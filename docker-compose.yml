@@ -6,13 +6,13 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-dockus}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dockus_secret}
-      POSTGRES_DB: ${POSTGRES_DB:-dockus_db}
+      POSTGRES_USER: ${DB_USERNAME:-dockus}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dockus_secure_pass}
+      POSTGRES_DB: ${DB_NAME:-dockus_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dockus}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-dockus}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,7 +37,7 @@ services:
       - dockus-network
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:RELEASE.2024-02-26T09-33-48Z
     container_name: dockus-minio
     restart: unless-stopped
     ports:
@@ -50,7 +50,7 @@ services:
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
