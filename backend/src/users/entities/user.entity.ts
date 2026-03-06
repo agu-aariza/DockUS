@@ -42,7 +42,7 @@ export enum UserRole {
 export class User {
   /**
    * Identificador único (UUID v4) para prevenir enumeración de usuarios
-   * y garantizar la distribución uniforme en el índice de la base de datos. 
+   * y garantizar la distribución uniforme en el índice de la base de datos.
    */
   @PrimaryGeneratedColumn('uuid')
   id: string;

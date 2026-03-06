@@ -15,6 +15,7 @@
  *   - `whitelist: true`: Purga masiva silenciosa de variables maliciosas extra.
  *   - `forbidNonWhitelisted: true`: Throw agresivo cortocircuitando exploits
  *      conocidos de "Mass Assignment" o "Prototype Pollution".
+ * - `CORS`: Habilitación selectiva de recursos compartidos entre orígenes.
  * 
  * @module MainBootstrap
  */
@@ -25,13 +26,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  console.log('=== NESTJS DB DEBUG ===');
-  console.log('DB_USERNAME:', process.env.DB_USERNAME);
-  console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '******' + process.env.DB_PASSWORD.slice(-4) : 'UNDEFINED');
-  console.log('DB_NAME:', process.env.DB_NAME);
-  console.log('CWD:', process.cwd());
-
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(appModule);
 
   // Api Gateway Path Segment (Para Infra/Ingress Proxies)
   app.setGlobalPrefix('api');
@@ -43,14 +38,20 @@ async function bootstrap() {
     transform: true, // Convertimos pasivamente Request strings al Type correcto de TS
   }));
 
+  // Habilitamos CORS para interoperabilidad del Frontend
+  app.enableCors();
+
   // ============================================================================
   // OPENAPI (SWAGGER) - AUTO-DOCUMENTACION INTERACTIVA
   // ============================================================================
   const config = new DocumentBuilder()
     .setTitle('DockUS API - Seguridad y Servicios')
-    .setDescription('Especificación técnica de los microservicios de DockUS.')
+    .setDescription('Especificación técnica de los microservicios de DockUS para la gestión de entornos reproducibles.')
     .setVersion('1.0.0')
     .addBearerAuth() // Añadimos el botón "Authorize" para probar el JWT
+    .addTag('Identity Access Management (IAM)', 'Endpoints de registro, login y perfil')
+    .addTag('User Administration (RBAC)', 'Gestión administrativa de usuarios con control de roles')
+    .addTag('System Health', 'Health checks y monitoreo de infraestructura')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -58,6 +59,17 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   // Bind del puerto para orquestador del cluster/contenedor Docker
-  await app.listen(3000);
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+
+  console.log(`🚀 Kernel operativo en el puerto ${port}`);
+  console.log(`📚 Especificación OpenAPI disponible en: http://localhost:${port}/api/docs`);
 }
+
+/**
+ * Variable global para evitar colisión de nombres de clase en bootstrap.
+ * @internal
+ */
+const appModule = AppModule;
+
 bootstrap();
