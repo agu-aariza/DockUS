@@ -1,0 +1,11 @@
+# Dependencias del proyecto
+node_modules/
+
+# Archivos de construcción
+dist/
+
+# Configuración y Secretos
+.env
+
+# Docker y Archivos de Registro
+*.log
