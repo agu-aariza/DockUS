@@ -1,21 +1,21 @@
 /**
- * @fileoverview Root Module - Central de Conexiones e Inyección (AppModule).
- * 
+ * @fileoverview Root Module - Central de Conexiones e Inyección.
+ *
  * ============================================================================
  * RAIZ DE MICROSERVICIOS Y CONECTIVIDAD
  * ============================================================================
- * 
- * Este módulo sirve como Entry-Point Lógico (Grafo Principal) agregando todos los 
- * submódulos funcionales del Monolito. Registramos el mapa de dependencias inyectables 
+ *
+ * Este módulo sirve como Entry-Point Lógico (Grafo Principal) agregando todos los
+ * submódulos funcionales del Monolito. Registramos el mapa de dependencias inyectables
  * (Dependency Injection Tree) en un contexto único (Singleton Scope nativo de Nest).
- * 
+ *
  * Módulos integrados actualmente:
  * - `ConfigModule`: Carga de variables de entorno global (.env).
  * - `TypeOrmModule`: Conexión principal a PostgreSQL configurada asíncronamente.
  * - `BullModule`: Integración con Redis para el procesamiento de colas (Fase 3).
  * - `AuthModule`: Gestión de Sesiones JWT y Rutas Perimetrales de IAM.
  * - `UsersModule`: Gestión administrativa de identidades y RBAC.
- * 
+ *
  * @module AppModule
  */
 
@@ -31,7 +31,7 @@ import { User } from './users/entities/user.entity';
 
 @Module({
   imports: [
-    // Carga de variables de entorno (DevSecOps Baseline)
+    // Carga de variables de entorno global
     ConfigModule.forRoot({
       isGlobal: true, // Disponible en todos los módulos sin re-importar
       envFilePath: '../.env', // Ruta al archivo de secretos locales
@@ -49,7 +49,7 @@ import { User } from './users/entities/user.entity';
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_NAME', 'dockus'),
         entities: [User], // Mapeo automático de identidades
-        synchronize: configService.get<string>('NODE_ENV') !== 'production', // Precaución: Inhabilitado en PROD
+        synchronize: configService.get<string>('NODE_ENV') !== 'production', // Inhabilitado en producción
       }),
     }),
 
@@ -70,6 +70,6 @@ import { User } from './users/entities/user.entity';
     AuthModule,
   ],
   controllers: [AppController], // Gateway Root (Healthchecks)
-  providers: [AppService],      // Providers de infraestructura global
+  providers: [AppService], // Providers de infraestructura global
 })
 export class AppModule { }

@@ -1,18 +1,17 @@
 /**
  * @fileoverview Entidad User - Modelo de Datos de Identidad.
- * 
+ *
  * ============================================================================
  * MODELO DE PERSISTENCIA Y AUDITORIA
  * ============================================================================
- * 
+ *
  * Definimos el esquema estricto para la tabla 'users' en PostgreSQL mediante TypeORM.
  * Esta entidad incluye campos de auditoría automáticos para trazabilidad
  * de cambios y aplica roles por defecto (Principio de Menor Privilegio).
- * 
- * Seguridad:
- * - El campo `passwordHash` NUNCA debe ser serializado ni retornado en 
- *   respuestas HTTP. La sanitización se maneja en la capa de Servicio.
- * 
+ *
+ * El campo `passwordHash` NUNCA debe ser serializado ni retornado en
+ * respuestas HTTP. La sanitización se maneja en la capa de Servicio.
+ *
  * @module User
  * @requires typeorm
  */
@@ -23,6 +22,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 
 /**
@@ -36,6 +36,21 @@ export enum UserRole {
   TEACHER = 'TEACHER',
   /** Rol de superusuario, acceso sin restricciones. */
   ADMIN = 'ADMIN',
+}
+
+/**
+ * Estado del ciclo de vida de la cuenta.
+ * @enum {string}
+ */
+export enum UserStatus {
+  /** Cuenta operativa y con acceso total. */
+  ACTIVE = 'ACTIVE',
+  /** Cuenta deshabilitada temporalmente por el administrador. */
+  INACTIVE = 'INACTIVE',
+  /** Cuenta bloqueada por infracción de políticas de seguridad. */
+  SUSPENDED = 'SUSPENDED',
+  /** Cuenta en proceso de validación de identidad (Baselines). */
+  PENDING_VERIFICATION = 'PENDING_VERIFICATION',
 }
 
 @Entity('users')
@@ -61,12 +76,13 @@ export class User {
   @Column()
   passwordHash: string;
 
-  /**
-   * Nivel de autorización del usuario.
-   * Por seguridad (Secure by Default), asignamos el nivel más restrictivo.
-   */
+  /** Nivel de autorización del usuario (RBAC). */
   @Column({ type: 'enum', enum: UserRole, default: UserRole.STUDENT })
   role: UserRole;
+
+  /** Estado operativo de la identidad. */
+  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
+  status: UserStatus;
 
   @Column()
   firstName: string;
@@ -81,4 +97,11 @@ export class User {
   /** Timestamp de modificación automática para trazabilidad. */
   @UpdateDateColumn()
   updatedAt: Date;
+
+  /**
+   * Timestamp de borrado lógico (Soft Delete).
+   * Si este campo está presente, la identidad se considera purgada pero recuperable.
+   */
+  @DeleteDateColumn()
+  deletedAt: Date;
 }

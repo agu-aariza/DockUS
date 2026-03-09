@@ -1,122 +1,139 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"/>
-  <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL"/>
-  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis"/>
-  <img src="https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" alt="NestJS"/>
-  <img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions"/>
-</p>
+﻿# DockUS
 
-<h1 align="center">🐳 DockUS</h1>
+[![Backend CI](https://github.com/agu-aariza/DockUS/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/agu-aariza/DockUS/actions/workflows/backend-ci.yml)
+[![NestJS](https://img.shields.io/badge/NestJS-11.0-e0234e.svg?logo=nestjs)](https://nestjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-316192?logo=postgresql)](https://www.postgresql.org/)
 
-<p align="center">
-  <strong>Plataforma de Entornos Reproducibles para Desarrollo Containerizado</strong>
-</p>
+Plataforma para entornos reproducibles y evaluación de proyectos con arquitectura backend en NestJS.
 
-<p align="center">
-  <a href="#-descripción">Descripción</a> •
-  <a href="#️-guía-de-desarrollo---dockus">Guía de Desarrollo</a> •
-  <a href="#️-roadmap-de-fases">Roadmap</a>
-</p>
+## Estado actual
 
----
+- Fase 2 completada: autenticación, RBAC, CRUD de usuarios, soft delete, restore y cambio de estado.
+- Listado de usuarios: listado completo disponible en `GET /api/users`.
+- Fase 3+ planificada: subida de proyectos, pipeline de build, logs en tiempo real y despliegue dinámico.
 
-## Descripción
+## Stack
 
-**DockUS** es un ecosistema profesional diseñado para la gestión de entornos de desarrollo reproducibles y la evaluación automatizada de proyectos académicos. 
+- Backend: NestJS 11, TypeScript
+- Base de datos: PostgreSQL 16+
+- Cache/colas: Redis 7 + BullMQ
+- Documentacion API: Swagger (`/api/docs`)
+- CI: GitHub Actions (lint, build, test)
 
----
+## Requisitos previos
 
-## Guía de Desarrollo - DockUS
+- Node.js >= 20
+- npm >= 9
+- Docker + Docker Compose v2
 
-Bienvenido al equipo de desarrollo de **DockUS**. Este documento contiene la información técnica necesaria para configurar el entorno y empezar a contribuir siguiendo nuestros estándares de calidad.
+## Puesta en marcha local
 
-### Requisitos Previos
+```bash
+# desde la raiz del repo
+docker compose up -d
 
-Asegúrate de tener instaladas las siguientes herramientas antes de comenzar:
+# backend
+cd backend
+npm install
+npm run start:dev
+```
 
-- **Node.js**: >= 20.11.x (LTS)
-- **NPM**: >= 9.x
-- **Docker & Docker Compose**: 
-  - Necesitas tener el motor de Docker corriendo (ya sea Docker Desktop o Docker Engine nativo en Linux/WSL).
-  - Debes tener el plugin moderno **Docker Compose V2** (el que se ejecuta con `docker compose`, sin guion).
-- **NestJS CLI** *(Opcional)*: Recomendado para generar código rápidamente. Instálalo globalmente con `npm install -g @nestjs/cli`.
+## Endpoints base
 
-### Configuración del Entorno
+Con prefijo global `api`:
 
-Sigue estos pasos estrictamente en orden para levantar tu entorno local:
+- Health check: `GET /api`
+- Swagger: `GET /api/docs` (Para interactuar visualmente con la API y exportar el OpenAPI).
 
-1. **Instalar dependencias del proyecto:**
-   Esto descargará todos los paquetes necesarios.
-   ```bash
-   cd backend/
-   npm install
-   ```
-   *Nota: Esto incluye dependencias core como TypeORM, Swagger, Passport, JWT y bcrypt.*
+### IAM
 
-2. **Configurar variables de entorno:**
-   Copia el archivo de plantilla y ajusta los valores (credenciales de BD, puertos, secretos) si es necesario:
-   ```bash
-   cp ../.env.example ../.env
-   ```
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/profile` (JWT)
 
-3. **Levantar infraestructura de apoyo (Contenedores):**
-   Inicia las bases de datos y servicios auxiliares (PostgreSQL, Redis, MinIO) en segundo plano:
-   ```bash
-   # En la raíz del proyecto
-   docker compose up -d
-   ```
-   *Nota: Puedes verificar que los tres servicios están corriendo correctamente (y que pasaron su healthcheck) ejecutando `docker ps`.*
+> **Nota sobre Sesiones**: La autenticación emplea JWT *stateless*. No hay endpoint de logout nativo en el backend; el token expira automáticamente tras un tiempo predefinido (configurable vía `JWT_EXPIRES_IN`).
 
-### Scripts Disponibles (Backend)
+### Usuarios (RBAC)
 
-| Comando | Descripción |
-| --- | --- |
-| `npm run start:dev` | Arranca la API en modo watch (hot reload) para desarrollo |
-| `npm run build` | Compila el proyecto en la carpeta `/dist` listo para producción |
-| `npm run lint` | Ejecuta el linter (ESLint) para verificar y corregir el estilo del código |
-| `npm run test` | Ejecuta los tests unitarios (Jest) |
-| `npm run test:e2e` | Ejecuta los tests de integración y end-to-end |
+- `GET /api/users` (ADMIN, TEACHER)
+- `GET /api/users/:id` (ADMIN, TEACHER)
+- `POST /api/users` (ADMIN)
+- `PATCH /api/users/:id` (ADMIN)
+- `DELETE /api/users/:id` (ADMIN, soft delete, devuelve `200` con mensaje)
+- `PATCH /api/users/:id/restore` (ADMIN)
+- `PATCH /api/users/:id/status/:status` (ADMIN)
 
-### Estándares del Proyecto
+Ejemplo:
 
-**1. Mensajes de Commit (Conventional Commits)**
-Usamos el estándar de Conventional Commits. La estructura obligatoria es: `tipo(ámbito): descripción`
-- `feat`: Nueva funcionalidad.
-- `fix`: Corrección de un error o bug.
-- `docs`: Cambios en la documentación.
-- `chore`: Tareas de mantenimiento, actualización de dependencias o configuración.
-- `ci`: Cambios en los pipelines o flujos de integración continua.
+```http
+GET /api/users
+```
 
-**2. Estrategia de Ramas (Git Flow Simplificado)**
-- `main`: Código estable y listo para producción.
-- `develop`: Rama de integración para el desarrollo actual.
-- `feature/*`: Para nuevas funcionalidades (ej: `feature/auth-jwt`).
-- `hotfix/*`: Para correcciones urgentes en producción.
-- `fix/*`: Para correcciones urgentes en la rama de desarrollo.
+Respuesta:
 
-### Arquitectura Modular
-El proyecto sigue una arquitectura monolítica modular impulsada por NestJS. Los módulos principales son:
-- `src/auth`: Gestión de seguridad, estrategias Passport y tokens JWT.
-- `src/users`: Gestión de usuarios, roles y perfiles en la base de datos PostgreSQL.
+```json
+[
+  {
+    "id": "uuid",
+    "email": "user@dockus.com",
+    "firstName": "User",
+    "lastName": "Name",
+    "role": "STUDENT",
+    "status": "ACTIVE"
+  }
+]
+```
 
----
+## Variables de entorno
 
-### Seguridad
-- Todas las variables críticas (claves de API, credenciales de BD, secretos JWT) deben ir obligatoriamente en el `.env` local y nunca subirse al repositorio.
-- El archivo `.env` está explícitamente ignorado en nuestro archivo `.gitignore`.
+El backend consume estas claves:
 
----
+- `NODE_ENV`
+- `PORT`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `DB_NAME`
+- `DATABASE_URL`
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `JWT_SECRET`
+- `JWT_EXPIRES_IN`
 
-## Roadmap de Fases
+Variables adicionales para infraestructura local (Docker/MinIO):
 
-1.  **Fase 1-2:** Estructura base, usuarios y salud del sistema. 
-2.  **Fase 3:** Motor de construcción de imágenes y gestión de proyectos.
-3.  **Fase 4-5:** Frontend React/Vite y despliegue dinámico en Kubernetes.
-4.  **Fase 6:** Panel de administración y gestión docente.
-5.  **Fase 7:** Integración completa de IA Local mediante MCP (Opcional).
+- `POSTGRES_PORT`
+- `MINIO_ROOT_USER`
+- `MINIO_ROOT_PASSWORD`
+- `MINIO_API_PORT`
+- `MINIO_CONSOLE_PORT`
+- `MINIO_ENDPOINT`
 
----
+## Scripts útiles (backend)
 
-<p align="center">
-  TFG Agustín Ariza Aragón - Universidad de Sevilla
-</p>
+```bash
+npm run start:dev
+npm run build
+npm run lint
+npm run test
+npm run test:e2e
+```
+
+## Calidad y flujo
+
+- Convención de commits: Conventional Commits (`feat`, `fix`, `docs`, `chore`, `ci`)
+- CI activo en `.github/workflows/backend-ci.yml`
+
+## ERS alineada
+
+La versión editable de la ERS con correcciones y mejoras está en:
+
+- `docs/ERS_DockUS_v2.0_ALINEADA.md`
+
+## Roadmap
+
+1. Fase 1-2: base de usuarios, auth, salud del sistema.
+2. Fase 3: proyectos/builds/integraciones adicionales.
+3. Fase 4-5: frontend y despliegue dinámico en Kubernetes.
+4. Fase 6: panel docente/administración ampliada.

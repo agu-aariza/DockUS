@@ -9,3 +9,9 @@ dist/
 
 # Docker y Archivos de Registro
 *.log
+
+# Archivos de construcción
+build/
+
+# Documentación
+docs/

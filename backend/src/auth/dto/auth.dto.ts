@@ -1,19 +1,19 @@
 /**
- * @fileoverview Auth DTOs - Contratos de Frontera para IAM.
- * 
+ * @fileoverview Auth DTOs - Verificación de Identidad.
+ *
  * ============================================================================
  * VALIDACION Y SANEAMIENTO DE PAYLOADS
  * ============================================================================
- * 
+ *
  * Definimos la estructura restrictiva permitida en los firewalls lógicos
  * (ValidationPipes) antes de tocar capas internas de la aplicación.
- * 
+ *
  * Políticas Implementadas:
  * - DTOs estrictos por verbo (Register/Login).
  * - "Fail-Fast" de NestJS: Rechazamos la petición sin cómputo extra si `class-validator`
  *   falla. Mitigamos DoS y validaciones costosas.
  * - Minimum Security baselines (Longitudes mínimas forzadas).
- * 
+ *
  * @module AuthDto
  * @requires class-validator
  * @requires @nestjs/swagger
@@ -34,16 +34,18 @@ export class RegisterDto {
   email: string;
 
   /**
-   * Secret Key proporcionado por el usuario. 
-   * Políticas Zero-Trust nos obligan a rechazar secretos débiles (Entropía base).
+   * Secret Key proporcionado por el usuario.
+   * Políticas Zero-Trust nos obligan a rechazar contraseñas débiles.
    */
   @ApiProperty({
     example: '12345678!',
-    description: 'Secret Key (Min: 8 caracteres para mitigación de BF).',
+    description: 'Secret Key (Min: 8 caracteres).',
     minLength: 8,
   })
   @IsString({ message: 'El tipo debe coincidir estrictamente.' })
-  @MinLength(8, { message: 'Infracción política seguridad: Longitud de password insana.' })
+  @MinLength(8, {
+    message: 'Infracción política seguridad: Longitud de password insuficiente.',
+  })
   password: string;
 
   @ApiProperty({
@@ -82,4 +84,4 @@ export class LoginDto {
   })
   @IsString({ message: 'Tipo MIME inválido procesando el string.' })
   password: string;
-} 
+}

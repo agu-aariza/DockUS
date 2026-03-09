@@ -1,0 +1,54 @@
+# ============================================================================
+# CI PIPELINE - BACKEND KERNEL VALIDATION
+# ============================================================================
+# 
+# Workflow para la validación de integridad del backend.
+# Ejecuta auditoría de dependencias, análisis estático, construcción y tests.
+# ============================================================================
+
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, 'feature/*' ]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [ main, 'feature/*' ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  validate-kernel:
+    name: Backend Validation (Node.js 22)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies (CI)
+        run: npm ci
+
+      - name: Linting
+        run: npm run lint
+
+      - name: Security Audit
+        run: npm audit --audit-level=high
+
+      - name: Build Application
+        run: npm run build
+
+      - name: Unit Tests
+        run: npm run test
