@@ -44,7 +44,8 @@ export class RegisterDto {
   })
   @IsString({ message: 'El tipo debe coincidir estrictamente.' })
   @MinLength(8, {
-    message: 'Infracción política seguridad: Longitud de password insuficiente.',
+    message:
+      'Infracción política seguridad: Longitud de password insuficiente.',
   })
   password: string;
 

@@ -23,6 +23,8 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -30,6 +32,9 @@ async function bootstrap() {
 
   // Api Gateway Path Segment
   app.setGlobalPrefix('api');
+
+  // Instanciamos el Logger Global JSON (Pino)
+  app.useLogger(app.get(Logger));
 
   // Hardened Request Filtering Pipeline
   app.useGlobalPipes(
@@ -40,8 +45,17 @@ async function bootstrap() {
     }),
   );
 
-  // Habilitamos CORS para interoperabilidad del Frontend
-  app.enableCors();
+  // Security Headers (Mitigación XSS, Clickjacking, MIME Sniffing, etc.)
+  app.use(helmet());
+
+  // Habilitamos CORS de forma restringida (Evitar '*' en producción)
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+  });
+
+  // Graceful Shutdown: Intercepta SIGTERM/SIGINT para drenar conexiones
+  app.enableShutdownHooks();
 
   // ============================================================================
   // OPENAPI (SWAGGER) - AUTO-DOCUMENTACION INTERACTIVA
@@ -68,13 +82,16 @@ async function bootstrap() {
   // Exponemos el portal en http://localhost:3000/api/docs
   SwaggerModule.setup('api/docs', app, document);
 
-  // Bind del puerto para ocker
+  // Bind del puerto para container orchestration
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
-  console.log(`🚀 Kernel operativo en el puerto ${port}`);
-  console.log(
-    `📚 Especificación OpenAPI disponible en: http://localhost:${port}/api/docs`,
+  // Usamos el logger estandarizado en vez de console.log
+  const logger = app.get(Logger);
+  logger.log(`Kernel operativo en el puerto ${port}`, 'Bootstrap');
+  logger.log(
+    `Especificación OpenAPI disponible en: http://localhost:${port}/api/docs`,
+    'Bootstrap',
   );
 }
 

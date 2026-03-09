@@ -20,7 +20,7 @@ import { AppService } from './app.service';
 @ApiTags('System Health')
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) { }
+  constructor(private readonly appService: AppService) {}
 
   /**
    * Healthcheck primario de Liveness.
@@ -30,8 +30,7 @@ export class AppController {
    */
   @ApiOperation({
     summary: 'Verificar salud del sistema',
-    description:
-      'Endpoint ligero para sondas de orquestación.',
+    description: 'Endpoint ligero para sondas de orquestación.',
   })
   @ApiResponse({
     status: 200,

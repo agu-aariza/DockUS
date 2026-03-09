@@ -23,6 +23,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
+import * as Joi from 'joi';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AppController } from './app.controller';
@@ -31,11 +34,46 @@ import { User } from './users/entities/user.entity';
 
 @Module({
   imports: [
-    // Carga de variables de entorno global
+    // Carga de variables de entorno global con validación estricta Fail-Fast
     ConfigModule.forRoot({
-      isGlobal: true, // Disponible en todos los módulos sin re-importar
-      envFilePath: '../.env', // Ruta al archivo de secretos locales
+      isGlobal: true,
+      envFilePath: '../.env',
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'test')
+          .default('development'),
+        PORT: Joi.number().default(3000),
+        FRONTEND_URL: Joi.string().uri().default('http://localhost:5173'),
+        DB_HOST: Joi.string().required(),
+        DB_PORT: Joi.number().default(5432),
+        DB_USERNAME: Joi.string().required(),
+        DB_PASSWORD: Joi.string().required(),
+        DB_NAME: Joi.string().required(),
+        JWT_SECRET: Joi.string().required(),
+        JWT_EXPIRES_IN: Joi.string().default('15m'),
+        REDIS_HOST: Joi.string().required(),
+        REDIS_PORT: Joi.number().default(6379),
+      }),
     }),
+
+    // Infraestructura de Logging JSON Estructurado
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty', options: { colorize: true } }
+            : undefined,
+      },
+    }),
+
+    // Protección Global frente a Fuerza Bruta (Rate Limiting)
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
 
     // Orquestación de Base de Datos (PostgreSQL)
     TypeOrmModule.forRootAsync({
@@ -72,4 +110,4 @@ import { User } from './users/entities/user.entity';
   controllers: [AppController], // Gateway Root (Healthchecks)
   providers: [AppService], // Providers de infraestructura global
 })
-export class AppModule { }
+export class AppModule {}

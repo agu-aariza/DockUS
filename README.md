@@ -8,9 +8,11 @@ Plataforma para entornos reproducibles y evaluación de proyectos con arquitectu
 
 ## Estado actual
 
-- Fase 2 completada: autenticación, RBAC, CRUD de usuarios, soft delete, restore y cambio de estado.
-- Listado de usuarios: listado completo disponible en `GET /api/users`.
-- Fase 3+ planificada: subida de proyectos, pipeline de build, logs en tiempo real y despliegue dinámico.
+- Fase 1-2 completada: infraestructura base, backendcore: autenticación, RBAC, CRUD de usuarios, soft delete, restore y cambio de estado.
+- Hardening DevOps: Implementado Helmet (seguridad HTTP), Rate Limiting (anti-fuerza bruta), Graceful Shutdown y validación estricta de configuración (Joi).
+- Observabilidad: Logging estructurado en formato JSON (Pino).
+- Listado de usuarios: listado plano optimizado disponible en `GET /api/users`.
+
 
 ## Stack
 
@@ -18,6 +20,8 @@ Plataforma para entornos reproducibles y evaluación de proyectos con arquitectu
 - Base de datos: PostgreSQL 16+
 - Cache/colas: Redis 7 + BullMQ
 - Documentacion API: Swagger (`/api/docs`)
+- Seguridad: Helmet (Headers), Throttler (Rate Limit), CORS restringido
+- Observabilidad: nestjs-pino (JSON Structured Logging)
 - CI: GitHub Actions (lint, build, test)
 
 ## Requisitos previos
@@ -51,7 +55,7 @@ Con prefijo global `api`:
 - `POST /api/auth/login`
 - `GET /api/auth/profile` (JWT)
 
-> **Nota sobre Sesiones**: La autenticación emplea JWT *stateless*. No hay endpoint de logout nativo en el backend; el token expira automáticamente tras un tiempo predefinido (configurable vía `JWT_EXPIRES_IN`).
+> **Nota sobre Seguridad**: Se aplica **Rate Limiting** estricto por IP (limite de intentos en login/registro) para prevenir ataques de fuerza bruta. La autenticación emplea JWT *stateless*. No hay endpoint de logout nativo en el backend; el token expira automáticamente tras un tiempo predefinido (configurable vía `JWT_EXPIRES_IN`).
 
 ### Usuarios (RBAC)
 
@@ -98,8 +102,10 @@ El backend consume estas claves:
 - `DATABASE_URL`
 - `REDIS_HOST`
 - `REDIS_PORT`
+- `FRONTEND_URL` (Para política de CORS)
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
+- `JWT_TTL` (opcional si se usa un valor fijo)
 
 Variables adicionales para infraestructura local (Docker/MinIO):
 
@@ -125,15 +131,10 @@ npm run test:e2e
 - Convención de commits: Conventional Commits (`feat`, `fix`, `docs`, `chore`, `ci`)
 - CI activo en `.github/workflows/backend-ci.yml`
 
-## ERS alineada
-
-La versión editable de la ERS con correcciones y mejoras está en:
-
-- `docs/ERS_DockUS_v2.0_ALINEADA.md`
-
 ## Roadmap
 
-1. Fase 1-2: base de usuarios, auth, salud del sistema.
+1. Fase 1-2: infraestructura base, backendcore: usuarios, auth, salud del sistema.
 2. Fase 3: proyectos/builds/integraciones adicionales.
-3. Fase 4-5: frontend y despliegue dinámico en Kubernetes.
-4. Fase 6: panel docente/administración ampliada.
+3. Fase 4: frontend 
+4. Fase 5: despliegue dinámico en Kubernetes.
+5. Fase 6: panel docente/administración ampliada.

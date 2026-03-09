@@ -9,7 +9,7 @@ src/
 ├── auth/            # IAM y Autenticación JWT / RBAC.
 ├── users/           # Gestión de CRUD y ciclos de vida de Usuarios.
 ├── app.module.ts    # Módulo raíz de la aplicación.
-└── main.ts          # Punto de entrada y configuración global (Swagger, ValidationPipes).
+└── main.ts          # Punto de entrada y configuración (Swagger, Helmet, Pino Logger, Throttler, Graceful Shutdown).
 ```
 
 ## Entorno Local

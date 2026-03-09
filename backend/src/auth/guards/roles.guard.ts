@@ -57,7 +57,7 @@ export class RolesGuard implements CanActivate {
    * Inyectamos el Reflector para acceder a los metadatos de los controladores.
    * @param {Reflector} reflector - Utilidad de consulta de metadatos de NestJS.
    */
-  constructor(private reflector: Reflector) { }
+  constructor(private reflector: Reflector) {}
 
   /**
    * Evaluamos si la identidad actual posee los privilegios necesarios.

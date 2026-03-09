@@ -47,7 +47,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) { }
+  ) {}
 
   /**
    * Recuperamos una identidad de usuario por email para la verificacion de autenticacion.
@@ -83,7 +83,7 @@ export class UsersService {
   /**
    * Recuperamos la lista completa de identidades.
    * Aviso Interno: En un futuro, para miles de registros, esta operacion
-   * cruda representa un riesgo de escalabilidad y debera volver a incluir 
+   * cruda representa un riesgo de escalabilidad y debera volver a incluir
    * fragmentación controlada.
    *
    * @returns {Promise<Omit<User, 'passwordHash'>[]>} Data de todos los usuarios sanitizada.

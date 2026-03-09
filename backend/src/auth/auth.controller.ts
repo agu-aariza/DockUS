@@ -27,6 +27,7 @@ import {
   Request,
   HttpCode,
 } from '@nestjs/common';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import {
   ApiTags,
   ApiOperation,
@@ -48,8 +49,9 @@ interface AuthenticatedRequest extends Request {
 
 @ApiTags('Identity Access Management (IAM)')
 @Controller('auth')
+@UseGuards(ThrottlerGuard)
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   /**
    * Endpoint de aprovisionamiento de identidades públicas.
@@ -70,19 +72,17 @@ export class AuthController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      'Error de Validación',
+    description: 'Error de Validación',
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Conflicto de Identidad: El email ya existe.',
+    description: 'Conflicto de Identidad: El email ya existe.',
   })
   @ApiResponse({
     status: 500,
-    description:
-      'Error Interno',
+    description: 'Error Interno',
   })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // Max 5 registros por IP por minuto
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
@@ -100,20 +100,18 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Token JWT emitido exitosamente.' })
   @ApiResponse({
     status: 400,
-    description:
-      'Error de Validación',
+    description: 'Error de Validación',
   })
   @ApiResponse({
     status: 401,
-    description:
-      'Fallo de Autenticación',
+    description: 'Fallo de Autenticación',
   })
   @ApiResponse({
     status: 500,
-    description:
-      'Error Interno',
+    description: 'Error Interno',
   })
   @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // Max 10 intentos de login por IP por minuto
   @Post('login')
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
@@ -129,8 +127,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Reflejar estado de identidad actual',
-    description:
-      'Verificamos y decodificamos localmente el JWT actual.',
+    description: 'Verificamos y decodificamos localmente el JWT actual.',
   })
   @ApiResponse({
     status: 200,

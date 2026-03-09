@@ -74,8 +74,16 @@ describe('UsersService', () => {
 
   it('debe devolver todos los usuarios sin paginación', async () => {
     const users = [
-      buildUser({ id: '0f4f2a18-bb0d-46df-a4f1-7220f3d63021', email: 'teacher@dockus.com', role: UserRole.TEACHER }),
-      buildUser({ id: 'fc0336bf-f1bf-4df7-88f8-86df0251f6ec', email: 'teacher2@dockus.com', role: UserRole.TEACHER }),
+      buildUser({
+        id: '0f4f2a18-bb0d-46df-a4f1-7220f3d63021',
+        email: 'teacher@dockus.com',
+        role: UserRole.TEACHER,
+      }),
+      buildUser({
+        id: 'fc0336bf-f1bf-4df7-88f8-86df0251f6ec',
+        email: 'teacher2@dockus.com',
+        role: UserRole.TEACHER,
+      }),
     ];
 
     usersRepository.find.mockResolvedValue(users);
@@ -85,7 +93,9 @@ describe('UsersService', () => {
     expect(usersRepository.find).toHaveBeenCalled();
     expect(result).toHaveLength(2);
     expect(result[0].email).toBe('teacher@dockus.com');
-    expect((result[0] as { passwordHash?: string }).passwordHash).toBeUndefined();
+    expect(
+      (result[0] as { passwordHash?: string }).passwordHash,
+    ).toBeUndefined();
   });
 
   it('debe aplicar soft delete al eliminar identidad', async () => {
