@@ -26,7 +26,6 @@ import {
   Get,
   Post,
   Body,
-  Query,
   Patch,
   Param,
   Delete,
@@ -58,7 +57,7 @@ export class UsersController {
    * Inyectamos el servicio de lógica de negocio de usuarios.
    * @param {UsersService} usersService - Gestor de identidades.
    */
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   /**
    * Punto de aprovisionamiento directo de usuarios (Uso Administrativo).
@@ -75,8 +74,7 @@ export class UsersController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      'Error de Esquema.',
+    description: 'Error de Esquema.',
   })
   @ApiResponse({
     status: 401,
@@ -84,8 +82,7 @@ export class UsersController {
   })
   @ApiResponse({
     status: 403,
-    description:
-      'Infracción de Privilegios.',
+    description: 'Infracción de Privilegios.',
   })
   @ApiResponse({
     status: 409,
@@ -94,8 +91,7 @@ export class UsersController {
   })
   @ApiResponse({
     status: 500,
-    description:
-      'Fallo de Sistema',
+    description: 'Fallo de Sistema',
   })
   @Roles(UserRole.ADMIN)
   @Post()
@@ -126,8 +122,7 @@ export class UsersController {
   })
   @ApiResponse({
     status: 500,
-    description:
-      'Error Interno',
+    description: 'Error Interno',
   })
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Get()
@@ -141,7 +136,8 @@ export class UsersController {
    */
   @ApiOperation({
     summary: 'Consultar identidad por UUID',
-    description: 'Obtenemos el perfil sanitizado de un usuario específico (Sólo ADMIN/TEACHER).',
+    description:
+      'Obtenemos el perfil sanitizado de un usuario específico (Sólo ADMIN/TEACHER).',
   })
   @ApiParam({
     name: 'id',
@@ -154,14 +150,12 @@ export class UsersController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      'ID Malformado',
+    description: 'ID Malformado',
   })
   @ApiResponse({ status: 401, description: 'Autenticación Requerida.' })
   @ApiResponse({
     status: 403,
-    description:
-      'Escalada de Privilegios Bloqueada.',
+    description: 'Escalada de Privilegios Bloqueada.',
   })
   @ApiResponse({
     status: 404,
@@ -306,6 +300,3 @@ export class UsersController {
     return this.usersService.updateStatus(id, status);
   }
 }
-
-
-
