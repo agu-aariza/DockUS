@@ -20,14 +20,13 @@ Plataforma para entornos reproducibles y evaluación de proyectos, con backend e
 .
 ├── backend/                         # API NestJS
 │   ├── src/
-│   │   ├── config/                  # Validación de entorno (.env)
-│   │   ├── infrastructure/          # DB, cola, logger, seguridad transversal
-│   │   ├── auth/                    # IAM (registro, login, perfil)
-│   │   ├── users/                   # CRUD de usuarios + RBAC
+│   │   ├── modules/                 # Dominios (auth, users, health)
+│   │   ├── shared/                  # Config e infraestructura técnica
 │   │   ├── bootstrap.ts             # Config global HTTP compartida
 │   │   ├── app.module.ts            # Composición de módulos
 │   │   └── main.ts                  # Entry point
 │   ├── test/                        # Tests e2e
+│   ├── ARCHITECTURE.md              # Convenciones de arquitectura backend
 │   └── package.json
 ├── docker-compose.yml               # PostgreSQL, Redis y MinIO
 ├── .env.example

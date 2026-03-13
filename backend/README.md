@@ -7,29 +7,26 @@ API principal construida con NestJS 11 y TypeScript.
 ```text
 backend/
 ├── src/
-│   ├── config/                    # Contratos y validación de entorno
-│   │   └── env.validation.ts
-│   ├── infrastructure/            # Infraestructura transversal (no dominio)
-│   │   ├── infrastructure.module.ts
-│   │   ├── database/typeorm.config.ts
-│   │   ├── observability/logger.config.ts
-│   │   ├── queue/bull.config.ts
-│   │   └── security/throttler.config.ts
-│   ├── auth/                      # Contexto de autenticación y autorización
-│   ├── users/                     # Contexto de usuarios y RBAC
+│   ├── modules/                   # Contextos de dominio
+│   │   ├── auth/                  # Autenticación y autorización
+│   │   ├── users/                 # Gestión de usuarios y RBAC
+│   │   └── health/                # Endpoints de salud (live/readiness)
+│   ├── shared/                    # Capa transversal técnica
+│   │   ├── config/                # Contratos y validación de entorno
+│   │   └── infrastructure/        # DB, cola, logger, seguridad global
 │   ├── app.module.ts              # Composición de módulos
 │   ├── bootstrap.ts               # Configuración global HTTP compartida
 │   └── main.ts                    # Entry point del proceso
 ├── test/                          # Suite e2e
+├── ARCHITECTURE.md                # Reglas de arquitectura y dependencias
 ├── package.json
 └── tsconfig.json
 ```
 
 ## Criterio de diseño
 
-- Dominio en `auth/` y `users/`.
-- Infraestructura técnica en `infrastructure/`.
-- Configuración declarativa en `config/`.
+- Dominio en `modules/`.
+- Infraestructura técnica y configuración en `shared/`.
 - `AppModule` como ensamblador, no como contenedor de lógica de infraestructura.
 
 ## Entorno local

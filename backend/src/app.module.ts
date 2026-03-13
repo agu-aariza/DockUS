@@ -9,14 +9,15 @@
  */
 
 import { Module } from '@nestjs/common';
-import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { InfrastructureModule } from './infrastructure/infrastructure.module';
-import { UsersModule } from './users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { HealthModule } from './modules/health/health.module';
+import { UsersModule } from './modules/users/users.module';
+import { InfrastructureModule } from './shared/infrastructure/infrastructure.module';
 
 @Module({
-  imports: [InfrastructureModule, UsersModule, AuthModule],
+  imports: [InfrastructureModule, UsersModule, AuthModule, HealthModule],
   controllers: [AppController], // Gateway Root (Healthchecks)
   providers: [AppService], // Providers de infraestructura global
 })
