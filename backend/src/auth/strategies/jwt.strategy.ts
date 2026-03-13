@@ -1,25 +1,11 @@
 /**
- * @fileoverview JWT Passport Strategy - Algoritmos Criptogróficos y Validación.
+ * @fileoverview Estrategia Passport para validación de JWT.
  *
- * ============================================================================
- * FACTORIA DE VALIDACION CRIPTOGRAFICA (BEARER TOKENS)
- * ============================================================================
- *
- * Esta estrategia intercepta todos los requests dirigidos a endpoints protegidos.
- * Extraemos y verificamos la firma (signature) generada asimétricamente para comprobar
- * Integridad (Data Integrity) y Autenticidad.
- *
- * Polóticas de Compliance & Security:
- * - Algoritmo subyacente blindado, verificando por `JWT_SECRET` rotativo desde Infra.
- * - Prohibición estricta de Bypass de Expiración (`ignoreExpiration: false`)
- *   forzando invalidación dura de sesiones críticas caídas por timeout.
- * - Validación in-memory ultra rápida escalable a micro servicios.
+ * Contexto:
+ * - Extrae y valida el token Bearer de Authorization.
+ * - Carga la identidad activa para reforzar controles de acceso.
  *
  * @module JwtStrategy
- * @requires @nestjs/common
- * @requires @nestjs/passport
- * @requires passport-jwt
- * @requires @nestjs/config
  */
 
 import { Injectable } from '@nestjs/common';
@@ -50,23 +36,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private usersService: UsersService,
   ) {
     super({
-      // Recuperador nativo del Authorization Bearer estándar.
+      // Extrae el token del header Authorization estándar.
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
 
-      // Security Flag: No autorizamos la re-habilitación del Token Expired.
+      // No permite reutilizar tokens expirados.
       ignoreExpiration: false,
 
-      // Secreto transitorio aprovisionado por entorno. Sin fallback peligroso nativo.
-      secretOrKey:
-        configService.get<string>('JWT_SECRET') ?? 'fallback_unsafe_dev_key',
+      // Secreto obligatorio: sin fallback inseguro.
+      secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
     });
   }
 
   /**
-   * El Token ha sido interceptado y su firma JWT criptogróficamente auditada
-   * y probada válida. Pasamos a poblar un Sandbox de Acceso de Usuario.
+   * Con el token ya validado, cargamos al usuario y verificamos que su cuenta
+   * continúe activa en el sistema.
    *
-   * @param payload Payload interno purgado validado firmado por el Emisor.
+   * @param payload Carga útil del JWT emitido por la API.
    */
   async validate(payload: JwtPayload): Promise<ValidatedUser> {
     const user = await this.usersService.findById(payload.sub, true);

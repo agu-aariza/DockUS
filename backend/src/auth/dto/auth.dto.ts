@@ -1,22 +1,11 @@
 /**
- * @fileoverview Auth DTOs - Verificación de Identidad.
+ * @fileoverview DTOs para operaciones de autenticación.
  *
- * ============================================================================
- * VALIDACION Y SANEAMIENTO DE PAYLOADS
- * ============================================================================
- *
- * Definimos la estructura restrictiva permitida en los firewalls lógicos
- * (ValidationPipes) antes de tocar capas internas de la aplicación.
- *
- * Políticas Implementadas:
- * - DTOs estrictos por verbo (Register/Login).
- * - "Fail-Fast" de NestJS: Rechazamos la petición sin cómputo extra si `class-validator`
- *   falla. Mitigamos DoS y validaciones costosas.
- * - Minimum Security baselines (Longitudes mínimas forzadas).
+ * Contexto:
+ * - Define contratos de entrada para register y login.
+ * - Aplica validaciones con class-validator y metadatos Swagger.
  *
  * @module AuthDto
- * @requires class-validator
- * @requires @nestjs/swagger
  */
 
 import { IsEmail, IsString, MinLength, IsNotEmpty } from 'class-validator';

@@ -1,26 +1,11 @@
-﻿/**
- * @fileoverview Users Service - Gestion Central de Identidades.
+/**
+ * @fileoverview Servicio de negocio para gestión de usuarios.
  *
- * ============================================================================
- * ARQUITECTURA DEL MODULO DE IDENTIDAD
- * ============================================================================
- *
- * Este servicio opera como la capa de datos fundacional para la gestion de
- * identidades. Proporcionamos la logica de negocio para operaciones CRUD sobre
- * la entidad de usuario y control de acceso.
- *
- * Responsabilidades:
- * - Aprovisionamiento seguro de identidades y persistencia.
- * - Hashing criptografico de credenciales mediante bcrypt.
- * - Recuperacion estructurada de datos para flujos de autenticacion.
- * - Sanitizacion de datos (PII Prevention) en los limites del sistema.
- * - Paginacion/filtrado/ordenamiento para evitar respuestas masivas no escalables.
+ * Contexto:
+ * - Implementa altas, consultas, actualización y baja lógica.
+ * - Incluye hashing de contraseña y reglas de consistencia.
  *
  * @module UsersService
- * @requires @nestjs/common
- * @requires typeorm
- * @requires bcrypt
- * @version 1.3.0 - Escalabilidad de listados con paginacion y filtros.
  */
 
 import {
@@ -30,13 +15,37 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { User, UserStatus } from './entities/user.entity';
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
+import { ListUsersQueryDto, UserSortField } from './dto/list-users-query.dto';
 import * as bcrypt from 'bcrypt';
 
 /** Parametro de Seguridad: Factor de trabajo de bcrypt. Minimo 10 recomendado para produccion. */
 const BCRYPT_SALT_ROUNDS = 10;
+const USER_SORT_COLUMNS: Record<UserSortField, string> = {
+  createdAt: 'user.createdAt',
+  updatedAt: 'user.updatedAt',
+  email: 'user.email',
+  firstName: 'user.firstName',
+  lastName: 'user.lastName',
+  role: 'user.role',
+  status: 'user.status',
+};
+
+export interface UsersPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface PaginatedUsersResponse {
+  data: Omit<User, 'passwordHash'>[];
+  meta: UsersPaginationMeta;
+}
 
 @Injectable()
 export class UsersService {
@@ -60,8 +69,9 @@ export class UsersService {
     email: string,
     includeDeleted = false,
   ): Promise<User | null> {
+    const normalizedEmail = this.normalizeEmail(email);
     return this.usersRepository.findOne({
-      where: { email },
+      where: { email: normalizedEmail },
       withDeleted: includeDeleted,
     });
   }
@@ -81,16 +91,53 @@ export class UsersService {
   }
 
   /**
-   * Recuperamos la lista completa de identidades.
-   * Aviso Interno: En un futuro, para miles de registros, esta operacion
-   * cruda representa un riesgo de escalabilidad y debera volver a incluir
-   * fragmentación controlada.
+   * Recuperamos identidades de forma paginada, filtrable y ordenada.
    *
-   * @returns {Promise<Omit<User, 'passwordHash'>[]>} Data de todos los usuarios sanitizada.
+   * @returns {Promise<PaginatedUsersResponse>} Segmento de usuarios y metadatos de paginacion.
    */
-  async findAll(): Promise<Omit<User, 'passwordHash'>[]> {
-    const users = await this.usersRepository.find();
-    return users.map((user) => this.sanitizeUser(user));
+  async findAll(query: ListUsersQueryDto): Promise<PaginatedUsersResponse> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const search = query.search?.trim();
+    const sortBy = query.sortBy ?? 'createdAt';
+    const sortOrder = query.sortOrder ?? 'DESC';
+
+    const queryBuilder = this.usersRepository.createQueryBuilder('user');
+
+    if (query.role) {
+      queryBuilder.andWhere('user.role = :role', { role: query.role });
+    }
+
+    if (query.status) {
+      queryBuilder.andWhere('user.status = :status', { status: query.status });
+    }
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(user.email ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    queryBuilder
+      .orderBy(USER_SORT_COLUMNS[sortBy], sortOrder)
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [users, total] = await queryBuilder.getManyAndCount();
+    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+
+    return {
+      data: users.map((user) => this.sanitizeUser(user)),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: totalPages > 0 && page < totalPages,
+        hasPrevPage: totalPages > 0 && page > 1,
+      },
+    };
   }
 
   /**
@@ -108,14 +155,20 @@ export class UsersService {
     firstName: string,
     lastName: string,
   ): Promise<User> {
+    const normalizedEmail = this.normalizeEmail(email);
     const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
     const user = this.usersRepository.create({
-      email,
+      email: normalizedEmail,
       passwordHash,
       firstName,
       lastName,
     });
-    return this.usersRepository.save(user);
+
+    try {
+      return await this.usersRepository.save(user);
+    } catch (error) {
+      this.rethrowIfUniqueEmailViolation(error, 'El email ya esta registrado.');
+    }
   }
 
   /**
@@ -125,17 +178,24 @@ export class UsersService {
    * @returns {Promise<Omit<User, 'passwordHash'>>} Usuario creado sanitizado.
    */
   async createFromDto(dto: CreateUserDto): Promise<Omit<User, 'passwordHash'>> {
-    const existingUser = await this.findByEmail(dto.email, true);
-    if (existingUser) {
-      throw new ConflictException('El email ya esta registrado.');
-    }
-
+    const normalizedEmail = this.normalizeEmail(dto.email);
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
     const user = this.usersRepository.create({
-      ...dto,
+      email: normalizedEmail,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      role: dto.role,
+      status: dto.status,
       passwordHash,
     });
-    const savedUser = await this.usersRepository.save(user);
+
+    let savedUser: User;
+    try {
+      savedUser = await this.usersRepository.save(user);
+    } catch (error) {
+      this.rethrowIfUniqueEmailViolation(error, 'El email ya esta registrado.');
+    }
+
     return this.sanitizeUser(savedUser);
   }
 
@@ -155,14 +215,20 @@ export class UsersService {
       throw new NotFoundException('Usuario no encontrado.');
     }
 
-    if (dto.email !== undefined && dto.email !== user.email) {
-      const existingUser = await this.findByEmail(dto.email, true);
-      if (existingUser) {
-        throw new ConflictException(
-          'El email ya esta registrado por otro usuario.',
-        );
+    if (dto.email !== undefined) {
+      const normalizedEmail = this.normalizeEmail(dto.email);
+      const normalizedCurrentEmail = this.normalizeEmail(user.email);
+
+      if (normalizedEmail !== normalizedCurrentEmail) {
+        const existingUser = await this.findByEmail(normalizedEmail, true);
+        if (existingUser) {
+          throw new ConflictException(
+            'El email ya esta registrado por otro usuario.',
+          );
+        }
       }
-      user.email = dto.email;
+
+      user.email = normalizedEmail;
     }
 
     if (dto.firstName !== undefined) user.firstName = dto.firstName;
@@ -174,7 +240,16 @@ export class UsersService {
       user.passwordHash = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
     }
 
-    const updatedUser = await this.usersRepository.save(user);
+    let updatedUser: User;
+    try {
+      updatedUser = await this.usersRepository.save(user);
+    } catch (error) {
+      this.rethrowIfUniqueEmailViolation(
+        error,
+        'El email ya esta registrado por otro usuario.',
+      );
+    }
+
     return this.sanitizeUser(updatedUser);
   }
 
@@ -293,5 +368,30 @@ export class UsersService {
     };
     delete sanitized.passwordHash;
     return sanitized;
+  }
+
+  /**
+   * Traduce violaciones de unicidad de PostgreSQL a errores de dominio HTTP 409.
+   *
+   * Evitamos condiciones de carrera "check-then-insert": la BD decide unicidad.
+   */
+  private rethrowIfUniqueEmailViolation(
+    error: unknown,
+    conflictMessage: string,
+  ): never {
+    const isUniqueViolation =
+      error instanceof QueryFailedError &&
+      (error as QueryFailedError & { driverError?: { code?: string } })
+        .driverError?.code === '23505';
+
+    if (isUniqueViolation) {
+      throw new ConflictException(conflictMessage);
+    }
+
+    throw error;
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
   }
 }

@@ -1,5 +1,15 @@
-﻿import { ConflictException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+/**
+ * @fileoverview Pruebas unitarias del servicio de usuarios.
+ *
+ * Contexto:
+ * - Valida normalización de email y manejo de conflictos de BD.
+ * - Cubre listado paginado y ciclo de vida de cuenta.
+ *
+ * @module UsersServiceSpec
+ */
+
+import { ConflictException } from '@nestjs/common';
+import { QueryFailedError, Repository } from 'typeorm';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User, UserRole, UserStatus } from './entities/user.entity';
@@ -48,31 +58,50 @@ describe('UsersService', () => {
     service = new UsersService(usersRepository as unknown as Repository<User>);
   });
 
-  it('debe impedir alta cuando el email existe incluso en registros soft-deleted', async () => {
+  it('debe normalizar email en findByEmail antes de consultar', async () => {
+    usersRepository.findOne.mockResolvedValue(null);
+
+    await service.findByEmail('  TeSt@DockUs.com  ', true);
+
+    expect(usersRepository.findOne).toHaveBeenCalledWith({
+      where: { email: 'test@dockus.com' },
+      withDeleted: true,
+    });
+  });
+
+  it('debe normalizar email al crear usuarios internamente', async () => {
+    const savedUser = buildUser({ email: 'test@dockus.com' });
+    usersRepository.save.mockResolvedValue(savedUser);
+
+    await service.create('  TeSt@DockUs.com  ', 'password123', 'Test', 'User');
+
+    expect(usersRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'test@dockus.com',
+      }),
+    );
+  });
+
+  it('debe traducir error de unicidad de BD a ConflictException al crear usuario', async () => {
     const dto: CreateUserDto = {
       email: 'existing@dockus.com',
       password: 'password123',
       firstName: 'Existing',
       lastName: 'User',
     };
-
-    usersRepository.findOne.mockResolvedValue(
-      buildUser({
-        email: dto.email,
-        deletedAt: new Date('2026-03-08T00:00:00.000Z'),
-      }),
-    );
+    const uniqueViolation = new QueryFailedError('INSERT INTO users', [], {
+      code: '23505',
+    });
+    usersRepository.save.mockRejectedValue(uniqueViolation);
 
     await expect(service.createFromDto(dto)).rejects.toBeInstanceOf(
       ConflictException,
     );
-    expect(usersRepository.findOne).toHaveBeenCalledWith({
-      where: { email: dto.email },
-      withDeleted: true,
-    });
+    expect(usersRepository.findOne).not.toHaveBeenCalled();
+    expect(usersRepository.save).toHaveBeenCalled();
   });
 
-  it('debe devolver todos los usuarios sin paginación', async () => {
+  it('debe devolver un listado paginado con metadatos y usuarios sanitizados', async () => {
     const users = [
       buildUser({
         id: '0f4f2a18-bb0d-46df-a4f1-7220f3d63021',
@@ -85,17 +114,97 @@ describe('UsersService', () => {
         role: UserRole.TEACHER,
       }),
     ];
+    queryBuilder.getManyAndCount.mockResolvedValue([users, 2]);
 
-    usersRepository.find.mockResolvedValue(users);
+    const result = await service.findAll({
+      page: 1,
+      limit: 20,
+      sortBy: 'createdAt',
+      sortOrder: 'DESC',
+    });
 
-    const result = await service.findAll();
-
-    expect(usersRepository.find).toHaveBeenCalled();
-    expect(result).toHaveLength(2);
-    expect(result[0].email).toBe('teacher@dockus.com');
+    expect(usersRepository.createQueryBuilder).toHaveBeenCalledWith('user');
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith('user.createdAt', 'DESC');
+    expect(queryBuilder.skip).toHaveBeenCalledWith(0);
+    expect(queryBuilder.take).toHaveBeenCalledWith(20);
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0].email).toBe('teacher@dockus.com');
     expect(
-      (result[0] as { passwordHash?: string }).passwordHash,
+      (result.data[0] as { passwordHash?: string }).passwordHash,
     ).toBeUndefined();
+    expect(result.meta).toEqual({
+      page: 1,
+      limit: 20,
+      total: 2,
+      totalPages: 1,
+      hasNextPage: false,
+      hasPrevPage: false,
+    });
+  });
+
+  it('debe aplicar filtros y orden seguro en el listado', async () => {
+    queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+    await service.findAll({
+      page: 2,
+      limit: 10,
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+      search: 'dock',
+      sortBy: 'email',
+      sortOrder: 'ASC',
+    });
+
+    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
+      1,
+      'user.role = :role',
+      { role: UserRole.ADMIN },
+    );
+    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
+      2,
+      'user.status = :status',
+      { status: UserStatus.ACTIVE },
+    );
+    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
+      3,
+      '(user.email ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search)',
+      { search: '%dock%' },
+    );
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith('user.email', 'ASC');
+    expect(queryBuilder.skip).toHaveBeenCalledWith(10);
+    expect(queryBuilder.take).toHaveBeenCalledWith(10);
+  });
+
+  it('debe normalizar email en update antes de persistir', async () => {
+    const existing = buildUser({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      email: 'existing@dockus.com',
+    });
+    const updated = buildUser({
+      id: existing.id,
+      email: 'new.email@dockus.com',
+    });
+
+    usersRepository.findOne
+      .mockResolvedValueOnce(existing)
+      .mockResolvedValueOnce(null);
+    usersRepository.save.mockResolvedValue(updated);
+
+    const result = await service.update(existing.id, {
+      email: '  New.Email@DockUs.com  ',
+    });
+
+    expect(usersRepository.findOne).toHaveBeenNthCalledWith(2, {
+      where: { email: 'new.email@dockus.com' },
+      withDeleted: true,
+    });
+    expect(usersRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: existing.id,
+        email: 'new.email@dockus.com',
+      }),
+    );
+    expect(result.email).toBe('new.email@dockus.com');
   });
 
   it('debe aplicar soft delete al eliminar identidad', async () => {

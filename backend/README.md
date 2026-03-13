@@ -1,54 +1,58 @@
 # DockUS - Backend
 
-Este directorio contiene el código fuente de la API principal, desarrollada utilizando **NestJS (versión 11)**. Arquitectura estructurada para ser altamente modular y escalable.
+API principal construida con NestJS 11 y TypeScript.
 
-## Estructura de Directorios Principal
+## Organización de carpetas (actual)
 
 ```text
-src/
-├── auth/            # IAM y Autenticación JWT / RBAC.
-├── users/           # Gestión de CRUD y ciclos de vida de Usuarios.
-├── app.module.ts    # Módulo raíz de la aplicación.
-└── main.ts          # Punto de entrada y configuración (Swagger, Helmet, Pino Logger, Throttler, Graceful Shutdown).
+backend/
+├── src/
+│   ├── config/                    # Contratos y validación de entorno
+│   │   └── env.validation.ts
+│   ├── infrastructure/            # Infraestructura transversal (no dominio)
+│   │   ├── infrastructure.module.ts
+│   │   ├── database/typeorm.config.ts
+│   │   ├── observability/logger.config.ts
+│   │   ├── queue/bull.config.ts
+│   │   └── security/throttler.config.ts
+│   ├── auth/                      # Contexto de autenticación y autorización
+│   ├── users/                     # Contexto de usuarios y RBAC
+│   ├── app.module.ts              # Composición de módulos
+│   ├── bootstrap.ts               # Configuración global HTTP compartida
+│   └── main.ts                    # Entry point del proceso
+├── test/                          # Suite e2e
+├── package.json
+└── tsconfig.json
 ```
 
-## Entorno Local
+## Criterio de diseño
 
-Asegúrate de tener levantada la base de datos (PostgreSQL), la cual debería idealmente orquestarse desde la raíz del proyecto usando Docker Compose (`docker compose up -d`).
+- Dominio en `auth/` y `users/`.
+- Infraestructura técnica en `infrastructure/`.
+- Configuración declarativa en `config/`.
+- `AppModule` como ensamblador, no como contenedor de lógica de infraestructura.
 
-Los requerimientos que necesita el backend para operar correctamente se encuentran listados como Variables de Entorno en el `.env`.  Usa el `.env.example` en la raíz si necesitas una plantilla base.
+## Entorno local
 
-## Scripts de Desarrollo
-
-Para la operativa diaria puedes emplear los siguientes comandos a través de `npm`:
+Desde la raíz del repo:
 
 ```bash
-# Desarrollo
-$ npm install
-$ npm run start:dev   # Inicia el proyecto en modo watch
-
-# Construcción
-$ npm run build       # Compila el TypeScript a JS en /dist
-
-# Calidad
-$ npm run lint        # Comprueba estándares de formateo
+docker compose up -d
+cd backend
+npm install
+npm run start:dev
 ```
 
-## Pruebas (Tests)
-
-El proyecto incluye tests unitarios automatizados que comprueban tanto controladores como servicios.
+## Scripts de trabajo
 
 ```bash
-# Ejecutar suite de testing unitario
-$ npm run test
+npm run lint
+npm run test
+npm run test:e2e
+npm run build
 ```
 
-## Migraciones y Base de Datos
+## Notas de configuración
 
-(Actualmente, y conforme al Roadmap, se utiliza la sincronización nativa de TypeORM por defecto o scripts similares en etapas iniciales. Documentar aquí flujo de migraciones manuales a medida que se implementen).
-
-## Convenciones de Código
-
-* **Eslint/Prettier**: Configuraciones globales ya aplicadas.
-* Patrón repositorio utilizado al interactuar con la Base de datos.
-* Todas las API's bajo el prefijo global de path `/api`.
+- El backend carga variables de entorno desde `../.env` (raíz del repositorio).
+- La validación de entorno se aplica en arranque con Joi (fail-fast).

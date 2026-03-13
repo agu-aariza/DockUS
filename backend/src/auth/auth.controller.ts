@@ -1,21 +1,11 @@
 /**
- * @fileoverview Auth Controller - Gestión de Identidad y Sesiones.
+ * @fileoverview Controlador de autenticación y sesión.
  *
- * ============================================================================
- * ENDPOINTS DE SEGURIDAD PERIMETRAL
- * ============================================================================
- *
- * Responsables de la exposición controlada de micro-servicios de autenticación.
- * Actuamos como la única frontera permitida entre la red pública y los datos de
- * identidad internos.
- *
- * Directivas Implementadas:
- * - DTO Validation en el punto de entrada (Fail-Fast a través de pipes).
- * - Generación automática de documentación OpenAPI (Swagger).
- * - Protección por Token en endpoints críticos.
+ * Contexto:
+ * - Expone endpoints de registro, login y perfil autenticado.
+ * - Aplica DTOs y guards para proteger el acceso.
  *
  * @module AuthController
- * @requires @nestjs/common
  */
 
 import {

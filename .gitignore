@@ -1,17 +1,22 @@
-# Dependencias del proyecto
+# Dependencias
 node_modules/
+backend/node_modules/
 
-# Archivos de construcción
+# Artefactos de build y cobertura
 dist/
-
-# Configuración y Secretos
-.env
-
-# Docker y Archivos de Registro
-*.log
-
-# Archivos de construcción
 build/
+coverage/
+backend/dist/
+backend/coverage/
+*.tsbuildinfo
 
-# Documentación
-docs/
+# Variables de entorno y secretos
+.env
+backend/.env
+.env.local
+.env.*.local
+
+# Archivos de editor y sistema
+.vscode/
+.idea/
+.DS_Store

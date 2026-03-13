@@ -1,19 +1,11 @@
 /**
- * @fileoverview Entidad User - Modelo de Datos de Identidad.
+ * @fileoverview Entidad TypeORM para persistencia de usuarios.
  *
- * ============================================================================
- * MODELO DE PERSISTENCIA Y AUDITORIA
- * ============================================================================
- *
- * Definimos el esquema estricto para la tabla 'users' en PostgreSQL mediante TypeORM.
- * Esta entidad incluye campos de auditoría automáticos para trazabilidad
- * de cambios y aplica roles por defecto (Principio de Menor Privilegio).
- *
- * El campo `passwordHash` NUNCA debe ser serializado ni retornado en
- * respuestas HTTP. La sanitización se maneja en la capa de Servicio.
+ * Contexto:
+ * - Modela columnas, estados, roles y metadatos de auditoría.
+ * - Define restricciones clave del dominio de identidad.
  *
  * @module User
- * @requires typeorm
  */
 
 import {

@@ -1,21 +1,11 @@
 /**
- * @fileoverview Users DTOs - Contratos de Operaciones CRUD.
+ * @fileoverview DTOs para creación y actualización de usuarios.
  *
- * ============================================================================
- * VALIDACION DE PAYLOADS DE IDENTIDAD
- * ============================================================================
- *
- * Definimos la estructura formal de los datos de entrada para la gestión de usuarios.
- * Utilizamos decoradores de `class-validator` para asegurar la integridad
- * del esquema antes de procesar las peticiones en el servicio.
- *
- * Políticas de Validación:
- * - Tipo de Roles: Valores permitidos definidos en `UserRole`.
- * - Password: Longitud mínima requerida para seguridad.
+ * Contexto:
+ * - Define validaciones de campos para operaciones de usuario.
+ * - Restringe tipos permitidos y reglas de integridad.
  *
  * @module UserDto
- * @requires class-validator
- * @requires @nestjs/swagger
  */
 
 import {

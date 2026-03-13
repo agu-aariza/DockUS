@@ -1,24 +1,11 @@
-﻿/**
- * @fileoverview Users Controller - Gestión Administrativa de Identidades.
+/**
+ * @fileoverview Controlador administrativo de usuarios.
  *
- * ============================================================================
- * ENDPOINTS DE ADMINISTRACION Y RBAC
- * ============================================================================
- *
- * Proporcionamos los puntos de entrada para la gestión delegada de usuarios.
- * Estos endpoints están protegidos por una doble capa de seguridad:
- * 1. Autenticación Stateless (JWT).
- * 2. Autorización por Roles (RolesGuard).
- *
- * Políticas de Acceso:
- * - `ADMIN`: Acceso total a operaciones de lectura, escritura y borrado lógico.
- * - `TEACHER`: Acceso limitado a operaciones de consulta (Read-only).
- * - `STUDENT`: Acceso denegado a este controlador. La gestión de perfil propio
- *   se realiza a través del AuthModule.
+ * Contexto:
+ * - Expone endpoints CRUD protegidos por JWT y RBAC.
+ * - Delega reglas de negocio al UsersService.
  *
  * @module UsersController
- * @requires @nestjs/common
- * @requires @nestjs/swagger
  */
 
 import {
@@ -29,6 +16,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
   UseGuards,
   ParseUUIDPipe,
   NotFoundException,
@@ -44,6 +32,7 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
 import { UserRole, UserStatus } from './entities/user.entity';
@@ -106,7 +95,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Listar todas las identidades',
     description:
-      'Recuperamos el pool de usuarios en formato de listado plano (Sólo ADMIN/TEACHER).',
+      'Recuperamos el pool de usuarios paginado y filtrable (Sólo ADMIN/TEACHER).',
   })
   @ApiResponse({
     status: 200,
@@ -126,8 +115,8 @@ export class UsersController {
   })
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Get()
-  async findAll() {
-    return this.usersService.findAll();
+  async findAll(@Query() query: ListUsersQueryDto) {
+    return this.usersService.findAll(query);
   }
 
   /**

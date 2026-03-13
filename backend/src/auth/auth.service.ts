@@ -1,31 +1,14 @@
 /**
- * @fileoverview Auth Service - Controlador Lógico de Seguridad Perimetral.
+ * @fileoverview Servicio de negocio para registro e inicio de sesión.
  *
- * ============================================================================
- * NUCLEO DE AUTENTICACION Y GENERACION DE TOKENS
- * ============================================================================
- *
- * Servicio centralizado para orchestrar el registro seguro de identidades y
- * el ciclo de vida de validación de sesiones (Login/Token issuance).
- *
- * Políticas de Seguridad Implementadas:
- * - Uso de JWT firmados simétricamente sin estado (stateless) para escalar
- *   horizontalmente.
- * - Validación cruzada con el módulo de identidad (UsersService) aislando la
- *   capa de la base de datos de las peticiones HTTP directas.
- * - Respuestas de error genéricas (por ejemplo, en login fallido) para evitar
- *   fugas de información y ataques de enumeración (CWE-200).
+ * Contexto:
+ * - Coordina validación de usuarios y emisión de JWT.
+ * - Define respuestas de error consistentes para seguridad.
  *
  * @module AuthService
- * @requires @nestjs/common
- * @requires @nestjs/jwt
  */
 
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
@@ -58,15 +41,8 @@ export class AuthService {
   /**
    * Registramos una nueva identidad en el pool asegurado de usuarios y
    * proveemos un token para un inicio de sesión inmediato (Seamless Auth).
-   *
-   * @throws {ConflictException} Mitigación contra registros duplicados.
    */
   async register(dto: RegisterDto): Promise<AuthResponse> {
-    const existingUser = await this.usersService.findByEmail(dto.email, true);
-    if (existingUser) {
-      throw new ConflictException('El email ya está registrado en el sistema.');
-    }
-
     const user = await this.usersService.create(
       dto.email,
       dto.password,
@@ -84,9 +60,6 @@ export class AuthService {
 
   /**
    * Interfaz de validación de credenciales en tiempo constante.
-   *
-   * IMPORTANTE: Utilizamos UnauthorizedException estándar en ambos fallos
-   * (usuario no existe o password inválido) para mitigar el User Enumeration.
    */
   async login(dto: LoginDto): Promise<AuthResponse> {
     const user = await this.validateLoginIdentity(dto);

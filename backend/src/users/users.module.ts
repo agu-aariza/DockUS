@@ -1,16 +1,13 @@
 /**
- * @fileoverview Users Module Configuration - Configuración del Módulo de Usuarios.
+ * @fileoverview Módulo de identidad y administración de usuarios.
  *
- * ============================================================================
- * CONFIGURACION DEL MODULO DE IDENTIDAD
- * ============================================================================
- *
- * Definimos el contexto de inyección de dependencias para la capa de Identidad.
- * Registramos el controlador para permitir la gestión administrativa y exportamos
- * el servicio para la validación de sesiones en el módulo de autenticación.
+ * Contexto:
+ * - Registra entidad, servicio y controlador del dominio users.
+ * - Exporta UsersService para consumo en auth.
  *
  * @module UsersModule
  */
+
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';

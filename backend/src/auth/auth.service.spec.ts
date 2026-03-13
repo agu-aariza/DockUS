@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Pruebas unitarias de flujos de autenticación.
+ *
+ * Contexto:
+ * - Cubre login válido, credenciales inválidas y cuentas no activas.
+ * - Verifica manejo de conflicto en registro duplicado.
+ *
+ * @module AuthServiceSpec
+ */
+
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
@@ -113,12 +123,19 @@ describe('AuthService', () => {
       lastName: 'Email',
     };
 
-    usersService.findByEmail.mockResolvedValue(buildUser({ email: dto.email }));
+    usersService.create.mockRejectedValue(
+      new ConflictException('El email ya está registrado en el sistema.'),
+    );
 
     await expect(service.register(dto)).rejects.toBeInstanceOf(
       ConflictException,
     );
-    expect(usersService.findByEmail).toHaveBeenCalledWith(dto.email, true);
-    expect(usersService.create).not.toHaveBeenCalled();
+    expect(usersService.findByEmail).not.toHaveBeenCalled();
+    expect(usersService.create).toHaveBeenCalledWith(
+      dto.email,
+      dto.password,
+      dto.firstName,
+      dto.lastName,
+    );
   });
 });

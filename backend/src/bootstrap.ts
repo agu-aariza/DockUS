@@ -1,0 +1,81 @@
+/**
+ * @fileoverview Inicialización global compartida de la aplicación.
+ *
+ * Contexto:
+ * - Aplica middleware, validación, CORS y logger de forma centralizada.
+ * - Permite reutilizar la misma configuración en main y e2e.
+ *
+ * @module AppBootstrap
+ */
+
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
+import { Logger } from 'nestjs-pino';
+
+/** Opciones para adaptar la inicialización al contexto de ejecución. */
+interface BootstrapOptions {
+  enableSwagger?: boolean;
+  enableShutdownHooks?: boolean;
+}
+
+/** Valores por defecto para la API en ejecución normal. */
+const DEFAULT_BOOTSTRAP_OPTIONS: Required<BootstrapOptions> = {
+  enableSwagger: true,
+  enableShutdownHooks: true,
+};
+
+export function applyAppBootstrap(
+  app: INestApplication,
+  options: BootstrapOptions = {},
+): void {
+  // Combinamos los valores por defecto con las opciones del entorno.
+  const { enableSwagger, enableShutdownHooks } = {
+    ...DEFAULT_BOOTSTRAP_OPTIONS,
+    ...options,
+  };
+
+  // Pipeline global de entrada y endurecimiento HTTP.
+  app.setGlobalPrefix('api');
+  app.useLogger(app.get(Logger));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  app.use(helmet());
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+  });
+
+  if (enableShutdownHooks) {
+    app.enableShutdownHooks();
+  }
+
+  // Portal OpenAPI opcional.
+  if (enableSwagger) {
+    const config = new DocumentBuilder()
+      .setTitle('DockUS API')
+      .setDescription(
+        'Especificación técnica de los microservicios de DockUS para la gestión de entornos reproducibles.',
+      )
+      .setVersion('1.3.0')
+      .addBearerAuth()
+      .addTag(
+        'Identity Access Management (IAM)',
+        'Endpoints de registro, login y perfil',
+      )
+      .addTag(
+        'User Administration (RBAC)',
+        'Gestión administrativa de usuarios con control de roles',
+      )
+      .addTag('System Health', 'Health checks y monitoreo de infraestructura')
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+  }
+}

@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Pruebas unitarias de la estrategia JWT.
+ *
+ * Contexto:
+ * - Valida reconstrucción de identidad desde base de datos.
+ * - Asegura rechazo de usuarios inactivos o no existentes.
+ *
+ * @module JwtStrategySpec
+ */
+
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
@@ -31,6 +41,7 @@ describe('JwtStrategy', () => {
   beforeEach(() => {
     const configService = {
       get: jest.fn().mockReturnValue('super-secret-key'),
+      getOrThrow: jest.fn().mockReturnValue('super-secret-key'),
     } as unknown as ConfigService;
 
     usersService = {

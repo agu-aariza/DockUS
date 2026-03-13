@@ -1,16 +1,11 @@
 /**
- * @fileoverview App Controller - Gateway Root y Healthchecks.
+ * @fileoverview Controlador HTTP para endpoints base de estado.
  *
- * ============================================================================
- * ENDPOINTS DE ESTADO DEL SISTEMA
- * ============================================================================
- *
- * Este controlador expone los puntos de entrada básicos para la verificación
- * de operatividad del microservicio (Liveness/Readiness).
+ * Contexto:
+ * - Expone rutas públicas de salud y disponibilidad.
+ * - Delega la respuesta de negocio en AppService.
  *
  * @module AppController
- * @requires @nestjs/common
- * @requires @nestjs/swagger
  */
 
 import { Controller, Get } from '@nestjs/common';

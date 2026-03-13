@@ -1,19 +1,13 @@
 /**
- * @fileoverview Auth Module - Factoría de Políticas IAM.
+ * @fileoverview Módulo de autenticación y estrategias JWT.
  *
- * ============================================================================
- * CONFIGURACION DE CONTEXTO DE AUTENTICACION
- * ============================================================================
- *
- * Definimos de manera centralizada la inyección de dependencias y las estrategias
- * de Passport.
- *
- * Parámetros Operacionales:
- * - Integramos `JwtModule` inyectando dinámicamente variables del entorno
- *   (ConfigService) garantizando políticas de "Zero Trust".
+ * Contexto:
+ * - Configura providers de auth, controller y Passport.
+ * - Registra JwtModule con configuración desde entorno.
  *
  * @module AuthModule
  */
+
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -32,7 +26,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get('JWT_SECRET'),
+        secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: { expiresIn: configService.get('JWT_EXPIRES_IN') || '1d' },
       }),
     }),

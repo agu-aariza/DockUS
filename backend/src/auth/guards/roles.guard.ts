@@ -1,25 +1,11 @@
 /**
- * @fileoverview Roles Guard y Decorador @Roles - Control de Acceso RBAC.
+ * @fileoverview Guard y decorador para autorización por roles.
  *
- * ============================================================================
- * CAPA DE AUTORIZACION BASADA EN ROLES (RBAC)
- * ============================================================================
- *
- * Implementamos un mecanismo de control de acceso granular para proteger los
- * recursos del sistema. Esta capa de seguridad permite definir quó roles
- * específicos pueden interactuar con cada controlador o endpoint.
- *
- * Componentes:
- * - `Roles`: Decorador de metadatos para asignar permisos.
- * - `RolesGuard`: Guardión lógico que evalóa el contexto de seguridad.
- *
- * Polóticas de Seguridad:
- * - Denegación por defecto: Si un endpoint requiere roles, el usuario debe poseer uno.
- * - Integración con JWT: Utiliza el objeto 'user' previamente establecido por el proceso de validación de tokens JWT.
+ * Contexto:
+ * - Define el decorador Roles para metadatos RBAC.
+ * - Evalúa permisos del usuario autenticado por ruta.
  *
  * @module RolesGuard
- * @requires @nestjs/common
- * @requires @nestjs/core
  */
 
 import {
@@ -37,56 +23,51 @@ interface AuthenticatedRequest {
   };
 }
 
-/**
- * Clave de metadatos para la persistencia de roles requeridos en el Reflector.
- * @constant {string}
- */
+/** Clave de metadatos usada por el decorador `@Roles`. */
 export const ROLES_KEY = 'roles';
 
 /**
- * Decorador de Clase/Mótodo para la asignación de permisos RBAC.
+ * Decorador de clase/método para declarar roles permitidos.
  *
- * @param {UserRole[]} roles - Lista de roles autorizados para el recurso.
- * @returns {CustomDecorator} Decorador de metadatos de NestJS.
+ * @param roles Lista de roles autorizados para el recurso.
  */
 export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   /**
-   * Inyectamos el Reflector para acceder a los metadatos de los controladores.
-   * @param {Reflector} reflector - Utilidad de consulta de metadatos de NestJS.
+   * Inyecta el reflector para leer metadatos definidos con `@Roles`.
    */
   constructor(private reflector: Reflector) {}
 
   /**
-   * Evaluamos si la identidad actual posee los privilegios necesarios.
+   * Evalúa si la identidad actual posee los privilegios necesarios.
    *
-   * @param {ExecutionContext} context - Contexto de la petición HTTP actual.
-   * @returns {boolean} Resultado de la validación de acceso.
+   * @param context Contexto de la petición HTTP actual.
+   * @returns `true` si el usuario está autorizado.
    */
   canActivate(context: ExecutionContext): boolean {
-    // Recuperamos los roles configurados mediante el decorador @Roles.
+    // Recupera roles declarados en método o controlador.
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
       ROLES_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    // Si el recurso no tiene restricciones de rol, permitimos el paso (solo JWT requerido).
+    // Si no hay restricciones de rol, se permite el paso.
     if (!requiredRoles) {
       return true;
     }
 
-    // Extraemos la identidad del usuario inyectada previamente por el Firewall de JWT.
+    // Obtiene la identidad cargada previamente por JwtAuthGuard.
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const currentUserRole = request.user?.role;
 
-    // Si no existe rol en el contexto, denegamos por política de mínimo privilegio.
+    // Si no hay rol en el contexto, deniega por mínimo privilegio.
     if (!currentUserRole) {
       return false;
     }
 
-    // Verificamos si el rol asignado a la identidad está incluido en los roles permitidos.
+    // Autoriza solo si el rol actual está dentro de los permitidos.
     return requiredRoles.includes(currentUserRole);
   }
 }
