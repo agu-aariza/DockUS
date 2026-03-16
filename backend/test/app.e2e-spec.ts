@@ -17,6 +17,7 @@ import { Repository } from 'typeorm';
 import { AppModule } from './../src/app.module';
 import { applyAppBootstrap } from './../src/bootstrap';
 import { User, UserRole } from './../src/modules/users/entities/user.entity';
+import { UsersService } from './../src/modules/users/users.service';
 
 interface AuthApiResponse {
   user: {
@@ -35,7 +36,6 @@ interface LivenessApiResponse {
 interface DependencyCheck {
   status: 'up' | 'down';
   latencyMs: number;
-  details?: string;
 }
 
 interface ReadinessApiResponse {
@@ -70,8 +70,11 @@ interface ProfileApiResponse {
 const TEST_PASSWORD = 'DockUs!Pass123';
 
 describe('DockUS API (e2e)', () => {
+  jest.setTimeout(20000);
+
   let app: INestApplication<App>;
   let usersRepository: Repository<User>;
+  let usersService: UsersService;
   const createdUserIds: string[] = [];
 
   let studentIdentity: AuthApiResponse;
@@ -117,7 +120,7 @@ describe('DockUS API (e2e)', () => {
 
     const teacherEmail = createUniqueEmail('teacher');
     const teacherIdentity = await registerIdentity(teacherEmail);
-    await usersRepository.update(teacherIdentity.user.id, {
+    await usersService.update(teacherIdentity.user.id, {
       role: UserRole.TEACHER,
     });
     teacherToken = (await loginIdentity(teacherIdentity.user.email))
@@ -138,22 +141,22 @@ describe('DockUS API (e2e)', () => {
     await app.init();
 
     usersRepository = app.get<Repository<User>>(getRepositoryToken(User));
+    usersService = app.get(UsersService);
     await prepareRbacIdentities();
   });
 
   afterAll(async () => {
-    if (createdUserIds.length > 0) {
+    if (usersRepository && createdUserIds.length > 0) {
       await usersRepository.delete(createdUserIds);
     }
 
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
-  it('/api (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/api')
-      .expect(200)
-      .expect('Hello World!');
+  it('/api (GET) debe responder 404 al no exponer alias en la raíz', () => {
+    return request(app.getHttpServer()).get('/api').expect(404);
   });
 
   it('/ (GET) debe responder 404 por prefijo global /api', () => {

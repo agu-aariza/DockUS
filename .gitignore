@@ -20,3 +20,6 @@ backend/.env
 .vscode/
 .idea/
 .DS_Store
+
+# Ficheros de documentación
+docs/

@@ -9,7 +9,7 @@ Plataforma para entornos reproducibles y evaluación de proyectos, con backend e
 ## Estado actual
 
 - Backend operativo con NestJS 11 + TypeScript.
-- Módulos de dominio: `auth` y `users`.
+- Módulos de dominio: `auth`, `users` y `health`.
 - Capa de infraestructura separada (`config` + `infrastructure`) para configuración, logging, rate limit, PostgreSQL y Redis/BullMQ.
 - Hardening activo: Helmet, Throttler, validación global y logging estructurado con Pino.
 - CI en GitHub Actions con lint, auditoría, build, tests unitarios y e2e.
@@ -37,7 +37,7 @@ Documentación más detallada del backend: [backend/README.md](./backend/README.
 
 ## Requisitos
 
-- Node.js >= 20
+- Node.js 22
 - npm >= 9
 - Docker + Docker Compose v2
 
@@ -51,14 +51,14 @@ cp .env.example .env
 docker compose up -d
 
 # 3) Levantar API
-cd backend
-npm ci
-npm run start:dev
+npm --prefix backend ci
+npm --prefix backend run start:dev
 ```
 
 Con la API levantada:
 
-- Health check: `GET http://localhost:3000/api`
+- Liveness oficial: `GET http://localhost:3000/api/health/live`
+- Readiness oficial: `GET http://localhost:3000/api/health/readiness`
 - Swagger: `GET http://localhost:3000/api/docs`
 
 ## Endpoints principales
@@ -80,6 +80,7 @@ Con la API levantada:
 - `PATCH /api/users/:id/status/:status` (ADMIN)
 
 Parámetros de listado en `GET /api/users`:
+
 - `page`, `limit`
 - `role`, `status`, `search`
 - `sortBy`, `sortOrder`
@@ -139,14 +140,15 @@ Nota: `DATABASE_URL` puede existir para tooling externo, pero la configuración 
 
 ## Scripts útiles
 
-Desde `backend/`:
+Desde la raíz del repo:
 
 ```bash
-npm run start:dev
-npm run build
-npm run lint
-npm run test
-npm run test:e2e
+npm --prefix backend run start:dev
+npm --prefix backend run build
+npm --prefix backend run lint
+npm --prefix backend run lint:fix
+npm --prefix backend run test
+npm --prefix backend run test:e2e
 ```
 
 ## Calidad y flujo

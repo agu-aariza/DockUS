@@ -63,9 +63,9 @@ export class User {
 
   /**
    * Credencial de autenticación cifrada.
-   * ALERTA DE SEGURIDAD: Nunca debemos exponer este campo.
+   * Solo se selecciona de forma explícita en el flujo de autenticación.
    */
-  @Column()
+  @Column({ select: false })
   passwordHash: string;
 
   /** Nivel de autorización del usuario (RBAC). */

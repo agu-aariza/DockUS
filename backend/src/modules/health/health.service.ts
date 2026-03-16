@@ -9,9 +9,9 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
+import { Logger } from 'nestjs-pino';
 import { DataSource } from 'typeorm';
+import { RedisClientService } from '../../shared/infrastructure/cache/redis-client.service';
 
 type DependencyStatus = 'up' | 'down';
 type ReadinessStatus = 'ok' | 'error';
@@ -19,7 +19,6 @@ type ReadinessStatus = 'ok' | 'error';
 interface DependencyHealth {
   status: DependencyStatus;
   latencyMs: number;
-  details?: string;
 }
 
 export interface LivenessReport {
@@ -36,19 +35,16 @@ export interface ReadinessReport {
   };
 }
 
-const REDIS_TIMEOUT_MS = 2000;
-
 @Injectable()
 export class HealthService {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly configService: ConfigService,
+    private readonly redisClient: RedisClientService,
+    private readonly logger: Logger,
   ) {}
 
   /**
-   * Indicador de vida del proceso HTTP principal.
-   *
-   * @returns Reporte mínimo para sondas de liveness.
+   * Devuelve el estado básico de liveness del proceso HTTP.
    */
   getLiveness(): LivenessReport {
     return {
@@ -58,9 +54,7 @@ export class HealthService {
   }
 
   /**
-   * Indicador de preparación del servicio con dependencias externas.
-   *
-   * @returns Reporte consolidado de estado de base de datos y Redis.
+   * Comprueba si las dependencias críticas están listas para recibir tráfico.
    */
   async getReadiness(): Promise<ReadinessReport> {
     const [database, redis] = await Promise.all([
@@ -79,9 +73,7 @@ export class HealthService {
   }
 
   /**
-   * Chequeo activo de conectividad con PostgreSQL.
-   *
-   * @returns Estado de disponibilidad de la base de datos.
+   * Comprueba conectividad con PostgreSQL.
    */
   private async checkDatabase(): Promise<DependencyHealth> {
     const startedAt = Date.now();
@@ -93,37 +85,22 @@ export class HealthService {
         latencyMs: Date.now() - startedAt,
       };
     } catch (error) {
+      this.logDependencyError('PostgreSQL', error);
       return {
         status: 'down',
         latencyMs: Date.now() - startedAt,
-        details: this.getErrorMessage(error),
       };
     }
   }
 
   /**
-   * Chequeo activo de conectividad con Redis usando PING.
-   *
-   * @returns Estado de disponibilidad de Redis.
+   * Comprueba conectividad con Redis mediante PING.
    */
   private async checkRedis(): Promise<DependencyHealth> {
     const startedAt = Date.now();
-    const redisHost = this.configService.get<string>('REDIS_HOST', 'localhost');
-    const redisPort = this.configService.get<number>('REDIS_PORT', 6379);
-
-    const redisClient = new Redis({
-      host: redisHost,
-      port: redisPort,
-      lazyConnect: true,
-      connectTimeout: REDIS_TIMEOUT_MS,
-      enableOfflineQueue: false,
-      maxRetriesPerRequest: 0,
-      retryStrategy: () => null,
-    });
 
     try {
-      await redisClient.connect();
-      const pong = await redisClient.ping();
+      const pong = await this.redisClient.ping();
 
       if (pong !== 'PONG') {
         throw new Error('Redis no respondió correctamente al comando PING.');
@@ -134,14 +111,20 @@ export class HealthService {
         latencyMs: Date.now() - startedAt,
       };
     } catch (error) {
+      this.logDependencyError('Redis', error);
       return {
         status: 'down',
         latencyMs: Date.now() - startedAt,
-        details: this.getErrorMessage(error),
       };
-    } finally {
-      redisClient.disconnect();
     }
+  }
+
+  private logDependencyError(dependencyName: string, error: unknown): void {
+    this.logger.error(
+      `Healthcheck de ${dependencyName} falló: ${this.getErrorMessage(error)}`,
+      undefined,
+      HealthService.name,
+    );
   }
 
   private getErrorMessage(error: unknown): string {

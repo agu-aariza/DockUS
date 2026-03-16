@@ -33,7 +33,7 @@ describe('AuthService', () => {
   let service: AuthService;
 
   let usersService: {
-    findByEmail: jest.MockedFunction<UsersService['findByEmail']>;
+    findByEmailForAuth: jest.MockedFunction<UsersService['findByEmailForAuth']>;
     create: jest.MockedFunction<UsersService['create']>;
     validatePassword: jest.MockedFunction<UsersService['validatePassword']>;
     assertAccountIsActive: jest.MockedFunction<
@@ -47,7 +47,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     usersService = {
-      findByEmail: jest.fn(),
+      findByEmailForAuth: jest.fn(),
       create: jest.fn(),
       validatePassword: jest.fn(),
       assertAccountIsActive: jest.fn(),
@@ -70,16 +70,19 @@ describe('AuthService', () => {
     };
     const user = buildUser();
 
-    usersService.findByEmail.mockResolvedValue(user);
+    usersService.findByEmailForAuth.mockResolvedValue(user);
     usersService.assertAccountIsActive.mockReturnValue(user);
     usersService.validatePassword.mockResolvedValue(true);
 
     const response = await service.login(dto);
 
-    expect(usersService.findByEmail).toHaveBeenCalledWith(dto.email, true);
+    expect(usersService.findByEmailForAuth).toHaveBeenCalledWith(
+      dto.email,
+      true,
+    );
     expect(usersService.assertAccountIsActive).toHaveBeenCalledWith(user);
     expect(usersService.validatePassword).toHaveBeenCalledWith(
-      user,
+      user.passwordHash,
       dto.password,
     );
     expect(jwtService.sign).toHaveBeenCalledWith({
@@ -103,7 +106,7 @@ describe('AuthService', () => {
       status: UserStatus.INACTIVE,
     });
 
-    usersService.findByEmail.mockResolvedValue(inactiveUser);
+    usersService.findByEmailForAuth.mockResolvedValue(inactiveUser);
     usersService.assertAccountIsActive.mockImplementation(() => {
       throw new UnauthorizedException('Credenciales inválidas proporcionadas.');
     });
@@ -111,7 +114,10 @@ describe('AuthService', () => {
     await expect(service.login(dto)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
-    expect(usersService.findByEmail).toHaveBeenCalledWith(dto.email, true);
+    expect(usersService.findByEmailForAuth).toHaveBeenCalledWith(
+      dto.email,
+      true,
+    );
     expect(usersService.validatePassword).not.toHaveBeenCalled();
   });
 
@@ -130,7 +136,7 @@ describe('AuthService', () => {
     await expect(service.register(dto)).rejects.toBeInstanceOf(
       ConflictException,
     );
-    expect(usersService.findByEmail).not.toHaveBeenCalled();
+    expect(usersService.findByEmailForAuth).not.toHaveBeenCalled();
     expect(usersService.create).toHaveBeenCalledWith(
       dto.email,
       dto.password,

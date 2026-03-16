@@ -34,22 +34,25 @@ backend/
 Desde la raíz del repo:
 
 ```bash
+cp .env.example .env
 docker compose up -d
-cd backend
-npm install
-npm run start:dev
+npm --prefix backend ci
+npm --prefix backend run start:dev
 ```
 
 ## Scripts de trabajo
 
 ```bash
-npm run lint
-npm run test
-npm run test:e2e
-npm run build
+npm --prefix backend run lint
+npm --prefix backend run lint:fix
+npm --prefix backend run test
+npm --prefix backend run test:e2e -- --runInBand
+npm --prefix backend run build
 ```
 
 ## Notas de configuración
 
 - El backend carga variables de entorno desde `../.env` (raíz del repositorio).
 - La validación de entorno se aplica en arranque con Joi (fail-fast).
+- `GET /api/health/live` y `GET /api/health/readiness` son los endpoints oficiales de health.
+- Node 22 es la versión recomendada para desarrollo local y CI.

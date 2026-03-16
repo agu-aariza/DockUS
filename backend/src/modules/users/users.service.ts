@@ -21,7 +21,6 @@ import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
 import { ListUsersQueryDto, UserSortField } from './dto/list-users-query.dto';
 import * as bcrypt from 'bcrypt';
 
-/** Parametro de Seguridad: Factor de trabajo de bcrypt. Minimo 10 recomendado para produccion. */
 const BCRYPT_SALT_ROUNDS = 10;
 const USER_SORT_COLUMNS: Record<UserSortField, string> = {
   createdAt: 'user.createdAt',
@@ -49,21 +48,13 @@ export interface PaginatedUsersResponse {
 
 @Injectable()
 export class UsersService {
-  /**
-   * Inyectamos el repositorio de usuarios de TypeORM.
-   * @param {Repository<User>} usersRepository - Orquestador de persistencia de usuarios.
-   */
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    private readonly usersRepository: Repository<User>,
   ) {}
 
   /**
-   * Recuperamos una identidad de usuario por email para la verificacion de autenticacion.
-   *
-   * @param {string} email - Cadena de direccion de email normalizada.
-   * @param {boolean} includeDeleted - Flag para incluir registros en estado 'Soft Delete'.
-   * @returns {Promise<User | null>} Entidad User incluyendo el passwordHash para validacion, o null.
+   * Busca un usuario por email sin incluir secretos por defecto.
    */
   async findByEmail(
     email: string,
@@ -77,11 +68,29 @@ export class UsersService {
   }
 
   /**
-   * Recuperamos una identidad de usuario por su UUID.
+   * Busca un usuario por email incluyendo explícitamente el hash de contraseña.
    *
-   * @param {string} id - Cadena UUID v4 valida.
-   * @param {boolean} includeDeleted - Flag para incluir registros en estado 'Soft Delete'.
-   * @returns {Promise<User | null>} Entidad User, o null.
+   * Este método queda reservado al flujo de autenticación.
+   */
+  async findByEmailForAuth(
+    email: string,
+    includeDeleted = false,
+  ): Promise<User | null> {
+    const normalizedEmail = this.normalizeEmail(email);
+    const queryBuilder = this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .where('user.email = :email', { email: normalizedEmail });
+
+    if (includeDeleted) {
+      queryBuilder.withDeleted();
+    }
+
+    return queryBuilder.getOne();
+  }
+
+  /**
+   * Busca una identidad por UUID.
    */
   async findById(id: string, includeDeleted = false): Promise<User | null> {
     return this.usersRepository.findOne({
@@ -91,9 +100,7 @@ export class UsersService {
   }
 
   /**
-   * Recuperamos identidades de forma paginada, filtrable y ordenada.
-   *
-   * @returns {Promise<PaginatedUsersResponse>} Segmento de usuarios y metadatos de paginacion.
+   * Lista usuarios de forma paginada, filtrable y ordenada.
    */
   async findAll(query: ListUsersQueryDto): Promise<PaginatedUsersResponse> {
     const page = query.page ?? 1;
@@ -141,13 +148,9 @@ export class UsersService {
   }
 
   /**
-   * Aprovisionamos una nueva identidad de usuario en la base de datos (Uso Interno).
+   * Crea un usuario para flujos internos.
    *
-   * @param {string} email - Direccion de correo electronico validada.
-   * @param {string} password - Contrasena en texto plano (sera hasheada criptograficamente).
-   * @param {string} firstName - Nombre del usuario.
-   * @param {string} lastName - Apellido del usuario.
-   * @returns {Promise<User>} La nueva entidad de User aprovisionada.
+   * El email permanece reservado incluso si existe un soft delete previo.
    */
   async create(
     email: string,
@@ -172,10 +175,7 @@ export class UsersService {
   }
 
   /**
-   * Aprovisionamos una nueva identidad de usuario a partir de un DTO (Uso Externo API).
-   *
-   * @param {CreateUserDto} dto - Datos estructurados del nuevo usuario.
-   * @returns {Promise<Omit<User, 'passwordHash'>>} Usuario creado sanitizado.
+   * Crea un usuario a partir de un DTO administrativo.
    */
   async createFromDto(dto: CreateUserDto): Promise<Omit<User, 'passwordHash'>> {
     const normalizedEmail = this.normalizeEmail(dto.email);
@@ -200,11 +200,7 @@ export class UsersService {
   }
 
   /**
-   * Actualizamos parcialmente una identidad existente.
-   *
-   * @param {string} id - UUID del usuario.
-   * @param {UpdateUserDto} dto - Campos a modificar.
-   * @returns {Promise<Omit<User, 'passwordHash'>>} Usuario actualizado sanitizado.
+   * Actualiza parcialmente una identidad existente.
    */
   async update(
     id: string,
@@ -254,11 +250,7 @@ export class UsersService {
   }
 
   /**
-   * Ejecutamos un borrado logico (Soft Delete) de la identidad.
-   * El registro permanece en la BD con deletedAt poblado para auditoria.
-   *
-   * @param {string} id - UUID del usuario.
-   * @returns {Promise<{ message: string }>} Confirmacion de la operacion.
+   * Aplica un borrado lógico sobre la identidad.
    */
   async remove(id: string): Promise<{ message: string }> {
     const user = await this.findById(id);
@@ -270,10 +262,7 @@ export class UsersService {
   }
 
   /**
-   * Restauramos una identidad previamente eliminada logicamente.
-   *
-   * @param {string} id - UUID del usuario a recuperar.
-   * @returns {Promise<Omit<User, 'passwordHash'>>} Usuario restaurado sanitizado.
+   * Restaura una identidad eliminada lógicamente.
    */
   async restore(id: string): Promise<Omit<User, 'passwordHash'>> {
     const user = await this.findById(id, true);
@@ -300,11 +289,7 @@ export class UsersService {
   }
 
   /**
-   * Mutacion forzada del estado de la cuenta (Gestion de Ciclo de Vida).
-   *
-   * @param {string} id - UUID del usuario.
-   * @param {UserStatus} status - Nuevo estado objetivo.
-   * @returns {Promise<Omit<User, 'passwordHash'>>} Usuario con estado actualizado.
+   * Cambia el estado operativo de una cuenta.
    */
   async updateStatus(
     id: string,
@@ -323,23 +308,17 @@ export class UsersService {
   }
 
   /**
-   * Verificamos criptograficamente una contrasena en texto claro contra un hash almacenado.
-   *
-   * @param {User} user - Entidad del usuario objetivo.
-   * @param {string} password - Contrasena en texto claro provista.
-   * @returns {Promise<boolean>} Booleano indicando validacion exitosa.
+   * Compara una contraseña en texto claro contra un hash almacenado.
    */
-  async validatePassword(user: User, password: string): Promise<boolean> {
-    return bcrypt.compare(password, user.passwordHash);
+  async validatePassword(
+    passwordHash: string,
+    password: string,
+  ): Promise<boolean> {
+    return bcrypt.compare(password, passwordHash);
   }
 
   /**
-   * Validamos que una identidad se encuentre activa y habilitada para autenticacion.
-   *
-   * @param {User | null} user - Entidad de usuario obtenida desde persistencia.
-   * @param {string} unauthorizedMessage - Mensaje homogeneo para denegar acceso.
-   * @returns {User} Entidad validada y apta para emision/uso de sesion.
-   * @throws {UnauthorizedException} Si la identidad esta ausente, suspendida o eliminada.
+   * Valida que una identidad siga activa para autenticar o autorizar.
    */
   assertAccountIsActive(
     user: User | null,
@@ -357,10 +336,7 @@ export class UsersService {
   }
 
   /**
-   * Sanitizador de datos: Extraemos credenciales sensibles del objeto de usuario.
-   *
-   * @param {User} user - Entidad de usuario cruda (raw).
-   * @returns {Omit<User, 'passwordHash'>} Objeto de usuario sanitizado.
+   * Elimina datos sensibles antes de devolver un usuario fuera del dominio.
    */
   sanitizeUser(user: User): Omit<User, 'passwordHash'> {
     const sanitized = { ...user } as Omit<User, 'passwordHash'> & {
@@ -371,9 +347,7 @@ export class UsersService {
   }
 
   /**
-   * Traduce violaciones de unicidad de PostgreSQL a errores de dominio HTTP 409.
-   *
-   * Evitamos condiciones de carrera "check-then-insert": la BD decide unicidad.
+   * Traduce violaciones de unicidad de PostgreSQL a errores HTTP de dominio.
    */
   private rethrowIfUniqueEmailViolation(
     error: unknown,

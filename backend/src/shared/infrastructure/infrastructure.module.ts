@@ -15,6 +15,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import { envValidationSchema } from '../config/env.validation';
+import { RedisClientService } from './cache/redis-client.service';
 import { buildTypeOrmConfig } from './database/typeorm.config';
 import { buildPinoHttpConfig } from './observability/logger.config';
 import { buildBullConfig } from './queue/bull.config';
@@ -28,9 +29,13 @@ import { throttlerConfig } from './security/throttler.config';
       validationSchema: envValidationSchema,
     }),
 
-    LoggerModule.forRoot({
-      pinoHttp: buildPinoHttpConfig(process.env.NODE_ENV),
-      forRoutes: [{ path: '/{*path}', method: RequestMethod.ALL }],
+    LoggerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        pinoHttp: buildPinoHttpConfig(configService.get<string>('NODE_ENV')),
+        forRoutes: [{ path: '/{*path}', method: RequestMethod.ALL }],
+      }),
     }),
 
     ThrottlerModule.forRoot(throttlerConfig),
@@ -49,5 +54,7 @@ import { throttlerConfig } from './security/throttler.config';
         buildBullConfig(configService),
     }),
   ],
+  providers: [RedisClientService],
+  exports: [RedisClientService],
 })
 export class InfrastructureModule {}

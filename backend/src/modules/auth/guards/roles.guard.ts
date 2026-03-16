@@ -15,59 +15,41 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { AuthenticatedRequest } from '../interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
-
-interface AuthenticatedRequest {
-  user?: {
-    role?: UserRole;
-  };
-}
 
 /** Clave de metadatos usada por el decorador `@Roles`. */
 export const ROLES_KEY = 'roles';
 
 /**
- * Decorador de clase/método para declarar roles permitidos.
- *
- * @param roles Lista de roles autorizados para el recurso.
+ * Declara los roles permitidos para una ruta o controlador.
  */
 export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  /**
-   * Inyecta el reflector para leer metadatos definidos con `@Roles`.
-   */
-  constructor(private reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) {}
 
   /**
-   * Evalúa si la identidad actual posee los privilegios necesarios.
-   *
-   * @param context Contexto de la petición HTTP actual.
-   * @returns `true` si el usuario está autorizado.
+   * Evalúa si la identidad actual tiene alguno de los roles requeridos.
    */
   canActivate(context: ExecutionContext): boolean {
-    // Recupera roles declarados en método o controlador.
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
       ROLES_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    // Si no hay restricciones de rol, se permite el paso.
     if (!requiredRoles) {
       return true;
     }
 
-    // Obtiene la identidad cargada previamente por JwtAuthGuard.
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const currentUserRole = request.user?.role;
 
-    // Si no hay rol en el contexto, deniega por mínimo privilegio.
     if (!currentUserRole) {
       return false;
     }
 
-    // Autoriza solo si el rol actual está dentro de los permitidos.
     return requiredRoles.includes(currentUserRole);
   }
 }

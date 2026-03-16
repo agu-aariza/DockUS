@@ -13,7 +13,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../../users/users.service';
-import { UserRole } from '../../users/entities/user.entity';
+import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 
 interface JwtPayload {
   sub: string;
@@ -23,37 +23,23 @@ interface JwtPayload {
   exp?: number;
 }
 
-interface ValidatedUser {
-  userId: string;
-  email: string;
-  role: UserRole;
-}
-
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     configService: ConfigService,
-    private usersService: UsersService,
+    private readonly usersService: UsersService,
   ) {
     super({
-      // Extrae el token del header Authorization estándar.
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-
-      // No permite reutilizar tokens expirados.
       ignoreExpiration: false,
-
-      // Secreto obligatorio: sin fallback inseguro.
       secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
     });
   }
 
   /**
-   * Con el token ya validado, cargamos al usuario y verificamos que su cuenta
-   * continúe activa en el sistema.
-   *
-   * @param payload Carga útil del JWT emitido por la API.
+   * Resuelve la identidad autenticada a partir del JWT validado.
    */
-  async validate(payload: JwtPayload): Promise<ValidatedUser> {
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     const user = await this.usersService.findById(payload.sub, true);
     const activeUser = this.usersService.assertAccountIsActive(
       user,

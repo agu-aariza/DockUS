@@ -42,20 +42,15 @@ import { UserRole, UserStatus } from './entities/user.entity';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
-  /**
-   * Inyectamos el servicio de lógica de negocio de usuarios.
-   * @param {UsersService} usersService - Gestor de identidades.
-   */
   constructor(private readonly usersService: UsersService) {}
 
   /**
-   * Punto de aprovisionamiento directo de usuarios (Uso Administrativo).
-   * Requiere validación estricta de esquema y privilegios elevados (ADMIN).
+   * Crea un usuario desde el panel administrativo.
    */
   @ApiOperation({
     summary: 'Crear nuevo usuario',
     description:
-      'Permite la creación forzada de usuarios con roles específicos (Sólo ADMIN).',
+      'Crea un usuario con rol y estado definidos por administración.',
   })
   @ApiResponse({
     status: 201,
@@ -75,12 +70,11 @@ export class UsersController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Conflicto de Estado: El email ya está vinculado a otra identidad.',
+    description: 'El email ya está reservado por otra identidad.',
   })
   @ApiResponse({
     status: 500,
-    description: 'Fallo de Sistema',
+    description: 'Error interno del servidor.',
   })
   @Roles(UserRole.ADMIN)
   @Post()
@@ -89,13 +83,12 @@ export class UsersController {
   }
 
   /**
-   * Recuperación del listado global de identidades.
-   * El set de datos devuelto es sanitizado para evitar la fuga de secretos (PII Leak Prevention).
+   * Recupera el listado global de identidades.
    */
   @ApiOperation({
     summary: 'Listar todas las identidades',
     description:
-      'Recuperamos el pool de usuarios paginado y filtrable (Sólo ADMIN/TEACHER).',
+      'Devuelve usuarios paginados y filtrables para ADMIN y TEACHER.',
   })
   @ApiResponse({
     status: 200,
@@ -120,13 +113,11 @@ export class UsersController {
   }
 
   /**
-   * Consulta de metadatos de una identidad específica mediante UUID.
-   * La búsqueda por UUID asegura la integridad referencial y protege contra IDOR.
+   * Consulta una identidad concreta por UUID.
    */
   @ApiOperation({
     summary: 'Consultar identidad por UUID',
-    description:
-      'Obtenemos el perfil sanitizado de un usuario específico (Sólo ADMIN/TEACHER).',
+    description: 'Devuelve el perfil sanitizado de un usuario concreto.',
   })
   @ApiParam({
     name: 'id',
@@ -165,12 +156,11 @@ export class UsersController {
   }
 
   /**
-   * Mutación parcial de datos de identidad (Write-Only Admin).
-   * Las contraseñas son re-hasheadas asíncronamente antes de la persistencia.
+   * Actualiza parcialmente una identidad.
    */
   @ApiOperation({
     summary: 'Actualizar parámetros de identidad',
-    description: 'Modificamos campos específicos de un usuario (Sólo ADMIN).',
+    description: 'Modifica campos concretos de un usuario.',
   })
   @ApiResponse({
     status: 200,
@@ -204,13 +194,11 @@ export class UsersController {
   }
 
   /**
-   * Borrado lógico de una identidad (Soft Delete).
-   * Esta acción no purga el registro, sino que lo marca mediante `deletedAt`.
+   * Marca una identidad como eliminada sin borrar su registro.
    */
   @ApiOperation({
     summary: 'Eliminar identidad lógicamente',
-    description:
-      'Ejecutamos el marcado de borrado lógico del usuario (Sólo ADMIN).',
+    description: 'Marca el usuario como eliminado mediante soft delete.',
   })
   @ApiResponse({
     status: 200,
@@ -237,7 +225,7 @@ export class UsersController {
   }
 
   /**
-   * Restauración de una identidad eliminada lógicamente.
+   * Restaura una identidad eliminada lógicamente.
    */
   @ApiOperation({
     summary: 'Restaurar identidad eliminada',
@@ -263,7 +251,7 @@ export class UsersController {
   }
 
   /**
-   * Gestión del estado del ciclo de vida de la cuenta.
+   * Actualiza el estado del ciclo de vida de la cuenta.
    */
   @ApiOperation({
     summary: 'Actualizar estado de la cuenta',

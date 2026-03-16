@@ -21,26 +21,23 @@ interface JwtPayload {
 }
 
 export interface AuthResponse {
-  /** Estructura sanitizada del usuario. Ningún dato sensible escapa. */
   user: {
     id: string;
     email: string;
     role: string;
   };
-  /** Bearer token válido emitido para autorización subsequente. */
   accessToken: string;
 }
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
-    private jwtService: JwtService,
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
   ) {}
 
   /**
-   * Registramos una nueva identidad en el pool asegurado de usuarios y
-   * proveemos un token para un inicio de sesión inmediato (Seamless Auth).
+   * Registra una nueva cuenta y devuelve un token para la sesión inicial.
    */
   async register(dto: RegisterDto): Promise<AuthResponse> {
     const user = await this.usersService.create(
@@ -59,7 +56,7 @@ export class AuthService {
   }
 
   /**
-   * Interfaz de validación de credenciales en tiempo constante.
+   * Inicia sesión y devuelve un token JWT.
    */
   async login(dto: LoginDto): Promise<AuthResponse> {
     const user = await this.validateLoginIdentity(dto);
@@ -72,18 +69,14 @@ export class AuthService {
   }
 
   /**
-   * Verificamos identidad y credenciales para emitir una sesión JWT.
-   *
-   * @param {LoginDto} dto - Credenciales de acceso del usuario.
-   * @returns {Promise<User>} Entidad activa lista para emisión de token.
-   * @throws {UnauthorizedException} Si la cuenta no existe, no está activa o el password es inválido.
+   * Valida credenciales y devuelve la identidad apta para autenticación.
    */
   private async validateLoginIdentity(dto: LoginDto): Promise<User> {
-    const user = await this.usersService.findByEmail(dto.email, true);
+    const user = await this.usersService.findByEmailForAuth(dto.email, true);
     const activeUser = this.usersService.assertAccountIsActive(user);
 
     const isPasswordValid = await this.usersService.validatePassword(
-      activeUser,
+      activeUser.passwordHash,
       dto.password,
     );
 
@@ -95,10 +88,7 @@ export class AuthService {
   }
 
   /**
-   * Firmamos criptográficamente un token JWT incluyendo datos mínimos esenciales
-   * para la autorización RBAC posterior (subject, email, role).
-   *
-   * @private Generado de forma aislada para uso interno de la clase.
+   * Genera el token JWT con la identidad mínima necesaria.
    */
   private generateToken(userId: string, email: string, role: string): string {
     const payload: JwtPayload = { sub: userId, email, role };

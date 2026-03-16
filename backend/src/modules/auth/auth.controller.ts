@@ -14,7 +14,7 @@ import {
   Body,
   UseGuards,
   Get,
-  Request,
+  Req,
   HttpCode,
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
@@ -25,35 +25,26 @@ import {
   ApiResponse,
   ApiBody,
 } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
+import { AuthResponse, AuthService } from './auth.service';
+import type {
+  AuthenticatedRequest,
+  AuthenticatedUser,
+} from './interfaces/authenticated-user.interface';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    email: string;
-    role: string;
-  };
-}
 
 @ApiTags('Identity Access Management (IAM)')
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   /**
-   * Endpoint de aprovisionamiento de identidades públicas.
-   *
-   * El registro genera una nueva identidad persistente con roles mínimos por defecto.
-   * Manejamos colisiones de estado (409) y fallos de integridad de payload (400)
-   * para asegurar un flujo de "Fail-Fast".
+   * Registra una cuenta y devuelve la sesión inicial.
    */
   @ApiOperation({
-    summary: 'Registrar un nuevo acceso',
-    description:
-      'Aprovisionamos un usuario seguro e inicializamos una sesión (JWT).',
+    summary: 'Registrar una cuenta',
+    description: 'Crea un usuario y devuelve un JWT para la sesión inicial.',
   })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({
@@ -66,25 +57,24 @@ export class AuthController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Conflicto de Identidad: El email ya existe.',
+    description: 'El email ya está reservado por otra cuenta.',
   })
   @ApiResponse({
     status: 500,
-    description: 'Error Interno',
+    description: 'Error interno del servidor.',
   })
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // Max 5 registros por IP por minuto
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('register')
-  async register(@Body() dto: RegisterDto) {
+  async register(@Body() dto: RegisterDto): Promise<AuthResponse> {
     return this.authService.register(dto);
   }
 
   /**
-   * Emisor de Token de Acción (Login).
+   * Inicia sesión y devuelve un nuevo JWT.
    */
   @ApiOperation({
-    summary: 'Negociar sesión',
-    description:
-      'Emitimos token de autorización (JWT) tras validación de credenciales.',
+    summary: 'Iniciar sesión',
+    description: 'Valida credenciales y devuelve un token JWT.',
   })
   @ApiBody({ type: LoginDto })
   @ApiResponse({ status: 200, description: 'Token JWT emitido exitosamente.' })
@@ -94,47 +84,38 @@ export class AuthController {
   })
   @ApiResponse({
     status: 401,
-    description: 'Fallo de Autenticación',
+    description: 'Credenciales inválidas.',
   })
   @ApiResponse({
     status: 500,
-    description: 'Error Interno',
+    description: 'Error interno del servidor.',
   })
   @HttpCode(200)
-  @Throttle({ default: { limit: 10, ttl: 60000 } }) // Max 10 intentos de login por IP por minuto
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login')
-  async login(@Body() dto: LoginDto) {
+  async login(@Body() dto: LoginDto): Promise<AuthResponse> {
     return this.authService.login(dto);
   }
 
   /**
-   * Endpoint de Reflexión de Identidad (Stateless).
-   *
-   * Este endpoint permite al cliente verificar la validez de su sesión actual
-   * mediante la decodificación del Token Bearer sin necesidad de hits adicionales
-   * a la base de datos de usuarios (Zero Trust Verification).
+   * Devuelve la identidad autenticada resuelta por la estrategia JWT.
    */
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Reflejar estado de identidad actual',
-    description: 'Verificamos y decodificamos localmente el JWT actual.',
+    summary: 'Consultar sesión actual',
+    description: 'Devuelve la identidad autenticada del token actual.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Contexto de identidad recuperado.',
+    description: 'Identidad autenticada recuperada.',
   })
   @ApiResponse({
     status: 401,
-    description: 'Acceso Denegado',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Error Interno',
+    description: 'Acceso no autorizado.',
   })
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  getProfile(@Request() req: AuthenticatedRequest) {
-    // La estrategia JWT ya decodificó e inyectó los metadatos puros.
+  getProfile(@Req() req: AuthenticatedRequest): AuthenticatedUser {
     return req.user;
   }
 }

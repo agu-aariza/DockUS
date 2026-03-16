@@ -9,8 +9,6 @@
  */
 
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
@@ -18,7 +16,5 @@ import { InfrastructureModule } from './shared/infrastructure/infrastructure.mod
 
 @Module({
   imports: [InfrastructureModule, UsersModule, AuthModule, HealthModule],
-  controllers: [AppController], // Gateway Root (Healthchecks)
-  providers: [AppService], // Providers de infraestructura global
 })
 export class AppModule {}

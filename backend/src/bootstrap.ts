@@ -9,33 +9,40 @@
  */
 
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 
-/** Opciones para adaptar la inicialización al contexto de ejecución. */
+/**
+ * Opciones para adaptar la inicialización al contexto de ejecución.
+ */
 interface BootstrapOptions {
   enableSwagger?: boolean;
   enableShutdownHooks?: boolean;
 }
 
-/** Valores por defecto para la API en ejecución normal. */
+/**
+ * Valores por defecto para la API en ejecución normal.
+ */
 const DEFAULT_BOOTSTRAP_OPTIONS: Required<BootstrapOptions> = {
   enableSwagger: true,
   enableShutdownHooks: true,
 };
 
+/**
+ * Aplica la configuración HTTP compartida por la aplicación.
+ */
 export function applyAppBootstrap(
   app: INestApplication,
   options: BootstrapOptions = {},
 ): void {
-  // Combinamos los valores por defecto con las opciones del entorno.
+  const configService = app.get(ConfigService);
   const { enableSwagger, enableShutdownHooks } = {
     ...DEFAULT_BOOTSTRAP_OPTIONS,
     ...options,
   };
 
-  // Pipeline global de entrada y endurecimiento HTTP.
   app.setGlobalPrefix('api');
   app.useLogger(app.get(Logger));
   app.useGlobalPipes(
@@ -47,7 +54,7 @@ export function applyAppBootstrap(
   );
   app.use(helmet());
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: configService.get<string>('FRONTEND_URL', 'http://localhost:5173'),
     credentials: true,
   });
 
@@ -55,7 +62,6 @@ export function applyAppBootstrap(
     app.enableShutdownHooks();
   }
 
-  // Portal OpenAPI opcional.
   if (enableSwagger) {
     const config = new DocumentBuilder()
       .setTitle('DockUS API')

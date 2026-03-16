@@ -8,12 +8,16 @@
  * @module MainBootstrap
  */
 
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { applyAppBootstrap } from './bootstrap';
 
-async function bootstrap() {
+/**
+ * Arranca el servidor HTTP principal.
+ */
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
   applyAppBootstrap(app, {
@@ -21,11 +25,10 @@ async function bootstrap() {
     enableShutdownHooks: true,
   });
 
-  // Inicia escucha HTTP en el puerto configurado.
-  const port = process.env.PORT || 3000;
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
 
-  // Registra estado de arranque con logger estructurado.
   const logger = app.get(Logger);
   logger.log(`Kernel operativo en el puerto ${port}`, 'Bootstrap');
   logger.log(

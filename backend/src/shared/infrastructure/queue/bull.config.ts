@@ -9,12 +9,10 @@
  */
 
 import { ConfigService } from '@nestjs/config';
+import { buildRedisConnectionOptions } from '../cache/redis.config';
 
 export function buildBullConfig(configService: ConfigService) {
   return {
-    connection: {
-      host: configService.get<string>('REDIS_HOST', 'localhost'),
-      port: configService.get<number>('REDIS_PORT', 6379),
-    },
+    connection: buildRedisConnectionOptions(configService),
   };
 }

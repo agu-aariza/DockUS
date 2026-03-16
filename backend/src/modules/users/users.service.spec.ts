@@ -32,10 +32,14 @@ describe('UsersService', () => {
   let service: UsersService;
 
   const queryBuilder = {
+    addSelect: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
+    getOne: jest.fn(),
     orderBy: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    withDeleted: jest.fn().mockReturnThis(),
     getManyAndCount: jest.fn(),
   };
 
@@ -51,7 +55,10 @@ describe('UsersService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    queryBuilder.addSelect.mockReturnThis();
     queryBuilder.andWhere.mockReturnThis();
+    queryBuilder.where.mockReturnThis();
+    queryBuilder.withDeleted.mockReturnThis();
     queryBuilder.orderBy.mockReturnThis();
     queryBuilder.skip.mockReturnThis();
     queryBuilder.take.mockReturnThis();
@@ -67,6 +74,24 @@ describe('UsersService', () => {
       where: { email: 'test@dockus.com' },
       withDeleted: true,
     });
+  });
+
+  it('debe cargar passwordHash solo en el lookup explícito de autenticación', async () => {
+    const user = buildUser({ email: 'secure@dockus.com' });
+    queryBuilder.getOne.mockResolvedValue(user);
+
+    const result = await service.findByEmailForAuth(
+      '  Secure@DockUs.com  ',
+      true,
+    );
+
+    expect(usersRepository.createQueryBuilder).toHaveBeenCalledWith('user');
+    expect(queryBuilder.addSelect).toHaveBeenCalledWith('user.passwordHash');
+    expect(queryBuilder.where).toHaveBeenCalledWith('user.email = :email', {
+      email: 'secure@dockus.com',
+    });
+    expect(queryBuilder.withDeleted).toHaveBeenCalled();
+    expect(result).toBe(user);
   });
 
   it('debe normalizar email al crear usuarios internamente', async () => {
@@ -276,5 +301,11 @@ describe('UsersService', () => {
     );
     expect(result.status).toBe(UserStatus.SUSPENDED);
     expect((result as { passwordHash?: string }).passwordHash).toBeUndefined();
+  });
+
+  it('debe validar contraseñas usando el hash provisto explícitamente', async () => {
+    await expect(
+      service.validatePassword('hashed-password', 'plain-password'),
+    ).resolves.toBe(false);
   });
 });
