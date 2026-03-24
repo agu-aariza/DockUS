@@ -20,10 +20,7 @@ import { applyAppBootstrap } from './bootstrap';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
-  applyAppBootstrap(app, {
-    enableSwagger: true,
-    enableShutdownHooks: true,
-  });
+  applyAppBootstrap(app);
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3000);

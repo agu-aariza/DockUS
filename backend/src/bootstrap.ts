@@ -70,15 +70,6 @@ export function applyAppBootstrap(
       )
       .setVersion('1.3.0')
       .addBearerAuth()
-      .addTag(
-        'Identity Access Management (IAM)',
-        'Endpoints de registro, login y perfil',
-      )
-      .addTag(
-        'User Administration (RBAC)',
-        'Gestión administrativa de usuarios con control de roles',
-      )
-      .addTag('System Health', 'Health checks y monitoreo de infraestructura')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

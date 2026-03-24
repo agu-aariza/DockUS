@@ -15,6 +15,11 @@ import { UsersModule } from './modules/users/users.module';
 import { InfrastructureModule } from './shared/infrastructure/infrastructure.module';
 
 @Module({
-  imports: [InfrastructureModule, UsersModule, AuthModule, HealthModule],
+  imports: [
+    InfrastructureModule,
+    UsersModule,
+    AuthModule,
+    HealthModule,
+  ],
 })
 export class AppModule {}

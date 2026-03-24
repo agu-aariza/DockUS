@@ -25,6 +25,11 @@ import {
   ApiResponse,
   ApiBody,
 } from '@nestjs/swagger';
+import {
+  INTERNAL_SERVER_ERROR_DESCRIPTION,
+  INVALID_INPUT_DESCRIPTION,
+  UNAUTHORIZED_DESCRIPTION,
+} from '../../shared/http/http-response.constants';
 import { AuthResponse, AuthService } from './auth.service';
 import type {
   AuthenticatedRequest,
@@ -53,7 +58,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Error de Validación',
+    description: INVALID_INPUT_DESCRIPTION,
   })
   @ApiResponse({
     status: 409,
@@ -61,7 +66,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 500,
-    description: 'Error interno del servidor.',
+    description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('register')
@@ -80,7 +85,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Token JWT emitido exitosamente.' })
   @ApiResponse({
     status: 400,
-    description: 'Error de Validación',
+    description: INVALID_INPUT_DESCRIPTION,
   })
   @ApiResponse({
     status: 401,
@@ -88,7 +93,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 500,
-    description: 'Error interno del servidor.',
+    description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
   @HttpCode(200)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -111,7 +116,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 401,
-    description: 'Acceso no autorizado.',
+    description: UNAUTHORIZED_DESCRIPTION,
   })
   @UseGuards(JwtAuthGuard)
   @Get('profile')
