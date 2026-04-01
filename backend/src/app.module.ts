@@ -11,10 +11,17 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { ProjectsModule } from './modules/projects/projects.module';
 import { UsersModule } from './modules/users/users.module';
 import { InfrastructureModule } from './shared/infrastructure/infrastructure.module';
 
 @Module({
-  imports: [InfrastructureModule, UsersModule, AuthModule, HealthModule],
+  imports: [
+    InfrastructureModule,
+    UsersModule,
+    AuthModule,
+    ProjectsModule,
+    HealthModule,
+  ],
 })
 export class AppModule {}

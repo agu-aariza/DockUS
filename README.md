@@ -9,7 +9,7 @@ Plataforma para entornos reproducibles y evaluación de proyectos, con backend e
 ## Estado actual
 
 - Backend operativo con NestJS 11 + TypeScript.
-- Módulos de dominio: `auth`, `users` y `health`.
+- Módulos de dominio: `auth`, `users`, `projects` y `health`.
 - Capa de infraestructura separada (`config` + `infrastructure`) para configuración, logging, rate limit, PostgreSQL y Redis/BullMQ.
 - Hardening activo: Helmet, Throttler, validación global y logging estructurado con Pino.
 - CI en GitHub Actions con lint, auditoría, build, tests unitarios y e2e.
@@ -78,6 +78,33 @@ Con la API levantada:
 - `DELETE /api/users/:id` (ADMIN, soft delete)
 - `PATCH /api/users/:id/restore` (ADMIN)
 - `PATCH /api/users/:id/status/:status` (ADMIN)
+
+### Projects
+
+- `POST /api/projects` (ADMIN, TEACHER)
+- `GET /api/projects` (ADMIN, TEACHER, STUDENT)
+- `GET /api/projects/:id` (ADMIN, TEACHER, STUDENT)
+- `PATCH /api/projects/:id` (ADMIN, TEACHER)
+- `PATCH /api/projects/:id/status/:status` (ADMIN, TEACHER)
+- `DELETE /api/projects/:id` (ADMIN, soft delete)
+- `PATCH /api/projects/:id/restore` (ADMIN)
+
+Parámetros de listado en `GET /api/projects`:
+
+- `page`, `limit`
+- `status`, `creatorId`, `search`
+- `createdFrom`, `createdTo`
+- `sortBy`, `sortOrder`
+
+### Deliveries
+
+- `POST /api/deliveries` (ADMIN, TEACHER, STUDENT)
+- `GET /api/deliveries` (ADMIN, TEACHER, STUDENT)
+- `GET /api/deliveries/:id` (ADMIN, TEACHER, STUDENT)
+- `PATCH /api/deliveries/:id` (ADMIN, TEACHER)
+- `PATCH /api/deliveries/:id/status/:status` (ADMIN, TEACHER)
+- `DELETE /api/deliveries/:id` (ADMIN, TEACHER, soft delete)
+- `PATCH /api/deliveries/:id/restore` (ADMIN)
 
 Parámetros de listado en `GET /api/users`:
 
