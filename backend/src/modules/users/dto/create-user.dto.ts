@@ -15,6 +15,7 @@ import {
   IsEnum,
   IsOptional,
   IsNotEmpty,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { UserRole, UserStatus } from '../entities/user.entity';
@@ -28,12 +29,17 @@ export class CreateUserDto {
   email: string;
 
   @ApiProperty({
-    example: 'password123',
-    description: 'Contraseña segura (mínimo 8 caracteres).',
+    example: 'Password123!',
+    description:
+      'Contraseña segura (mínimo 8 caracteres, al menos una mayúscula, un número y un carácter especial).',
     minLength: 8,
   })
   @IsString()
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres.' })
+  @Matches(/((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
+    message:
+      'La contraseña debe contener al menos una mayúscula, una minúscula y un número o carácter especial.',
+  })
   password: string;
 
   @ApiProperty({

@@ -171,6 +171,7 @@ export class UsersService {
       return await this.usersRepository.save(user);
     } catch (error) {
       this.rethrowIfUniqueEmailViolation(error, 'El email ya esta registrado.');
+      throw error;
     }
   }
 
@@ -194,6 +195,7 @@ export class UsersService {
       savedUser = await this.usersRepository.save(user);
     } catch (error) {
       this.rethrowIfUniqueEmailViolation(error, 'El email ya esta registrado.');
+      throw error;
     }
 
     return this.sanitizeUser(savedUser);
@@ -244,6 +246,7 @@ export class UsersService {
         error,
         'El email ya esta registrado por otro usuario.',
       );
+      throw error;
     }
 
     return this.sanitizeUser(updatedUser);
@@ -311,8 +314,8 @@ export class UsersService {
    * Compara una contraseña en texto claro contra un hash almacenado.
    */
   async validatePassword(
-    passwordHash: string,
     password: string,
+    passwordHash: string,
   ): Promise<boolean> {
     return bcrypt.compare(password, passwordHash);
   }

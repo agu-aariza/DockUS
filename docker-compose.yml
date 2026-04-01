@@ -25,7 +25,10 @@ services:
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
-    command: redis-server --appendonly yes
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command: >
+      sh -c "if [ -z \"$$REDIS_PASSWORD\" ]; then redis-server --appendonly yes; else redis-server --requirepass $$REDIS_PASSWORD --appendonly yes; fi"
     volumes:
       - redis_data:/data
     healthcheck:

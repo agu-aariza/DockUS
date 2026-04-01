@@ -246,7 +246,7 @@ export class UsersController {
   })
   @Roles(UserRole.ADMIN)
   @Delete(':id')
-  @HttpCode(200)
+  @HttpCode(204)
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<{ message: string }> {

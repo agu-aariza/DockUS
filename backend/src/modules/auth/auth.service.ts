@@ -10,6 +10,7 @@
 
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Logger } from 'nestjs-pino';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
@@ -34,6 +35,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly logger: Logger,
   ) {}
 
   /**
@@ -76,11 +78,14 @@ export class AuthService {
     const activeUser = this.usersService.assertAccountIsActive(user);
 
     const isPasswordValid = await this.usersService.validatePassword(
-      activeUser.passwordHash,
       dto.password,
+      activeUser.passwordHash,
     );
 
     if (!isPasswordValid) {
+      this.logger.warn(
+        `Login fallido: constraseña incorrecta para ${dto.email}`,
+      );
       throw new UnauthorizedException('Credenciales inválidas proporcionadas.');
     }
 

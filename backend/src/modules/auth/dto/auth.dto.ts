@@ -58,7 +58,11 @@ export class LoginDto {
   @ApiProperty({
     example: '12345678!',
     description: 'Contraseña de la cuenta.',
+    minLength: 8,
   })
   @IsString({ message: 'La contraseña debe ser un texto.' })
+  @MinLength(8, {
+    message: 'La contraseña debe tener al menos 8 caracteres.',
+  })
   password: string;
 }

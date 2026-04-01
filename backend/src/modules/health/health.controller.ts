@@ -8,12 +8,20 @@
  * @module HealthController
  */
 
-import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { HealthService } from './health.service';
 
 @ApiTags('System Health')
 @Controller('health')
+@UseGuards(ThrottlerGuard)
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
@@ -49,6 +57,7 @@ export class HealthController {
     status: 503,
     description: 'Una o más dependencias críticas no están disponibles.',
   })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Get('readiness')
   async getReadiness() {
     const readiness = await this.healthService.getReadiness();

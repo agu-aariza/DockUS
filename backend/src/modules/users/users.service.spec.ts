@@ -305,7 +305,7 @@ describe('UsersService', () => {
 
   it('debe validar contraseñas usando el hash provisto explícitamente', async () => {
     await expect(
-      service.validatePassword('hashed-password', 'plain-password'),
+      service.validatePassword('plain-password', 'hashed-password'),
     ).resolves.toBe(false);
   });
 });

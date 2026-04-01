@@ -96,7 +96,7 @@ export class AuthController {
     description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
   @HttpCode(200)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('login')
   async login(@Body() dto: LoginDto): Promise<AuthResponse> {
     return this.authService.login(dto);

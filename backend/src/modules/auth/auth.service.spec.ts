@@ -10,6 +10,7 @@
 
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Logger } from 'nestjs-pino';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { User, UserRole, UserStatus } from '../users/entities/user.entity';
@@ -45,6 +46,10 @@ describe('AuthService', () => {
     sign: jest.MockedFunction<JwtService['sign']>;
   };
 
+  let logger: {
+    warn: jest.Mock<any, any>;
+  };
+
   beforeEach(() => {
     usersService = {
       findByEmailForAuth: jest.fn(),
@@ -57,9 +62,14 @@ describe('AuthService', () => {
       sign: jest.fn().mockReturnValue('signed-token'),
     };
 
+    logger = {
+      warn: jest.fn(),
+    };
+
     service = new AuthService(
       usersService as unknown as UsersService,
       jwtService as unknown as JwtService,
+      logger as unknown as Logger,
     );
   });
 
@@ -82,8 +92,8 @@ describe('AuthService', () => {
     );
     expect(usersService.assertAccountIsActive).toHaveBeenCalledWith(user);
     expect(usersService.validatePassword).toHaveBeenCalledWith(
-      user.passwordHash,
       dto.password,
+      user.passwordHash,
     );
     expect(jwtService.sign).toHaveBeenCalledWith({
       sub: user.id,
@@ -142,6 +152,32 @@ describe('AuthService', () => {
       dto.password,
       dto.firstName,
       dto.lastName,
+    );
+  });
+
+  it('debe rechazar login si la contraseña es incorrecta (pero cuenta activa)', async () => {
+    const dto: LoginDto = {
+      email: 'active@dockus.com',
+      password: 'wrongpassword',
+    };
+    const user = buildUser();
+
+    usersService.findByEmailForAuth.mockResolvedValue(user);
+    usersService.assertAccountIsActive.mockReturnValue(user);
+    usersService.validatePassword.mockResolvedValue(false);
+
+    await expect(service.login(dto)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+
+    expect(usersService.findByEmailForAuth).toHaveBeenCalledWith(
+      dto.email,
+      true,
+    );
+    expect(usersService.assertAccountIsActive).toHaveBeenCalledWith(user);
+    expect(usersService.validatePassword).toHaveBeenCalledWith(
+      dto.password,
+      user.passwordHash,
     );
   });
 });

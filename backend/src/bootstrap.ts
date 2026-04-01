@@ -26,7 +26,7 @@ interface BootstrapOptions {
  * Valores por defecto para la API en ejecución normal.
  */
 const DEFAULT_BOOTSTRAP_OPTIONS: Required<BootstrapOptions> = {
-  enableSwagger: true,
+  enableSwagger: process.env.NODE_ENV !== 'production',
   enableShutdownHooks: true,
 };
 
@@ -54,7 +54,12 @@ export function applyAppBootstrap(
   );
   app.use(helmet());
   app.enableCors({
-    origin: configService.get<string>('FRONTEND_URL', 'http://localhost:5173'),
+    origin: configService.get<string>(
+      'FRONTEND_URL',
+      configService.get<string>('NODE_ENV') === 'production'
+        ? ''
+        : 'http://localhost:5173',
+    ),
     credentials: true,
   });
 
