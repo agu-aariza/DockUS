@@ -26,4 +26,12 @@ export const envValidationSchema = Joi.object({
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().default(6379),
   REDIS_PASSWORD: Joi.string().optional(),
+  MINIO_ENDPOINT: Joi.string().default('localhost'),
+  MINIO_API_PORT: Joi.number().default(9000),
+  MINIO_ROOT_USER: Joi.string().default('dockus_admin'),
+  MINIO_ROOT_PASSWORD: Joi.string().default('dockus_secret_key'),
+  MINIO_BUCKET_NAME: Joi.string().default('dockus-storage'),
+  MINIO_USE_SSL: Joi.boolean().default(false),
+  STORAGE_SIGNED_URL_TTL_SECONDS: Joi.number().default(600),
+  STORAGE_BOOTSTRAP_ON_STARTUP: Joi.boolean().default(true),
 });

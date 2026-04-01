@@ -16,9 +16,10 @@ import { Delivery } from './deliveries/entities/delivery.entity';
 import { Project } from './entities/project.entity';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Project, Delivery])],
+  imports: [TypeOrmModule.forFeature([Project, Delivery]), StorageModule],
   controllers: [ProjectsController, DeliveriesController],
   providers: [ProjectsService, DeliveriesService],
   exports: [ProjectsService, DeliveriesService],

@@ -106,10 +106,28 @@ Parámetros de listado en `GET /api/projects`:
 - `DELETE /api/deliveries/:id` (ADMIN, TEACHER, soft delete)
 - `PATCH /api/deliveries/:id/restore` (ADMIN)
 
-Parámetros de listado en `GET /api/users`:
+Parámetros de listado en `GET /api/deliveries`:
 
 - `page`, `limit`
-- `role`, `status`, `search`
+- `projectId`, `authorId`, `status`, `search`
+- `createdFrom`, `createdTo`
+- `sortBy`, `sortOrder`
+
+### Storage
+
+- `POST /api/storage/upload` (ADMIN, TEACHER, STUDENT)
+- `GET /api/storage` (ADMIN, TEACHER, STUDENT)
+- `GET /api/storage/:id` (ADMIN, TEACHER, STUDENT)
+- `POST /api/storage/:id/download-url` (ADMIN, TEACHER, STUDENT)
+- `DELETE /api/storage/:id` (ADMIN, TEACHER, soft delete)
+- `DELETE /api/storage/:id/purge` (ADMIN, purge física)
+- `PATCH /api/storage/:id/restore` (ADMIN)
+
+Parámetros de listado en `GET /api/storage`:
+
+- `page`, `limit`
+- `deliveryId`, `uploaderId`
+- `createdFrom`, `createdTo`
 - `sortBy`, `sortOrder`
 
 Respuesta típica del listado:
@@ -162,6 +180,10 @@ Variables de infraestructura local (`docker-compose.yml`):
 - `MINIO_API_PORT`
 - `MINIO_CONSOLE_PORT`
 - `MINIO_ENDPOINT`
+- `MINIO_BUCKET_NAME`
+- `MINIO_USE_SSL`
+- `STORAGE_SIGNED_URL_TTL_SECONDS`
+- `STORAGE_BOOTSTRAP_ON_STARTUP`
 
 Nota: `DATABASE_URL` puede existir para tooling externo, pero la configuración activa del backend usa los parámetros `DB_*`.
 

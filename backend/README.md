@@ -10,7 +10,7 @@ backend/
 │   ├── modules/                   # Contextos de dominio
 │   │   ├── auth/                  # Autenticación y autorización
 │   │   ├── users/                 # Gestión de usuarios y RBAC
-│   │   ├── projects/              # Gestión de proyectos y entregas
+│   │   ├── projects/              # Gestión de proyectos, entregas y storage
 │   │   └── health/                # Endpoints de salud (live/readiness)
 │   ├── shared/                    # Capa transversal técnica
 │   │   ├── config/                # Contratos y validación de entorno
