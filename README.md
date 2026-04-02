@@ -9,7 +9,8 @@ Plataforma para entornos reproducibles y evaluación de proyectos, con backend e
 ## Estado actual
 
 - Backend operativo con NestJS 11 + TypeScript.
-- Módulos de dominio: `auth`, `users`, `projects` y `health`.
+- Frontend smoke tester con React + TypeScript + Vite (`frontend/`).
+- Módulos de dominio: `auth`, `users`, `projects`, `deliveries`, `storage` y `health`.
 - Capa de infraestructura separada (`config` + `infrastructure`) para configuración, logging, rate limit, PostgreSQL y Redis/BullMQ.
 - Hardening activo: Helmet, Throttler, validación global y logging estructurado con Pino.
 - CI en GitHub Actions con lint, auditoría, build, tests unitarios y e2e.
@@ -20,7 +21,7 @@ Plataforma para entornos reproducibles y evaluación de proyectos, con backend e
 .
 ├── backend/                         # API NestJS
 │   ├── src/
-│   │   ├── modules/                 # Dominios (auth, users, health)
+│   │   ├── modules/                 # Dominios (auth, users, projects, health)
 │   │   ├── shared/                  # Config e infraestructura técnica
 │   │   ├── bootstrap.ts             # Config global HTTP compartida
 │   │   ├── app.module.ts            # Composición de módulos
@@ -28,7 +29,8 @@ Plataforma para entornos reproducibles y evaluación de proyectos, con backend e
 │   ├── test/                        # Tests e2e
 │   ├── ARCHITECTURE.md              # Convenciones de arquitectura backend
 │   └── package.json
-├── docker-compose.yml               # PostgreSQL, Redis y MinIO
+├── frontend/                        # Cliente smoke para probar endpoints
+├── docker-compose.yml               # PostgreSQL, Redis, MinIO y frontend dev
 ├── .env.example
 └── .github/workflows/backend-ci.yml
 ```
@@ -47,12 +49,16 @@ Documentación más detallada del backend: [backend/README.md](./backend/README.
 # 1) Crear entorno local
 cp .env.example .env
 
-# 2) Levantar infraestructura
-docker compose up -d
+# 2) Levantar infraestructura (sin frontend)
+docker compose up -d postgres redis minio
 
 # 3) Levantar API
 npm --prefix backend ci
 npm --prefix backend run start:dev
+
+# 4) Levantar frontend smoke tester
+npm --prefix frontend install
+npm --prefix frontend run dev
 ```
 
 Con la API levantada:
@@ -60,6 +66,13 @@ Con la API levantada:
 - Liveness oficial: `GET http://localhost:3000/api/health/live`
 - Readiness oficial: `GET http://localhost:3000/api/health/readiness`
 - Swagger: `GET http://localhost:3000/api/docs`
+- Frontend smoke tester: `http://localhost:5173`
+
+También puedes levantar el frontend con Docker Compose:
+
+```bash
+docker compose up -d frontend
+```
 
 ## Endpoints principales
 
@@ -137,11 +150,14 @@ Respuesta típica del listado:
   "data": [
     {
       "id": "uuid",
-      "email": "user@dockus.com",
-      "firstName": "User",
-      "lastName": "Name",
-      "role": "STUDENT",
-      "status": "ACTIVE"
+      "deliveryId": "uuid",
+      "logicalName": "main.py",
+      "logicalPath": "src/main.py",
+      "contentType": "text/x-python",
+      "sizeBytes": 2048,
+      "hash": "sha256...",
+      "uploaderId": "uuid",
+      "createdAt": "2026-04-01T10:00:00.000Z"
     }
   ],
   "meta": {
@@ -162,6 +178,7 @@ Variables principales usadas por el backend:
 - `NODE_ENV`
 - `PORT`
 - `FRONTEND_URL`
+- `VITE_API_BASE_URL`
 - `DB_HOST`
 - `DB_PORT`
 - `DB_USERNAME`
@@ -198,6 +215,8 @@ npm --prefix backend run lint
 npm --prefix backend run lint:fix
 npm --prefix backend run test
 npm --prefix backend run test:e2e
+npm --prefix frontend run dev
+npm --prefix frontend run build
 ```
 
 ## Calidad y flujo
