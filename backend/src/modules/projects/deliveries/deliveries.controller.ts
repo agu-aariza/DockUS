@@ -223,8 +223,8 @@ export class DeliveriesController {
   @HttpCode(204)
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<{ message: string }> {
-    return this.deliveriesService.remove(id);
+  ): Promise<void> {
+    await this.deliveriesService.remove(id);
   }
 
   @ApiOperation({

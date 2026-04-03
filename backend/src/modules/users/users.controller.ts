@@ -41,6 +41,10 @@ import { UsersService } from './users.service';
 import type { PaginatedUsersResponse } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import {
+  UserResponseDto,
+  PaginatedUsersResponseDto,
+} from './dto/user-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
 import { UserRole, UserStatus } from './entities/user.entity';
@@ -74,6 +78,7 @@ export class UsersController {
   @ApiResponse({
     status: 201,
     description: 'Identidad creada correctamente.',
+    type: UserResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -112,6 +117,7 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'Listado de identidades recuperado correctamente.',
+    type: PaginatedUsersResponseDto,
   })
   @ApiResponse({
     status: 401,
@@ -145,6 +151,7 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'Identidad recuperada correctamente.',
+    type: UserResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -187,6 +194,7 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'Identidad actualizada correctamente.',
+    type: UserResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -249,8 +257,8 @@ export class UsersController {
   @HttpCode(204)
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<{ message: string }> {
-    return this.usersService.remove(id);
+  ): Promise<void> {
+    await this.usersService.remove(id);
   }
 
   /**

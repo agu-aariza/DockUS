@@ -230,8 +230,8 @@ export class ProjectsController {
   @HttpCode(204)
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<{ message: string }> {
-    return this.projectsService.remove(id);
+  ): Promise<void> {
+    await this.projectsService.remove(id);
   }
 
   /**
