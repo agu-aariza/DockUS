@@ -20,6 +20,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Project } from '../../entities/project.entity';
+import { User } from '../../../users/entities/user.entity';
 
 /**
  * Estado funcional de una entrega academica.
@@ -51,6 +52,11 @@ export class Delivery {
   /** Identidad autora (extraida desde JWT en creacion). */
   @Column({ type: 'uuid' })
   authorId: string;
+
+  /** Relacion de trazabilidad con el usuario autor. */
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'authorId' })
+  author: User;
 
   /** Version logica de la entrega dentro del proyecto. */
   @Column({ type: 'int' })

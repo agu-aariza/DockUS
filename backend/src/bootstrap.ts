@@ -11,6 +11,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 
@@ -52,14 +53,19 @@ export function applyAppBootstrap(
       transform: true,
     }),
   );
+  app.useGlobalGuards(app.get(ThrottlerGuard));
   app.use(helmet());
+
+  const nodeEnv = configService.get<string>('NODE_ENV');
+  const frontendUrl = configService.get<string>('FRONTEND_URL');
+  if (nodeEnv === 'production' && !frontendUrl) {
+    throw new Error(
+      'FRONTEND_URL is required in production for CORS configuration.',
+    );
+  }
+
   app.enableCors({
-    origin: configService.get<string>(
-      'FRONTEND_URL',
-      configService.get<string>('NODE_ENV') === 'production'
-        ? ''
-        : 'http://localhost:5173',
-    ),
+    origin: frontendUrl || 'http://localhost:5173',
     credentials: true,
   });
 

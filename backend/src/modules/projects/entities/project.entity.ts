@@ -15,7 +15,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 
 /**
  * Estado funcional del proyecto.
@@ -51,6 +54,11 @@ export class Project {
   /** Identidad autora del proyecto en terminos de negocio. */
   @Column({ type: 'uuid' })
   creatorId: string;
+
+  /** Relacion de trazabilidad con el usuario creador. */
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'creatorId' })
+  creator: User;
 
   /** Timestamp de creacion para trazabilidad. */
   @CreateDateColumn()

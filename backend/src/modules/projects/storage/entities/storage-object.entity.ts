@@ -20,6 +20,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Delivery } from '../../deliveries/entities/delivery.entity';
+import { User } from '../../../users/entities/user.entity';
 
 @Entity('storage_objects')
 @Index(['deliveryId', 'logicalPath'], { unique: true })
@@ -57,6 +58,11 @@ export class StorageObject {
 
   @Column({ type: 'uuid' })
   uploaderId: string;
+
+  /** Relacion de trazabilidad con el usuario que subio el objeto. */
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'uploaderId' })
+  uploader: User;
 
   @CreateDateColumn()
   createdAt: Date;
