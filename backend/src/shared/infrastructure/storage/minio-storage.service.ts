@@ -21,6 +21,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
+import { toBoolean } from '../../utils/to-boolean.util';
 
 interface PutObjectParams {
   bucket: string;
@@ -52,7 +53,7 @@ export class MinioStorageService implements OnModuleInit {
       'MINIO_ROOT_PASSWORD',
       'dockus_secret_key',
     );
-    const useSsl = this.toBoolean(
+    const useSsl = toBoolean(
       this.configService.get<string | boolean>('MINIO_USE_SSL', false),
     );
     const protocol = useSsl ? 'https' : 'http';
@@ -79,7 +80,7 @@ export class MinioStorageService implements OnModuleInit {
       'STORAGE_SIGNED_URL_TTL_SECONDS',
       600,
     );
-    this.bootstrapOnStartup = this.toBoolean(
+    this.bootstrapOnStartup = toBoolean(
       this.configService.get<string | boolean>(
         'STORAGE_BOOTSTRAP_ON_STARTUP',
         true,
@@ -188,10 +189,6 @@ export class MinioStorageService implements OnModuleInit {
     }
   }
 
-  private toBoolean(value: string | boolean): boolean {
-    if (typeof value === 'boolean') return value;
-    return value.toLowerCase() === 'true';
-  }
 
   private async readBodyAsBuffer(body: unknown): Promise<Buffer> {
     if (body instanceof Readable) {

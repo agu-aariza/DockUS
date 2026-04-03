@@ -79,6 +79,9 @@ body {
   padding: 8px 14px;
   cursor: pointer;
   transition: transform 120ms ease, background-color 120ms ease;
+  text-decoration: none;
+  font: inherit;
+  font-weight: 500;
 }
 
 .tab.active {
@@ -87,12 +90,14 @@ body {
   color: #fff;
 }
 
-.tab:disabled {
+.tab:disabled,
+.tab.disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
-.tab:not(:disabled):hover {
+.tab:not(:disabled):not(.disabled):hover {
   transform: translateY(-1px);
 }
 

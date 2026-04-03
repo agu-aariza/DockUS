@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthPanel } from './auth/AuthPanel';
 import { DeliveriesPanel } from './deliveries/DeliveriesPanel';
 import { ProjectsPanel } from './projects/ProjectsPanel';
@@ -7,15 +7,19 @@ import { UsersPanel } from './users/UsersPanel';
 import { useSession } from './shared/session/SessionContext';
 import type { AuthResponse } from './shared/types';
 
-type TabKey = 'auth' | 'users' | 'projects' | 'deliveries' | 'storage';
+interface NavTab {
+  path: string;
+  label: string;
+  requiresAuth: boolean;
+}
 
-const TAB_LABELS: Record<TabKey, string> = {
-  auth: 'Auth',
-  users: 'Users',
-  projects: 'Projects',
-  deliveries: 'Deliveries',
-  storage: 'Storage',
-};
+const NAV_TABS: NavTab[] = [
+  { path: '/auth', label: 'Auth', requiresAuth: false },
+  { path: '/users', label: 'Users', requiresAuth: true },
+  { path: '/projects', label: 'Projects', requiresAuth: true },
+  { path: '/deliveries', label: 'Deliveries', requiresAuth: true },
+  { path: '/storage', label: 'Storage', requiresAuth: true },
+];
 
 export default function App(): JSX.Element {
   const {
@@ -30,31 +34,13 @@ export default function App(): JSX.Element {
     clearAuthWarning,
   } = useSession();
 
-  const [activeTab, setActiveTab] = useState<TabKey>('auth');
+  const location = useLocation();
 
   const handleAuthSuccess = (response: AuthResponse, label?: string) => {
     addSession(response, label);
-    setActiveTab('projects');
   };
 
   const hasAuthenticatedSession = Boolean(activeSession);
-
-  const renderTab = () => {
-    switch (activeTab) {
-      case 'auth':
-        return <AuthPanel onAuthSuccess={handleAuthSuccess} />;
-      case 'users':
-        return <UsersPanel session={activeSession} />;
-      case 'projects':
-        return <ProjectsPanel session={activeSession} />;
-      case 'deliveries':
-        return <DeliveriesPanel session={activeSession} />;
-      case 'storage':
-        return <StoragePanel session={activeSession} />;
-      default:
-        return null;
-    }
-  };
 
   return (
     <div className="app-shell">
@@ -119,26 +105,79 @@ export default function App(): JSX.Element {
       </section>
 
       <nav className="nav-tabs" aria-label="Módulos">
-        {(Object.keys(TAB_LABELS) as TabKey[]).map((tabKey) => {
-          const disabled = tabKey !== 'auth' && !hasAuthenticatedSession;
+        {NAV_TABS.map((tab) => {
+          const disabled = tab.requiresAuth && !hasAuthenticatedSession;
           return (
-            <button
-              key={tabKey}
-              className={`tab ${activeTab === tabKey ? 'active' : ''}`}
-              onClick={() => setActiveTab(tabKey)}
-              disabled={disabled}
+            <NavLink
+              key={tab.path}
+              to={tab.path}
+              className={({ isActive }) =>
+                `tab ${isActive ? 'active' : ''} ${disabled ? 'disabled' : ''}`
+              }
+              onClick={(e) => {
+                if (disabled) e.preventDefault();
+              }}
+              aria-disabled={disabled}
             >
-              {TAB_LABELS[tabKey]}
-            </button>
+              {tab.label}
+            </NavLink>
           );
         })}
       </nav>
 
-      {!hasAuthenticatedSession && activeTab !== 'auth' ? (
+      {!hasAuthenticatedSession && location.pathname !== '/auth' ? (
         <p className="message">Necesitas una sesión activa para este módulo.</p>
       ) : null}
 
-      <main>{renderTab()}</main>
+      <main>
+        <Routes>
+          <Route
+            path="/auth"
+            element={<AuthPanel onAuthSuccess={handleAuthSuccess} />}
+          />
+          <Route
+            path="/users"
+            element={
+              hasAuthenticatedSession ? (
+                <UsersPanel session={activeSession} />
+              ) : (
+                <Navigate to="/auth" replace />
+              )
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              hasAuthenticatedSession ? (
+                <ProjectsPanel session={activeSession} />
+              ) : (
+                <Navigate to="/auth" replace />
+              )
+            }
+          />
+          <Route
+            path="/deliveries"
+            element={
+              hasAuthenticatedSession ? (
+                <DeliveriesPanel session={activeSession} />
+              ) : (
+                <Navigate to="/auth" replace />
+              )
+            }
+          />
+          <Route
+            path="/storage"
+            element={
+              hasAuthenticatedSession ? (
+                <StoragePanel session={activeSession} />
+              ) : (
+                <Navigate to="/auth" replace />
+              )
+            }
+          />
+          <Route path="*" element={<Navigate to="/auth" replace />} />
+        </Routes>
+      </main>
     </div>
   );
 }

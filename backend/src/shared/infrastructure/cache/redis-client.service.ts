@@ -2,8 +2,15 @@
  * @fileoverview Cliente Redis compartido para infraestructura transversal.
  *
  * Contexto:
- * - Centraliza la conexión Redis usada por health y colas.
+ * - Centraliza la conexión Redis usada por healthchecks y servicios transversales.
  * - Gestiona reconexión básica y cierre ordenado de la conexión.
+ *
+ * Nota arquitectónica:
+ * Este cliente es intencionalmente independiente de la conexión Redis gestionada
+ * por BullMQ. La separación permite:
+ * 1. Ejecutar healthchecks sin depender del estado interno de BullMQ.
+ * 2. Configurar timeouts agresivos (2s) sin afectar los workers de colas.
+ * 3. Desacoplar el ciclo de vida de monitorización del de procesamiento.
  *
  * @module RedisClientService
  */

@@ -31,6 +31,7 @@ import {
   UNAUTHORIZED_DESCRIPTION,
 } from '../../shared/http/http-response.constants';
 import { AuthResponse, AuthService } from './auth.service';
+import { AuthResponseDto } from './dto/auth-response.dto';
 import type {
   AuthenticatedRequest,
   AuthenticatedUser,
@@ -55,6 +56,7 @@ export class AuthController {
   @ApiResponse({
     status: 201,
     description: 'Identidad registrada y sesión inicializada.',
+    type: AuthResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -82,7 +84,7 @@ export class AuthController {
     description: 'Valida credenciales y devuelve un token JWT.',
   })
   @ApiBody({ type: LoginDto })
-  @ApiResponse({ status: 200, description: 'Token JWT emitido exitosamente.' })
+  @ApiResponse({ status: 200, description: 'Token JWT emitido exitosamente.', type: AuthResponseDto })
   @ApiResponse({
     status: 400,
     description: INVALID_INPUT_DESCRIPTION,

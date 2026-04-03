@@ -23,6 +23,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { Repository } from 'typeorm';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
+import { toBoolean } from '../../../shared/utils/to-boolean.util';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
@@ -104,7 +105,7 @@ export class BuilderService {
       'BUILDER_DOCKER_BUILD_TIMEOUT_MS',
       DEFAULT_DOCKER_BUILD_TIMEOUT_MS,
     );
-    this.cleanupImages = this.toBoolean(
+    this.cleanupImages = toBoolean(
       this.configService.get<string | boolean>(
         'BUILDER_CLEANUP_IMAGES',
         DEFAULT_BUILDER_CLEANUP_IMAGES,
@@ -722,10 +723,4 @@ export class BuilderService {
     }
   }
 
-  private toBoolean(value: string | boolean): boolean {
-    if (typeof value === 'boolean') {
-      return value;
-    }
-    return value.toLowerCase() === 'true';
-  }
 }

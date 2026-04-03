@@ -15,11 +15,16 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { User, UserStatus } from './entities/user.entity';
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
 import { ListUsersQueryDto, UserSortField } from './dto/list-users-query.dto';
 import * as bcrypt from 'bcrypt';
+import {
+  buildPaginationMeta,
+  PaginationMeta,
+} from '../../shared/utils/pagination.util';
+import { throwIfUniqueViolation } from '../../shared/database/unique-violation.util';
 
 const BCRYPT_SALT_ROUNDS = 10;
 const USER_SORT_COLUMNS: Record<UserSortField, string> = {
@@ -32,14 +37,7 @@ const USER_SORT_COLUMNS: Record<UserSortField, string> = {
   status: 'user.status',
 };
 
-export interface UsersPaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
+export interface UsersPaginationMeta extends PaginationMeta {}
 
 export interface PaginatedUsersResponse {
   data: Omit<User, 'passwordHash'>[];
@@ -132,18 +130,10 @@ export class UsersService {
       .take(limit);
 
     const [users, total] = await queryBuilder.getManyAndCount();
-    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
 
     return {
       data: users.map((user) => this.sanitizeUser(user)),
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNextPage: totalPages > 0 && page < totalPages,
-        hasPrevPage: totalPages > 0 && page > 1,
-      },
+      meta: buildPaginationMeta(page, limit, total),
     };
   }
 
@@ -170,8 +160,7 @@ export class UsersService {
     try {
       return await this.usersRepository.save(user);
     } catch (error) {
-      this.rethrowIfUniqueEmailViolation(error, 'El email ya esta registrado.');
-      throw error;
+      throwIfUniqueViolation(error, 'El email ya esta registrado.');
     }
   }
 
@@ -194,8 +183,7 @@ export class UsersService {
     try {
       savedUser = await this.usersRepository.save(user);
     } catch (error) {
-      this.rethrowIfUniqueEmailViolation(error, 'El email ya esta registrado.');
-      throw error;
+      throwIfUniqueViolation(error, 'El email ya esta registrado.');
     }
 
     return this.sanitizeUser(savedUser);
@@ -242,11 +230,10 @@ export class UsersService {
     try {
       updatedUser = await this.usersRepository.save(user);
     } catch (error) {
-      this.rethrowIfUniqueEmailViolation(
+      throwIfUniqueViolation(
         error,
         'El email ya esta registrado por otro usuario.',
       );
-      throw error;
     }
 
     return this.sanitizeUser(updatedUser);
@@ -347,25 +334,6 @@ export class UsersService {
     };
     delete sanitized.passwordHash;
     return sanitized;
-  }
-
-  /**
-   * Traduce violaciones de unicidad de PostgreSQL a errores HTTP de dominio.
-   */
-  private rethrowIfUniqueEmailViolation(
-    error: unknown,
-    conflictMessage: string,
-  ): never {
-    const isUniqueViolation =
-      error instanceof QueryFailedError &&
-      (error as QueryFailedError & { driverError?: { code?: string } })
-        .driverError?.code === '23505';
-
-    if (isUniqueViolation) {
-      throw new ConflictException(conflictMessage);
-    }
-
-    throw error;
   }
 
   private normalizeEmail(email: string): string {

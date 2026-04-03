@@ -16,8 +16,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as path from 'path';
+import {
+  buildPaginationMeta,
+  PaginationMeta,
+} from '../../../shared/utils/pagination.util';
+import { throwIfUniqueViolation } from '../../../shared/database/unique-violation.util';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
@@ -48,14 +53,7 @@ const STORAGE_SORT_COLUMNS: Record<StorageSortField, string> = {
   sizeBytes: 'storage.sizeBytes',
 };
 
-export interface StorageObjectsPaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
+export interface StorageObjectsPaginationMeta extends PaginationMeta {}
 
 export interface StorageObjectResponse {
   id: string;
@@ -207,18 +205,10 @@ export class StorageService {
       .take(limit);
 
     const [rows, total] = await queryBuilder.getManyAndCount();
-    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
 
     return {
       data: rows.map((row) => this.toResponse(row)),
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNextPage: totalPages > 0 && page < totalPages,
-        hasPrevPage: totalPages > 0 && page > 1,
-      },
+      meta: buildPaginationMeta(page, limit, total),
     };
   }
 
@@ -451,17 +441,9 @@ export class StorageService {
   }
 
   private rethrowIfUniqueLogicalPathViolation(error: unknown): never {
-    const isUniqueViolation =
-      error instanceof QueryFailedError &&
-      (error as QueryFailedError & { driverError?: { code?: string } })
-        .driverError?.code === '23505';
-
-    if (isUniqueViolation) {
-      throw new ConflictException(
-        'Ya existe un objeto con la misma ruta logica para esa entrega.',
-      );
-    }
-
-    throw error;
+    throwIfUniqueViolation(
+      error,
+      'Ya existe un objeto con la misma ruta logica para esa entrega.',
+    );
   }
 }

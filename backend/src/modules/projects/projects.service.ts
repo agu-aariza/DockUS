@@ -22,6 +22,10 @@ import {
   ProjectSortField,
 } from './dto/list-projects-query.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
+import {
+  buildPaginationMeta,
+  PaginationMeta,
+} from '../../shared/utils/pagination.util';
 
 const PROJECT_SORT_COLUMNS: Record<ProjectSortField, string> = {
   createdAt: 'project.createdAt',
@@ -30,14 +34,7 @@ const PROJECT_SORT_COLUMNS: Record<ProjectSortField, string> = {
   status: 'project.status',
 };
 
-export interface ProjectsPaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
+export interface ProjectsPaginationMeta extends PaginationMeta {}
 
 export interface PaginatedProjectsResponse {
   data: Project[];
@@ -120,18 +117,10 @@ export class ProjectsService {
       .take(limit);
 
     const [projects, total] = await queryBuilder.getManyAndCount();
-    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
 
     return {
       data: projects,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNextPage: totalPages > 0 && page < totalPages,
-        hasPrevPage: totalPages > 0 && page > 1,
-      },
+      meta: buildPaginationMeta(page, limit, total),
     };
   }
 

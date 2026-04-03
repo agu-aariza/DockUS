@@ -14,8 +14,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Project } from '../entities/project.entity';
+import {
+  buildPaginationMeta,
+  PaginationMeta,
+} from '../../../shared/utils/pagination.util';
+import { throwIfUniqueViolation } from '../../../shared/database/unique-violation.util';
 import {
   CreateDeliveryDto,
   UpdateDeliveryDto,
@@ -33,14 +38,7 @@ const DELIVERY_SORT_COLUMNS: Record<DeliverySortField, string> = {
   status: 'delivery.status',
 };
 
-export interface DeliveriesPaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
+export interface DeliveriesPaginationMeta extends PaginationMeta {}
 
 export interface PaginatedDeliveriesResponse {
   data: Delivery[];
@@ -98,18 +96,10 @@ export class DeliveriesService {
       .take(limit);
 
     const [deliveries, total] = await queryBuilder.getManyAndCount();
-    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
 
     return {
       data: deliveries,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNextPage: totalPages > 0 && page < totalPages,
-        hasPrevPage: totalPages > 0 && page > 1,
-      },
+      meta: buildPaginationMeta(page, limit, total),
     };
   }
 
@@ -127,8 +117,10 @@ export class DeliveriesService {
     try {
       return await this.deliveriesRepository.save(delivery);
     } catch (error) {
-      this.rethrowIfUniqueVersionViolation(error);
-      throw error;
+      throwIfUniqueViolation(
+        error,
+        'Ya existe una entrega con la misma version para ese proyecto.',
+      );
     }
   }
 
@@ -153,8 +145,10 @@ export class DeliveriesService {
     try {
       return await this.deliveriesRepository.save(delivery);
     } catch (error) {
-      this.rethrowIfUniqueVersionViolation(error);
-      throw error;
+      throwIfUniqueViolation(
+        error,
+        'Ya existe una entrega con la misma version para ese proyecto.',
+      );
     }
   }
 
@@ -214,18 +208,4 @@ export class DeliveriesService {
     }
   }
 
-  private rethrowIfUniqueVersionViolation(error: unknown): never {
-    const isUniqueViolation =
-      error instanceof QueryFailedError &&
-      (error as QueryFailedError & { driverError?: { code?: string } })
-        .driverError?.code === '23505';
-
-    if (isUniqueViolation) {
-      throw new ConflictException(
-        'Ya existe una entrega con la misma version para ese proyecto.',
-      );
-    }
-
-    throw error;
-  }
 }
