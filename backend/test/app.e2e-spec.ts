@@ -247,4 +247,11 @@ describe('DockUS API (e2e)', () => {
       expect('passwordHash' in usersList.data[0]).toBe(false);
     }
   });
+
+  it('/api/builder/deliveries/:id/run (POST) retorna 404 cuando la entrega no existe', async () => {
+    await request(app.getHttpServer())
+      .post('/api/builder/deliveries/550e8400-e29b-41d4-a716-446655440000/run')
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .expect(404);
+  });
 });

@@ -21,7 +21,10 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "overrides": {
-    "class-validator": "$class-validator"
+    "class-validator": "$class-validator",
+    "lodash": "4.18.1",
+    "path-to-regexp": "8.4.2",
+    "picomatch": "4.0.4"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1009.0",

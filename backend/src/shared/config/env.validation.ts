@@ -34,4 +34,21 @@ export const envValidationSchema = Joi.object({
   MINIO_USE_SSL: Joi.boolean().default(false),
   STORAGE_SIGNED_URL_TTL_SECONDS: Joi.number().default(600),
   STORAGE_BOOTSTRAP_ON_STARTUP: Joi.boolean().default(true),
+  BUILDER_OLLAMA_BASE_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('http://localhost:11434'),
+  BUILDER_OLLAMA_MODEL: Joi.string().default('qwen2.5-coder:7b'),
+  BUILDER_OLLAMA_TIMEOUT_MS: Joi.number().integer().min(1000).default(120000),
+  BUILDER_DOCKER_BUILD_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(10000)
+    .default(300000),
+  BUILDER_CLEANUP_IMAGES: Joi.boolean().default(true),
+  BUILDER_DEFAULT_PYTHON_VERSION: Joi.string().default('3.11'),
+  BUILDER_MAX_EXTRACTED_FILES: Joi.number().integer().min(1).default(1500),
+  BUILDER_MAX_EXTRACTED_BYTES: Joi.number()
+    .integer()
+    .min(1024)
+    .default(104857600),
+  BUILDER_PROMPT_MAX_CHARS: Joi.number().integer().min(1000).default(180000),
 });

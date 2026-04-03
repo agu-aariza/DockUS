@@ -20,6 +20,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Readable } from 'stream';
 
 interface PutObjectParams {
   bucket: string;
@@ -148,6 +149,21 @@ export class MinioStorageService implements OnModuleInit {
     );
   }
 
+  async getObjectBuffer(bucket: string, key: string): Promise<Buffer> {
+    const response = await this.s3Client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }),
+    );
+
+    if (!response.Body) {
+      return Buffer.alloc(0);
+    }
+
+    return this.readBodyAsBuffer(response.Body as unknown);
+  }
+
   private async ensureBucketExists(bucket: string): Promise<void> {
     try {
       await this.s3Client.send(
@@ -175,5 +191,46 @@ export class MinioStorageService implements OnModuleInit {
   private toBoolean(value: string | boolean): boolean {
     if (typeof value === 'boolean') return value;
     return value.toLowerCase() === 'true';
+  }
+
+  private async readBodyAsBuffer(body: unknown): Promise<Buffer> {
+    if (body instanceof Readable) {
+      const chunks: Buffer[] = [];
+      for await (const chunk of body as AsyncIterable<unknown>) {
+        if (Buffer.isBuffer(chunk)) {
+          chunks.push(chunk);
+          continue;
+        }
+        if (typeof chunk === 'string') {
+          chunks.push(Buffer.from(chunk, 'utf8'));
+          continue;
+        }
+        if (chunk instanceof Uint8Array) {
+          chunks.push(Buffer.from(chunk));
+          continue;
+        }
+        throw new Error('Chunk de stream no soportado al leer objeto MinIO.');
+      }
+      return Buffer.concat(chunks);
+    }
+
+    if (body instanceof Uint8Array) {
+      return Buffer.from(body);
+    }
+
+    if (
+      body &&
+      typeof body === 'object' &&
+      'transformToByteArray' in body &&
+      typeof (body as { transformToByteArray: unknown })
+        .transformToByteArray === 'function'
+    ) {
+      const array = await (
+        body as { transformToByteArray: () => Promise<Uint8Array> }
+      ).transformToByteArray();
+      return Buffer.from(array);
+    }
+
+    throw new Error('Tipo de stream no soportado al leer objeto desde MinIO.');
   }
 }
