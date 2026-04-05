@@ -23,3 +23,6 @@ backend/.env
 
 # Ficheros de documentación
 docs/
+
+# Casos de uso
+cases/

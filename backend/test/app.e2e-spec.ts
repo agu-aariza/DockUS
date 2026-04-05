@@ -16,6 +16,10 @@ import { App } from 'supertest/types';
 import { Repository } from 'typeorm';
 import { AppModule } from './../src/app.module';
 import { applyAppBootstrap } from './../src/bootstrap';
+import {
+  BuildRun,
+  BuildRunStatus,
+} from './../src/modules/projects/builder/domain/entities/build-run.entity';
 import { User, UserRole } from './../src/modules/users/entities/user.entity';
 import { UsersService } from './../src/modules/users/users.service';
 
@@ -67,6 +71,31 @@ interface ProfileApiResponse {
   role: UserRole;
 }
 
+interface ProjectApiResponse {
+  id: string;
+}
+
+interface DeliveryApiResponse {
+  id: string;
+}
+
+interface EnqueueBuildRunApiResponse {
+  buildRunId: string;
+  status: BuildRunStatus;
+  deliveryId: string;
+}
+
+interface BuildRunApiResponse {
+  id: string;
+  deliveryId: string;
+  status: BuildRunStatus;
+}
+
+interface BuildRunListApiResponse {
+  data: BuildRunApiResponse[];
+  meta: UserListMeta;
+}
+
 const TEST_PASSWORD = 'DockUs!Pass123';
 
 describe('DockUS API (e2e)', () => {
@@ -74,10 +103,12 @@ describe('DockUS API (e2e)', () => {
 
   let app: INestApplication<App>;
   let usersRepository: Repository<User>;
+  let buildRunsRepository: Repository<BuildRun>;
   let usersService: UsersService;
   const createdUserIds: string[] = [];
 
   let studentIdentity: AuthApiResponse;
+  let teacherIdentity: AuthApiResponse;
   let studentToken = '';
   let teacherToken = '';
 
@@ -119,12 +150,45 @@ describe('DockUS API (e2e)', () => {
       .accessToken;
 
     const teacherEmail = createUniqueEmail('teacher');
-    const teacherIdentity = await registerIdentity(teacherEmail);
+    teacherIdentity = await registerIdentity(teacherEmail);
     await usersService.update(teacherIdentity.user.id, {
       role: UserRole.TEACHER,
     });
     teacherToken = (await loginIdentity(teacherIdentity.user.email))
       .accessToken;
+  };
+
+  const createProjectAndDelivery = async (): Promise<{
+    projectId: string;
+    deliveryId: string;
+  }> => {
+    const projectResponse = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        title: `Proyecto E2E ${Date.now()}`,
+        contextAcademico: 'Builder async tests',
+      })
+      .expect(201);
+
+    const projectPayload = projectResponse.body as ProjectApiResponse;
+
+    const deliveryResponse = await request(app.getHttpServer())
+      .post('/api/deliveries')
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        projectId: projectPayload.id,
+        version: Date.now(),
+        notes: 'Entrega para pruebas e2e del builder async',
+      })
+      .expect(201);
+
+    const deliveryPayload = deliveryResponse.body as DeliveryApiResponse;
+
+    return {
+      projectId: projectPayload.id,
+      deliveryId: deliveryPayload.id,
+    };
   };
 
   beforeAll(async () => {
@@ -141,6 +205,9 @@ describe('DockUS API (e2e)', () => {
     await app.init();
 
     usersRepository = app.get<Repository<User>>(getRepositoryToken(User));
+    buildRunsRepository = app.get<Repository<BuildRun>>(
+      getRepositoryToken(BuildRun),
+    );
     usersService = app.get(UsersService);
     await prepareRbacIdentities();
   });
@@ -246,6 +313,83 @@ describe('DockUS API (e2e)', () => {
     if (usersList.data.length > 0) {
       expect('passwordHash' in usersList.data[0]).toBe(false);
     }
+  });
+
+  it('/api/builder/deliveries/:id/run (POST) devuelve 202 al encolar ejecución', async () => {
+    const { deliveryId } = await createProjectAndDelivery();
+
+    const response = await request(app.getHttpServer())
+      .post(`/api/builder/deliveries/${deliveryId}/run`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .expect(202);
+
+    const payload = response.body as EnqueueBuildRunApiResponse;
+    expect(payload.deliveryId).toBe(deliveryId);
+    expect(payload.status).toBe(BuildRunStatus.QUEUED);
+    expect(payload.buildRunId).toEqual(expect.any(String));
+  });
+
+  it('/api/builder/runs/:id (GET) devuelve estado válido del run', async () => {
+    const { deliveryId } = await createProjectAndDelivery();
+    const enqueueResponse = await request(app.getHttpServer())
+      .post(`/api/builder/deliveries/${deliveryId}/run`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .expect(202);
+
+    const enqueuePayload = enqueueResponse.body as EnqueueBuildRunApiResponse;
+    const response = await request(app.getHttpServer())
+      .get(`/api/builder/runs/${enqueuePayload.buildRunId}`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .expect(200);
+
+    const runPayload = response.body as BuildRunApiResponse;
+    expect(runPayload.id).toBe(enqueuePayload.buildRunId);
+    expect(runPayload.deliveryId).toBe(deliveryId);
+    expect([
+      BuildRunStatus.QUEUED,
+      BuildRunStatus.BUILDING,
+      BuildRunStatus.SUCCESS,
+      BuildRunStatus.FAILED,
+      BuildRunStatus.CANCELLED,
+    ]).toContain(runPayload.status);
+  });
+
+  it('/api/builder/deliveries/:id/runs (GET) devuelve historial paginado', async () => {
+    const { deliveryId } = await createProjectAndDelivery();
+    const enqueueResponse = await request(app.getHttpServer())
+      .post(`/api/builder/deliveries/${deliveryId}/run`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .expect(202);
+    const enqueuePayload = enqueueResponse.body as EnqueueBuildRunApiResponse;
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/builder/deliveries/${deliveryId}/runs?page=1&limit=10`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .expect(200);
+
+    const payload = response.body as BuildRunListApiResponse;
+    expect(Array.isArray(payload.data)).toBe(true);
+    expect(payload.meta.page).toBe(1);
+    expect(payload.meta.limit).toBe(10);
+    expect(
+      payload.data.some((run) => run.id === enqueuePayload.buildRunId),
+    ).toBe(true);
+  });
+
+  it('/api/builder/deliveries/:id/run (POST) devuelve 409 si ya existe run activo', async () => {
+    const { deliveryId } = await createProjectAndDelivery();
+
+    await buildRunsRepository.save({
+      deliveryId,
+      triggeredById: teacherIdentity.user.id,
+      status: BuildRunStatus.QUEUED,
+      warnings: [],
+    });
+
+    await request(app.getHttpServer())
+      .post(`/api/builder/deliveries/${deliveryId}/run`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .expect(409);
   });
 
   it('/api/builder/deliveries/:id/run (POST) retorna 404 cuando la entrega no existe', async () => {

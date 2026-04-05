@@ -6,7 +6,7 @@ import {
   isUnsafeRelativePath,
   toPosixPath,
 } from './builder-analysis.util';
-import { RuntimeFile } from '../builder.types';
+import { RuntimeFile } from '../../domain/builder.types';
 
 export interface ExtractionLimits {
   maxFiles: number;

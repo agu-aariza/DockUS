@@ -4,6 +4,7 @@ export interface CommandRunOptions {
   cwd?: string;
   timeoutMs: number;
   maxBufferedChars?: number;
+  stdin?: string;
 }
 
 export interface CommandRunResult {
@@ -23,7 +24,7 @@ export async function runCommand(
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
 
     let stdout = '';
@@ -43,6 +44,11 @@ export async function runCommand(
       }
       return merged.slice(merged.length - maxBufferedChars);
     };
+
+    if (typeof options.stdin === 'string') {
+      child.stdin.write(options.stdin);
+    }
+    child.stdin.end();
 
     child.stdout.on('data', (chunk: Buffer) => {
       stdout = appendBuffer(stdout, chunk);

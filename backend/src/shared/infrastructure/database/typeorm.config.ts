@@ -14,6 +14,8 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 export function buildTypeOrmConfig(
   configService: ConfigService,
 ): TypeOrmModuleOptions {
+  const nodeEnv = configService.get<string>('NODE_ENV');
+
   return {
     type: 'postgres',
     host: configService.get<string>('DB_HOST', 'localhost'),
@@ -22,6 +24,6 @@ export function buildTypeOrmConfig(
     password: configService.get<string>('DB_PASSWORD', 'postgres'),
     database: configService.get<string>('DB_NAME', 'dockus'),
     autoLoadEntities: true,
-    synchronize: configService.get<string>('NODE_ENV') === 'development',
+    synchronize: nodeEnv === 'development' || nodeEnv === 'test',
   };
 }
