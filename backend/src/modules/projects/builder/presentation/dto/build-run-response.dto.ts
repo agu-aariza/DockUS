@@ -1,260 +1,58 @@
 /**
- * @fileoverview DTOs de salida para ejecuciones del builder.
+ * @fileoverview Fachada DTO de salida para ejecuciones del builder.
  *
  * Contexto:
- * - Estandariza payloads de cola, detalle e historial de BuildRun.
- * - Sirve de contrato para Swagger y clientes de polling.
+ * - Mantiene un punto de importación estable para controller y Swagger.
+ * - Reexporta DTOs segmentados por responsabilidad para evitar un archivo monolítico.
  *
  * @module BuildRunResponseDto
  */
 
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   BuildRun,
   BuildRunStatus,
 } from '../../domain/entities/build-run.entity';
+import { BuildRunResponseDto } from './build-run-core.dto';
 
-export class EnqueueBuildRunResponseDto {
-  @ApiProperty({
-    example: '550e8400-e29b-41d4-a716-446655440000',
-    description: 'Identificador del run creado en cola.',
-  })
-  buildRunId!: string;
-
-  @ApiProperty({
-    enum: BuildRunStatus,
-    example: BuildRunStatus.QUEUED,
-    description: 'Estado inicial del run.',
-  })
-  status!: BuildRunStatus;
-
-  @ApiProperty({
-    example: '550e8400-e29b-41d4-a716-446655440111',
-    description: 'Identificador de la entrega asociada.',
-  })
-  deliveryId!: string;
-}
-
-export class BuildRunResponseDto {
-  @ApiProperty({
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  id!: string;
-
-  @ApiProperty({
-    example: '550e8400-e29b-41d4-a716-446655440111',
-  })
-  deliveryId!: string;
-
-  @ApiProperty({
-    example: '550e8400-e29b-41d4-a716-446655440222',
-  })
-  triggeredById!: string;
-
-  @ApiProperty({
-    enum: BuildRunStatus,
-    example: BuildRunStatus.BUILDING,
-  })
-  status!: BuildRunStatus;
-
-  @ApiPropertyOptional({
-    description: 'Resultado de detección de stack.',
-    type: Object,
-  })
-  stackResult?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Dockerfile generado por el builder.',
-  })
-  dockerfileContent?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'Resumen de logs y metadatos de build.',
-    type: Object,
-  })
-  buildLogs?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Tiempos de cada etapa del pipeline.',
-    type: Object,
-  })
-  timingsMs?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Hallazgos estáticos detectados.',
-    type: Object,
-  })
-  staticFindings?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Resultado por etapa (PASS/FAIL/SKIP).',
-    type: Object,
-  })
-  stageResults?: unknown;
-
-  @ApiPropertyOptional({
-    description:
-      'Contrato canónico LLM-only del builder con taxonomía T/C/E y receta observada.',
-    type: Object,
-  })
-  llmAssessment?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Artefactos de evidencia asociados al run.',
-    type: Object,
-  })
-  evidenceArtifacts?: unknown;
-
-  @ApiPropertyOptional({
-    description:
-      'Informe canónico derivado de la evaluación LLM final en taxonomía T/C/E.',
-    type: Object,
-  })
-  report?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Contexto de ejecución para reproducibilidad operativa.',
-    type: Object,
-  })
-  executionContext?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Causa exacta de fallo (si aplica).',
-  })
-  failureReason?: string | null;
-
-  @ApiProperty({
-    type: [String],
-    description: 'Avisos del pipeline.',
-  })
-  warnings!: string[];
-
-  @ApiPropertyOptional({
-    description: 'Tag de imagen Docker generada.',
-  })
-  imageTag?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'Fecha de expiración de imagen Docker (TTL).',
-    format: 'date-time',
-  })
-  imageExpiresAt?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'Inicio de ejecución real.',
-    format: 'date-time',
-  })
-  startedAt?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'Fin de ejecución real.',
-    format: 'date-time',
-  })
-  finishedAt?: string | null;
-
-  @ApiProperty({
-    description: 'Fecha de creación del run.',
-    format: 'date-time',
-  })
-  createdAt!: string;
-
-  @ApiProperty({
-    description: 'Fecha de última actualización.',
-    format: 'date-time',
-  })
-  updatedAt!: string;
-}
-
-export class PaginatedBuildRunsResponseDto {
-  @ApiProperty({
-    type: [BuildRunResponseDto],
-  })
-  data!: BuildRunResponseDto[];
-
-  @ApiProperty({
-    type: Object,
-  })
-  meta!: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-  };
-}
-
-export class CancelBuildRunResponseDto {
-  @ApiProperty({
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  buildRunId!: string;
-
-  @ApiProperty({
-    enum: BuildRunStatus,
-    example: BuildRunStatus.CANCELLED,
-  })
-  status!: BuildRunStatus;
-}
-
-export class EvidenceArtifactDto {
-  @ApiProperty({
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  id!: string;
-
-  @ApiProperty({
-    example: 'BUILD_LOG',
-  })
-  type!: string;
-
-  @ApiProperty({
-    example: 'application/json',
-  })
-  contentType!: string;
-
-  @ApiProperty({
-    example: 1024,
-  })
-  sizeBytes!: number;
-
-  @ApiProperty({
-    format: 'date-time',
-  })
-  createdAt!: string;
-}
-
-export class EvidenceDownloadUrlDto {
-  @ApiProperty({
-    example: 'https://minio.local/signed/url',
-  })
-  downloadUrl!: string;
-
-  @ApiProperty({
-    format: 'date-time',
-  })
-  expiresAt!: string;
-}
-
-export class BuildRunReportResponseDto {
-  @ApiProperty({
-    enum: ['json', 'text'],
-    example: 'json',
-  })
-  format!: 'json' | 'text';
-
-  @ApiProperty({
-    type: Object,
-  })
-  report!: unknown;
-}
+export {
+  BuildRunResponseDto,
+  CancelBuildRunResponseDto,
+  EnqueueBuildRunResponseDto,
+  PaginatedBuildRunsResponseDto,
+  ReplayBuildRunResponseDto,
+} from './build-run-core.dto';
+export {
+  BuildRunComparisonRequestDto,
+  BuildRunComparisonResponseDto,
+  ReproducibilityResultDto,
+} from './build-run-comparison.dto';
+export {
+  BuildRunEventDto,
+  BuildRunEventsResponseDto,
+} from './build-run-events.dto';
+export {
+  BuildRunReportResponseDto,
+  EvidenceArtifactDto,
+  EvidenceDownloadUrlDto,
+} from './build-run-evidence.dto';
 
 export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
   return {
     id: run.id,
     deliveryId: run.deliveryId,
     triggeredById: run.triggeredById,
+    runKind: run.runKind,
+    sourceRunId: run.sourceRunId,
     status: run.status,
+    activeStage: run.activeStage,
+    latestEventSequence: run.latestEventSequence
+      ? Number(run.latestEventSequence)
+      : null,
+    isTerminal: [
+      BuildRunStatus.SUCCESS,
+      BuildRunStatus.FAILED,
+      BuildRunStatus.CANCELLED,
+    ].includes(run.status),
     stackResult: run.stackResult,
     dockerfileContent: run.dockerfileContent,
     buildLogs: run.buildLogs,
@@ -265,6 +63,8 @@ export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
     evidenceArtifacts: run.evidenceArtifacts,
     report: run.report,
     executionContext: run.executionContext,
+    reproducibilitySnapshot: run.reproducibilitySnapshot,
+    reproducibilityResult: run.reproducibilityResult,
     failureReason: run.failureReason,
     warnings: run.warnings ?? [],
     imageTag: run.imageTag,
