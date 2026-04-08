@@ -2,39 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
 import {
-  ASSESSMENTS,
   BuilderLlmAssessment,
   BuilderLlmPhaseResult,
-  CAPABILITY_IDS,
-  CONFIDENCE_LEVELS,
-  EVALUATIVE_STATES,
   ExecutionContext,
   StageResult,
   StaticFinding,
-  STRUCTURAL_TYPES,
 } from '../builder.types';
-import { toPosixPath } from '../../infrastructure/utils/builder-analysis.util';
-
-const ALLOWED_EXECUTABLES = new Set([
-  'coverage',
-  'flask',
-  'gunicorn',
-  'hatch',
-  'pdm',
-  'pip',
-  'pip3',
-  'pipenv',
-  'poetry',
-  'pytest',
-  'python',
-  'python3',
-  'streamlit',
-  'tox',
-  'uv',
-  'uvicorn',
-]);
-
-const SHELL_WRAPPER_TOKENS = new Set(['|', '||', '&&', ';', '>', '>>', '<']);
+import { parseBuilderLlmAssessment } from '../llm/builder-llm-assessment.parser';
 
 @Injectable()
 export class BuilderEvaluationLlmService {
@@ -47,7 +21,7 @@ export class BuilderEvaluationLlmService {
   constructor(private readonly configService: ConfigService) {
     this.enabled = toBoolean(
       this.configService.get<string | boolean>(
-        'BUILDER_LLM_BUILDER_ENABLED',
+        'BUILDER_LLM_ASSIST_ENABLED',
         true,
       ),
     );
@@ -64,11 +38,8 @@ export class BuilderEvaluationLlmService {
       120000,
     );
     this.maxInputChars = this.configService.get<number>(
-      'BUILDER_LLM_EVALUATION_MAX_INPUT_CHARS',
-      this.configService.get<number>(
-        'BUILDER_LLM_BUILDER_MAX_INPUT_CHARS',
-        35000,
-      ),
+      'BUILDER_LLM_ASSIST_MAX_INPUT_CHARS',
+      15000,
     );
   }
 
@@ -240,299 +211,7 @@ export class BuilderEvaluationLlmService {
     }
   }
 
-  private parseResponse(raw: string): BuilderLlmAssessment {
-    const normalized = this.stripCodeFence(raw).trim();
-    if (!normalized) {
-      throw new Error('Salida vacía del evaluador LLM.');
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(normalized);
-    } catch {
-      throw new Error('La salida del evaluador LLM no es JSON válido.');
-    }
-
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('El evaluador LLM devolvió un JSON no objeto.');
-    }
-
-    const object = parsed as Record<string, unknown>;
-    const assessment: BuilderLlmAssessment = {
-      structuralType: this.normalizeStructuralType(object.structuralType),
-      capabilities: this.normalizeCapabilities(object.capabilities),
-      evaluativeState: this.normalizeEvaluativeState(object.evaluativeState),
-      confidence: this.normalizeConfidence(object.confidence),
-      rationale: this.normalizeString(object.rationale, 'rationale'),
-      externalRequirements: this.normalizeStringArray(
-        object.externalRequirements,
-        'externalRequirements',
-      ),
-      recipe: this.normalizeRecipe(object.recipe),
-      evidenceSummary: this.normalizeString(
-        object.evidenceSummary,
-        'evidenceSummary',
-      ),
-      observedEvidence: this.normalizeStringArray(
-        object.observedEvidence,
-        'observedEvidence',
-      ),
-      evaluationLimits: this.normalizeStringArray(
-        object.evaluationLimits,
-        'evaluationLimits',
-      ),
-    };
-
-    this.assertSemanticConsistency(assessment);
-    return assessment;
-  }
-
-  private normalizeCapabilities(
-    value: unknown,
-  ): BuilderLlmAssessment['capabilities'] {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      throw new Error('capabilities debe ser un objeto.');
-    }
-
-    const object = value as Record<string, unknown>;
-    const capabilities = {} as BuilderLlmAssessment['capabilities'];
-
-    for (const capabilityId of CAPABILITY_IDS) {
-      const rawCapability = object[capabilityId];
-      if (
-        !rawCapability ||
-        typeof rawCapability !== 'object' ||
-        Array.isArray(rawCapability)
-      ) {
-        throw new Error(`capabilities.${capabilityId} debe ser un objeto.`);
-      }
-
-      const capability = rawCapability as Record<string, unknown>;
-      const status = this.normalizeString(
-        capability.status,
-        `capabilities.${capabilityId}.status`,
-      );
-      if (!ASSESSMENTS.includes(status as (typeof ASSESSMENTS)[number])) {
-        throw new Error(`Estado inválido en ${capabilityId}.`);
-      }
-
-      capabilities[capabilityId] = {
-        status: status as BuilderLlmAssessment['capabilities']['C1']['status'],
-        rationale: this.normalizeString(
-          capability.rationale,
-          `capabilities.${capabilityId}.rationale`,
-        ),
-      };
-    }
-
-    return capabilities;
-  }
-
-  private normalizeRecipe(value: unknown): BuilderLlmAssessment['recipe'] {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      throw new Error('recipe debe ser un objeto.');
-    }
-
-    const object = value as Record<string, unknown>;
-
-    return {
-      install: this.normalizeCommandMatrix(object.install, 'recipe.install'),
-      run:
-        object.run === null || object.run === undefined
-          ? null
-          : this.normalizeCommand(object.run, 'recipe.run'),
-      test: this.normalizeCommandMatrix(object.test, 'recipe.test'),
-      healthcheck:
-        object.healthcheck === null || object.healthcheck === undefined
-          ? null
-          : this.normalizeCommand(object.healthcheck, 'recipe.healthcheck'),
-      servicePort:
-        object.servicePort === null || object.servicePort === undefined
-          ? null
-          : this.normalizePort(object.servicePort, 'recipe.servicePort'),
-      systemPackages: this.normalizeSystemPackages(object.systemPackages),
-    };
-  }
-
-  private assertSemanticConsistency(assessment: BuilderLlmAssessment): void {
-    if (
-      assessment.structuralType === 'T8' &&
-      assessment.evaluativeState !== 'E4'
-    ) {
-      throw new Error('T8 debe evaluar en E4.');
-    }
-
-    if (
-      assessment.structuralType === 'T7' &&
-      assessment.evaluativeState === 'E1'
-    ) {
-      throw new Error('T7 no puede evaluarse como E1.');
-    }
-
-    if (
-      assessment.capabilities.C3.status === 'yes' &&
-      ['T4', 'T5'].includes(assessment.structuralType) &&
-      assessment.recipe.run === null
-    ) {
-      throw new Error('T4/T5 con C3=yes requieren recipe.run.');
-    }
-
-    if (
-      assessment.capabilities.C3.status === 'yes' &&
-      assessment.recipe.servicePort === null
-    ) {
-      throw new Error('C3=yes requiere recipe.servicePort.');
-    }
-
-    if (
-      assessment.capabilities.C5.status === 'yes' &&
-      assessment.recipe.healthcheck === null
-    ) {
-      throw new Error('C5=yes requiere recipe.healthcheck.');
-    }
-  }
-
-  private normalizeStructuralType(value: unknown) {
-    const normalized = this.normalizeString(value, 'structuralType');
-    if (
-      !STRUCTURAL_TYPES.includes(
-        normalized as (typeof STRUCTURAL_TYPES)[number],
-      )
-    ) {
-      throw new Error('structuralType inválido en evaluador LLM.');
-    }
-    return normalized as BuilderLlmAssessment['structuralType'];
-  }
-
-  private normalizeEvaluativeState(value: unknown) {
-    const normalized = this.normalizeString(value, 'evaluativeState');
-    if (
-      !EVALUATIVE_STATES.includes(
-        normalized as (typeof EVALUATIVE_STATES)[number],
-      )
-    ) {
-      throw new Error('evaluativeState inválido en evaluador LLM.');
-    }
-    return normalized as BuilderLlmAssessment['evaluativeState'];
-  }
-
-  private normalizeConfidence(value: unknown) {
-    const normalized = this.normalizeString(value, 'confidence');
-    if (
-      !CONFIDENCE_LEVELS.includes(
-        normalized as (typeof CONFIDENCE_LEVELS)[number],
-      )
-    ) {
-      throw new Error('confidence inválido en evaluador LLM.');
-    }
-    return normalized as BuilderLlmAssessment['confidence'];
-  }
-
-  private normalizeSystemPackages(value: unknown): string[] {
-    if (value === undefined || value === null) {
-      return [];
-    }
-    if (!Array.isArray(value)) {
-      throw new Error('recipe.systemPackages debe ser un array.');
-    }
-
-    return value.map((entry, index) => {
-      const pkg = this.normalizeString(
-        entry,
-        `recipe.systemPackages[${index}]`,
-      );
-      if (!/^[a-z0-9.+-]+$/i.test(pkg)) {
-        throw new Error(`Paquete de sistema inválido: ${pkg}`);
-      }
-      return pkg;
-    });
-  }
-
-  private normalizeCommandMatrix(value: unknown, field: string): string[][] {
-    if (value === undefined || value === null) {
-      return [];
-    }
-    if (!Array.isArray(value)) {
-      throw new Error(`${field} debe ser un array de comandos.`);
-    }
-
-    return value.map((command, index) =>
-      this.normalizeCommand(command, `${field}[${index}]`),
-    );
-  }
-
-  private normalizeCommand(value: unknown, field: string): string[] {
-    if (!Array.isArray(value) || value.length === 0) {
-      throw new Error(`${field} debe ser un array no vacío.`);
-    }
-
-    const tokens = value.map((token, index) =>
-      this.normalizeString(token, `${field}[${index}]`),
-    );
-    const executable = tokens[0];
-    if (!ALLOWED_EXECUTABLES.has(executable)) {
-      throw new Error(`Executable no permitido en ${field}: ${executable}`);
-    }
-
-    for (const [index, token] of tokens.entries()) {
-      if (/[\n\r`]/.test(token)) {
-        throw new Error(`Token inseguro en ${field}: ${token}`);
-      }
-      if (SHELL_WRAPPER_TOKENS.has(token) || /\$\(.+\)/u.test(token)) {
-        throw new Error(`Token de shell no permitido en ${field}: ${token}`);
-      }
-      if (
-        index > 0 &&
-        (token.includes('/') || token.endsWith('.py')) &&
-        (toPosixPath(token).startsWith('/') ||
-          toPosixPath(token).includes('../'))
-      ) {
-        throw new Error(`Ruta insegura en ${field}: ${token}`);
-      }
-    }
-
-    return tokens;
-  }
-
-  private normalizePort(value: unknown, field: string): number {
-    const parsed =
-      typeof value === 'number'
-        ? value
-        : Number.parseInt(this.normalizeString(value, field), 10);
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
-      throw new Error(`${field} inválido en evaluador LLM.`);
-    }
-    return parsed;
-  }
-
-  private normalizeStringArray(value: unknown, field: string): string[] {
-    if (value === undefined || value === null) {
-      return [];
-    }
-    if (!Array.isArray(value)) {
-      throw new Error(`${field} debe ser un array.`);
-    }
-
-    return value.map((entry, index) =>
-      this.normalizeString(entry, `${field}[${index}]`),
-    );
-  }
-
-  private normalizeString(value: unknown, field: string): string {
-    if (typeof value !== 'string' || !value.trim()) {
-      throw new Error(`${field} debe ser un string no vacío.`);
-    }
-    return value.trim();
-  }
-
-  private stripCodeFence(value: string): string {
-    const trimmed = value.trim();
-    if (!trimmed.startsWith('```')) {
-      return trimmed;
-    }
-    return trimmed
-      .replace(/^```[a-zA-Z]*\s*/u, '')
-      .replace(/```$/u, '')
-      .trim();
+  private parseResponse(raw: string): BuilderLlmPhaseResult['assessment'] {
+    return parseBuilderLlmAssessment(raw, { mode: 'evaluation' });
   }
 }

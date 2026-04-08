@@ -44,7 +44,7 @@ const buildAssessment = (
 describe('BuilderEvaluationLlmService', () => {
   const configService = {
     get: jest.fn((key: string, defaultValue?: unknown) => {
-      if (key === 'BUILDER_LLM_BUILDER_ENABLED') {
+      if (key === 'BUILDER_LLM_ASSIST_ENABLED') {
         return true;
       }
       return defaultValue;
@@ -76,6 +76,7 @@ describe('BuilderEvaluationLlmService', () => {
       warnings: [],
       executionContext: {
         pythonBaseImage: 'python:3.11.9-slim-bookworm',
+        pythonBaseImageDigest: null,
         dockerVersion: 'Docker version 27',
         kindVersion: 'kind v0.24.0',
         kubectlVersion: 'kubectl v1.31.0',
@@ -113,6 +114,7 @@ describe('BuilderEvaluationLlmService', () => {
         warnings: [],
         executionContext: {
           pythonBaseImage: 'python:3.11.9-slim-bookworm',
+          pythonBaseImageDigest: null,
           dockerVersion: null,
           kindVersion: null,
           kubectlVersion: null,

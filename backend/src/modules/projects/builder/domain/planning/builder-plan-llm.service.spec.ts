@@ -51,7 +51,7 @@ describe('BuilderPlanLlmService', () => {
 
   const configService = {
     get: jest.fn((key: string, defaultValue?: unknown) => {
-      if (key === 'BUILDER_LLM_BUILDER_ENABLED') {
+      if (key === 'BUILDER_LLM_ASSIST_ENABLED') {
         return true;
       }
       return defaultValue;
