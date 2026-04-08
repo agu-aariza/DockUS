@@ -61,8 +61,10 @@ export const envValidationSchema = Joi.object({
     .min(60000)
     .default(600000),
   BUILDER_DEFAULT_PYTHON_VERSION: Joi.string().default('3.11'),
-  BUILDER_BASE_PYTHON_IMAGE: Joi.string().default('python:3.11.9-slim-bookworm'),
-  BUILDER_KIND_CLUSTER_NAME: Joi.string().default('dockus-v1'),
+  BUILDER_BASE_PYTHON_IMAGE: Joi.string().default(
+    'python:3.11.9-slim-bookworm',
+  ),
+  BUILDER_KIND_CLUSTER_NAME: Joi.string().default('dockus-builder'),
   BUILDER_K8S_NAMESPACE_PREFIX: Joi.string().default('dockus-run'),
   BUILDER_BATCH_TIMEOUT_SECONDS: Joi.number().integer().min(10).default(60),
   BUILDER_SERVICE_READY_TIMEOUT_SECONDS: Joi.number()

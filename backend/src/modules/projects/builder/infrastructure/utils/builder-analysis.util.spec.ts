@@ -7,7 +7,7 @@ import {
   scanAbsolutePathsInFiles,
 } from './builder-analysis.util';
 
-describe('builder-analysis.util (dockus v1)', () => {
+describe('builder-analysis.util (dockus)', () => {
   let tmpDir: string;
 
   beforeEach(async () => {

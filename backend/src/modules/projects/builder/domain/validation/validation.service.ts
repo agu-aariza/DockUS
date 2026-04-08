@@ -52,6 +52,7 @@ export class ValidationService {
     return {
       profile: input.profile,
       overall,
+      deterministicVerdict: overall,
       failedStage,
       checks: input.checks,
       tests: input.tests,

@@ -52,6 +52,7 @@ import {
   EvidenceArtifactPublic,
   ExecutionProfile,
   LlmSupportMetadata,
+  LlmVerdictMetadata,
   RuntimeFile,
   StageResult,
   StageStatus,
@@ -435,7 +436,7 @@ export class BuilderService {
       qualityResult: {
         classes: [],
         summary:
-          'DockUS v1 no usa LLM en camino crítico; qualityResult legacy mantenido por compatibilidad.',
+          'DockUS no usa LLM en camino crítico; qualityResult legacy mantenido por compatibilidad.',
       },
       timingsMs: {},
     };
@@ -479,6 +480,7 @@ export class BuilderService {
       validationResult: {
         profile: ExecutionProfile.ANALYSIS_ONLY,
         overall: StageStatus.PASS,
+        deterministicVerdict: StageStatus.PASS,
         failedStage: null,
         checks: [],
         tests: {
@@ -992,6 +994,13 @@ export class BuilderService {
             },
           );
           if (llmSummary) {
+            const llmVerdict = this.buildLlmVerdictMetadata({
+              status: 'generated',
+              model: llmSummary.model,
+              verdict: llmSummary.summary.llmVerdict,
+              confidence: llmSummary.summary.llmVerdictConfidence,
+              rationale: llmSummary.summary.llmVerdictReason,
+            });
             classification.characterization.llmSupport =
               this.buildLlmSupportMetadata({
                 status: 'generated',
@@ -1009,6 +1018,7 @@ export class BuilderService {
                 model: llmSummary.model,
                 summary: llmSummary.summary.validationSupport,
               });
+            dummyOutcome.validationResult.llmVerdict = llmVerdict;
             report.llmAssistedSummary = {
               status: 'generated',
               model: llmSummary.model,
@@ -1022,6 +1032,7 @@ export class BuilderService {
                 strategy: llmSummary.summary.strategySupport,
                 validation: llmSummary.summary.validationSupport,
               },
+              llmVerdict,
             };
             report.readableText = [
               report.readableText,
@@ -1035,6 +1046,12 @@ export class BuilderService {
               'Traducción legible de evidencias técnicas:',
               llmSummary.summary.evidenceReadableText,
               '',
+              'Veredictos separados:',
+              `Determinista (canónico): ${dummyOutcome.validationResult.deterministicVerdict}`,
+              `LLM (independiente): ${llmSummary.summary.llmVerdict}`,
+              `Confianza LLM: ${llmSummary.summary.llmVerdictConfidence}`,
+              `Razonamiento LLM: ${llmSummary.summary.llmVerdictReason}`,
+              '',
               'Apoyo LLM por análisis (sin alterar verdicts):',
               `Clasificación: ${llmSummary.summary.classificationSupport}`,
               `Findings estáticos: ${llmSummary.summary.staticFindingsSupport}`,
@@ -1042,6 +1059,9 @@ export class BuilderService {
               `Validación: ${llmSummary.summary.validationSupport}`,
             ].join('\n');
           } else {
+            const llmVerdict = this.buildLlmVerdictMetadata({
+              status: 'skipped',
+            });
             classification.characterization.llmSupport =
               this.buildLlmSupportMetadata({
                 status: 'skipped',
@@ -1053,12 +1073,18 @@ export class BuilderService {
               this.buildLlmSupportMetadata({
                 status: 'skipped',
               });
+            dummyOutcome.validationResult.llmVerdict = llmVerdict;
             report.llmAssistedSummary = {
               status: 'skipped',
+              llmVerdict,
             };
           }
         } catch (error) {
           const errorMessage = this.toErrorMessage(error);
+          const llmVerdict = this.buildLlmVerdictMetadata({
+            status: 'error',
+            error: errorMessage,
+          });
           warnings.push(`Resumen docente LLM no disponible: ${errorMessage}`);
           classification.characterization.llmSupport =
             this.buildLlmSupportMetadata({
@@ -1074,26 +1100,33 @@ export class BuilderService {
               status: 'error',
               error: errorMessage,
             });
+          dummyOutcome.validationResult.llmVerdict = llmVerdict;
           report.llmAssistedSummary = {
             status: 'error',
             error: errorMessage,
+            llmVerdict,
           };
         }
       } else {
-        classification.characterization.llmSupport = this.buildLlmSupportMetadata(
+        const llmVerdict = this.buildLlmVerdictMetadata({
+          status: 'skipped',
+        });
+        classification.characterization.llmSupport =
+          this.buildLlmSupportMetadata({
+            status: 'skipped',
+          });
+        strategy.llmSupport = this.buildLlmSupportMetadata({
+          status: 'skipped',
+        });
+        dummyOutcome.validationResult.llmSupport = this.buildLlmSupportMetadata(
           {
             status: 'skipped',
           },
         );
-        strategy.llmSupport = this.buildLlmSupportMetadata({
-          status: 'skipped',
-        });
-        dummyOutcome.validationResult.llmSupport =
-          this.buildLlmSupportMetadata({
-            status: 'skipped',
-          });
+        dummyOutcome.validationResult.llmVerdict = llmVerdict;
         report.llmAssistedSummary = {
           status: 'skipped',
+          llmVerdict,
         };
       }
 
@@ -1138,7 +1171,7 @@ export class BuilderService {
     });
     if (!delivery) {
       throw new NotFoundException(
-        'Entrega no encontrada para ejecutar builder v1.',
+        'Entrega no encontrada para ejecutar builder.',
       );
     }
     return delivery;
@@ -1426,6 +1459,12 @@ export class BuilderService {
   private buildLlmSupportMetadata(
     metadata: LlmSupportMetadata,
   ): LlmSupportMetadata {
+    return metadata;
+  }
+
+  private buildLlmVerdictMetadata(
+    metadata: LlmVerdictMetadata,
+  ): LlmVerdictMetadata {
     return metadata;
   }
 

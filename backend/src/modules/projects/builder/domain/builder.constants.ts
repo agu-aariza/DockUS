@@ -12,7 +12,7 @@ export const DEFAULT_MAX_EXTRACTED_FILES = 1500;
 export const DEFAULT_MAX_EXTRACTED_BYTES = 100 * 1024 * 1024;
 export const DEFAULT_LOG_TAIL_LINES = 120;
 
-export const DEFAULT_KIND_CLUSTER_NAME = 'dockus-v1';
+export const DEFAULT_KIND_CLUSTER_NAME = 'dockus-builder';
 export const DEFAULT_KUBECTL_TIMEOUT_MS = 90000;
 export const DEFAULT_BATCH_TIMEOUT_SECONDS = 60;
 export const DEFAULT_SERVICE_READY_TIMEOUT_SECONDS = 90;
@@ -34,7 +34,7 @@ export const DEFAULT_TEST_MEMORY_REQUEST = '128Mi';
 export const DEFAULT_TEST_CPU_LIMIT = '300m';
 export const DEFAULT_TEST_MEMORY_LIMIT = '384Mi';
 
-export const CLASSIFIER_VERSION = 'dockus-v1.0';
+export const CLASSIFIER_VERSION = 'dockus-stable.0';
 
 export const TEXT_SCAN_EXTENSIONS = new Set([
   '.py',

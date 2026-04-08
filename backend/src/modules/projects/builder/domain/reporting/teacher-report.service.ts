@@ -27,8 +27,8 @@ export class TeacherReportService {
         : 'Evaluación completada correctamente en entorno controlado.');
     const strategyApplied = this.buildStrategyDescription(input.strategyResult);
     const evaluationImplication = failed
-      ? 'No cumple la validación técnica mínima de DockUS v1.'
-      : 'Cumple la validación técnica mínima de DockUS v1.';
+      ? 'No cumple la validación técnica mínima de DockUS.'
+      : 'Cumple la validación técnica mínima de DockUS.';
     const readableText = [
       `Proyecto detectado: ${input.detectedProject}.`,
       `Estrategia aplicada: ${strategyApplied}.`,

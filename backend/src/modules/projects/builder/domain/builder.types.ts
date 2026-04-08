@@ -78,6 +78,19 @@ export interface LlmSupportMetadata {
   error?: string;
 }
 
+export type LlmVerdict = 'PASS' | 'FAIL' | 'INCONCLUSIVE';
+
+export type LlmVerdictConfidence = 'low' | 'medium' | 'high';
+
+export interface LlmVerdictMetadata {
+  status: 'generated' | 'skipped' | 'error';
+  model?: string;
+  verdict?: LlmVerdict;
+  confidence?: LlmVerdictConfidence;
+  rationale?: string;
+  error?: string;
+}
+
 export interface ProjectCharacterization {
   mainClass: ProjectClass;
   facets: CharacterizationFacets;
@@ -139,6 +152,7 @@ export interface ValidationCheck {
 export interface ValidationResult {
   profile: ExecutionProfile;
   overall: StageStatus;
+  deterministicVerdict: StageStatus;
   failedStage: BuildStage | null;
   checks: ValidationCheck[];
   tests: {
@@ -148,6 +162,7 @@ export interface ValidationResult {
     details: string;
   };
   llmSupport?: LlmSupportMetadata;
+  llmVerdict?: LlmVerdictMetadata;
 }
 
 export interface TeacherReport {
@@ -171,6 +186,7 @@ export interface TeacherReport {
       strategy: string;
       validation: string;
     };
+    llmVerdict?: LlmVerdictMetadata;
     error?: string;
   };
 }

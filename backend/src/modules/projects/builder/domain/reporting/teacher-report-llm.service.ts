@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  LlmVerdict,
+  LlmVerdictConfidence,
   StageResult,
   StaticFinding,
   StrategyResult,
@@ -17,6 +19,9 @@ interface TeacherReportLlmOutput {
   staticFindingsSupport: string;
   strategySupport: string;
   validationSupport: string;
+  llmVerdict: LlmVerdict;
+  llmVerdictReason: string;
+  llmVerdictConfidence: LlmVerdictConfidence;
 }
 
 @Injectable()
@@ -52,7 +57,10 @@ export class TeacherReportLlmService {
     );
     this.maxInputChars = this.configService.get<number>(
       'BUILDER_LLM_ASSIST_MAX_INPUT_CHARS',
-      this.configService.get<number>('BUILDER_LLM_REPORT_MAX_INPUT_CHARS', 15000),
+      this.configService.get<number>(
+        'BUILDER_LLM_REPORT_MAX_INPUT_CHARS',
+        15000,
+      ),
     );
   }
 
@@ -123,12 +131,16 @@ export class TeacherReportLlmService {
       '  "classificationSupport": "string",',
       '  "staticFindingsSupport": "string",',
       '  "strategySupport": "string",',
-      '  "validationSupport": "string"',
+      '  "validationSupport": "string",',
+      '  "llmVerdict": "PASS|FAIL|INCONCLUSIVE",',
+      '  "llmVerdictReason": "string",',
+      '  "llmVerdictConfidence": "low|medium|high"',
       '}',
       '',
       'Reglas:',
       '- No inventes datos no presentes en la entrada.',
       '- No cambies verdicts técnicos PASS/FAIL/SKIP.',
+      '- El llmVerdict es independiente del veredicto determinista y orientativo.',
       '- Redacción clara para profesorado (español, tono académico).',
       '',
       'Entrada técnica:',
@@ -201,11 +213,26 @@ export class TeacherReportLlmService {
       'staticFindingsSupport',
       'strategySupport',
       'validationSupport',
+      'llmVerdict',
+      'llmVerdictReason',
+      'llmVerdictConfidence',
     ];
     for (const key of requiredKeys) {
       if (typeof object[key] !== 'string') {
         throw new Error(`Clave inválida en salida LLM: ${key}.`);
       }
+    }
+
+    const llmVerdict = String(object.llmVerdict).trim().toUpperCase();
+    if (!['PASS', 'FAIL', 'INCONCLUSIVE'].includes(llmVerdict)) {
+      throw new Error('Valor inválido para llmVerdict.');
+    }
+
+    const llmVerdictConfidence = String(object.llmVerdictConfidence)
+      .trim()
+      .toLowerCase();
+    if (!['low', 'medium', 'high'].includes(llmVerdictConfidence)) {
+      throw new Error('Valor inválido para llmVerdictConfidence.');
     }
 
     return {
@@ -217,6 +244,9 @@ export class TeacherReportLlmService {
       staticFindingsSupport: String(object.staticFindingsSupport).trim(),
       strategySupport: String(object.strategySupport).trim(),
       validationSupport: String(object.validationSupport).trim(),
+      llmVerdict: llmVerdict as LlmVerdict,
+      llmVerdictReason: String(object.llmVerdictReason).trim(),
+      llmVerdictConfidence: llmVerdictConfidence as LlmVerdictConfidence,
     };
   }
 
