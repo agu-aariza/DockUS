@@ -6,14 +6,12 @@ import type { AuthenticatedUser } from '../../../auth/interfaces/authenticated-u
 import { UserRole } from '../../../users/entities/user.entity';
 import { Delivery } from '../../deliveries/entities/delivery.entity';
 import { StorageObject } from '../../storage/entities/storage-object.entity';
-import { ClassifierService } from '../domain/classification/classifier.service';
 import { BuildRun, BuildRunStatus } from '../domain/entities/build-run.entity';
+import { BuilderEvaluationLlmService } from '../domain/evaluation/builder-evaluation-llm.service';
 import { StaticFindingsService } from '../domain/findings/static-findings.service';
-import { TeacherReportLlmService } from '../domain/reporting/teacher-report-llm.service';
-import { TeacherReportService } from '../domain/reporting/teacher-report.service';
-import { StrategyResolverService } from '../domain/strategy/strategy-resolver.service';
+import { BuilderPlanLlmService } from '../domain/planning/builder-plan-llm.service';
+import { BuilderReportService } from '../domain/reporting/builder-report.service';
 import { DockerfileTemplateService } from '../domain/templates/dockerfile-template.service';
-import { ValidationService } from '../domain/validation/validation.service';
 import { EvidenceService } from '../infrastructure/evidence/evidence.service';
 import { ExecutionAdapterService } from '../infrastructure/execution/execution-adapter.service';
 import { BuilderService } from './builder.service';
@@ -52,14 +50,11 @@ const buildRun = (overrides: Partial<BuildRun> = {}): BuildRun =>
     stackResult: null,
     dockerfileContent: null,
     buildLogs: null,
-    qualityResult: null,
     timingsMs: null,
-    projectCharacterization: null,
-    strategyResult: null,
     staticFindings: null,
     stageResults: null,
-    validationResult: null,
-    teacherReport: null,
+    llmAssessment: null,
+    report: null,
     evidenceArtifacts: null,
     executionContext: null,
     failureReason: null,
@@ -107,15 +102,13 @@ describe('BuilderService', () => {
   };
 
   const minioStorageService = {};
-  const classifierService = {};
   const staticFindingsService = {};
-  const strategyResolverService = {};
+  const builderPlanLlmService = {};
+  const builderEvaluationLlmService = {};
   const dockerfileTemplateService = {};
   const executionAdapterService = {};
-  const validationService = {};
   const evidenceService = {};
-  const teacherReportService = {};
-  const teacherReportLlmService = {};
+  const builderReportService = {};
   const configService = {
     get: jest.fn((_: string, defaultValue: unknown) => defaultValue),
   };
@@ -129,15 +122,13 @@ describe('BuilderService', () => {
       buildRunsRepository as unknown as Repository<BuildRun>,
       builderRunsQueue as unknown as Queue,
       minioStorageService as MinioStorageService,
-      classifierService as ClassifierService,
       staticFindingsService as StaticFindingsService,
-      strategyResolverService as StrategyResolverService,
+      builderPlanLlmService as BuilderPlanLlmService,
+      builderEvaluationLlmService as BuilderEvaluationLlmService,
       dockerfileTemplateService as DockerfileTemplateService,
       executionAdapterService as ExecutionAdapterService,
-      validationService as ValidationService,
       evidenceService as EvidenceService,
-      teacherReportService as TeacherReportService,
-      teacherReportLlmService as TeacherReportLlmService,
+      builderReportService as BuilderReportService,
       configService as never,
     );
   });
@@ -179,5 +170,43 @@ describe('BuilderService', () => {
     await expect(service.cancelRun(run.id, actor)).rejects.toBeInstanceOf(
       ConflictException,
     );
+  });
+
+  it('reintenta una vez la fase de planning y recupera', async () => {
+    const operation = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('timeout'))
+      .mockResolvedValueOnce('ok');
+
+    const result = await (
+      service as unknown as {
+        runLlmPhaseWithRetry: (
+          phase: 'planning' | 'evaluation',
+          warnings: string[],
+          operation: () => Promise<string>,
+        ) => Promise<string>;
+      }
+    ).runLlmPhaseWithRetry('planning', [], operation);
+
+    expect(result).toBe('ok');
+    expect(operation).toHaveBeenCalledTimes(2);
+  });
+
+  it('falla duro tras dos intentos en la fase de evaluation', async () => {
+    const operation = jest.fn().mockRejectedValue(new Error('broken-json'));
+
+    await expect(
+      (
+        service as unknown as {
+          runLlmPhaseWithRetry: (
+            phase: 'planning' | 'evaluation',
+            warnings: string[],
+            operation: () => Promise<string>,
+          ) => Promise<string>;
+        }
+      ).runLlmPhaseWithRetry('evaluation', [], operation),
+    ).rejects.toThrow(/evaluation falló tras 2 intentos/i);
+
+    expect(operation).toHaveBeenCalledTimes(2);
   });
 });

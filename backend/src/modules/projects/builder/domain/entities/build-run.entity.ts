@@ -77,16 +77,7 @@ export class BuildRun {
   buildLogs!: unknown;
 
   @Column({ type: 'jsonb', nullable: true })
-  qualityResult!: unknown;
-
-  @Column({ type: 'jsonb', nullable: true })
   timingsMs!: unknown;
-
-  @Column({ type: 'jsonb', nullable: true })
-  projectCharacterization!: unknown;
-
-  @Column({ type: 'jsonb', nullable: true })
-  strategyResult!: unknown;
 
   @Column({ type: 'jsonb', nullable: true })
   staticFindings!: unknown;
@@ -95,10 +86,10 @@ export class BuildRun {
   stageResults!: unknown;
 
   @Column({ type: 'jsonb', nullable: true })
-  validationResult!: unknown;
+  llmAssessment!: unknown;
 
   @Column({ type: 'jsonb', nullable: true })
-  teacherReport!: unknown;
+  report!: unknown;
 
   @Column({ type: 'jsonb', nullable: true })
   evidenceArtifacts!: unknown;

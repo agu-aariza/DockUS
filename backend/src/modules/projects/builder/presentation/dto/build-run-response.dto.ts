@@ -75,28 +75,10 @@ export class BuildRunResponseDto {
   buildLogs?: unknown;
 
   @ApiPropertyOptional({
-    description: 'Resultado de análisis de calidad.',
-    type: Object,
-  })
-  qualityResult?: unknown;
-
-  @ApiPropertyOptional({
     description: 'Tiempos de cada etapa del pipeline.',
     type: Object,
   })
   timingsMs?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Caracterización determinista del proyecto.',
-    type: Object,
-  })
-  projectCharacterization?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Estrategia resultante de build/ejecución.',
-    type: Object,
-  })
-  strategyResult?: unknown;
 
   @ApiPropertyOptional({
     description: 'Hallazgos estáticos detectados.',
@@ -111,10 +93,11 @@ export class BuildRunResponseDto {
   stageResults?: unknown;
 
   @ApiPropertyOptional({
-    description: 'Resultado de validación.',
+    description:
+      'Contrato canónico LLM-only del builder con taxonomía T/C/E y receta observada.',
     type: Object,
   })
-  validationResult?: unknown;
+  llmAssessment?: unknown;
 
   @ApiPropertyOptional({
     description: 'Artefactos de evidencia asociados al run.',
@@ -123,10 +106,11 @@ export class BuildRunResponseDto {
   evidenceArtifacts?: unknown;
 
   @ApiPropertyOptional({
-    description: 'Informe para docencia en formato estructurado.',
+    description:
+      'Informe canónico derivado de la evaluación LLM final en taxonomía T/C/E.',
     type: Object,
   })
-  teacherReport?: unknown;
+  report?: unknown;
 
   @ApiPropertyOptional({
     description: 'Contexto de ejecución para reproducibilidad operativa.',
@@ -252,7 +236,7 @@ export class EvidenceDownloadUrlDto {
   expiresAt!: string;
 }
 
-export class TeacherReportResponseDto {
+export class BuildRunReportResponseDto {
   @ApiProperty({
     enum: ['json', 'text'],
     example: 'json',
@@ -274,15 +258,12 @@ export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
     stackResult: run.stackResult,
     dockerfileContent: run.dockerfileContent,
     buildLogs: run.buildLogs,
-    qualityResult: run.qualityResult,
     timingsMs: run.timingsMs,
-    projectCharacterization: run.projectCharacterization,
-    strategyResult: run.strategyResult,
     staticFindings: run.staticFindings,
     stageResults: run.stageResults,
-    validationResult: run.validationResult,
+    llmAssessment: run.llmAssessment,
     evidenceArtifacts: run.evidenceArtifacts,
-    teacherReport: run.teacherReport,
+    report: run.report,
     executionContext: run.executionContext,
     failureReason: run.failureReason,
     warnings: run.warnings ?? [],

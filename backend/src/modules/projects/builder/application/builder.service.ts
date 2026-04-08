@@ -23,7 +23,6 @@ import {
 import { toBoolean } from '../../../../shared/utils/to-boolean.util';
 import type { AuthenticatedUser } from '../../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../../users/entities/user.entity';
-import { ClassifierService } from '../domain/classification/classifier.service';
 import {
   BUILDER_RUN_JOB_NAME,
   BUILDER_RUNS_QUEUE_NAME,
@@ -36,27 +35,23 @@ import {
 } from '../domain/builder.constants';
 import { BuildRunArtifactType } from '../domain/entities/build-run-artifact.entity';
 import { BuildRun, BuildRunStatus } from '../domain/entities/build-run.entity';
+import { BuilderEvaluationLlmService } from '../domain/evaluation/builder-evaluation-llm.service';
 import { StaticFindingsService } from '../domain/findings/static-findings.service';
-import { TeacherReportLlmService } from '../domain/reporting/teacher-report-llm.service';
-import { TeacherReportService } from '../domain/reporting/teacher-report.service';
-import { StrategyResolverService } from '../domain/strategy/strategy-resolver.service';
+import { BuilderPlanLlmService } from '../domain/planning/builder-plan-llm.service';
+import { BuilderReportService } from '../domain/reporting/builder-report.service';
 import { DockerfileTemplateService } from '../domain/templates/dockerfile-template.service';
-import { ValidationService } from '../domain/validation/validation.service';
 import { ListBuildRunsDto } from '../presentation/dto/list-build-runs.dto';
 import { Delivery } from '../../deliveries/entities/delivery.entity';
 import { EvidenceService } from '../infrastructure/evidence/evidence.service';
 import {
   BuildStage,
+  BuilderExecutionMode,
+  BuilderObservedEvidence,
   BuilderPipelineOutcome,
-  Deployability,
   EvidenceArtifactPublic,
-  ExecutionProfile,
-  LlmSupportMetadata,
-  LlmVerdictMetadata,
   RuntimeFile,
   StageResult,
   StageStatus,
-  ValidationResult,
 } from '../domain/builder.types';
 import { ExecutionAdapterService } from '../infrastructure/execution/execution-adapter.service';
 import { extractArchiveToWorkspace } from '../infrastructure/utils/archive-extractor.util';
@@ -108,15 +103,13 @@ export class BuilderService {
     @InjectQueue(BUILDER_RUNS_QUEUE_NAME)
     private readonly builderRunsQueue: Queue,
     private readonly minioStorageService: MinioStorageService,
-    private readonly classifierService: ClassifierService,
     private readonly staticFindingsService: StaticFindingsService,
-    private readonly strategyResolverService: StrategyResolverService,
+    private readonly builderPlanLlmService: BuilderPlanLlmService,
+    private readonly builderEvaluationLlmService: BuilderEvaluationLlmService,
     private readonly dockerfileTemplateService: DockerfileTemplateService,
     private readonly executionAdapterService: ExecutionAdapterService,
-    private readonly validationService: ValidationService,
     private readonly evidenceService: EvidenceService,
-    private readonly teacherReportService: TeacherReportService,
-    private readonly teacherReportLlmService: TeacherReportLlmService,
+    private readonly builderReportService: BuilderReportService,
     private readonly configService: ConfigService,
   ) {
     this.cleanupImages = toBoolean(
@@ -247,27 +240,21 @@ export class BuilderService {
 
     try {
       const pipelineOutcome = await this.executeDeliveryPipeline(run, data);
-      const hasFailedStage = pipelineOutcome.stageResults.some(
-        (stage) => stage.status === StageStatus.FAIL,
-      );
-      const finalStatus = hasFailedStage
+      const finalStatus = pipelineOutcome.failureReason
         ? BuildRunStatus.FAILED
         : BuildRunStatus.SUCCESS;
 
       await this.buildRunsRepository.save({
         ...run,
         status: finalStatus,
-        stackResult: pipelineOutcome.legacy.stackResult,
-        dockerfileContent: pipelineOutcome.legacy.dockerfileContent,
-        buildLogs: pipelineOutcome.legacy.buildLogs,
-        qualityResult: pipelineOutcome.legacy.qualityResult,
-        timingsMs: pipelineOutcome.legacy.timingsMs,
-        projectCharacterization: pipelineOutcome.projectCharacterization,
-        strategyResult: pipelineOutcome.strategyResult,
+        stackResult: pipelineOutcome.runtimeOutputs.stackResult,
+        dockerfileContent: pipelineOutcome.runtimeOutputs.dockerfileContent,
+        buildLogs: pipelineOutcome.runtimeOutputs.buildLogs,
+        timingsMs: pipelineOutcome.runtimeOutputs.timingsMs,
         staticFindings: pipelineOutcome.staticFindings,
         stageResults: pipelineOutcome.stageResults,
-        validationResult: pipelineOutcome.validationResult,
-        teacherReport: pipelineOutcome.teacherReport,
+        llmAssessment: pipelineOutcome.llmAssessment,
+        report: pipelineOutcome.report,
         evidenceArtifacts: pipelineOutcome.evidenceArtifacts,
         executionContext: pipelineOutcome.executionContext,
         failureReason: pipelineOutcome.failureReason,
@@ -275,7 +262,9 @@ export class BuilderService {
         imageTag:
           finalStatus === BuildRunStatus.SUCCESS
             ? ((
-                pipelineOutcome.legacy.buildLogs as { imageTag?: string } | null
+                pipelineOutcome.runtimeOutputs.buildLogs as {
+                  imageTag?: string;
+                } | null
               )?.imageTag ?? null)
             : null,
         imageExpiresAt:
@@ -369,19 +358,19 @@ export class BuilderService {
     format: 'json' | 'text',
   ): Promise<unknown> {
     const run = await this.getRunById(buildRunId, actor);
-    const teacherReport = run.teacherReport as { readableText?: string } | null;
-    if (!teacherReport) {
-      throw new NotFoundException('El run no contiene teacherReport.');
+    const report = run.report as { readableText?: string } | null;
+    if (!report) {
+      throw new NotFoundException('El run no contiene report.');
     }
     if (format === 'text') {
-      return { format: 'text', report: teacherReport.readableText ?? '' };
+      return { format: 'text', report: report.readableText ?? '' };
     }
     if (format !== 'json') {
       throw new UnprocessableEntityException(
         'Formato de reporte inválido. Use format=json o format=text.',
       );
     }
-    return { format: 'json', report: teacherReport };
+    return { format: 'json', report };
   }
 
   async failStaleRunsOnStartup(): Promise<void> {
@@ -422,108 +411,34 @@ export class BuilderService {
   ): Promise<BuilderPipelineOutcome> {
     const warnings: string[] = [];
     const stageResults: StageResult[] = [];
-    const validationChecks: ValidationResult['checks'] = [];
     const evidenceArtifacts: EvidenceArtifactPublic[] = [];
     let workspaceRootDir: string | null = null;
     let namespace: string | null = null;
     let imageTag: string | null = null;
-    let failureReason: string | null = null;
+    let completed = false;
 
-    const legacy: BuilderPipelineOutcome['legacy'] = {
+    const runtimeOutputs: BuilderPipelineOutcome['runtimeOutputs'] = {
       stackResult: null,
       dockerfileContent: null,
       buildLogs: null,
-      qualityResult: {
-        classes: [],
-        summary:
-          'DockUS no usa LLM en camino crítico; qualityResult legacy mantenido por compatibilidad.',
-      },
       timingsMs: {},
     };
-
-    const dummyOutcome: BuilderPipelineOutcome = {
-      projectCharacterization: {
-        mainClass:
-          null as unknown as BuilderPipelineOutcome['projectCharacterization']['mainClass'],
-        facets: {
-          tests_present: false,
-          packaging_state:
-            null as unknown as BuilderPipelineOutcome['projectCharacterization']['facets']['packaging_state'],
-          execution_profile: ExecutionProfile.ANALYSIS_ONLY,
-          deployability: Deployability.ANALYSIS_ONLY,
-          portability_risks: [],
-        },
-        signals: [],
-        classifierVersion: '',
+    const observedEvidence: BuilderObservedEvidence = {
+      workspaceSummary: '',
+      build: {
+        attempted: false,
+        succeeded: false,
+        summary: 'Build no ejecutado.',
+        logTail: [],
       },
-      strategyResult: {
-        selectedClass:
-          null as unknown as BuilderPipelineOutcome['strategyResult']['selectedClass'],
-        build: {
-          mode: 'none',
-          dockerTemplate: 'none',
-          pythonVersion: '',
-        },
-        execution: {
-          profile: ExecutionProfile.ANALYSIS_ONLY,
-          command: null,
-          serviceType: null,
-          appModule: null,
-          appVariable: null,
-          namespace: null,
-        },
-        notes: [],
-        blockingConditions: [],
+      runtime: {
+        mode: 'analysis_only',
+        deploySummary: 'No desplegado.',
+        probeSummary: 'No ejecutado.',
+        stabilitySummary: 'No ejecutado.',
+        testSummary: 'No ejecutado.',
+        healthcheckSummary: 'No ejecutado.',
       },
-      staticFindings: [],
-      stageResults: [],
-      validationResult: {
-        profile: ExecutionProfile.ANALYSIS_ONLY,
-        overall: StageStatus.PASS,
-        deterministicVerdict: StageStatus.PASS,
-        failedStage: null,
-        checks: [],
-        tests: {
-          detected: false,
-          runner: 'none',
-          status: StageStatus.SKIP,
-          details: '',
-        },
-      },
-      evidenceArtifacts: [],
-      teacherReport: {
-        detectedProject:
-          null as unknown as BuilderPipelineOutcome['teacherReport']['detectedProject'],
-        strategyApplied: '',
-        stageOutcome: {
-          [BuildStage.ANALYSIS]: StageStatus.SKIP,
-          [BuildStage.BUILD]: StageStatus.SKIP,
-          [BuildStage.DEPLOY]: StageStatus.SKIP,
-          [BuildStage.PROBES]: StageStatus.SKIP,
-          [BuildStage.STABILITY]: StageStatus.SKIP,
-          [BuildStage.TESTS]: StageStatus.SKIP,
-          [BuildStage.CLEANUP]: StageStatus.SKIP,
-        },
-        exactCause: '',
-        relevantEvidence: [],
-        evaluationImplication: '',
-        readableText: '',
-      },
-      executionContext: {
-        pythonBaseImage: '',
-        dockerVersion: null,
-        kindVersion: null,
-        kubectlVersion: null,
-        clusterName: '',
-        limits: {
-          batchTimeoutSeconds: 0,
-          serviceReadyTimeoutSeconds: 0,
-          stabilityWindowSeconds: 0,
-        },
-      },
-      legacy,
-      failureReason: null,
-      warnings: [],
     };
 
     try {
@@ -534,47 +449,63 @@ export class BuilderService {
       workspaceRootDir = path.dirname(workspace.projectRootDir);
       warnings.push(...workspace.warnings);
 
-      const analysisStarted = this.validationService.beginStage(
-        BuildStage.ANALYSIS,
-      );
-      const classification = await this.classifierService.classify(
-        workspace.runtimeFiles,
-      );
+      const analysisStarted = this.beginStage(BuildStage.ANALYSIS);
       const staticFindings = await this.staticFindingsService.analyze(
         workspace.runtimeFiles,
       );
-      classification.characterization.facets.portability_risks =
-        staticFindings.portabilityRisks;
-      const strategy = this.strategyResolverService.resolve(classification);
-      legacy.stackResult = {
-        language: 'python',
-        pythonVersion: classification.pythonVersion,
-        manifests: {
-          requirementsTxt: classification.requirementsPath,
-          pyprojectToml: classification.pyprojectPath,
-          runtimeTxt: classification.runtimePath,
-          chosen: classification.requirementsPath
-            ? 'requirements.txt'
-            : classification.pyprojectPath
-              ? 'pyproject.toml'
-              : null,
+      const planResult = await this.runLlmPhaseWithRetry(
+        'planning',
+        warnings,
+        async () => {
+          if (!this.builderPlanLlmService.isEnabled()) {
+            throw new ServiceUnavailableException(
+              'El planner LLM del builder está desactivado.',
+            );
+          }
+          const result = await this.builderPlanLlmService.generatePlan({
+            runtimeFiles: workspace.runtimeFiles,
+            staticFindings: staticFindings.findings,
+          });
+          if (!result) {
+            throw new ServiceUnavailableException(
+              'El planner LLM no devolvió una evaluación inicial.',
+            );
+          }
+          return result;
         },
-        entrypoint: classification.resolvedEntrypoint,
-        pythonFiles: workspace.runtimeFiles.filter((file) =>
-          file.relativePath.endsWith('.py'),
-        ).length,
-      };
+      );
 
-      const classificationArtifact =
-        await this.evidenceService.persistJsonArtifact(
-          run.id,
-          BuildRunArtifactType.CLASSIFICATION,
-          classification.characterization,
-        );
-      const strategyArtifact = await this.evidenceService.persistJsonArtifact(
+      observedEvidence.workspaceSummary = planResult.assessment.evidenceSummary;
+      observedEvidence.runtime.mode = this.resolveExecutionMode(
+        planResult.assessment,
+      );
+      observedEvidence.runtime.testSummary =
+        planResult.assessment.recipe.test.length > 0
+          ? 'Pendiente de ejecutar según receta del planner LLM.'
+          : 'El planner LLM no propuso tests.';
+      observedEvidence.runtime.healthcheckSummary =
+        planResult.assessment.recipe.healthcheck !== null
+          ? 'Pendiente de ejecutar según receta del planner LLM.'
+          : 'El planner LLM no propuso healthcheck.';
+
+      runtimeOutputs.stackResult = this.buildStackResult({
+        runtimeFiles: workspace.runtimeFiles,
+        assessment: planResult.assessment,
+        model: planResult.model,
+      });
+
+      const planningArtifact = await this.evidenceService.persistJsonArtifact(
+        run.id,
+        BuildRunArtifactType.CLASSIFICATION,
+        {
+          model: planResult.model,
+          assessment: planResult.assessment,
+        },
+      );
+      const recipeArtifact = await this.evidenceService.persistJsonArtifact(
         run.id,
         BuildRunArtifactType.STRATEGY,
-        strategy,
+        planResult.assessment.recipe,
       );
       const findingsArtifact = await this.evidenceService.persistJsonArtifact(
         run.id,
@@ -582,20 +513,20 @@ export class BuilderService {
         staticFindings.findings,
       );
       evidenceArtifacts.push(
-        classificationArtifact,
-        strategyArtifact,
+        planningArtifact,
+        recipeArtifact,
         findingsArtifact,
       );
 
       stageResults.push(
-        this.validationService.finishStage({
+        this.finishStage({
           stage: BuildStage.ANALYSIS,
           startedAt: analysisStarted.startedAt,
           status: StageStatus.PASS,
-          reasonCode: 'ANALYSIS_COMPLETED',
+          reasonCode: 'LLM_PLANNING_COMPLETED',
           evidenceRefs: [
-            `artifact:${classificationArtifact.id}`,
-            `artifact:${strategyArtifact.id}`,
+            `artifact:${planningArtifact.id}`,
+            `artifact:${recipeArtifact.id}`,
             `artifact:${findingsArtifact.id}`,
           ],
         }),
@@ -610,310 +541,417 @@ export class BuilderService {
             'python:3.11.9-slim-bookworm',
           ) ?? 'python:3.11.9-slim-bookworm',
         );
-      dummyOutcome.executionContext = executionContext;
+      const dockerfile = this.dockerfileTemplateService.render(
+        planResult.assessment,
+      );
 
-      if (strategy.build.mode === 'none') {
+      if (!dockerfile) {
         stageResults.push(
           this.toSkippedStage(BuildStage.BUILD, 'BUILD_SKIPPED_NO_RECIPE'),
         );
       } else {
-        const dockerfile = this.dockerfileTemplateService.render(
-          strategy,
-          classification,
-        );
-        if (!dockerfile) {
-          throw new UnprocessableEntityException(
-            'No se pudo renderizar Dockerfile determinista para la entrega.',
-          );
-        }
-        legacy.dockerfileContent = dockerfile;
+        runtimeOutputs.dockerfileContent = dockerfile;
         await writeFile(
           path.join(workspace.projectRootDir, 'Dockerfile'),
           dockerfile,
           'utf8',
         );
 
-        await this.executionAdapterService.assertDockerAvailable();
-        imageTag = this.createImageTag(delivery.id);
-        const buildStage = this.validationService.beginStage(BuildStage.BUILD);
-        const dockerBuild = await this.executionAdapterService.dockerBuild(
-          workspace.projectRootDir,
-          imageTag,
-        );
-        legacy.buildLogs = {
-          exitCode: dockerBuild.exitCode,
-          durationMs: dockerBuild.durationMs,
-          logsTail: dockerBuild.logsTail,
-          imageTag,
-        };
-        const buildLogArtifact = await this.evidenceService.persistTextArtifact(
-          run.id,
-          BuildRunArtifactType.BUILD_LOG,
-          `${dockerBuild.stdout}\n${dockerBuild.stderr}`.trim(),
-        );
-        evidenceArtifacts.push(buildLogArtifact);
-        const buildStatus =
-          dockerBuild.exitCode === 0 ? StageStatus.PASS : StageStatus.FAIL;
-        stageResults.push(
-          this.validationService.finishStage({
-            stage: BuildStage.BUILD,
-            startedAt: buildStage.startedAt,
-            status: buildStatus,
-            reasonCode:
+        const buildStage = this.beginStage(BuildStage.BUILD);
+        try {
+          await this.executionAdapterService.assertDockerAvailable();
+          imageTag = this.createImageTag(delivery.id);
+          const dockerBuild = await this.executionAdapterService.dockerBuild(
+            workspace.projectRootDir,
+            imageTag,
+          );
+          runtimeOutputs.buildLogs = {
+            exitCode: dockerBuild.exitCode,
+            durationMs: dockerBuild.durationMs,
+            logsTail: dockerBuild.logsTail,
+            imageTag,
+          };
+          observedEvidence.build = {
+            attempted: true,
+            succeeded: dockerBuild.exitCode === 0,
+            summary:
               dockerBuild.exitCode === 0
-                ? 'DOCKER_BUILD_OK'
-                : 'DOCKER_BUILD_FAILED',
-            evidenceRefs: [`artifact:${buildLogArtifact.id}`],
-          }),
-        );
-        if (buildStatus === StageStatus.FAIL) {
-          failureReason = 'DOCKER_BUILD_FAILED';
+                ? 'La imagen Docker se construyó correctamente.'
+                : 'La construcción de la imagen Docker falló.',
+            logTail: dockerBuild.logsTail,
+          };
+          const buildLogArtifact =
+            await this.evidenceService.persistTextArtifact(
+              run.id,
+              BuildRunArtifactType.BUILD_LOG,
+              `${dockerBuild.stdout}\n${dockerBuild.stderr}`.trim(),
+            );
+          evidenceArtifacts.push(buildLogArtifact);
+          stageResults.push(
+            this.finishStage({
+              stage: BuildStage.BUILD,
+              startedAt: buildStage.startedAt,
+              status:
+                dockerBuild.exitCode === 0
+                  ? StageStatus.PASS
+                  : StageStatus.FAIL,
+              reasonCode:
+                dockerBuild.exitCode === 0
+                  ? 'DOCKER_BUILD_OK'
+                  : 'DOCKER_BUILD_FAILED',
+              evidenceRefs: [`artifact:${buildLogArtifact.id}`],
+            }),
+          );
+          if (dockerBuild.exitCode !== 0) {
+            imageTag = null;
+          }
+        } catch (error) {
+          const errorMessage = this.toErrorMessage(error);
+          warnings.push(`Build no disponible: ${errorMessage}`);
+          observedEvidence.build = {
+            attempted: true,
+            succeeded: false,
+            summary: `Build no completado: ${errorMessage}`,
+            logTail: [],
+          };
+          runtimeOutputs.buildLogs = {
+            error: errorMessage,
+            imageTag,
+          };
+          imageTag = null;
+          stageResults.push(
+            this.finishStage({
+              stage: BuildStage.BUILD,
+              startedAt: buildStage.startedAt,
+              status: StageStatus.FAIL,
+              reasonCode: 'DOCKER_BUILD_EXCEPTION',
+            }),
+          );
         }
       }
 
       if (
-        failureReason === null &&
         imageTag &&
-        strategy.execution.profile !== ExecutionProfile.ANALYSIS_ONLY &&
-        strategy.execution.command
+        planResult.assessment.recipe.run &&
+        observedEvidence.runtime.mode !== 'analysis_only'
       ) {
         await this.updateRunStatus(run.id, BuildRunStatus.DEPLOYING);
-        await this.executionAdapterService.assertKubernetesTooling();
-        await this.executionAdapterService.loadImageInKind(imageTag);
+        try {
+          await this.executionAdapterService.assertKubernetesTooling();
+          await this.executionAdapterService.loadImageInKind(imageTag);
+          namespace = `${this.namespacePrefix}-${run.id.slice(0, 8).toLowerCase()}`;
+          await this.executionAdapterService.createNamespace(namespace);
 
-        namespace = `${this.namespacePrefix}-${run.id.slice(0, 8).toLowerCase()}`;
-        await this.executionAdapterService.createNamespace(namespace);
-
-        const deployStarted = this.validationService.beginStage(
-          BuildStage.DEPLOY,
-        );
-        let deployStageStatus: StageStatus = StageStatus.PASS;
-        let probesStageStatus: StageStatus = StageStatus.SKIP;
-        let stabilityStageStatus: StageStatus = StageStatus.SKIP;
-        let testStatus: StageStatus = StageStatus.SKIP;
-        let testRunner: 'pytest' | 'unittest' | 'none' = 'none';
-        let testDetails = 'Sin tests';
-        const testChecks: ValidationResult['checks'] = [];
-        let testLogs = '';
-
-        if (strategy.execution.profile === ExecutionProfile.BATCH) {
-          const batchResult = await this.executionAdapterService.runBatchJob({
-            namespace,
-            jobName: `run-${run.id.slice(0, 8)}`,
-            imageTag,
-            command: strategy.execution.command,
-            runId: run.id,
-            deliveryId: delivery.id,
-          });
-          deployStageStatus = batchResult.status;
-          probesStageStatus = StageStatus.SKIP;
-          stabilityStageStatus = StageStatus.SKIP;
-          validationChecks.push(...batchResult.checks);
-
-          const batchLogsArtifact =
-            await this.evidenceService.persistTextArtifact(
-              run.id,
-              BuildRunArtifactType.K8S_POD_LOG,
-              batchResult.logs,
-            );
-          evidenceArtifacts.push(batchLogsArtifact);
-        } else if (strategy.execution.profile === ExecutionProfile.SERVICE) {
-          const serviceResult =
-            await this.executionAdapterService.runServiceDeployment({
+          const deployStarted = this.beginStage(BuildStage.DEPLOY);
+          if (observedEvidence.runtime.mode === 'batch') {
+            const batchResult = await this.executionAdapterService.runBatchJob({
               namespace,
-              deploymentName: `app-${run.id.slice(0, 8)}`,
-              serviceName: `svc-${run.id.slice(0, 8)}`,
+              jobName: `run-${run.id.slice(0, 8)}`,
               imageTag,
+              command: planResult.assessment.recipe.run,
               runId: run.id,
               deliveryId: delivery.id,
             });
-          deployStageStatus = serviceResult.status;
-          probesStageStatus = serviceResult.checks
-            .filter((check) => ['POD_READY_90S', 'TCP_8000'].includes(check.id))
-            .every((check) => check.status === StageStatus.PASS)
-            ? StageStatus.PASS
-            : StageStatus.FAIL;
-          stabilityStageStatus =
-            serviceResult.checks.find(
-              (check) => check.id === 'STABILITY_30S_NO_RESTARTS',
-            )?.status ?? StageStatus.FAIL;
-          validationChecks.push(...serviceResult.checks);
+            observedEvidence.runtime.deploySummary =
+              batchResult.reasonCode === 'BATCH_VALIDATED'
+                ? 'El job efímero completó correctamente.'
+                : 'El job efímero no completó correctamente.';
+            observedEvidence.runtime.probeSummary =
+              'No aplica para ejecución batch.';
+            observedEvidence.runtime.stabilitySummary =
+              'No aplica para ejecución batch.';
 
-          if (serviceResult.podName) {
-            const podDescribe =
-              await this.executionAdapterService.collectPodDescribe(
+            if (batchResult.logs) {
+              const batchLogsArtifact =
+                await this.evidenceService.persistTextArtifact(
+                  run.id,
+                  BuildRunArtifactType.K8S_POD_LOG,
+                  batchResult.logs,
+                );
+              evidenceArtifacts.push(batchLogsArtifact);
+            }
+
+            stageResults.push(
+              this.finishStage({
+                stage: BuildStage.DEPLOY,
+                startedAt: deployStarted.startedAt,
+                status: batchResult.status,
+                reasonCode: batchResult.reasonCode,
+              }),
+            );
+            stageResults.push(
+              this.toSkippedStage(BuildStage.PROBES, 'PROBES_NOT_APPLICABLE'),
+            );
+            stageResults.push(
+              this.toSkippedStage(
+                BuildStage.STABILITY,
+                'STABILITY_NOT_APPLICABLE',
+              ),
+            );
+          } else {
+            const serviceResult =
+              await this.executionAdapterService.runServiceDeployment({
+                namespace,
+                deploymentName: `app-${run.id.slice(0, 8)}`,
+                serviceName: `svc-${run.id.slice(0, 8)}`,
+                imageTag,
+                port: planResult.assessment.recipe.servicePort ?? 8000,
+                runId: run.id,
+                deliveryId: delivery.id,
+              });
+            const deployStatus = this.stageStatusForCheckPrefix(
+              serviceResult.checks,
+              'POD_READY_',
+            );
+            let probesStatus = this.stageStatusForCheckPrefix(
+              serviceResult.checks,
+              'TCP_',
+            );
+            const stabilityStatus = this.stageStatusForCheckPrefix(
+              serviceResult.checks,
+              'STABILITY_',
+            );
+
+            observedEvidence.runtime.deploySummary =
+              deployStatus === StageStatus.PASS
+                ? 'El deployment quedó listo en Kubernetes.'
+                : 'El deployment no llegó a estado listo.';
+            observedEvidence.runtime.probeSummary =
+              probesStatus === StageStatus.PASS
+                ? 'La comprobación TCP del servicio fue satisfactoria.'
+                : 'La comprobación TCP del servicio falló.';
+            observedEvidence.runtime.stabilitySummary =
+              stabilityStatus === StageStatus.PASS
+                ? 'La ventana de estabilidad no detectó reinicios.'
+                : 'Se detectó inestabilidad o reinicios.';
+
+            if (serviceResult.podName) {
+              const podDescribe =
+                await this.executionAdapterService.collectPodDescribe(
+                  namespace,
+                  serviceResult.podName,
+                );
+              const podDescribeArtifact =
+                await this.evidenceService.persistTextArtifact(
+                  run.id,
+                  BuildRunArtifactType.K8S_POD_DESCRIBE,
+                  podDescribe,
+                );
+              evidenceArtifacts.push(podDescribeArtifact);
+
+              const podLogs = await this.executionAdapterService.collectPodLogs(
                 namespace,
                 serviceResult.podName,
               );
-            const podDescribeArtifact =
+              if (podLogs) {
+                const podLogsArtifact =
+                  await this.evidenceService.persistTextArtifact(
+                    run.id,
+                    BuildRunArtifactType.K8S_POD_LOG,
+                    podLogs,
+                  );
+                evidenceArtifacts.push(podLogsArtifact);
+              }
+            }
+
+            if (planResult.assessment.recipe.healthcheck) {
+              try {
+                const healthcheckResult =
+                  await this.executionAdapterService.runHealthcheck({
+                    namespace,
+                    imageTag,
+                    command: planResult.assessment.recipe.healthcheck,
+                    runId: run.id,
+                    deliveryId: delivery.id,
+                  });
+                observedEvidence.runtime.healthcheckSummary =
+                  healthcheckResult.details;
+                if (healthcheckResult.logs) {
+                  const healthcheckArtifact =
+                    await this.evidenceService.persistTextArtifact(
+                      run.id,
+                      BuildRunArtifactType.K8S_POD_LOG,
+                      healthcheckResult.logs,
+                    );
+                  evidenceArtifacts.push(healthcheckArtifact);
+                }
+                if (healthcheckResult.status === StageStatus.FAIL) {
+                  probesStatus = StageStatus.FAIL;
+                }
+              } catch (error) {
+                const errorMessage = this.toErrorMessage(error);
+                warnings.push(`Healthcheck no ejecutable: ${errorMessage}`);
+                observedEvidence.runtime.healthcheckSummary = `Healthcheck no ejecutado: ${errorMessage}`;
+                probesStatus = StageStatus.FAIL;
+              }
+            }
+
+            stageResults.push(
+              this.finishStage({
+                stage: BuildStage.DEPLOY,
+                startedAt: deployStarted.startedAt,
+                status: deployStatus,
+                reasonCode:
+                  deployStatus === StageStatus.PASS
+                    ? 'DEPLOY_SERVICE_READY'
+                    : 'DEPLOY_SERVICE_FAILED',
+              }),
+            );
+            stageResults.push(
+              this.toManualStage(
+                BuildStage.PROBES,
+                probesStatus,
+                probesStatus === StageStatus.PASS
+                  ? 'PROBES_OK'
+                  : 'PROBES_FAILED',
+              ),
+            );
+            stageResults.push(
+              this.toManualStage(
+                BuildStage.STABILITY,
+                stabilityStatus,
+                stabilityStatus === StageStatus.PASS
+                  ? 'STABILITY_OK'
+                  : 'STABILITY_FAILED',
+              ),
+            );
+          }
+        } catch (error) {
+          const errorMessage = this.toErrorMessage(error);
+          warnings.push(`Despliegue no disponible: ${errorMessage}`);
+          observedEvidence.runtime.deploySummary = `Despliegue no completado: ${errorMessage}`;
+          observedEvidence.runtime.probeSummary =
+            'Probes omitidas por fallo previo en despliegue.';
+          observedEvidence.runtime.stabilitySummary =
+            'Stability omitida por fallo previo en despliegue.';
+          stageResults.push(
+            this.toManualStage(
+              BuildStage.DEPLOY,
+              StageStatus.FAIL,
+              'DEPLOY_EXCEPTION',
+            ),
+          );
+          stageResults.push(
+            this.toSkippedStage(
+              BuildStage.PROBES,
+              'PROBES_SKIPPED_DEPLOY_EXCEPTION',
+            ),
+          );
+          stageResults.push(
+            this.toSkippedStage(
+              BuildStage.STABILITY,
+              'STABILITY_SKIPPED_DEPLOY_EXCEPTION',
+            ),
+          );
+        }
+      } else {
+        observedEvidence.runtime.deploySummary =
+          planResult.assessment.recipe.run === null
+            ? 'El planner LLM no propuso un comando de arranque.'
+            : imageTag === null
+              ? 'Despliegue omitido porque no se construyó una imagen ejecutable.'
+              : 'No se planificó despliegue persistente.';
+        observedEvidence.runtime.probeSummary =
+          'No se ejecutaron probes porque no hubo servicio desplegado.';
+        observedEvidence.runtime.stabilitySummary =
+          'No se ejecutó stability porque no hubo servicio desplegado.';
+        stageResults.push(
+          this.toSkippedStage(BuildStage.DEPLOY, 'DEPLOY_SKIPPED'),
+        );
+        stageResults.push(
+          this.toSkippedStage(BuildStage.PROBES, 'PROBES_SKIPPED'),
+        );
+        stageResults.push(
+          this.toSkippedStage(BuildStage.STABILITY, 'STABILITY_SKIPPED'),
+        );
+      }
+
+      await this.updateRunStatus(run.id, BuildRunStatus.VALIDATING);
+      const testsStarted = this.beginStage(BuildStage.TESTS);
+      if (
+        namespace &&
+        imageTag &&
+        planResult.assessment.recipe.test.length > 0
+      ) {
+        try {
+          const testsResult = await this.executionAdapterService.runTests({
+            namespace,
+            imageTag,
+            commands: planResult.assessment.recipe.test,
+            runId: run.id,
+            deliveryId: delivery.id,
+          });
+          observedEvidence.runtime.testSummary = testsResult.details;
+          if (testsResult.logs) {
+            const testLogArtifact =
               await this.evidenceService.persistTextArtifact(
                 run.id,
-                BuildRunArtifactType.K8S_POD_DESCRIBE,
-                podDescribe,
+                BuildRunArtifactType.TEST_LOG,
+                testsResult.logs,
               );
-            evidenceArtifacts.push(podDescribeArtifact);
+            evidenceArtifacts.push(testLogArtifact);
           }
+          stageResults.push(
+            this.finishStage({
+              stage: BuildStage.TESTS,
+              startedAt: testsStarted.startedAt,
+              status: testsResult.status,
+              reasonCode:
+                testsResult.status === StageStatus.PASS
+                  ? 'TESTS_OK'
+                  : 'TESTS_FAILED',
+            }),
+          );
+        } catch (error) {
+          const errorMessage = this.toErrorMessage(error);
+          warnings.push(`Tests no ejecutables: ${errorMessage}`);
+          observedEvidence.runtime.testSummary = `Tests no ejecutados correctamente: ${errorMessage}`;
+          stageResults.push(
+            this.finishStage({
+              stage: BuildStage.TESTS,
+              startedAt: testsStarted.startedAt,
+              status: StageStatus.FAIL,
+              reasonCode: 'TESTS_EXCEPTION',
+            }),
+          );
         }
-
-        stageResults.push(
-          this.validationService.finishStage({
-            stage: BuildStage.DEPLOY,
-            startedAt: deployStarted.startedAt,
-            status: deployStageStatus,
-            reasonCode:
-              deployStageStatus === StageStatus.PASS
-                ? 'DEPLOY_COMPLETED'
-                : 'DEPLOY_FAILED',
-          }),
-        );
-        stageResults.push(
-          this.toManualStage(
-            BuildStage.PROBES,
-            probesStageStatus,
-            probesStageStatus === StageStatus.PASS
-              ? 'PROBES_OK'
-              : probesStageStatus === StageStatus.SKIP
-                ? 'PROBES_SKIPPED'
-                : 'PROBES_FAILED',
-          ),
-        );
-        stageResults.push(
-          this.toManualStage(
-            BuildStage.STABILITY,
-            stabilityStageStatus,
-            stabilityStageStatus === StageStatus.PASS
-              ? 'STABILITY_OK'
-              : stabilityStageStatus === StageStatus.SKIP
-                ? 'STABILITY_SKIPPED'
-                : 'STABILITY_FAILED',
-          ),
-        );
-
-        await this.updateRunStatus(run.id, BuildRunStatus.VALIDATING);
-        const testsStarted = this.validationService.beginStage(
-          BuildStage.TESTS,
-        );
-        const testsResult = await this.executionAdapterService.runTests({
-          namespace,
-          imageTag,
-          testsDetected: classification.characterization.facets.tests_present,
-          runId: run.id,
-          deliveryId: delivery.id,
-        });
-        testStatus = testsResult.status;
-        testRunner = testsResult.runner;
-        testDetails = testsResult.details;
-        testLogs = testsResult.logs;
-        if (testLogs) {
-          const testLogArtifact =
-            await this.evidenceService.persistTextArtifact(
-              run.id,
-              BuildRunArtifactType.TEST_LOG,
-              testLogs,
-            );
-          evidenceArtifacts.push(testLogArtifact);
-        }
-        stageResults.push(
-          this.validationService.finishStage({
-            stage: BuildStage.TESTS,
-            startedAt: testsStarted.startedAt,
-            status: testStatus,
-            reasonCode:
-              testStatus === StageStatus.PASS
-                ? 'TESTS_OK'
-                : testStatus === StageStatus.SKIP
-                  ? 'TESTS_SKIPPED'
-                  : 'TESTS_FAILED_OR_NOT_EXECUTABLE',
-          }),
-        );
-
-        if (
-          ![
-            deployStageStatus,
-            probesStageStatus,
-            stabilityStageStatus,
-            testStatus,
-          ].every(
-            (status) =>
-              status === StageStatus.PASS || status === StageStatus.SKIP,
-          )
-        ) {
-          failureReason = 'VALIDATION_FAILED';
-        }
-
-        testChecks.push(...validationChecks);
-        dummyOutcome.validationResult =
-          this.validationService.buildValidationResult({
-            profile: strategy.execution.profile,
-            stageResults,
-            checks: testChecks,
-            tests: {
-              detected: classification.characterization.facets.tests_present,
-              runner: testRunner,
-              status: testStatus,
-              details: testDetails,
-            },
-          });
       } else {
-        if (strategy.execution.profile === ExecutionProfile.ANALYSIS_ONLY) {
-          stageResults.push(
-            this.toSkippedStage(BuildStage.DEPLOY, 'DEPLOY_SKIPPED'),
-          );
-          stageResults.push(
-            this.toSkippedStage(BuildStage.PROBES, 'PROBES_SKIPPED'),
-          );
-          stageResults.push(
-            this.toSkippedStage(BuildStage.STABILITY, 'STABILITY_SKIPPED'),
-          );
-          if (stageResults.every((stage) => stage.stage !== BuildStage.TESTS)) {
-            if (
-              classification.characterization.facets.tests_present &&
-              classification.characterization.facets.deployability ===
-                Deployability.BUILD_ONLY
-            ) {
-              stageResults.push(
-                this.toManualStage(
-                  BuildStage.TESTS,
-                  StageStatus.FAIL,
-                  'TESTS_DETECTED_NOT_EXECUTABLE',
-                ),
+        observedEvidence.runtime.testSummary =
+          planResult.assessment.recipe.test.length > 0
+            ? 'Los tests no se ejecutaron porque faltó un runtime utilizable.'
+            : 'El planner LLM no propuso tests.';
+        stageResults.push(
+          this.toSkippedStage(
+            BuildStage.TESTS,
+            planResult.assessment.recipe.test.length > 0
+              ? 'TESTS_SKIPPED_NO_RUNTIME'
+              : 'TESTS_SKIPPED_NO_RECIPE',
+          ),
+        );
+      }
+
+      if (namespace) {
+        try {
+          const k8sEvents =
+            await this.executionAdapterService.collectEvents(namespace);
+          if (k8sEvents) {
+            const eventsArtifact =
+              await this.evidenceService.persistTextArtifact(
+                run.id,
+                BuildRunArtifactType.K8S_EVENTS,
+                k8sEvents,
               );
-              validationChecks.push({
-                id: 'TESTS_DETECTED_NOT_EXECUTABLE',
-                status: StageStatus.FAIL,
-                expected: 'tests executable in built environment',
-                actual: 'detected_not_executable',
-              });
-              warnings.push(
-                'Tests detectados pero no ejecutables en entorno construido (detected_not_executable).',
-              );
-              failureReason = failureReason ?? 'TESTS_NOT_EXECUTABLE';
-            } else {
-              stageResults.push(
-                this.toSkippedStage(BuildStage.TESTS, 'TESTS_SKIPPED'),
-              );
-            }
+            evidenceArtifacts.push(eventsArtifact);
           }
-        } else if (failureReason) {
-          stageResults.push(
-            this.toSkippedStage(BuildStage.DEPLOY, 'DEPLOY_SKIPPED'),
-          );
-          stageResults.push(
-            this.toSkippedStage(BuildStage.PROBES, 'PROBES_SKIPPED'),
-          );
-          stageResults.push(
-            this.toSkippedStage(BuildStage.STABILITY, 'STABILITY_SKIPPED'),
-          );
-          stageResults.push(
-            this.toSkippedStage(BuildStage.TESTS, 'TESTS_SKIPPED'),
+        } catch (error) {
+          warnings.push(
+            `No se pudieron recopilar eventos de Kubernetes: ${this.toErrorMessage(error)}`,
           );
         }
       }
 
       await this.updateRunStatus(run.id, BuildRunStatus.CLEANING);
-      const cleanupStarted = this.validationService.beginStage(
-        BuildStage.CLEANUP,
-      );
+      const cleanupStarted = this.beginStage(BuildStage.CLEANUP);
       let cleanupStatus = StageStatus.PASS;
       let cleanupReason = 'CLEANUP_OK';
       let orphanedResources: string[] = [];
@@ -923,13 +961,10 @@ export class BuilderService {
         cleanupStatus = cleanup.status;
         cleanupReason = cleanup.reasonCode;
         orphanedResources = cleanup.orphanedResources;
-        if (cleanupStatus === StageStatus.FAIL) {
-          failureReason = 'CLEANUP_FAILED';
-        }
       }
 
       stageResults.push(
-        this.validationService.finishStage({
+        this.finishStage({
           stage: BuildStage.CLEANUP,
           startedAt: cleanupStarted.startedAt,
           status: cleanupStatus,
@@ -940,195 +975,47 @@ export class BuilderService {
         }),
       );
 
-      if (
-        !dummyOutcome.validationResult ||
-        !dummyOutcome.validationResult.checks
-      ) {
-        const testsStage = stageResults.find(
-          (stageResult) => stageResult.stage === BuildStage.TESTS,
-        );
-        dummyOutcome.validationResult =
-          this.validationService.buildValidationResult({
-            profile: strategy.execution.profile,
-            stageResults,
-            checks: validationChecks,
-            tests: {
-              detected: classification.characterization.facets.tests_present,
-              runner: 'none',
-              status: testsStage?.status ?? StageStatus.SKIP,
-              details:
-                testsStage?.reasonCode === 'TESTS_DETECTED_NOT_EXECUTABLE'
-                  ? 'detected_not_executable'
-                  : 'No se ejecutaron tests.',
-            },
-          });
-      }
-
-      if (failureReason) {
-        warnings.push(`failureReason=${failureReason}`);
-      }
       if (orphanedResources.length > 0) {
         warnings.push(
           `Recursos huérfanos detectados tras cleanup: ${orphanedResources.join(', ')}`,
         );
       }
 
-      const report = this.teacherReportService.create({
-        detectedProject: classification.characterization.mainClass,
-        strategyResult: strategy,
+      const evaluationResult = await this.runLlmPhaseWithRetry(
+        'evaluation',
+        warnings,
+        async () => {
+          if (!this.builderEvaluationLlmService.isEnabled()) {
+            throw new ServiceUnavailableException(
+              'La evaluación LLM del builder está desactivada.',
+            );
+          }
+          const result = await this.builderEvaluationLlmService.evaluate({
+            planningAssessment: planResult.assessment,
+            stageResults,
+            staticFindings: staticFindings.findings,
+            warnings,
+            executionContext,
+            evidenceArtifacts: evidenceArtifacts.map((artifact) => ({
+              id: artifact.id,
+              type: artifact.type,
+            })),
+            observedEvidence,
+          });
+          if (!result) {
+            throw new ServiceUnavailableException(
+              'La evaluación LLM no devolvió un veredicto final.',
+            );
+          }
+          return result;
+        },
+      );
+
+      const report = this.builderReportService.create({
+        assessment: evaluationResult.assessment,
         stageResults,
-        failureReason,
         relevantEvidence: evidenceArtifacts.map((artifact) => artifact.id),
       });
-
-      if (this.teacherReportLlmService.isEnabled()) {
-        try {
-          const llmSummary = await this.teacherReportLlmService.generateSummary(
-            {
-              report,
-              strategyResult: strategy,
-              stageResults,
-              validationResult: dummyOutcome.validationResult,
-              staticFindings: staticFindings.findings,
-              evidenceIds: evidenceArtifacts.map((artifact) => artifact.id),
-            },
-          );
-          if (llmSummary) {
-            const llmVerdict = this.buildLlmVerdictMetadata({
-              status: 'generated',
-              model: llmSummary.model,
-              verdict: llmSummary.summary.llmVerdict,
-              confidence: llmSummary.summary.llmVerdictConfidence,
-              rationale: llmSummary.summary.llmVerdictReason,
-            });
-            classification.characterization.llmSupport =
-              this.buildLlmSupportMetadata({
-                status: 'generated',
-                model: llmSummary.model,
-                summary: llmSummary.summary.classificationSupport,
-              });
-            strategy.llmSupport = this.buildLlmSupportMetadata({
-              status: 'generated',
-              model: llmSummary.model,
-              summary: llmSummary.summary.strategySupport,
-            });
-            dummyOutcome.validationResult.llmSupport =
-              this.buildLlmSupportMetadata({
-                status: 'generated',
-                model: llmSummary.model,
-                summary: llmSummary.summary.validationSupport,
-              });
-            dummyOutcome.validationResult.llmVerdict = llmVerdict;
-            report.llmAssistedSummary = {
-              status: 'generated',
-              model: llmSummary.model,
-              findingsForTeachers: llmSummary.summary.findingsForTeachers,
-              evidenceReadableText: llmSummary.summary.evidenceReadableText,
-              naturalExplanation: llmSummary.summary.naturalExplanation,
-              humanInterpretation: llmSummary.summary.humanInterpretation,
-              analysisSupport: {
-                classification: llmSummary.summary.classificationSupport,
-                staticFindings: llmSummary.summary.staticFindingsSupport,
-                strategy: llmSummary.summary.strategySupport,
-                validation: llmSummary.summary.validationSupport,
-              },
-              llmVerdict,
-            };
-            report.readableText = [
-              report.readableText,
-              '',
-              'Resumen docente asistido por LLM:',
-              llmSummary.summary.naturalExplanation,
-              '',
-              'Interpretación humana sugerida de hallazgos:',
-              llmSummary.summary.humanInterpretation,
-              '',
-              'Traducción legible de evidencias técnicas:',
-              llmSummary.summary.evidenceReadableText,
-              '',
-              'Veredictos separados:',
-              `Determinista (canónico): ${dummyOutcome.validationResult.deterministicVerdict}`,
-              `LLM (independiente): ${llmSummary.summary.llmVerdict}`,
-              `Confianza LLM: ${llmSummary.summary.llmVerdictConfidence}`,
-              `Razonamiento LLM: ${llmSummary.summary.llmVerdictReason}`,
-              '',
-              'Apoyo LLM por análisis (sin alterar verdicts):',
-              `Clasificación: ${llmSummary.summary.classificationSupport}`,
-              `Findings estáticos: ${llmSummary.summary.staticFindingsSupport}`,
-              `Estrategia: ${llmSummary.summary.strategySupport}`,
-              `Validación: ${llmSummary.summary.validationSupport}`,
-            ].join('\n');
-          } else {
-            const llmVerdict = this.buildLlmVerdictMetadata({
-              status: 'skipped',
-            });
-            classification.characterization.llmSupport =
-              this.buildLlmSupportMetadata({
-                status: 'skipped',
-              });
-            strategy.llmSupport = this.buildLlmSupportMetadata({
-              status: 'skipped',
-            });
-            dummyOutcome.validationResult.llmSupport =
-              this.buildLlmSupportMetadata({
-                status: 'skipped',
-              });
-            dummyOutcome.validationResult.llmVerdict = llmVerdict;
-            report.llmAssistedSummary = {
-              status: 'skipped',
-              llmVerdict,
-            };
-          }
-        } catch (error) {
-          const errorMessage = this.toErrorMessage(error);
-          const llmVerdict = this.buildLlmVerdictMetadata({
-            status: 'error',
-            error: errorMessage,
-          });
-          warnings.push(`Resumen docente LLM no disponible: ${errorMessage}`);
-          classification.characterization.llmSupport =
-            this.buildLlmSupportMetadata({
-              status: 'error',
-              error: errorMessage,
-            });
-          strategy.llmSupport = this.buildLlmSupportMetadata({
-            status: 'error',
-            error: errorMessage,
-          });
-          dummyOutcome.validationResult.llmSupport =
-            this.buildLlmSupportMetadata({
-              status: 'error',
-              error: errorMessage,
-            });
-          dummyOutcome.validationResult.llmVerdict = llmVerdict;
-          report.llmAssistedSummary = {
-            status: 'error',
-            error: errorMessage,
-            llmVerdict,
-          };
-        }
-      } else {
-        const llmVerdict = this.buildLlmVerdictMetadata({
-          status: 'skipped',
-        });
-        classification.characterization.llmSupport =
-          this.buildLlmSupportMetadata({
-            status: 'skipped',
-          });
-        strategy.llmSupport = this.buildLlmSupportMetadata({
-          status: 'skipped',
-        });
-        dummyOutcome.validationResult.llmSupport = this.buildLlmSupportMetadata(
-          {
-            status: 'skipped',
-          },
-        );
-        dummyOutcome.validationResult.llmVerdict = llmVerdict;
-        report.llmAssistedSummary = {
-          status: 'skipped',
-          llmVerdict,
-        };
-      }
 
       const reportJsonArtifact = await this.evidenceService.persistJsonArtifact(
         run.id,
@@ -1142,24 +1029,25 @@ export class BuilderService {
       );
       evidenceArtifacts.push(reportJsonArtifact, reportTextArtifact);
 
-      legacy.timingsMs = this.toLegacyTimings(stageResults);
-      dummyOutcome.projectCharacterization = classification.characterization;
-      dummyOutcome.strategyResult = strategy;
-      dummyOutcome.staticFindings = staticFindings.findings;
-      dummyOutcome.stageResults = stageResults;
-      dummyOutcome.teacherReport = report;
-      dummyOutcome.evidenceArtifacts = evidenceArtifacts;
-      dummyOutcome.legacy = legacy;
-      dummyOutcome.failureReason = failureReason;
-      dummyOutcome.warnings = warnings;
-
-      return dummyOutcome;
+      runtimeOutputs.timingsMs = this.toTimings(stageResults);
+      completed = true;
+      return {
+        llmAssessment: evaluationResult.assessment,
+        staticFindings: staticFindings.findings,
+        stageResults,
+        evidenceArtifacts,
+        report,
+        executionContext,
+        runtimeOutputs,
+        failureReason: null,
+        warnings,
+      };
     } finally {
       if (workspaceRootDir) {
         await rm(workspaceRootDir, { recursive: true, force: true });
       }
 
-      if (this.cleanupImages && imageTag && failureReason) {
+      if (this.cleanupImages && imageTag && !completed) {
         await this.cleanupImage(imageTag, warnings);
       }
     }
@@ -1373,7 +1261,7 @@ export class BuilderService {
     await this.buildRunsRepository.save(run);
   }
 
-  private toLegacyTimings(stageResults: StageResult[]): Record<string, number> {
+  private toTimings(stageResults: StageResult[]): Record<string, number> {
     const timings: Record<string, number> = {};
     for (const stageResult of stageResults) {
       timings[stageResult.stage.toLowerCase()] = stageResult.durationMs;
@@ -1383,6 +1271,116 @@ export class BuilderService {
       0,
     );
     return timings;
+  }
+
+  private beginStage(stage: BuildStage): {
+    stage: BuildStage;
+    startedAt: Date;
+  } {
+    return {
+      stage,
+      startedAt: new Date(),
+    };
+  }
+
+  private finishStage(input: {
+    stage: BuildStage;
+    startedAt: Date;
+    status: StageStatus;
+    reasonCode: string;
+    evidenceRefs?: string[];
+  }): StageResult {
+    const finishedAt = new Date();
+    return {
+      stage: input.stage,
+      status: input.status,
+      startedAt: input.startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+      durationMs: finishedAt.getTime() - input.startedAt.getTime(),
+      reasonCode: input.reasonCode,
+      evidenceRefs: input.evidenceRefs ?? [],
+    };
+  }
+
+  private async runLlmPhaseWithRetry<T>(
+    phase: 'planning' | 'evaluation',
+    warnings: string[],
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        warnings.push(
+          `Fallo en fase LLM ${phase} intento ${attempt}/2: ${this.toErrorMessage(error)}`,
+        );
+      }
+    }
+
+    throw new ServiceUnavailableException(
+      `La fase LLM ${phase} falló tras 2 intentos: ${this.toErrorMessage(lastError)}`,
+    );
+  }
+
+  private buildStackResult(input: {
+    runtimeFiles: RuntimeFile[];
+    assessment: BuilderPipelineOutcome['llmAssessment'];
+    model: string;
+  }): Record<string, unknown> {
+    const fileList = input.runtimeFiles.map((file) =>
+      toPosixPath(file.relativePath),
+    );
+    const manifests = {
+      requirements: fileList.filter((file) =>
+        /(^|\/)requirements[^/]*\.txt$/u.test(file),
+      ),
+      pyprojectToml: fileList.filter((file) => file.endsWith('pyproject.toml')),
+      setupPy: fileList.filter((file) => file.endsWith('setup.py')),
+      setupCfg: fileList.filter((file) => file.endsWith('setup.cfg')),
+      managePy: fileList.filter((file) => file.endsWith('manage.py')),
+    };
+
+    return {
+      language: 'python',
+      manifests,
+      pythonFiles: fileList.filter((file) => file.endsWith('.py')).length,
+      planner: {
+        source: 'llm-only',
+        model: input.model,
+        structuralType: input.assessment.structuralType,
+        evaluativeState: input.assessment.evaluativeState,
+        confidence: input.assessment.confidence,
+      },
+    };
+  }
+
+  private resolveExecutionMode(
+    assessment: BuilderPipelineOutcome['llmAssessment'],
+  ): BuilderExecutionMode {
+    if (!assessment.recipe.run) {
+      return 'analysis_only';
+    }
+
+    if (assessment.capabilities.C3.status === 'yes') {
+      return 'service';
+    }
+
+    return assessment.structuralType === 'T6' ? 'batch' : 'batch';
+  }
+
+  private stageStatusForCheckPrefix(
+    checks: Array<{ id: string; status: StageStatus }>,
+    prefix: string,
+  ): StageStatus {
+    const matching = checks.filter((check) => check.id.startsWith(prefix));
+    if (matching.length === 0) {
+      return StageStatus.SKIP;
+    }
+    return matching.every((check) => check.status === StageStatus.PASS)
+      ? StageStatus.PASS
+      : StageStatus.FAIL;
   }
 
   private toSkippedStage(stage: BuildStage, reasonCode: string): StageResult {
@@ -1454,18 +1452,6 @@ export class BuilderService {
     run.failureReason = reason;
     run.warnings = [...(run.warnings ?? []), reason];
     await this.buildRunsRepository.save(run);
-  }
-
-  private buildLlmSupportMetadata(
-    metadata: LlmSupportMetadata,
-  ): LlmSupportMetadata {
-    return metadata;
-  }
-
-  private buildLlmVerdictMetadata(
-    metadata: LlmVerdictMetadata,
-  ): LlmVerdictMetadata {
-    return metadata;
   }
 
   private toErrorMessage(error: unknown): string {

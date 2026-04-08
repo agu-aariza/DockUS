@@ -53,7 +53,11 @@ services:
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "mc alias set myminio http://localhost:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD >/dev/null 2>&1 && mc ready myminio >/dev/null 2>&1 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "mc alias set myminio http://localhost:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD >/dev/null 2>&1 && mc ready myminio >/dev/null 2>&1 || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -68,7 +72,7 @@ services:
     ports:
       - "${OLLAMA_PORT:-11435}:11434"
     environment:
-      BUILDER_OLLAMA_MODEL: ${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:7b}
+      BUILDER_OLLAMA_MODEL: ${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:32b}
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 15s
@@ -89,7 +93,7 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-    command: ["pull", "${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:7b}"]
+    command: ["pull", "${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:32b}"]
     networks:
       - dockus-network
 
@@ -127,7 +131,11 @@ services:
     command: >
       sh -c "command -v docker >/dev/null || apk add --no-cache docker-cli docker-cli-buildx curl; command -v kubectl >/dev/null || (curl -sLo /usr/local/bin/kubectl https://dl.k8s.io/release/stable/bin/linux/amd64/kubectl && chmod +x /usr/local/bin/kubectl); command -v kind >/dev/null || (curl -sLo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.24.0/kind-linux-amd64 && chmod +x /usr/local/bin/kind); docker network connect kind dockus-backend 2>/dev/null || true; mkdir -p ~/.kube && kind get kubeconfig --name dockus-builder --internal > ~/.kube/config 2>/dev/null || true; [ -f node_modules/.package-lock.json ] && npm run start:dev || (npm install && npm run start:dev)"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health/live || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:3000/api/health/live || exit 1",
+        ]
       interval: 15s
       timeout: 5s
       retries: 5

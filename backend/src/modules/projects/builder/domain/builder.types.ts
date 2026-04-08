@@ -1,34 +1,5 @@
 import { BuildRunArtifactType } from './entities/build-run-artifact.entity';
 
-export type SignalStrength = 'strong' | 'aux';
-
-export enum ProjectClass {
-  SIMPLE_SCRIPT = 'simple_script',
-  INSTALLABLE_PACKAGE = 'installable_package',
-  WEB_SERVICE_FASTAPI_FLASK = 'web_service_fastapi_flask',
-  DJANGO_APP = 'django_app',
-  ANALYZABLE_NON_DEPLOYABLE = 'analyzable_non_deployable',
-  INCOMPLETE_OR_INVALID = 'incomplete_or_invalid',
-}
-
-export enum PackagingState {
-  WELL_PACKAGED = 'well_packaged',
-  MIXED = 'mixed',
-  MISPACKAGED = 'mispackaged',
-}
-
-export enum ExecutionProfile {
-  BATCH = 'batch',
-  SERVICE = 'service',
-  ANALYSIS_ONLY = 'analysis_only',
-}
-
-export enum Deployability {
-  DEPLOYABLE = 'deployable',
-  BUILD_ONLY = 'build_only',
-  ANALYSIS_ONLY = 'analysis_only',
-}
-
 export enum StageStatus {
   PASS = 'PASS',
   FAIL = 'FAIL',
@@ -51,52 +22,97 @@ export enum FindingSeverity {
   HIGH = 'HIGH',
 }
 
+export const STRUCTURAL_TYPES = [
+  'T1',
+  'T2',
+  'T3',
+  'T4',
+  'T5',
+  'T6',
+  'T7',
+  'T8',
+] as const;
+
+export type StructuralType = (typeof STRUCTURAL_TYPES)[number];
+
+export const CAPABILITY_IDS = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'] as const;
+
+export type CapabilityId = (typeof CAPABILITY_IDS)[number];
+
+export const EVALUATIVE_STATES = ['E1', 'E2', 'E3', 'E4'] as const;
+
+export type EvaluativeState = (typeof EVALUATIVE_STATES)[number];
+
+export const ASSESSMENTS = ['yes', 'no', 'unknown'] as const;
+
+export type Assessment = (typeof ASSESSMENTS)[number];
+
+export const CONFIDENCE_LEVELS = ['low', 'medium', 'high'] as const;
+
+export type Confidence = (typeof CONFIDENCE_LEVELS)[number];
+
+export type BuilderExecutionMode = 'analysis_only' | 'batch' | 'service';
+
+export interface CapabilityAssessment {
+  status: Assessment;
+  rationale: string;
+}
+
+export interface LlmPlanRecipe {
+  install: string[][];
+  run: string[] | null;
+  test: string[][];
+  healthcheck: string[] | null;
+  servicePort: number | null;
+  systemPackages: string[];
+}
+
+export interface BuilderLlmAssessment {
+  structuralType: StructuralType;
+  capabilities: Record<CapabilityId, CapabilityAssessment>;
+  evaluativeState: EvaluativeState;
+  confidence: Confidence;
+  rationale: string;
+  externalRequirements: string[];
+  recipe: LlmPlanRecipe;
+  evidenceSummary: string;
+  observedEvidence: string[];
+  evaluationLimits: string[];
+}
+
+export interface BuilderLlmPhaseResult {
+  model: string;
+  assessment: BuilderLlmAssessment;
+}
+
+export interface BuilderReport extends BuilderLlmAssessment {
+  readableText: string;
+  stageOutcome: Record<BuildStage, StageStatus>;
+  relevantEvidence: string[];
+}
+
+export interface BuilderObservedEvidence {
+  workspaceSummary: string;
+  build: {
+    attempted: boolean;
+    succeeded: boolean;
+    summary: string;
+    logTail: string[];
+  };
+  runtime: {
+    mode: BuilderExecutionMode;
+    deploySummary: string;
+    probeSummary: string;
+    stabilitySummary: string;
+    testSummary: string;
+    healthcheckSummary: string;
+  };
+}
+
 export interface RuntimeFile {
   relativePath: string;
   absolutePath: string;
   sizeBytes: number;
-}
-
-export interface ClassifierSignal {
-  id: string;
-  strength: SignalStrength;
-  evidence: string;
-}
-
-export interface CharacterizationFacets {
-  tests_present: boolean;
-  packaging_state: PackagingState;
-  execution_profile: ExecutionProfile;
-  deployability: Deployability;
-  portability_risks: string[];
-}
-
-export interface LlmSupportMetadata {
-  status: 'generated' | 'skipped' | 'error';
-  model?: string;
-  summary?: string;
-  error?: string;
-}
-
-export type LlmVerdict = 'PASS' | 'FAIL' | 'INCONCLUSIVE';
-
-export type LlmVerdictConfidence = 'low' | 'medium' | 'high';
-
-export interface LlmVerdictMetadata {
-  status: 'generated' | 'skipped' | 'error';
-  model?: string;
-  verdict?: LlmVerdict;
-  confidence?: LlmVerdictConfidence;
-  rationale?: string;
-  error?: string;
-}
-
-export interface ProjectCharacterization {
-  mainClass: ProjectClass;
-  facets: CharacterizationFacets;
-  signals: ClassifierSignal[];
-  classifierVersion: string;
-  llmSupport?: LlmSupportMetadata;
 }
 
 export interface StaticFinding {
@@ -108,30 +124,6 @@ export interface StaticFinding {
   evidence: string;
 }
 
-export interface BuildStrategy {
-  mode: 'requirements' | 'pyproject' | 'copy_only' | 'none';
-  dockerTemplate: 'batch' | 'fastapi' | 'flask' | 'django' | 'none';
-  pythonVersion: string;
-}
-
-export interface ExecutionStrategy {
-  profile: ExecutionProfile;
-  command: string[] | null;
-  serviceType: 'fastapi' | 'flask' | 'django' | null;
-  appModule: string | null;
-  appVariable: string | null;
-  namespace: string | null;
-}
-
-export interface StrategyResult {
-  selectedClass: ProjectClass;
-  build: BuildStrategy;
-  execution: ExecutionStrategy;
-  notes: string[];
-  blockingConditions: string[];
-  llmSupport?: LlmSupportMetadata;
-}
-
 export interface StageResult {
   stage: BuildStage;
   status: StageStatus;
@@ -140,55 +132,6 @@ export interface StageResult {
   durationMs: number;
   reasonCode: string;
   evidenceRefs: string[];
-}
-
-export interface ValidationCheck {
-  id: string;
-  status: StageStatus;
-  expected: string;
-  actual: string;
-}
-
-export interface ValidationResult {
-  profile: ExecutionProfile;
-  overall: StageStatus;
-  deterministicVerdict: StageStatus;
-  failedStage: BuildStage | null;
-  checks: ValidationCheck[];
-  tests: {
-    detected: boolean;
-    runner: 'pytest' | 'unittest' | 'none';
-    status: StageStatus;
-    details: string;
-  };
-  llmSupport?: LlmSupportMetadata;
-  llmVerdict?: LlmVerdictMetadata;
-}
-
-export interface TeacherReport {
-  detectedProject: ProjectClass;
-  strategyApplied: string;
-  stageOutcome: Record<BuildStage, StageStatus>;
-  exactCause: string;
-  relevantEvidence: string[];
-  evaluationImplication: string;
-  readableText: string;
-  llmAssistedSummary?: {
-    status: 'generated' | 'skipped' | 'error';
-    model?: string;
-    findingsForTeachers?: string;
-    evidenceReadableText?: string;
-    naturalExplanation?: string;
-    humanInterpretation?: string;
-    analysisSupport?: {
-      classification: string;
-      staticFindings: string;
-      strategy: string;
-      validation: string;
-    };
-    llmVerdict?: LlmVerdictMetadata;
-    error?: string;
-  };
 }
 
 export interface ExecutionContext {
@@ -213,19 +156,16 @@ export interface EvidenceArtifactPublic {
 }
 
 export interface BuilderPipelineOutcome {
-  projectCharacterization: ProjectCharacterization;
-  strategyResult: StrategyResult;
+  llmAssessment: BuilderLlmAssessment;
   staticFindings: StaticFinding[];
   stageResults: StageResult[];
-  validationResult: ValidationResult;
   evidenceArtifacts: EvidenceArtifactPublic[];
-  teacherReport: TeacherReport;
+  report: BuilderReport;
   executionContext: ExecutionContext;
-  legacy: {
+  runtimeOutputs: {
     stackResult: unknown;
     dockerfileContent: string | null;
     buildLogs: unknown;
-    qualityResult: unknown;
     timingsMs: unknown;
   };
   failureReason: string | null;

@@ -40,12 +40,12 @@ import { UserRole } from '../../../users/entities/user.entity';
 import { BuilderService } from '../application/builder.service';
 import {
   BuildRunResponseDto,
+  BuildRunReportResponseDto,
   CancelBuildRunResponseDto,
   EvidenceArtifactDto,
   EvidenceDownloadUrlDto,
   EnqueueBuildRunResponseDto,
   PaginatedBuildRunsResponseDto,
-  TeacherReportResponseDto,
   toBuildRunResponseDto,
 } from './dto/build-run-response.dto';
 import { ListBuildRunsDto } from './dto/list-build-runs.dto';
@@ -218,14 +218,15 @@ export class BuilderController {
   }
 
   @ApiOperation({
-    summary: 'Obtener informe docente de un run',
-    description: 'Devuelve el teacherReport en formato JSON o texto.',
+    summary: 'Obtener informe canónico de un run',
+    description:
+      'Devuelve el informe canónico derivado de la evaluación LLM final en formato JSON o texto.',
   })
   @ApiParam(BUILD_RUN_ID_PARAM)
   @ApiResponse({
     status: 200,
     description: 'Informe recuperado correctamente.',
-    type: TeacherReportResponseDto,
+    type: BuildRunReportResponseDto,
   })
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @Get('runs/:buildRunId/report')
@@ -233,12 +234,12 @@ export class BuilderController {
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
     @Query('format') format: 'json' | 'text' | undefined,
     @Req() request: AuthenticatedRequest,
-  ): Promise<TeacherReportResponseDto> {
+  ): Promise<BuildRunReportResponseDto> {
     return this.builderService.getRunReport(
       buildRunId,
       request.user,
       format ?? 'json',
-    ) as Promise<TeacherReportResponseDto>;
+    ) as Promise<BuildRunReportResponseDto>;
   }
 
   @ApiOperation({

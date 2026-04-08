@@ -61,7 +61,13 @@ export interface ServiceExecutionResult {
 
 export interface TestExecutionResult {
   detected: boolean;
-  runner: 'pytest' | 'unittest' | 'none';
+  runner: 'pytest' | 'unittest' | 'custom' | 'none';
+  status: StageStatus;
+  details: string;
+  logs: string;
+}
+
+export interface HealthcheckExecutionResult {
   status: StageStatus;
   details: string;
   logs: string;
@@ -320,6 +326,7 @@ export class ExecutionAdapterService {
     deploymentName: string;
     serviceName: string;
     imageTag: string;
+    port: number;
     runId: string;
     deliveryId: string;
   }): Promise<ServiceExecutionResult> {
@@ -347,6 +354,7 @@ export class ExecutionAdapterService {
     const tcpProbe = await this.runTcpProbe(
       params.namespace,
       params.serviceName,
+      params.port,
     );
     const stability = await this.evaluateStability(
       params.namespace,
@@ -365,9 +373,9 @@ export class ExecutionAdapterService {
       actual: waitReady.exitCode === 0 ? 'ready' : 'timeout_or_error',
     });
     checks.push({
-      id: 'TCP_8000',
+      id: `TCP_${params.port}`,
       status: tcpProbe ? StageStatus.PASS : StageStatus.FAIL,
-      expected: 'tcp open on 8000',
+      expected: `tcp open on ${params.port}`,
       actual: tcpProbe ? 'open' : 'closed_or_error',
     });
     checks.push({
@@ -389,108 +397,47 @@ export class ExecutionAdapterService {
   async runTests(params: {
     namespace: string;
     imageTag: string;
-    testsDetected: boolean;
+    commands?: string[][];
     runId: string;
     deliveryId: string;
   }): Promise<TestExecutionResult> {
-    if (!params.testsDetected) {
+    if (!params.commands || params.commands.length === 0) {
       return {
         detected: false,
         runner: 'none',
         status: StageStatus.SKIP,
-        details: 'No se detectaron tests.',
+        details: 'El planner LLM no propuso comandos de test.',
         logs: '',
       };
     }
 
-    const pytestJobName = `tests-pytest-${Date.now().toString().slice(-6)}`;
-    await this.applyManifest(
-      params.namespace,
-      this.renderTestJobManifest({
-        namespace: params.namespace,
-        jobName: pytestJobName,
-        imageTag: params.imageTag,
-        command: ['pytest', '-q'],
-        resources: this.testResources,
-        runId: params.runId,
-        deliveryId: params.deliveryId,
-      }),
-    );
-    const pytestResult = await this.runKubectlResult(
-      [
-        'wait',
-        '--for=condition=complete',
-        `job/${pytestJobName}`,
-        '--timeout',
-        `${this.batchTimeoutSeconds}s`,
-      ],
-      params.namespace,
-      this.kubectlTimeoutMs + this.batchTimeoutSeconds * 1000,
-    );
-    if (pytestResult.exitCode === 0) {
-      const podName = await this.tryResolvePodName(params.namespace, [
-        `job-name=${pytestJobName}`,
-      ]);
-      const logs = podName
-        ? await this.collectPodLogs(params.namespace, podName)
-        : pytestResult.stdout;
-      return {
-        detected: true,
-        runner: 'pytest',
-        status: StageStatus.PASS,
-        details: 'pytest ejecutado correctamente.',
-        logs,
-      };
-    }
+    return this.runSuggestedTestCommand(params);
+  }
 
-    const unittestJobName = `tests-unit-${Date.now().toString().slice(-6)}`;
-    await this.applyManifest(
-      params.namespace,
-      this.renderTestJobManifest({
-        namespace: params.namespace,
-        jobName: unittestJobName,
-        imageTag: params.imageTag,
-        command: ['python', '-m', 'unittest', 'discover'],
-        resources: this.testResources,
-        runId: params.runId,
-        deliveryId: params.deliveryId,
-      }),
-    );
-    const unittestResult = await this.runKubectlResult(
-      [
-        'wait',
-        '--for=condition=complete',
-        `job/${unittestJobName}`,
-        '--timeout',
-        `${this.batchTimeoutSeconds}s`,
-      ],
-      params.namespace,
-      this.kubectlTimeoutMs + this.batchTimeoutSeconds * 1000,
-    );
-
-    if (unittestResult.exitCode === 0) {
-      const podName = await this.tryResolvePodName(params.namespace, [
-        `job-name=${unittestJobName}`,
-      ]);
-      const logs = podName
-        ? await this.collectPodLogs(params.namespace, podName)
-        : unittestResult.stdout;
-      return {
-        detected: true,
-        runner: 'unittest',
-        status: StageStatus.PASS,
-        details: 'unittest discover ejecutado correctamente.',
-        logs,
-      };
-    }
+  async runHealthcheck(params: {
+    namespace: string;
+    imageTag: string;
+    command: string[];
+    runId: string;
+    deliveryId: string;
+  }): Promise<HealthcheckExecutionResult> {
+    const result = await this.runSingleCommandJob({
+      namespace: params.namespace,
+      imageTag: params.imageTag,
+      command: params.command,
+      resources: this.testResources,
+      runId: params.runId,
+      deliveryId: params.deliveryId,
+      jobPrefix: 'healthcheck',
+    });
 
     return {
-      detected: true,
-      runner: 'none',
-      status: StageStatus.FAIL,
+      status: result.status,
       details:
-        'Tests detectados pero no ejecutables en el entorno construido (detected_not_executable).',
-      logs: `${pytestResult.stdout}\n${pytestResult.stderr}\n${unittestResult.stdout}\n${unittestResult.stderr}`.trim(),
+        result.status === StageStatus.PASS
+          ? 'Healthcheck ejecutado correctamente.'
+          : 'Healthcheck falló o no completó a tiempo.',
+      logs: result.logs,
     };
   }
 
@@ -663,6 +610,7 @@ export class ExecutionAdapterService {
   private async runTcpProbe(
     namespace: string,
     serviceName: string,
+    port: number,
   ): Promise<boolean> {
     const endpointResult = await this.runKubectlResult(
       [
@@ -678,7 +626,7 @@ export class ExecutionAdapterService {
     if (endpointResult.exitCode !== 0 || endpointResult.timedOut) {
       return false;
     }
-    return endpointResult.stdout.trim() === '8000';
+    return endpointResult.stdout.trim() === String(port);
   }
 
   private async evaluateStability(
@@ -772,6 +720,7 @@ export class ExecutionAdapterService {
     deploymentName: string;
     serviceName: string;
     imageTag: string;
+    port: number;
     runId: string;
     deliveryId: string;
     resources: ResourceLimits;
@@ -804,7 +753,7 @@ export class ExecutionAdapterService {
       `          image: ${input.imageTag}`,
       '          imagePullPolicy: IfNotPresent',
       '          ports:',
-      '            - containerPort: 8000',
+      `            - containerPort: ${input.port}`,
       '          resources:',
       '            requests:',
       `              cpu: "${input.resources.cpuRequest}"`,
@@ -827,8 +776,8 @@ export class ExecutionAdapterService {
       `    app: ${input.deploymentName}`,
       '  ports:',
       '    - protocol: TCP',
-      '      port: 8000',
-      '      targetPort: 8000',
+      `      port: ${input.port}`,
+      `      targetPort: ${input.port}`,
       '  type: ClusterIP',
       '',
     ].join('\n');
@@ -868,6 +817,120 @@ export class ExecutionAdapterService {
     } catch {
       return null;
     }
+  }
+
+  private async runSuggestedTestCommand(params: {
+    namespace: string;
+    imageTag: string;
+    commands?: string[][];
+    runId: string;
+    deliveryId: string;
+  }): Promise<TestExecutionResult> {
+    const attemptedLogs: string[] = [];
+
+    for (const [index, command] of (params.commands ?? []).entries()) {
+      const result = await this.runSingleCommandJob({
+        namespace: params.namespace,
+        imageTag: params.imageTag,
+        command,
+        resources: this.testResources,
+        runId: params.runId,
+        deliveryId: params.deliveryId,
+        jobPrefix: `tests-llm-${index}`,
+      });
+      const logs = result.logs;
+      attemptedLogs.push(
+        [`$ ${command.join(' ')}`, logs].filter(Boolean).join('\n'),
+      );
+
+      if (result.status === StageStatus.PASS) {
+        return {
+          detected: true,
+          runner: this.inferRunner(command),
+          status: StageStatus.PASS,
+          details: `Comando de tests ejecutado correctamente: ${command.join(' ')}`,
+          logs,
+        };
+      }
+    }
+
+    return {
+      detected: true,
+      runner:
+        params.commands && params.commands.length > 0
+          ? this.inferRunner(params.commands[0])
+          : 'custom',
+      status: StageStatus.FAIL,
+      details:
+        'Los comandos de tests sugeridos por el LLM no finalizaron correctamente.',
+      logs: attemptedLogs.join('\n\n'),
+    };
+  }
+
+  private async runSingleCommandJob(params: {
+    namespace: string;
+    imageTag: string;
+    command: string[];
+    resources: ResourceLimits;
+    runId: string;
+    deliveryId: string;
+    jobPrefix: string;
+  }): Promise<{
+    status: StageStatus;
+    logs: string;
+  }> {
+    const jobName =
+      `${params.jobPrefix}-${Date.now().toString().slice(-6)}`.slice(0, 52);
+    await this.applyManifest(
+      params.namespace,
+      this.renderTestJobManifest({
+        namespace: params.namespace,
+        jobName,
+        imageTag: params.imageTag,
+        command: params.command,
+        resources: params.resources,
+        runId: params.runId,
+        deliveryId: params.deliveryId,
+      }),
+    );
+
+    const result = await this.runKubectlResult(
+      [
+        'wait',
+        '--for=condition=complete',
+        `job/${jobName}`,
+        '--timeout',
+        `${this.batchTimeoutSeconds}s`,
+      ],
+      params.namespace,
+      this.kubectlTimeoutMs + this.batchTimeoutSeconds * 1000,
+    );
+
+    const podName = await this.tryResolvePodName(params.namespace, [
+      `job-name=${jobName}`,
+    ]);
+    const logs = podName
+      ? await this.collectPodLogs(params.namespace, podName)
+      : `${result.stdout}\n${result.stderr}`.trim();
+
+    return {
+      status:
+        result.exitCode === 0 && !result.timedOut
+          ? StageStatus.PASS
+          : StageStatus.FAIL,
+      logs,
+    };
+  }
+
+  private inferRunner(command: string[]): TestExecutionResult['runner'] {
+    const normalized = command.join(' ').toLowerCase();
+    if (normalized.includes('pytest')) {
+      return 'pytest';
+    }
+    if (normalized.includes('unittest')) {
+      return 'unittest';
+    }
+    return 'custom';
   }
 }
 

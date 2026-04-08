@@ -1,0 +1,700 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
+import {
+  ASSESSMENTS,
+  BuilderLlmAssessment,
+  BuilderLlmPhaseResult,
+  CAPABILITY_IDS,
+  CONFIDENCE_LEVELS,
+  EVALUATIVE_STATES,
+  RuntimeFile,
+  StaticFinding,
+  STRUCTURAL_TYPES,
+} from '../builder.types';
+import {
+  readTextFileSafe,
+  toPosixPath,
+} from '../../infrastructure/utils/builder-analysis.util';
+
+const ALLOWED_EXECUTABLES = new Set([
+  'coverage',
+  'flask',
+  'gunicorn',
+  'hatch',
+  'pdm',
+  'pip',
+  'pip3',
+  'pipenv',
+  'poetry',
+  'pytest',
+  'python',
+  'python3',
+  'streamlit',
+  'tox',
+  'uv',
+  'uvicorn',
+]);
+
+const SHELL_WRAPPER_TOKENS = new Set(['|', '||', '&&', ';', '>', '>>', '<']);
+
+const SNIPPET_PRIORITY_NAMES = new Set([
+  '__main__.py',
+  'app.py',
+  'asgi.py',
+  'cli.py',
+  'main.py',
+  'manage.py',
+  'pyproject.toml',
+  'requirements-dev.txt',
+  'requirements.txt',
+  'runtime.txt',
+  'server.py',
+  'setup.cfg',
+  'setup.py',
+  'tox.ini',
+  'wsgi.py',
+]);
+
+@Injectable()
+export class BuilderPlanLlmService {
+  private readonly enabled: boolean;
+  private readonly baseUrl: string;
+  private readonly model: string;
+  private readonly timeoutMs: number;
+  private readonly maxInputChars: number;
+
+  constructor(private readonly configService: ConfigService) {
+    this.enabled = toBoolean(
+      this.configService.get<string | boolean>(
+        'BUILDER_LLM_BUILDER_ENABLED',
+        true,
+      ),
+    );
+    this.baseUrl = this.configService.get<string>(
+      'BUILDER_OLLAMA_BASE_URL',
+      'http://localhost:11434',
+    );
+    this.model = this.configService.get<string>(
+      'BUILDER_OLLAMA_MODEL',
+      'qwen2.5-coder:32b',
+    );
+    this.timeoutMs = this.configService.get<number>(
+      'BUILDER_OLLAMA_TIMEOUT_MS',
+      120000,
+    );
+    this.maxInputChars = this.configService.get<number>(
+      'BUILDER_LLM_BUILDER_MAX_INPUT_CHARS',
+      35000,
+    );
+  }
+
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  async generatePlan(input: {
+    runtimeFiles: RuntimeFile[];
+    staticFindings: StaticFinding[];
+  }): Promise<BuilderLlmPhaseResult | null> {
+    if (!this.enabled) {
+      return null;
+    }
+
+    const prompt = await this.buildPrompt(input);
+    const raw = await this.callModel(prompt);
+    return {
+      model: this.model,
+      assessment: this.parseResponse(raw),
+    };
+  }
+
+  private async buildPrompt(input: {
+    runtimeFiles: RuntimeFile[];
+    staticFindings: StaticFinding[];
+  }): Promise<string> {
+    const workspaceSnapshot = await this.buildWorkspaceSnapshot(input);
+
+    return [
+      'Eres el planner principal del builder Python de DockUS.',
+      'Debes clasificar el proyecto usando exclusivamente hechos observables del workspace y devolver una receta ejecutable para contenedor Linux slim.',
+      '',
+      'Taxonomía estructural:',
+      '- T1: Script standalone',
+      '- T2: CLI application',
+      '- T3: Python package/library',
+      '- T4: Web API ligera (Flask/FastAPI)',
+      '- T5: Web app estructurada (Django)',
+      '- T6: Worker/batch job',
+      '- T7: Ambiguo o híbrido',
+      '- T8: No clasificable',
+      '',
+      'Capacidades:',
+      '- C1 instalable',
+      '- C2 ejecutable',
+      '- C3 desplegable como servicio',
+      '- C4 testeable',
+      '- C5 observable con healthcheck',
+      '- C6 requiere intervención/configuración externa',
+      '',
+      'Estado evaluativo:',
+      '- E1 evaluación completa posible',
+      '- E2 evaluación parcial posible',
+      '- E3 solo análisis estático viable',
+      '- E4 evaluación bloqueada por defectos graves',
+      '',
+      'Devuelve SOLO JSON UTF-8 válido, sin markdown, con esta forma exacta:',
+      '{',
+      '  "structuralType": "T1|T2|T3|T4|T5|T6|T7|T8",',
+      '  "capabilities": {',
+      '    "C1": { "status": "yes|no|unknown", "rationale": "string" },',
+      '    "C2": { "status": "yes|no|unknown", "rationale": "string" },',
+      '    "C3": { "status": "yes|no|unknown", "rationale": "string" },',
+      '    "C4": { "status": "yes|no|unknown", "rationale": "string" },',
+      '    "C5": { "status": "yes|no|unknown", "rationale": "string" },',
+      '    "C6": { "status": "yes|no|unknown", "rationale": "string" }',
+      '  },',
+      '  "evaluativeState": "E1|E2|E3|E4",',
+      '  "confidence": "low|medium|high",',
+      '  "rationale": "string",',
+      '  "externalRequirements": ["string"],',
+      '  "recipe": {',
+      '    "install": [["cmd","arg"]],',
+      '    "run": ["cmd","arg"] o null,',
+      '    "test": [["cmd","arg"]],',
+      '    "healthcheck": ["cmd","arg"] o null,',
+      '    "servicePort": 8000 o null,',
+      '    "systemPackages": ["string"]',
+      '  },',
+      '  "evidenceSummary": "string",',
+      '  "observedEvidence": ["string"],',
+      '  "evaluationLimits": ["string"]',
+      '}',
+      '',
+      'Reglas obligatorias:',
+      '- Usa solo ejecutables permitidos: python, python3, pip, pip3, pytest, poetry, uv, pipenv, hatch, pdm, flask, uvicorn, gunicorn, streamlit, tox, coverage.',
+      '- No uses bash, sh, pipes, redirecciones ni subshells.',
+      '- Los comandos deben ser arrays de tokens seguros.',
+      '- Si C3=yes en T4/T5, proporciona run y servicePort.',
+      '- Si C5=yes, proporciona healthcheck.',
+      '- T6 debe comportarse como job efímero, no como servicio persistente.',
+      '- T7 no puede terminar en E1.',
+      '- T8 debe terminar en E4.',
+      '- Si no hay suficiente evidencia para ejecutar con seguridad, usa run=null y un estado evaluativo conservador.',
+      '',
+      'Hechos observables del workspace:',
+      workspaceSnapshot,
+    ].join('\n');
+  }
+
+  private async buildWorkspaceSnapshot(input: {
+    runtimeFiles: RuntimeFile[];
+    staticFindings: StaticFinding[];
+  }): Promise<string> {
+    const fileList = input.runtimeFiles
+      .map((file) => toPosixPath(file.relativePath))
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 200);
+    const snippets = await this.collectRelevantSnippets(input.runtimeFiles);
+    const directoryHistogram = this.buildDirectoryHistogram(fileList);
+    const pythonFiles = fileList.filter((file) => file.endsWith('.py'));
+    const testFiles = fileList.filter(
+      (file) =>
+        file.startsWith('tests/') ||
+        file.includes('/tests/') ||
+        file.endsWith('_test.py') ||
+        file.endsWith('_tests.py') ||
+        file.startsWith('test_') ||
+        file.includes('/test_'),
+    );
+
+    const payload = {
+      summary: {
+        totalFiles: fileList.length,
+        pythonFileCount: pythonFiles.length,
+        testFileCount: testFiles.length,
+        topDirectories: directoryHistogram,
+      },
+      manifests: {
+        requirements: fileList.filter((file) =>
+          /(^|\/)requirements[^/]*\.txt$/u.test(file),
+        ),
+        pyprojectToml: fileList.filter((file) =>
+          file.endsWith('pyproject.toml'),
+        ),
+        setupPy: fileList.filter((file) => file.endsWith('setup.py')),
+        setupCfg: fileList.filter((file) => file.endsWith('setup.cfg')),
+        runtimeTxt: fileList.filter((file) => file.endsWith('runtime.txt')),
+        managePy: fileList.filter((file) => file.endsWith('manage.py')),
+        procfile: fileList.filter((file) => file.endsWith('Procfile')),
+        dockerfile: fileList.filter((file) => /(^|\/)Dockerfile$/u.test(file)),
+      },
+      visibleSignals: {
+        serviceLikeFiles: fileList.filter((file) =>
+          /(app|main|server|wsgi|asgi)\.py$/u.test(file),
+        ),
+        cliLikeFiles: fileList.filter((file) =>
+          /(cli|main|__main__)\.py$/u.test(file),
+        ),
+        workerLikeFiles: fileList.filter((file) =>
+          /(worker|job|tasks|celery|queue)\.py$/u.test(file),
+        ),
+      },
+      staticFindings: input.staticFindings.slice(0, 20),
+      fileList,
+      snippets,
+    };
+
+    return JSON.stringify(payload, null, 2).slice(0, this.maxInputChars);
+  }
+
+  private buildDirectoryHistogram(fileList: string[]): Array<{
+    path: string;
+    count: number;
+  }> {
+    const counts = new Map<string, number>();
+
+    for (const file of fileList) {
+      const segments = file.split('/');
+      const root = segments.length > 1 ? segments[0] : '.';
+      counts.set(root, (counts.get(root) ?? 0) + 1);
+    }
+
+    return [...counts.entries()]
+      .map(([dir, count]) => ({ path: dir, count }))
+      .sort((a, b) => b.count - a.count || a.path.localeCompare(b.path))
+      .slice(0, 20);
+  }
+
+  private async collectRelevantSnippets(
+    runtimeFiles: RuntimeFile[],
+  ): Promise<Array<{ path: string; content: string }>> {
+    const prioritized = [...runtimeFiles].sort((a, b) => {
+      const scoreDelta =
+        this.scoreSnippetCandidate(b.relativePath) -
+        this.scoreSnippetCandidate(a.relativePath);
+      return scoreDelta !== 0
+        ? scoreDelta
+        : a.relativePath.localeCompare(b.relativePath);
+    });
+
+    const snippets: Array<{ path: string; content: string }> = [];
+    let budget = Math.max(this.maxInputChars - 8000, 8000);
+
+    for (const file of prioritized) {
+      if (budget <= 0 || snippets.length >= 16) {
+        break;
+      }
+
+      const content = await readTextFileSafe(file.absolutePath);
+      if (!content.trim()) {
+        continue;
+      }
+
+      const trimmed = content.slice(0, 2400);
+      snippets.push({
+        path: toPosixPath(file.relativePath),
+        content: trimmed,
+      });
+      budget -= trimmed.length;
+    }
+
+    return snippets;
+  }
+
+  private scoreSnippetCandidate(relativePath: string): number {
+    const normalized = toPosixPath(relativePath).toLowerCase();
+    const baseName = normalized.split('/').at(-1) ?? normalized;
+    let score = 0;
+
+    if (SNIPPET_PRIORITY_NAMES.has(baseName)) {
+      score += 50;
+    }
+    if (normalized.endsWith('.toml') || normalized.endsWith('.txt')) {
+      score += 25;
+    }
+    if (normalized.includes('/tests/') || normalized.startsWith('tests/')) {
+      score += 15;
+    }
+    if (
+      normalized.endsWith('.py') &&
+      ['app', 'main', 'server', 'run', 'manage', 'cli'].some((token) =>
+        baseName.includes(token),
+      )
+    ) {
+      score += 30;
+    }
+    if (normalized.endsWith('.py')) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  private async callModel(prompt: string): Promise<string> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          stream: false,
+          prompt,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const details = await response.text();
+        throw new Error(
+          `Ollama devolvió ${response.status}: ${details.slice(0, 250)}`,
+        );
+      }
+
+      const payload = (await response.json()) as { response?: unknown };
+      if (typeof payload.response !== 'string') {
+        throw new Error('Respuesta de planner LLM sin campo response string.');
+      }
+
+      return payload.response;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Timeout agotado al planificar builder con LLM.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private parseResponse(raw: string): BuilderLlmAssessment {
+    const normalized = this.stripCodeFence(raw).trim();
+    if (!normalized) {
+      throw new Error('Salida vacía del planner LLM.');
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(normalized);
+    } catch {
+      throw new Error('La salida del planner LLM no es JSON válido.');
+    }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('El planner LLM devolvió un JSON no objeto.');
+    }
+
+    const object = parsed as Record<string, unknown>;
+    const assessment: BuilderLlmAssessment = {
+      structuralType: this.normalizeStructuralType(object.structuralType),
+      capabilities: this.normalizeCapabilities(object.capabilities),
+      evaluativeState: this.normalizeEvaluativeState(object.evaluativeState),
+      confidence: this.normalizeConfidence(object.confidence),
+      rationale: this.normalizeString(object.rationale, 'rationale'),
+      externalRequirements: this.normalizeStringArray(
+        object.externalRequirements,
+        'externalRequirements',
+      ),
+      recipe: this.normalizeRecipe(object.recipe),
+      evidenceSummary: this.normalizeString(
+        object.evidenceSummary,
+        'evidenceSummary',
+      ),
+      observedEvidence: this.normalizeStringArray(
+        object.observedEvidence,
+        'observedEvidence',
+      ),
+      evaluationLimits: this.normalizeStringArray(
+        object.evaluationLimits,
+        'evaluationLimits',
+      ),
+    };
+
+    this.assertSemanticConsistency(assessment);
+    return assessment;
+  }
+
+  private normalizeCapabilities(
+    value: unknown,
+  ): BuilderLlmAssessment['capabilities'] {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('capabilities debe ser un objeto.');
+    }
+
+    const object = value as Record<string, unknown>;
+    const capabilities = {} as BuilderLlmAssessment['capabilities'];
+
+    for (const capabilityId of CAPABILITY_IDS) {
+      const rawCapability = object[capabilityId];
+      if (
+        !rawCapability ||
+        typeof rawCapability !== 'object' ||
+        Array.isArray(rawCapability)
+      ) {
+        throw new Error(`capabilities.${capabilityId} debe ser un objeto.`);
+      }
+
+      const capability = rawCapability as Record<string, unknown>;
+      const status = this.normalizeString(
+        capability.status,
+        `capabilities.${capabilityId}.status`,
+      );
+      if (!ASSESSMENTS.includes(status as (typeof ASSESSMENTS)[number])) {
+        throw new Error(`Estado inválido en ${capabilityId}.`);
+      }
+
+      capabilities[capabilityId] = {
+        status: status as BuilderLlmAssessment['capabilities']['C1']['status'],
+        rationale: this.normalizeString(
+          capability.rationale,
+          `capabilities.${capabilityId}.rationale`,
+        ),
+      };
+    }
+
+    return capabilities;
+  }
+
+  private normalizeRecipe(value: unknown): BuilderLlmAssessment['recipe'] {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('recipe debe ser un objeto.');
+    }
+
+    const object = value as Record<string, unknown>;
+    const run =
+      object.run === null || object.run === undefined
+        ? null
+        : this.normalizeCommand(object.run, 'recipe.run');
+    const healthcheck =
+      object.healthcheck === null || object.healthcheck === undefined
+        ? null
+        : this.normalizeCommand(object.healthcheck, 'recipe.healthcheck');
+
+    return {
+      install: this.normalizeCommandMatrix(object.install, 'recipe.install'),
+      run,
+      test: this.normalizeCommandMatrix(object.test, 'recipe.test'),
+      healthcheck,
+      servicePort:
+        object.servicePort === null || object.servicePort === undefined
+          ? null
+          : this.normalizePort(object.servicePort, 'recipe.servicePort'),
+      systemPackages: this.normalizeSystemPackages(object.systemPackages),
+    };
+  }
+
+  private assertSemanticConsistency(assessment: BuilderLlmAssessment): void {
+    if (
+      assessment.structuralType === 'T8' &&
+      assessment.evaluativeState !== 'E4'
+    ) {
+      throw new Error('T8 debe evaluar en E4.');
+    }
+
+    if (
+      assessment.structuralType === 'T7' &&
+      assessment.evaluativeState === 'E1'
+    ) {
+      throw new Error('T7 no puede evaluarse como E1.');
+    }
+
+    if (
+      assessment.capabilities.C3.status === 'yes' &&
+      ['T4', 'T5'].includes(assessment.structuralType) &&
+      assessment.recipe.run === null
+    ) {
+      throw new Error('T4/T5 con C3=yes requieren recipe.run.');
+    }
+
+    if (
+      assessment.capabilities.C3.status === 'yes' &&
+      assessment.recipe.servicePort === null
+    ) {
+      throw new Error('C3=yes requiere recipe.servicePort.');
+    }
+
+    if (
+      assessment.capabilities.C5.status === 'yes' &&
+      assessment.recipe.healthcheck === null
+    ) {
+      throw new Error('C5=yes requiere recipe.healthcheck.');
+    }
+
+    if (
+      assessment.capabilities.C5.status === 'yes' &&
+      assessment.capabilities.C3.status !== 'yes'
+    ) {
+      throw new Error('C5=yes requiere C3=yes.');
+    }
+
+    if (
+      assessment.structuralType === 'T6' &&
+      assessment.capabilities.C3.status === 'yes'
+    ) {
+      throw new Error('T6 no debe marcarse como servicio persistente.');
+    }
+
+    if (
+      assessment.recipe.run === null &&
+      assessment.capabilities.C2.status === 'yes'
+    ) {
+      throw new Error('C2=yes requiere recipe.run.');
+    }
+
+    if (
+      assessment.recipe.run !== null &&
+      assessment.recipe.servicePort !== null &&
+      assessment.capabilities.C3.status === 'no'
+    ) {
+      throw new Error('servicePort no puede coexistir con C3=no.');
+    }
+  }
+
+  private normalizeStructuralType(value: unknown) {
+    const normalized = this.normalizeString(value, 'structuralType');
+    if (
+      !STRUCTURAL_TYPES.includes(
+        normalized as (typeof STRUCTURAL_TYPES)[number],
+      )
+    ) {
+      throw new Error('structuralType inválido en planner LLM.');
+    }
+    return normalized as BuilderLlmAssessment['structuralType'];
+  }
+
+  private normalizeEvaluativeState(value: unknown) {
+    const normalized = this.normalizeString(value, 'evaluativeState');
+    if (
+      !EVALUATIVE_STATES.includes(
+        normalized as (typeof EVALUATIVE_STATES)[number],
+      )
+    ) {
+      throw new Error('evaluativeState inválido en planner LLM.');
+    }
+    return normalized as BuilderLlmAssessment['evaluativeState'];
+  }
+
+  private normalizeConfidence(value: unknown) {
+    const normalized = this.normalizeString(value, 'confidence');
+    if (
+      !CONFIDENCE_LEVELS.includes(
+        normalized as (typeof CONFIDENCE_LEVELS)[number],
+      )
+    ) {
+      throw new Error('confidence inválido en planner LLM.');
+    }
+    return normalized as BuilderLlmAssessment['confidence'];
+  }
+
+  private normalizeSystemPackages(value: unknown): string[] {
+    if (value === undefined || value === null) {
+      return [];
+    }
+    if (!Array.isArray(value)) {
+      throw new Error('recipe.systemPackages debe ser un array.');
+    }
+
+    return value.map((entry, index) => {
+      const pkg = this.normalizeString(
+        entry,
+        `recipe.systemPackages[${index}]`,
+      );
+      if (!/^[a-z0-9.+-]+$/i.test(pkg)) {
+        throw new Error(`Paquete de sistema inválido: ${pkg}`);
+      }
+      return pkg;
+    });
+  }
+
+  private normalizeCommandMatrix(value: unknown, field: string): string[][] {
+    if (value === undefined || value === null) {
+      return [];
+    }
+    if (!Array.isArray(value)) {
+      throw new Error(`${field} debe ser un array de comandos.`);
+    }
+
+    return value.map((command, index) =>
+      this.normalizeCommand(command, `${field}[${index}]`),
+    );
+  }
+
+  private normalizeCommand(value: unknown, field: string): string[] {
+    if (!Array.isArray(value) || value.length === 0) {
+      throw new Error(`${field} debe ser un array no vacío.`);
+    }
+
+    const tokens = value.map((token, index) =>
+      this.normalizeString(token, `${field}[${index}]`),
+    );
+    const executable = tokens[0];
+    if (!ALLOWED_EXECUTABLES.has(executable)) {
+      throw new Error(`Executable no permitido en ${field}: ${executable}`);
+    }
+
+    for (const [index, token] of tokens.entries()) {
+      if (/[\n\r`]/.test(token)) {
+        throw new Error(`Token inseguro en ${field}: ${token}`);
+      }
+      if (SHELL_WRAPPER_TOKENS.has(token) || /\$\(.+\)/u.test(token)) {
+        throw new Error(`Token de shell no permitido en ${field}: ${token}`);
+      }
+      if (
+        index > 0 &&
+        (token.includes('/') || token.endsWith('.py')) &&
+        (toPosixPath(token).startsWith('/') ||
+          toPosixPath(token).includes('../'))
+      ) {
+        throw new Error(`Ruta insegura en ${field}: ${token}`);
+      }
+    }
+
+    return tokens;
+  }
+
+  private normalizePort(value: unknown, field: string): number {
+    const parsed =
+      typeof value === 'number'
+        ? value
+        : Number.parseInt(this.normalizeString(value, field), 10);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
+      throw new Error(`${field} inválido en planner LLM.`);
+    }
+    return parsed;
+  }
+
+  private normalizeStringArray(value: unknown, field: string): string[] {
+    if (value === undefined || value === null) {
+      return [];
+    }
+    if (!Array.isArray(value)) {
+      throw new Error(`${field} debe ser un array.`);
+    }
+    return value.map((entry, index) =>
+      this.normalizeString(entry, `${field}[${index}]`),
+    );
+  }
+
+  private normalizeString(value: unknown, field: string): string {
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new Error(`${field} debe ser un string no vacío.`);
+    }
+    return value.trim();
+  }
+
+  private stripCodeFence(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed.startsWith('```')) {
+      return trimmed;
+    }
+    return trimmed
+      .replace(/^```[a-zA-Z]*\s*/u, '')
+      .replace(/```$/u, '')
+      .trim();
+  }
+}
