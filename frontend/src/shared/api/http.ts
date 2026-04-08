@@ -1,14 +1,14 @@
-import axios from 'axios';
-import type { ApiErrorPayload } from '../types';
+import axios from "axios";
+import type { ApiErrorPayload } from "../types";
 
-const baseURL =
-  import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:3000/api';
+export const apiBaseUrl =
+  import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:3000/api";
 
 let accessToken: string | null = null;
 const authWarningListeners = new Set<(message: string) => void>();
 
 export const http = axios.create({
-  baseURL,
+  baseURL: apiBaseUrl,
   timeout: 30000,
 });
 
@@ -33,8 +33,8 @@ function normalizeApiError(error: unknown): ApiErrorPayload {
   if (!axios.isAxiosError(error)) {
     return {
       statusCode: 500,
-      error: 'Unknown Error',
-      message: 'Error inesperado en cliente.',
+      error: "Unknown Error",
+      message: "Error inesperado en cliente.",
     };
   }
 
@@ -54,7 +54,7 @@ function normalizeApiError(error: unknown): ApiErrorPayload {
   return {
     statusCode: error.response?.status,
     error: error.name,
-    message: error.message || 'Error de red o servidor no disponible.',
+    message: error.message || "Error de red o servidor no disponible.",
   };
 }
 

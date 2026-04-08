@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap");
 
 :root {
   --bg: #f6f7f3;
@@ -27,7 +27,7 @@ body,
 }
 
 body {
-  font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
   color: var(--text);
   background:
     radial-gradient(circle at 12% 10%, #e3f6f3 0, transparent 40%),
@@ -78,7 +78,9 @@ body {
   color: var(--text);
   padding: 8px 14px;
   cursor: pointer;
-  transition: transform 120ms ease, background-color 120ms ease;
+  transition:
+    transform 120ms ease,
+    background-color 120ms ease;
   text-decoration: none;
   font: inherit;
   font-weight: 500;
@@ -270,10 +272,95 @@ th {
   color: #f8faf8;
   padding: 10px;
   border-radius: 10px;
-  font-family: 'IBM Plex Mono', Consolas, monospace;
+  font-family: "IBM Plex Mono", Consolas, monospace;
   font-size: 0.8rem;
   line-height: 1.4;
   max-height: 360px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.pill.streaming {
+  border-color: #7ccfbe;
+  background: #e6faf6;
+}
+
+.pill.connecting,
+.pill.polling {
+  border-color: #edb266;
+  background: #fff2dd;
+}
+
+.builder-info {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfcfa;
+}
+
+.builder-timeline {
+  display: grid;
+  gap: 10px;
+}
+
+.builder-event {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background:
+    linear-gradient(135deg, rgba(0, 127, 115, 0.06), rgba(255, 197, 139, 0.06)),
+    #fff;
+}
+
+.builder-event p {
+  margin: 6px 0;
+}
+
+.builder-event-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.builder-inline-json {
+  margin: 0;
+  overflow: auto;
+  background: #18202a;
+  color: #eef9f6;
+  padding: 10px;
+  border-radius: 10px;
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-size: 0.77rem;
+}
+
+.builder-summary-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fbfcfa;
+}
+
+.builder-summary-card h4 {
+  margin: 0 0 8px;
+}
+
+.builder-summary-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
 }
 
 .modal-overlay {

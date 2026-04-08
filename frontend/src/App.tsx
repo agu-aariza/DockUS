@@ -1,11 +1,18 @@
-import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
-import { AuthPanel } from './auth/AuthPanel';
-import { DeliveriesPanel } from './deliveries/DeliveriesPanel';
-import { ProjectsPanel } from './projects/ProjectsPanel';
-import { StoragePanel } from './storage/StoragePanel';
-import { UsersPanel } from './users/UsersPanel';
-import { useSession } from './shared/session/SessionContext';
-import type { AuthResponse } from './shared/types';
+import {
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
+import { AuthPanel } from "./auth/AuthPanel";
+import { BuilderPanel } from "./builder/BuilderPanel";
+import { DeliveriesPanel } from "./deliveries/DeliveriesPanel";
+import { ProjectsPanel } from "./projects/ProjectsPanel";
+import { StoragePanel } from "./storage/StoragePanel";
+import { UsersPanel } from "./users/UsersPanel";
+import { useSession } from "./shared/session/SessionContext";
+import type { AuthResponse } from "./shared/types";
 
 interface NavTab {
   path: string;
@@ -14,11 +21,12 @@ interface NavTab {
 }
 
 const NAV_TABS: NavTab[] = [
-  { path: '/auth', label: 'Auth', requiresAuth: false },
-  { path: '/users', label: 'Users', requiresAuth: true },
-  { path: '/projects', label: 'Projects', requiresAuth: true },
-  { path: '/deliveries', label: 'Deliveries', requiresAuth: true },
-  { path: '/storage', label: 'Storage', requiresAuth: true },
+  { path: "/auth", label: "Auth", requiresAuth: false },
+  { path: "/users", label: "Users", requiresAuth: true },
+  { path: "/projects", label: "Projects", requiresAuth: true },
+  { path: "/deliveries", label: "Deliveries", requiresAuth: true },
+  { path: "/builder", label: "Builder", requiresAuth: true },
+  { path: "/storage", label: "Storage", requiresAuth: true },
 ];
 
 export default function App(): JSX.Element {
@@ -48,7 +56,7 @@ export default function App(): JSX.Element {
         <h1>DockUS Smoke Tester</h1>
         <p>
           Cliente funcional para validar Auth, RBAC y flujos de
-          Projects/Deliveries/Storage.
+          Projects/Deliveries/Storage/Builder.
         </p>
       </header>
 
@@ -71,7 +79,7 @@ export default function App(): JSX.Element {
               <label>
                 Sesión activa
                 <select
-                  value={activeSessionId ?? ''}
+                  value={activeSessionId ?? ""}
                   onChange={(event) => setActiveSessionId(event.target.value)}
                 >
                   {sessions.map((session) => (
@@ -96,7 +104,7 @@ export default function App(): JSX.Element {
             </div>
             {activeSession ? (
               <p className="hint">
-                Usuario activo: <strong>{activeSession.email}</strong> / rol{' '}
+                Usuario activo: <strong>{activeSession.email}</strong> / rol{" "}
                 <strong>{activeSession.role}</strong>
               </p>
             ) : null}
@@ -112,7 +120,7 @@ export default function App(): JSX.Element {
               key={tab.path}
               to={tab.path}
               className={({ isActive }) =>
-                `tab ${isActive ? 'active' : ''} ${disabled ? 'disabled' : ''}`
+                `tab ${isActive ? "active" : ""} ${disabled ? "disabled" : ""}`
               }
               onClick={(e) => {
                 if (disabled) e.preventDefault();
@@ -125,7 +133,7 @@ export default function App(): JSX.Element {
         })}
       </nav>
 
-      {!hasAuthenticatedSession && location.pathname !== '/auth' ? (
+      {!hasAuthenticatedSession && location.pathname !== "/auth" ? (
         <p className="message">Necesitas una sesión activa para este módulo.</p>
       ) : null}
 
@@ -160,6 +168,16 @@ export default function App(): JSX.Element {
             element={
               hasAuthenticatedSession ? (
                 <DeliveriesPanel session={activeSession} />
+              ) : (
+                <Navigate to="/auth" replace />
+              )
+            }
+          />
+          <Route
+            path="/builder"
+            element={
+              hasAuthenticatedSession ? (
+                <BuilderPanel session={activeSession} />
               ) : (
                 <Navigate to="/auth" replace />
               )
