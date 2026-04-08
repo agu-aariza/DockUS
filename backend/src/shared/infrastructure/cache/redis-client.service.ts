@@ -39,6 +39,15 @@ export class RedisClientService implements OnApplicationShutdown {
     return this.withTimeout(client.ping());
   }
 
+  async publish(channel: string, payload: string): Promise<number> {
+    const client = await this.getClient();
+    return this.withTimeout(client.publish(channel, payload));
+  }
+
+  createSubscriber(): Redis {
+    return this.createClient();
+  }
+
   /**
    * Cierra la conexión Redis cuando la aplicación se apaga.
    */
