@@ -100,7 +100,7 @@ describe('BuilderPlanLlmService', () => {
 
     expect(result?.assessment.structuralType).toBe('T4');
     expect(result?.assessment.recipe.servicePort).toBe(8000);
-    expect(result?.model).toBe('qwen2.5-coder:32b');
+    expect(result?.model).toBe('qwen2.5-coder:7b');
   });
 
   it('rechaza una salida incompleta', async () => {

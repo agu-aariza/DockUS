@@ -37,7 +37,7 @@ export const envValidationSchema = Joi.object({
   BUILDER_OLLAMA_BASE_URL: Joi.string()
     .uri({ scheme: ['http', 'https'] })
     .default('http://localhost:11434'),
-  BUILDER_OLLAMA_MODEL: Joi.string().default('qwen2.5-coder:32b'),
+  BUILDER_OLLAMA_MODEL: Joi.string().default('qwen2.5-coder:7b'),
   BUILDER_OLLAMA_TIMEOUT_MS: Joi.number().integer().min(1000).default(120000),
   BUILDER_LLM_BUILDER_ENABLED: Joi.boolean().default(true),
   BUILDER_LLM_BUILDER_MAX_INPUT_CHARS: Joi.number()

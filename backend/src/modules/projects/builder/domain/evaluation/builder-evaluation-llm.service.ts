@@ -31,7 +31,7 @@ export class BuilderEvaluationLlmService {
     );
     this.model = this.configService.get<string>(
       'BUILDER_OLLAMA_MODEL',
-      'qwen2.5-coder:32b',
+      'qwen2.5-coder:7b',
     );
     this.timeoutMs = this.configService.get<number>(
       'BUILDER_OLLAMA_TIMEOUT_MS',

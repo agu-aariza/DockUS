@@ -72,7 +72,7 @@ services:
     ports:
       - "${OLLAMA_PORT:-11435}:11434"
     environment:
-      BUILDER_OLLAMA_MODEL: ${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:32b}
+      BUILDER_OLLAMA_MODEL: ${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:7b}
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 15s
@@ -93,7 +93,7 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-    command: ["pull", "${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:32b}"]
+    command: ["pull", "${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:7b}"]
     networks:
       - dockus-network
 
