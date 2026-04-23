@@ -8,7 +8,13 @@
  * @module AuthDto
  */
 
-import { IsEmail, IsString, MinLength, IsNotEmpty, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  IsNotEmpty,
+  Matches,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterDto {

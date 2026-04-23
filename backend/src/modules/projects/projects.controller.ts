@@ -22,15 +22,20 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   FORBIDDEN_DESCRIPTION,
   INTERNAL_SERVER_ERROR_DESCRIPTION,
@@ -46,6 +51,11 @@ import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
 import { ListProjectsQueryDto } from './dto/list-projects-query.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
 import { PaginatedProjectsResponse, ProjectsService } from './projects.service';
+import {
+  StorageObjectResponse,
+  StorageService,
+} from './storage/storage.service';
+import { UploadedStorageFile } from './storage/interfaces/uploaded-storage-file.interface';
 
 const PROJECT_ID_PARAM = {
   name: 'id',
@@ -60,7 +70,10 @@ const PROJECT_NOT_FOUND_DESCRIPTION = 'Proyecto no encontrado.';
 @Controller('projects')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectsService: ProjectsService,
+    private readonly storageService: StorageService,
+  ) {}
 
   /**
    * Crea un nuevo proyecto academico.
@@ -107,8 +120,9 @@ export class ProjectsController {
   @Get()
   async findAll(
     @Query() query: ListProjectsQueryDto,
+    @Req() request: AuthenticatedRequest,
   ): Promise<PaginatedProjectsResponse> {
-    return this.projectsService.findAll(query);
+    return this.projectsService.findAll(query, request.user);
   }
 
   /**
@@ -133,8 +147,11 @@ export class ProjectsController {
   })
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @Get(':id')
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Project> {
-    const project = await this.projectsService.findById(id);
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<Project> {
+    const project = await this.projectsService.findById(id, request.user);
     if (!project) {
       throw new NotFoundException(PROJECT_NOT_FOUND_DESCRIPTION);
     }
@@ -167,8 +184,9 @@ export class ProjectsController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateProjectDto: UpdateProjectDto,
+    @Req() request: AuthenticatedRequest,
   ): Promise<Project> {
-    return this.projectsService.update(id, updateProjectDto);
+    return this.projectsService.update(id, updateProjectDto, request.user);
   }
 
   /**
@@ -201,8 +219,60 @@ export class ProjectsController {
   async updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('status', new ParseEnumPipe(ProjectStatus)) status: ProjectStatus,
+    @Req() request: AuthenticatedRequest,
   ): Promise<Project> {
-    return this.projectsService.updateStatus(id, status);
+    return this.projectsService.updateStatus(id, status, request.user);
+  }
+
+  @ApiOperation({
+    summary: 'Subir o reemplazar suite docente del proyecto',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Post(':id/test-suite/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadTestSuite(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: UploadedStorageFile | undefined,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<StorageObjectResponse> {
+    return this.storageService.uploadProjectTestSuite(id, file, request.user);
+  }
+
+  @ApiOperation({
+    summary: 'Consultar suite docente activa',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get(':id/test-suite')
+  async findTestSuite(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<StorageObjectResponse> {
+    return this.storageService.findProjectTestSuite(id, request.user);
+  }
+
+  @ApiOperation({
+    summary: 'Eliminar suite docente activa',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Delete(':id/test-suite')
+  async removeTestSuite(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<{ message: string }> {
+    return this.storageService.removeProjectTestSuite(id, request.user);
   }
 
   /**
@@ -228,9 +298,7 @@ export class ProjectsController {
   @Roles(UserRole.ADMIN)
   @Delete(':id')
   @HttpCode(204)
-  async remove(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.projectsService.remove(id);
   }
 
@@ -262,5 +330,30 @@ export class ProjectsController {
   @Patch(':id/restore')
   async restore(@Param('id', ParseUUIDPipe) id: string): Promise<Project> {
     return this.projectsService.restore(id);
+  }
+
+  /**
+   * Resumen de progreso de un proyecto para el profesor.
+   */
+  @ApiOperation({
+    summary: 'Resumen de progreso del proyecto',
+    description:
+      'Devuelve estadísticas agregadas de entregas y alumnos asignados. Solo accesible por el profesor creador y admins.',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @ApiResponse({
+    status: 200,
+    description: 'Resumen generado correctamente.',
+  })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
+  @ApiResponse({ status: 403, description: FORBIDDEN_DESCRIPTION })
+  @ApiResponse({ status: 404, description: PROJECT_NOT_FOUND_DESCRIPTION })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get(':id/progress-summary')
+  async progressSummary(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.projectsService.getProgressSummary(id, request.user);
   }
 }

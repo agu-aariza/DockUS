@@ -10,21 +10,13 @@
 
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Repository } from 'typeorm';
+import { buildActor, buildProject } from '../../test-support/domain-builders';
+import { UserRole } from '../users/entities/user.entity';
+import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
+import { Delivery } from './deliveries/entities/delivery.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
 import { ProjectsService } from './projects.service';
-
-const buildProject = (overrides: Partial<Project> = {}): Project => ({
-  id: '5a6f2626-c78c-4842-b180-f1ca0a3f2d53',
-  title: 'Analizador Python',
-  contextAcademico: 'MPSP 2025/2026',
-  status: ProjectStatus.DRAFT,
-  creatorId: 'c17c421a-14cb-4a9c-a64a-62395cc542f4',
-  createdAt: new Date('2026-03-09T00:00:00.000Z'),
-  updatedAt: new Date('2026-03-09T00:00:00.000Z'),
-  deletedAt: undefined as unknown as Date,
-  ...overrides,
-});
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -46,6 +38,15 @@ describe('ProjectsService', () => {
     createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
   };
 
+  const assignmentsRepository = {
+    find: jest.fn(),
+    findOne: jest.fn(),
+  };
+
+  const deliveriesRepository = {
+    createQueryBuilder: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     queryBuilder.andWhere.mockReturnThis();
@@ -54,6 +55,8 @@ describe('ProjectsService', () => {
     queryBuilder.take.mockReturnThis();
     service = new ProjectsService(
       projectsRepository as unknown as Repository<Project>,
+      assignmentsRepository as unknown as Repository<ProjectAssignment>,
+      deliveriesRepository as unknown as Repository<Delivery>,
     );
   });
 
@@ -79,24 +82,29 @@ describe('ProjectsService', () => {
       contextAcademico: 'MPSP - Grupo A',
       status: ProjectStatus.DRAFT,
       creatorId,
+      maxDeliveriesPerStudent: 1,
     });
     expect(result.creatorId).toBe(creatorId);
   });
 
   it('debe devolver listado paginado con filtros y orden seguro', async () => {
+    const actor = buildActor(UserRole.ADMIN);
     queryBuilder.getManyAndCount.mockResolvedValue([[buildProject()], 1]);
 
-    const result = await service.findAll({
-      page: 1,
-      limit: 20,
-      status: ProjectStatus.ACTIVE,
-      creatorId: '9d52e6d8-d7ca-4b4f-8cd3-d3539f9b8e5f',
-      search: 'python',
-      createdFrom: '2026-03-01T00:00:00.000Z',
-      createdTo: '2026-03-31T23:59:59.999Z',
-      sortBy: 'title',
-      sortOrder: 'ASC',
-    });
+    const result = await service.findAll(
+      {
+        page: 1,
+        limit: 20,
+        status: ProjectStatus.ACTIVE,
+        creatorId: '9d52e6d8-d7ca-4b4f-8cd3-d3539f9b8e5f',
+        search: 'python',
+        createdFrom: '2026-03-01T00:00:00.000Z',
+        createdTo: '2026-03-31T23:59:59.999Z',
+        sortBy: 'title',
+        sortOrder: 'ASC',
+      },
+      actor,
+    );
 
     expect(projectsRepository.createQueryBuilder).toHaveBeenCalledWith(
       'project',
@@ -138,6 +146,7 @@ describe('ProjectsService', () => {
   });
 
   it('debe actualizar estado de proyecto y persistir cambios', async () => {
+    const actor = buildActor(UserRole.ADMIN);
     const project = buildProject();
     const updated = buildProject({ status: ProjectStatus.ARCHIVED });
     projectsRepository.findOne.mockResolvedValue(project);
@@ -146,6 +155,7 @@ describe('ProjectsService', () => {
     const result = await service.updateStatus(
       project.id,
       ProjectStatus.ARCHIVED,
+      actor,
     );
 
     expect(projectsRepository.save).toHaveBeenCalledWith(
@@ -192,7 +202,6 @@ describe('ProjectsService', () => {
     expect(projectsRepository.recover).toHaveBeenCalledWith(deletedProject);
     expect(projectsRepository.findOne).toHaveBeenNthCalledWith(2, {
       where: { id: deletedProject.id },
-      withDeleted: false,
     });
     expect(result.id).toBe(restoredProject.id);
   });
@@ -210,12 +219,15 @@ describe('ProjectsService', () => {
 
   it('debe rechazar rango de fechas invalido cuando createdFrom es mayor que createdTo', async () => {
     await expect(
-      service.findAll({
-        page: 1,
-        limit: 20,
-        createdFrom: '2026-04-10T00:00:00.000Z',
-        createdTo: '2026-04-01T00:00:00.000Z',
-      }),
+      service.findAll(
+        {
+          page: 1,
+          limit: 20,
+          createdFrom: '2026-04-10T00:00:00.000Z',
+          createdTo: '2026-04-01T00:00:00.000Z',
+        },
+        buildActor(UserRole.ADMIN),
+      ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

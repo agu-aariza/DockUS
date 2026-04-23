@@ -65,6 +65,16 @@ export class ListDeliveriesQueryDto {
   projectId?: string;
 
   @ApiPropertyOptional({
+    description: 'Filtro por asignación.',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsUUID('4', {
+    message: 'El assignmentId de filtro debe ser un UUID valido.',
+  })
+  @IsOptional()
+  assignmentId?: string;
+
+  @ApiPropertyOptional({
     description: 'Filtro por autor de entrega.',
     example: 'd9428888-122b-11e1-b85c-61cd3cbb3210',
   })

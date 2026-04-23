@@ -10,10 +10,12 @@
 
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { ProjectStatus } from '../entities/project.entity';
@@ -49,6 +51,17 @@ export class CreateProjectDto {
   @IsEnum(ProjectStatus, { message: 'Estado de proyecto invalido.' })
   @IsOptional()
   status?: ProjectStatus;
+
+  @ApiPropertyOptional({
+    example: 2,
+    description: 'Máximo de entregas permitidas por alumno asignado.',
+    minimum: 1,
+    default: 1,
+  })
+  @IsInt({ message: 'El máximo de entregas debe ser un entero.' })
+  @Min(1, { message: 'El máximo de entregas por alumno debe ser al menos 1.' })
+  @IsOptional()
+  maxDeliveriesPerStudent?: number;
 }
 
 /**

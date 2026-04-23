@@ -84,7 +84,11 @@ export class AuthController {
     description: 'Valida credenciales y devuelve un token JWT.',
   })
   @ApiBody({ type: LoginDto })
-  @ApiResponse({ status: 200, description: 'Token JWT emitido exitosamente.', type: AuthResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Token JWT emitido exitosamente.',
+    type: AuthResponseDto,
+  })
   @ApiResponse({
     status: 400,
     description: INVALID_INPUT_DESCRIPTION,

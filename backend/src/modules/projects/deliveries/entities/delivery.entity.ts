@@ -19,7 +19,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Project } from '../../entities/project.entity';
+import { ProjectAssignment } from '../../assignments/entities/project-assignment.entity';
 import { User } from '../../../users/entities/user.entity';
 
 /**
@@ -34,20 +34,20 @@ export enum DeliveryStatus {
 }
 
 @Entity('deliveries')
-@Index(['projectId', 'version'], { unique: true })
+@Index(['assignmentId', 'version'], { unique: true })
 export class Delivery {
   /** Identificador unico de entrega. */
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  /** Proyecto al que pertenece la entrega. */
+  /** Asignacion académica a la que pertenece la entrega. */
   @Column({ type: 'uuid' })
-  projectId: string;
+  assignmentId: string;
 
-  /** Relacion de trazabilidad con proyecto. */
-  @ManyToOne(() => Project, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'projectId' })
-  project: Project;
+  /** Relacion de trazabilidad con la asignacion proyecto-alumno. */
+  @ManyToOne(() => ProjectAssignment, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'assignmentId' })
+  assignment: ProjectAssignment;
 
   /** Identidad autora (extraida desde JWT en creacion). */
   @Column({ type: 'uuid' })

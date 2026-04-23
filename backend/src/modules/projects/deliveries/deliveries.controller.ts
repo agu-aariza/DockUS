@@ -49,9 +49,10 @@ import {
 import { ListDeliveriesQueryDto } from './dto/list-deliveries-query.dto';
 import {
   DeliveriesService,
+  DeliveryResponse,
   PaginatedDeliveriesResponse,
 } from './deliveries.service';
-import { Delivery, DeliveryStatus } from './entities/delivery.entity';
+import { DeliveryStatus } from './entities/delivery.entity';
 
 const DELIVERY_ID_PARAM = {
   name: 'id',
@@ -84,16 +85,13 @@ export class DeliveriesController {
     status: 500,
     description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
   @Post()
   async create(
     @Body() createDeliveryDto: CreateDeliveryDto,
     @Req() request: AuthenticatedRequest,
-  ): Promise<Delivery> {
-    return this.deliveriesService.create(
-      createDeliveryDto,
-      request.user.userId,
-    );
+  ): Promise<DeliveryResponse> {
+    return this.deliveriesService.create(createDeliveryDto, request.user);
   }
 
   @ApiOperation({
@@ -115,8 +113,9 @@ export class DeliveriesController {
   @Get()
   async findAll(
     @Query() query: ListDeliveriesQueryDto,
+    @Req() request: AuthenticatedRequest,
   ): Promise<PaginatedDeliveriesResponse> {
-    return this.deliveriesService.findAll(query);
+    return this.deliveriesService.findAll(query, request.user);
   }
 
   @ApiOperation({
@@ -138,8 +137,11 @@ export class DeliveriesController {
   })
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @Get(':id')
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Delivery> {
-    const delivery = await this.deliveriesService.findById(id);
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<DeliveryResponse> {
+    const delivery = await this.deliveriesService.findById(id, request.user);
     if (!delivery) {
       throw new NotFoundException(DELIVERY_NOT_FOUND_DESCRIPTION);
     }
@@ -169,8 +171,9 @@ export class DeliveriesController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDeliveryDto: UpdateDeliveryDto,
-  ): Promise<Delivery> {
-    return this.deliveriesService.update(id, updateDeliveryDto);
+    @Req() request: AuthenticatedRequest,
+  ): Promise<DeliveryResponse> {
+    return this.deliveriesService.update(id, updateDeliveryDto, request.user);
   }
 
   @ApiOperation({
@@ -200,8 +203,9 @@ export class DeliveriesController {
   async updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('status', new ParseEnumPipe(DeliveryStatus)) status: DeliveryStatus,
-  ): Promise<Delivery> {
-    return this.deliveriesService.updateStatus(id, status);
+    @Req() request: AuthenticatedRequest,
+  ): Promise<DeliveryResponse> {
+    return this.deliveriesService.updateStatus(id, status, request.user);
   }
 
   @ApiOperation({
@@ -223,8 +227,9 @@ export class DeliveriesController {
   @HttpCode(204)
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
   ): Promise<void> {
-    await this.deliveriesService.remove(id);
+    await this.deliveriesService.remove(id, request.user);
   }
 
   @ApiOperation({
@@ -250,7 +255,10 @@ export class DeliveriesController {
   })
   @Roles(UserRole.ADMIN)
   @Patch(':id/restore')
-  async restore(@Param('id', ParseUUIDPipe) id: string): Promise<Delivery> {
-    return this.deliveriesService.restore(id);
+  async restore(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<DeliveryResponse> {
+    return this.deliveriesService.restore(id, request.user);
   }
 }
