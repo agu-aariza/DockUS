@@ -255,9 +255,7 @@ export class UsersController {
   @Roles(UserRole.ADMIN)
   @Delete(':id')
   @HttpCode(204)
-  async remove(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.usersService.remove(id);
   }
 

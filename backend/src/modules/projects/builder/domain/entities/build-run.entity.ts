@@ -70,9 +70,6 @@ export class BuildRun {
   })
   runKind!: BuildRunKind;
 
-  @Column({ type: 'uuid', nullable: true })
-  sourceRunId!: string | null;
-
   @Column({
     type: 'enum',
     enum: BuildRunStatus,
@@ -119,12 +116,6 @@ export class BuildRun {
 
   @Column({ type: 'jsonb', nullable: true })
   executionContext!: unknown;
-
-  @Column({ type: 'jsonb', nullable: true })
-  reproducibilitySnapshot!: unknown;
-
-  @Column({ type: 'jsonb', nullable: true })
-  reproducibilityResult!: unknown;
 
   @Column({ type: 'text', nullable: true })
   failureReason!: string | null;

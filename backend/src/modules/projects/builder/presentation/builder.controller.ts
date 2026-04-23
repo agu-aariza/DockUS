@@ -9,7 +9,6 @@
  */
 
 import {
-  Body,
   Controller,
   DefaultValuePipe,
   Get,
@@ -20,7 +19,6 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
-  Res,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -44,22 +42,16 @@ import { UserRole } from '../../../users/entities/user.entity';
 import { BuilderService } from '../application/builder.service';
 import {
   BuildRunResponseDto,
-  BuildRunComparisonRequestDto,
-  BuildRunComparisonResponseDto,
   BuildRunEventsResponseDto,
   BuildRunEventDto,
-  BuildRunReportResponseDto,
   CancelBuildRunResponseDto,
   EvidenceArtifactDto,
   EvidenceDownloadUrlDto,
   EnqueueBuildRunResponseDto,
   PaginatedBuildRunsResponseDto,
-  ReplayBuildRunResponseDto,
   toBuildRunResponseDto,
 } from './dto/build-run-response.dto';
 import { ListBuildRunsDto } from './dto/list-build-runs.dto';
-import { BuilderRunStreamService } from './services/builder-run-stream.service';
-import type { Response } from 'express';
 
 const DELIVERY_ID_PARAM = {
   name: 'deliveryId',
@@ -78,10 +70,7 @@ const BUILD_RUN_ID_PARAM = {
 @Controller('builder')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class BuilderController {
-  constructor(
-    private readonly builderService: BuilderService,
-    private readonly builderRunStreamService: BuilderRunStreamService,
-  ) {}
+  constructor(private readonly builderService: BuilderService) {}
 
   @ApiOperation({
     summary: 'Encolar ejecución Builder para una entrega',
@@ -198,29 +187,6 @@ export class BuilderController {
   }
 
   @ApiOperation({
-    summary: 'Stream SSE de un run',
-    description:
-      'Abre un stream server-sent events con cambios de estado, etapas, warnings y artefactos.',
-  })
-  @ApiParam(BUILD_RUN_ID_PARAM)
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
-  @Get('runs/:buildRunId/stream')
-  async streamRunEvents(
-    @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
-    @Query('afterSequence') afterSequenceRaw: string | undefined,
-    @Req() request: AuthenticatedRequest,
-    @Res() response: Response,
-  ): Promise<void> {
-    const afterSequence = Number.parseInt(afterSequenceRaw ?? '0', 10) || 0;
-    await this.builderRunStreamService.openRunEventStream({
-      buildRunId,
-      afterSequence,
-      actor: request.user,
-      response,
-    });
-  }
-
-  @ApiOperation({
     summary: 'Listar historial de ejecuciones por entrega',
     description: 'Devuelve runs paginados de una entrega.',
   })
@@ -285,79 +251,6 @@ export class BuilderController {
     @Req() request: AuthenticatedRequest,
   ): Promise<CancelBuildRunResponseDto> {
     return this.builderService.cancelRun(buildRunId, request.user);
-  }
-
-  @ApiOperation({
-    summary: 'Encolar frozen replay de un run',
-    description:
-      'Crea una nueva ejecución enlazada al run origen reutilizando snapshot y receta congelados.',
-  })
-  @ApiParam(BUILD_RUN_ID_PARAM)
-  @ApiResponse({
-    status: 202,
-    description: 'Frozen replay encolado correctamente.',
-    type: ReplayBuildRunResponseDto,
-  })
-  @HttpCode(HttpStatus.ACCEPTED)
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
-  @Post('runs/:buildRunId/replay')
-  async replayRun(
-    @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
-    @Req() request: AuthenticatedRequest,
-  ): Promise<ReplayBuildRunResponseDto> {
-    return this.builderService.enqueueFrozenReplay(buildRunId, request.user);
-  }
-
-  @ApiOperation({
-    summary: 'Obtener informe canónico de un run',
-    description:
-      'Devuelve el informe canónico derivado de la evaluación LLM final en formato JSON o texto.',
-  })
-  @ApiParam(BUILD_RUN_ID_PARAM)
-  @ApiResponse({
-    status: 200,
-    description: 'Informe recuperado correctamente.',
-    type: BuildRunReportResponseDto,
-  })
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
-  @Get('runs/:buildRunId/report')
-  async getRunReport(
-    @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
-    @Query('format') format: 'json' | 'text' | undefined,
-    @Req() request: AuthenticatedRequest,
-  ): Promise<BuildRunReportResponseDto> {
-    return this.builderService.getRunReport(
-      buildRunId,
-      request.user,
-      format ?? 'json',
-    ) as Promise<BuildRunReportResponseDto>;
-  }
-
-  @ApiOperation({
-    summary: 'Comparar técnicamente dos runs',
-    description:
-      'Devuelve un delta determinista entre un run base y un run candidato de la misma entrega.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Comparación recuperada correctamente.',
-    type: BuildRunComparisonResponseDto,
-  })
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
-  @Post('runs/compare')
-  async compareRuns(
-    @Body() body: BuildRunComparisonRequestDto,
-    @Req() request: AuthenticatedRequest,
-  ): Promise<BuildRunComparisonResponseDto> {
-    const comparison = await this.builderService.compareRuns(
-      body.baseRunId,
-      body.candidateRunId,
-      request.user,
-    );
-    return {
-      overallVerdict: comparison.overallVerdict,
-      comparison,
-    };
   }
 
   @ApiOperation({

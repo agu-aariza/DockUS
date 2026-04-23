@@ -22,14 +22,6 @@ export class EnqueueBuildRunResponseDto {
   deliveryId!: string;
 }
 
-export class ReplayBuildRunResponseDto extends EnqueueBuildRunResponseDto {
-  @ApiProperty({
-    example: '550e8400-e29b-41d4-a716-446655440222',
-    description: 'Run origen del frozen replay.',
-  })
-  sourceRunId!: string;
-}
-
 export class BuildRunResponseDto {
   @ApiProperty({
     example: '550e8400-e29b-41d4-a716-446655440000',
@@ -47,15 +39,10 @@ export class BuildRunResponseDto {
   triggeredById!: string;
 
   @ApiProperty({
-    enum: ['STANDARD', 'FROZEN_REPLAY'],
+    enum: ['STANDARD'],
     example: 'STANDARD',
   })
   runKind!: string;
-
-  @ApiPropertyOptional({
-    example: '550e8400-e29b-41d4-a716-446655440333',
-  })
-  sourceRunId?: string | null;
 
   @ApiProperty({
     enum: BuildRunStatus,
@@ -143,23 +130,10 @@ export class BuildRunResponseDto {
   report?: unknown;
 
   @ApiPropertyOptional({
-    description: 'Contexto de ejecución para reproducibilidad operativa.',
+    description: 'Contexto de ejecución capturado durante el run.',
     type: Object,
   })
   executionContext?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Snapshot congelado del run origen para reproducibilidad.',
-    type: Object,
-  })
-  reproducibilitySnapshot?: unknown;
-
-  @ApiPropertyOptional({
-    description:
-      'Resultado determinista de reproducibilidad del frozen replay.',
-    type: Object,
-  })
-  reproducibilityResult?: unknown;
 
   @ApiPropertyOptional({
     description: 'Causa exacta de fallo (si aplica).',

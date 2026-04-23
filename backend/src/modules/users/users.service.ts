@@ -37,11 +37,10 @@ const USER_SORT_COLUMNS: Record<UserSortField, string> = {
   status: 'user.status',
 };
 
-export interface UsersPaginationMeta extends PaginationMeta {}
 
 export interface PaginatedUsersResponse {
   data: Omit<User, 'passwordHash'>[];
-  meta: UsersPaginationMeta;
+  meta: PaginationMeta;
 }
 
 @Injectable()

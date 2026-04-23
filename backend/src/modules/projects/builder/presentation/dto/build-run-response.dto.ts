@@ -19,19 +19,12 @@ export {
   CancelBuildRunResponseDto,
   EnqueueBuildRunResponseDto,
   PaginatedBuildRunsResponseDto,
-  ReplayBuildRunResponseDto,
 } from './build-run-core.dto';
-export {
-  BuildRunComparisonRequestDto,
-  BuildRunComparisonResponseDto,
-  ReproducibilityResultDto,
-} from './build-run-comparison.dto';
 export {
   BuildRunEventDto,
   BuildRunEventsResponseDto,
 } from './build-run-events.dto';
 export {
-  BuildRunReportResponseDto,
   EvidenceArtifactDto,
   EvidenceDownloadUrlDto,
 } from './build-run-evidence.dto';
@@ -42,7 +35,6 @@ export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
     deliveryId: run.deliveryId,
     triggeredById: run.triggeredById,
     runKind: run.runKind,
-    sourceRunId: run.sourceRunId,
     status: run.status,
     activeStage: run.activeStage,
     latestEventSequence: run.latestEventSequence
@@ -63,8 +55,6 @@ export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
     evidenceArtifacts: run.evidenceArtifacts,
     report: run.report,
     executionContext: run.executionContext,
-    reproducibilitySnapshot: run.reproducibilitySnapshot,
-    reproducibilityResult: run.reproducibilityResult,
     failureReason: run.failureReason,
     warnings: run.warnings ?? [],
     imageTag: run.imageTag,

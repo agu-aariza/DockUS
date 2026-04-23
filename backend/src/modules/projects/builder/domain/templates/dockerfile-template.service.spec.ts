@@ -15,7 +15,7 @@ describe('DockerfileTemplateService', () => {
   it('renderiza Dockerfile genérico con comandos seguros, puerto y healthcheck', () => {
     const service = new DockerfileTemplateService(configService);
     const assessment: BuilderLlmAssessment = {
-      structuralType: 'T7',
+      structuralType: 'Dashboard con Streamlit',
       capabilities: {
         C1: { status: 'yes', rationale: 'Instalable con pip.' },
         C2: { status: 'yes', rationale: 'Tiene comando de arranque.' },

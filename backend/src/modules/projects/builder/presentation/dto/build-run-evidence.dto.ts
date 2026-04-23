@@ -38,16 +38,3 @@ export class EvidenceDownloadUrlDto {
   })
   expiresAt!: string;
 }
-
-export class BuildRunReportResponseDto {
-  @ApiProperty({
-    enum: ['json', 'text'],
-    example: 'json',
-  })
-  format!: 'json' | 'text';
-
-  @ApiProperty({
-    type: Object,
-  })
-  report!: unknown;
-}
