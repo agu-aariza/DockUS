@@ -21,19 +21,46 @@ import {
 } from 'typeorm';
 import { Delivery } from '../../deliveries/entities/delivery.entity';
 import { User } from '../../../users/entities/user.entity';
+import { Project } from '../../entities/project.entity';
+
+export enum StorageScopeType {
+  DELIVERY = 'DELIVERY',
+  PROJECT = 'PROJECT',
+}
+
+export enum StorageAssetRole {
+  STUDENT_SOURCE = 'STUDENT_SOURCE',
+  TEACHER_TESTS = 'TEACHER_TESTS',
+}
 
 @Entity('storage_objects')
-@Index(['deliveryId', 'logicalPath'], { unique: true })
+@Index(['scopeType', 'scopeId', 'assetRole', 'logicalPath'], { unique: true })
 export class StorageObject {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid' })
-  deliveryId: string;
+  @Column({ type: 'enum', enum: StorageScopeType })
+  scopeType: StorageScopeType;
 
-  @ManyToOne(() => Delivery, { onDelete: 'RESTRICT' })
+  @Column({ type: 'uuid' })
+  scopeId: string;
+
+  @Column({ type: 'enum', enum: StorageAssetRole })
+  assetRole: StorageAssetRole;
+
+  @Column({ type: 'uuid', nullable: true })
+  projectId: string | null;
+
+  @ManyToOne(() => Project, { onDelete: 'RESTRICT', nullable: true })
+  @JoinColumn({ name: 'projectId' })
+  project: Project | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  deliveryId: string | null;
+
+  @ManyToOne(() => Delivery, { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'deliveryId' })
-  delivery: Delivery;
+  delivery: Delivery | null;
 
   @Column({ length: 255 })
   logicalName: string;

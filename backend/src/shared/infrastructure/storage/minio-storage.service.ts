@@ -189,7 +189,6 @@ export class MinioStorageService implements OnModuleInit {
     }
   }
 
-
   private async readBodyAsBuffer(body: unknown): Promise<Buffer> {
     if (body instanceof Readable) {
       const chunks: Buffer[] = [];

@@ -11,6 +11,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsEnum,
   IsDateString,
   IsIn,
   IsInt,
@@ -19,6 +20,10 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import {
+  StorageAssetRole,
+  StorageScopeType,
+} from '../entities/storage-object.entity';
 
 const STORAGE_SORT_FIELDS = [
   'createdAt',
@@ -62,6 +67,30 @@ export class ListStorageObjectsQueryDto {
   @IsUUID('4', { message: 'El deliveryId debe ser un UUID valido.' })
   @IsOptional()
   deliveryId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filtro por proyecto.',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsUUID('4', { message: 'El projectId debe ser un UUID valido.' })
+  @IsOptional()
+  projectId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filtro por tipo de scope.',
+    enum: StorageScopeType,
+  })
+  @IsEnum(StorageScopeType, { message: 'El scopeType es invalido.' })
+  @IsOptional()
+  scopeType?: StorageScopeType;
+
+  @ApiPropertyOptional({
+    description: 'Filtro por rol del artefacto.',
+    enum: StorageAssetRole,
+  })
+  @IsEnum(StorageAssetRole, { message: 'El assetRole es invalido.' })
+  @IsOptional()
+  assetRole?: StorageAssetRole;
 
   @ApiPropertyOptional({
     description: 'Filtro por uploader.',

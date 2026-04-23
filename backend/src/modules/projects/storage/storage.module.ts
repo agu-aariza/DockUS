@@ -10,7 +10,9 @@
 
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
+import { Project } from '../entities/project.entity';
 import { StorageObject } from './entities/storage-object.entity';
 import { StorageController } from './storage.controller';
 import { StorageService } from './storage.service';
@@ -18,7 +20,12 @@ import { StorageInfrastructureModule } from '../../../shared/infrastructure/stor
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([StorageObject, Delivery]),
+    TypeOrmModule.forFeature([
+      StorageObject,
+      Delivery,
+      Project,
+      ProjectAssignment,
+    ]),
     StorageInfrastructureModule,
   ],
   controllers: [StorageController],

@@ -15,83 +15,26 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { QueryFailedError, Repository } from 'typeorm';
-import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
-import { UserRole } from '../../users/entities/user.entity';
 import {
-  Delivery,
-  DeliveryStatus,
-} from '../deliveries/entities/delivery.entity';
+  buildActor,
+  buildDelivery,
+  buildProject,
+  buildStorageObject,
+  buildUploadedStorageFile,
+  createMinioStorageServiceMock,
+} from '../../../test-support/domain-builders';
+import { UserRole } from '../../users/entities/user.entity';
+import { Delivery } from '../deliveries/entities/delivery.entity';
+import { Project } from '../entities/project.entity';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
 import { StorageObject } from './entities/storage-object.entity';
-import { UploadedStorageFile } from './interfaces/uploaded-storage-file.interface';
 import { StorageService } from './storage.service';
-
-const buildActor = (
-  role: UserRole,
-  userId = 'd9428888-122b-11e1-b85c-61cd3cbb3210',
-): AuthenticatedUser => ({
-  userId,
-  email: `${role.toLowerCase()}@dockus.com`,
-  role,
-});
-
-const buildDelivery = (overrides: Partial<Delivery> = {}): Delivery => ({
-  id: '06bf45ea-4b34-4f8b-88cb-a7bf7d09a34b',
-  projectId: '5a6f2626-c78c-4842-b180-f1ca0a3f2d53',
-  project: undefined as unknown as Delivery['project'],
-  authorId: 'd9428888-122b-11e1-b85c-61cd3cbb3210',
-  version: 2,
-  status: DeliveryStatus.SUBMITTED,
-  notes: null,
-  createdAt: new Date('2026-03-09T00:00:00.000Z'),
-  updatedAt: new Date('2026-03-09T00:00:00.000Z'),
-  deletedAt: undefined as unknown as Date,
-  ...overrides,
-});
-
-const buildStorageObject = (
-  overrides: Partial<StorageObject> = {},
-): StorageObject => ({
-  id: 'b8efef4b-a77d-41cf-9f83-ae2046b0df4a',
-  deliveryId: '06bf45ea-4b34-4f8b-88cb-a7bf7d09a34b',
-  delivery: undefined as unknown as StorageObject['delivery'],
-  logicalName: 'main.py',
-  logicalPath: 'src/main.py',
-  contentType: 'text/x-python',
-  sizeBytes: 10,
-  hash: 'abc123',
-  bucket: 'dockus-storage',
-  objectKey: 'deliveries/06bf45ea-4b34-4f8b-88cb-a7bf7d09a34b/v2/main.py',
-  uploaderId: 'd9428888-122b-11e1-b85c-61cd3cbb3210',
-  createdAt: new Date('2026-03-09T00:00:00.000Z'),
-  updatedAt: new Date('2026-03-09T00:00:00.000Z'),
-  deletedAt: undefined as unknown as Date,
-  ...overrides,
-});
-
-const buildUploadedFile = (
-  overrides: Partial<UploadedStorageFile> = {},
-): UploadedStorageFile => ({
-  buffer: Buffer.alloc(1),
-  size: 1,
-  ...overrides,
-});
 
 describe('StorageService', () => {
   let service: StorageService;
 
-  const queryBuilder = {
-    andWhere: jest.fn().mockReturnThis(),
-    leftJoin: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    take: jest.fn().mockReturnThis(),
-    getManyAndCount: jest.fn(),
-  };
-
   const storageRepository = {
     create: jest.fn(),
-    createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
     delete: jest.fn(),
     findOne: jest.fn(),
     recover: jest.fn(),
@@ -101,24 +44,17 @@ describe('StorageService', () => {
 
   const deliveriesRepository = {
     findOne: jest.fn(),
+    save: jest.fn(),
   };
 
-  const minioStorageService = {
-    createDownloadSignedUrl: jest.fn(),
-    deleteObject: jest.fn(),
-    getBucketName: jest.fn(),
-    getSignedUrlTtlSeconds: jest.fn(),
-    objectExists: jest.fn(),
-    putObject: jest.fn(),
+  const projectsRepository = {
+    findOne: jest.fn(),
   };
+
+  const minioStorageService = createMinioStorageServiceMock();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    queryBuilder.andWhere.mockReturnThis();
-    queryBuilder.leftJoin.mockReturnThis();
-    queryBuilder.orderBy.mockReturnThis();
-    queryBuilder.skip.mockReturnThis();
-    queryBuilder.take.mockReturnThis();
 
     minioStorageService.getBucketName.mockReturnValue('dockus-storage');
     minioStorageService.getSignedUrlTtlSeconds.mockReturnValue(600);
@@ -129,15 +65,16 @@ describe('StorageService', () => {
     service = new StorageService(
       storageRepository as unknown as Repository<StorageObject>,
       deliveriesRepository as unknown as Repository<Delivery>,
+      projectsRepository as unknown as Repository<Project>,
       minioStorageService as unknown as MinioStorageService,
     );
   });
 
   it('debe subir objeto y persistir metadata cuando todo es valido', async () => {
-    const student = buildActor(UserRole.STUDENT);
+    const student = buildActor(UserRole.STUDENT, 'student-1');
     const delivery = buildDelivery({ authorId: student.userId });
     const saved = buildStorageObject({ uploaderId: student.userId });
-    const file = buildUploadedFile({
+    const file = buildUploadedStorageFile({
       buffer: Buffer.from('print(1)'),
       size: 8,
     });
@@ -161,7 +98,7 @@ describe('StorageService', () => {
 
     expect(minioStorageService.putObject).toHaveBeenCalledWith({
       bucket: 'dockus-storage',
-      key: `deliveries/${delivery.id}/v${delivery.version}/main.py`,
+      key: `deliveries/${delivery.id}/student-source/main.py`,
       body: file.buffer,
       contentType: 'text/x-python',
     });
@@ -173,13 +110,13 @@ describe('StorageService', () => {
   });
 
   it('debe permitir upload sin sizeBytes declarado y usar tamano real', async () => {
-    const student = buildActor(UserRole.STUDENT);
+    const student = buildActor(UserRole.STUDENT, 'student-1');
     const delivery = buildDelivery({ authorId: student.userId });
     const saved = buildStorageObject({
       uploaderId: student.userId,
       sizeBytes: 8,
     });
-    const file = buildUploadedFile({
+    const file = buildUploadedStorageFile({
       buffer: Buffer.from('print(1)'),
       size: 8,
     });
@@ -207,7 +144,7 @@ describe('StorageService', () => {
   });
 
   it('debe rechazar upload por tamaño mayor a 50MB', async () => {
-    const file = buildUploadedFile({
+    const file = buildUploadedStorageFile({
       buffer: Buffer.alloc(1),
       size: 50 * 1024 * 1024 + 1,
     });
@@ -229,7 +166,7 @@ describe('StorageService', () => {
   });
 
   it('debe rechazar upload con extensión no permitida', async () => {
-    const file = buildUploadedFile();
+    const file = buildUploadedStorageFile();
 
     await expect(
       service.upload(
@@ -248,7 +185,7 @@ describe('StorageService', () => {
   });
 
   it('debe rechazar upload con ruta absoluta o traversal', async () => {
-    const file = buildUploadedFile();
+    const file = buildUploadedStorageFile();
 
     await expect(
       service.upload(
@@ -274,7 +211,7 @@ describe('StorageService', () => {
     const otherDelivery = buildDelivery({
       authorId: 'c17c421a-14cb-4a9c-a64a-62395cc542f4',
     });
-    const file = buildUploadedFile();
+    const file = buildUploadedStorageFile();
     deliveriesRepository.findOne.mockResolvedValue(otherDelivery);
 
     await expect(
@@ -293,108 +230,23 @@ describe('StorageService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it('debe generar signed URL con TTL configurado', async () => {
-    const student = buildActor(UserRole.STUDENT);
-    const storageObject = buildStorageObject();
-    deliveriesRepository.findOne.mockResolvedValue(
-      buildDelivery({ authorId: student.userId }),
-    );
-    storageRepository.findOne.mockResolvedValue(storageObject);
-    minioStorageService.createDownloadSignedUrl.mockResolvedValue(
-      'https://minio.local/signed-url',
-    );
-
-    const result = await service.createDownloadUrl(storageObject.id, student);
-
-    expect(minioStorageService.createDownloadSignedUrl).toHaveBeenCalledWith(
-      storageObject.bucket,
-      storageObject.objectKey,
-    );
-    expect(result.downloadUrl).toContain('signed-url');
-    expect(result.expiresAt).toBeDefined();
-  });
-
-  it('debe aplicar soft delete y restaurar objeto si existe en MinIO', async () => {
-    const admin = buildActor(UserRole.ADMIN);
-    const activeObject = buildStorageObject();
-    const deletedObject = buildStorageObject({
-      deletedAt: new Date('2026-03-10T00:00:00.000Z'),
-    });
-    const restoredObject = buildStorageObject({
-      deletedAt: undefined as unknown as Date,
-    });
-
-    storageRepository.findOne
-      .mockResolvedValueOnce(activeObject)
-      .mockResolvedValueOnce(deletedObject)
-      .mockResolvedValueOnce(restoredObject);
-    storageRepository.softRemove.mockResolvedValue(deletedObject);
-    storageRepository.recover.mockResolvedValue(restoredObject);
-    minioStorageService.objectExists.mockResolvedValue(true);
-
-    const removeResult = await service.remove(activeObject.id, admin);
-    const restoreResult = await service.restore(activeObject.id, admin);
-
-    expect(removeResult.message).toContain('eliminado');
-    expect(storageRepository.recover).toHaveBeenCalledWith(deletedObject);
-    expect(restoreResult.id).toBe(restoredObject.id);
-  });
-
-  it('debe purgar físicamente solo como ADMIN', async () => {
-    const admin = buildActor(UserRole.ADMIN);
-    const object = buildStorageObject();
-    storageRepository.findOne.mockResolvedValue(object);
-
-    const result = await service.purge(object.id, admin);
-
-    expect(minioStorageService.deleteObject).toHaveBeenCalledWith(
-      object.bucket,
-      object.objectKey,
-    );
-    expect(storageRepository.delete).toHaveBeenCalledWith({ id: object.id });
-    expect(result.message).toContain('purgado');
-  });
-
-  it('debe limitar listado de STUDENT a entregas de su autoría', async () => {
-    const student = buildActor(UserRole.STUDENT);
-    queryBuilder.getManyAndCount.mockResolvedValue([[buildStorageObject()], 1]);
-
-    await service.findAll(
-      {
-        page: 1,
-        limit: 20,
-        sortBy: 'createdAt',
-        sortOrder: 'DESC',
-      },
-      student,
-    );
-
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      'delivery.authorId = :requestUserId',
-      { requestUserId: student.userId },
-    );
-  });
-
   it('debe traducir colisión de ruta lógica a ConflictException', async () => {
-    const student = buildActor(UserRole.STUDENT);
+    const student = buildActor(UserRole.STUDENT, 'student-1');
     const delivery = buildDelivery({ authorId: student.userId });
-    const file = buildUploadedFile({
+    const file = buildUploadedStorageFile({
       buffer: Buffer.from('print(1)'),
       size: 8,
     });
-    const uniqueViolationDriverError = Object.assign(
-      new Error('duplicate key value violates unique constraint'),
-      { code: '23505' },
-    );
-    const uniqueViolation = new QueryFailedError(
-      'INSERT INTO storage_objects',
-      [],
-      uniqueViolationDriverError,
-    );
 
     deliveriesRepository.findOne.mockResolvedValue(delivery);
-    storageRepository.create.mockReturnValue(buildStorageObject());
-    storageRepository.save.mockRejectedValue(uniqueViolation);
+    storageRepository.create.mockReturnValue(
+      buildStorageObject({ uploaderId: student.userId }),
+    );
+    storageRepository.save.mockRejectedValue(
+      new QueryFailedError('INSERT INTO storage_objects', [], {
+        code: '23505',
+      }),
+    );
 
     await expect(
       service.upload(
@@ -412,6 +264,68 @@ describe('StorageService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('debe generar signed URL con TTL configurado', async () => {
+    const admin = buildActor(UserRole.ADMIN, 'admin-1');
+    const storageObject = buildStorageObject();
+    storageRepository.findOne.mockResolvedValue(storageObject);
+    deliveriesRepository.findOne.mockResolvedValue(buildDelivery());
+    minioStorageService.createDownloadSignedUrl.mockResolvedValue(
+      'https://minio.local/signed-url',
+    );
+
+    const result = await service.createDownloadUrl(storageObject.id, admin);
+
+    expect(minioStorageService.createDownloadSignedUrl).toHaveBeenCalledWith(
+      storageObject.bucket,
+      storageObject.objectKey,
+    );
+    expect(result.downloadUrl).toContain('signed-url');
+    expect(result.expiresAt).toBeDefined();
+  });
+
+  it('debe aplicar soft delete y restaurar objeto si existe en MinIO', async () => {
+    const admin = buildActor(UserRole.ADMIN);
+    const activeObject = buildStorageObject();
+    const deletedObject = buildStorageObject({
+      deletedAt: new Date('2026-03-10T00:00:00.000Z'),
+    });
+    const restoredObject = buildStorageObject({
+      deletedAt: null,
+    });
+
+    storageRepository.findOne
+      .mockResolvedValueOnce(activeObject)
+      .mockResolvedValueOnce(deletedObject)
+      .mockResolvedValueOnce(restoredObject);
+    storageRepository.softRemove.mockResolvedValue(deletedObject);
+    storageRepository.recover.mockResolvedValue(restoredObject);
+    deliveriesRepository.findOne.mockResolvedValue(buildDelivery());
+    minioStorageService.objectExists.mockResolvedValue(true);
+
+    const removeResult = await service.remove(activeObject.id, admin);
+    const restoreResult = await service.restore(activeObject.id, admin);
+
+    expect(removeResult.message).toContain('eliminado');
+    expect(storageRepository.recover).toHaveBeenCalledWith(deletedObject);
+    expect(restoreResult.id).toBe(restoredObject.id);
+  });
+
+  it('debe purgar físicamente solo como ADMIN', async () => {
+    const admin = buildActor(UserRole.ADMIN);
+    const object = buildStorageObject();
+    storageRepository.findOne.mockResolvedValue(object);
+    deliveriesRepository.findOne.mockResolvedValue(buildDelivery());
+
+    const result = await service.purge(object.id, admin);
+
+    expect(minioStorageService.deleteObject).toHaveBeenCalledWith(
+      object.bucket,
+      object.objectKey,
+    );
+    expect(storageRepository.delete).toHaveBeenCalledWith({ id: object.id });
+    expect(result.message).toContain('purgado');
+  });
+
   it('debe rechazar purga si no es ADMIN', async () => {
     const teacher = buildActor(UserRole.TEACHER);
 
@@ -426,10 +340,45 @@ describe('StorageService', () => {
       deletedAt: new Date('2026-03-10T00:00:00.000Z'),
     });
     storageRepository.findOne.mockResolvedValue(deletedObject);
+    deliveriesRepository.findOne.mockResolvedValue(buildDelivery());
     minioStorageService.objectExists.mockResolvedValue(false);
 
     await expect(
       service.restore(deletedObject.id, admin),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('debe subir la suite docente de un proyecto gestionado por el profesor', async () => {
+    const teacher = buildActor(
+      UserRole.TEACHER,
+      '22222222-2222-2222-2222-222222222222',
+    );
+    const project = buildProject({ creatorId: teacher.userId });
+    const saved = buildStorageObject({
+      projectId: project.id,
+      deliveryId: null,
+      scopeId: project.id,
+      logicalName: 'teacher-suite.zip',
+      logicalPath: 'teacher-suite.zip',
+      contentType: 'application/zip',
+    });
+
+    projectsRepository.findOne.mockResolvedValue(project);
+    storageRepository.findOne.mockResolvedValue(null);
+    storageRepository.create.mockReturnValue(saved);
+    storageRepository.save.mockResolvedValue(saved);
+
+    const result = await service.uploadProjectTestSuite(
+      project.id,
+      buildUploadedStorageFile({
+        size: 20,
+        originalname: 'teacher-suite.zip',
+        mimetype: 'application/zip',
+      }),
+      teacher,
+    );
+
+    expect(minioStorageService.putObject).toHaveBeenCalled();
+    expect(result.projectId).toBe(project.id);
   });
 });

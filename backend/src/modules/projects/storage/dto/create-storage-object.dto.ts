@@ -23,7 +23,7 @@ import {
 export class CreateStorageObjectDto {
   @ApiProperty({
     example: '550e8400-e29b-41d4-a716-446655440000',
-    description: 'Entrega asociada al archivo.',
+    description: 'Entrega asociada al archivo fuente del alumno.',
   })
   @IsUUID('4', { message: 'El deliveryId debe ser un UUID valido.' })
   deliveryId: string;
