@@ -1,3 +1,10 @@
+/**
+ * Fachadas tipadas para consumir la API REST desde el frontend.
+ *
+ * Cada bloque agrupa endpoints por dominio y reutiliza la serialización de
+ * filtros para evitar lógica duplicada en los paneles.
+ */
+
 import { http } from './http';
 import type {
   AuthResponse,
@@ -5,9 +12,13 @@ import type {
   DeliveryStatus,
   DownloadUrlResponse,
   PaginatedResponse,
+  ProjectAssignmentEntity,
   ProjectEntity,
+  ProjectProgressSummary,
   ProjectStatus,
+  StorageAssetRole,
   StorageObjectEntity,
+  StorageScopeType,
   UserEntity,
   UserRole,
   UserStatus,
@@ -136,6 +147,7 @@ export const projectsApi = {
     title: string;
     contextAcademico?: string;
     status?: ProjectStatus;
+    maxDeliveriesPerStudent?: number;
   }): Promise<ProjectEntity> {
     const { data } = await http.post<ProjectEntity>('/projects', payload);
     return data;
@@ -147,6 +159,7 @@ export const projectsApi = {
       title: string;
       contextAcademico: string;
       status: ProjectStatus;
+      maxDeliveriesPerStudent: number;
     }>,
   ): Promise<ProjectEntity> {
     const { data } = await http.patch<ProjectEntity>(`/projects/${id}`, payload);
@@ -166,6 +179,74 @@ export const projectsApi = {
     const { data } = await http.patch<ProjectEntity>(`/projects/${id}/restore`);
     return data;
   },
+
+  async uploadTestSuite(projectId: string, file: File): Promise<StorageObjectEntity> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await http.post<StorageObjectEntity>(
+      `/projects/${projectId}/test-suite/upload`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+    );
+    return data;
+  },
+
+  async getTestSuite(projectId: string): Promise<StorageObjectEntity> {
+    const { data } = await http.get<StorageObjectEntity>(
+      `/projects/${projectId}/test-suite`,
+    );
+    return data;
+  },
+
+  async removeTestSuite(projectId: string): Promise<{ message: string }> {
+    const { data } = await http.delete<{ message: string }>(
+      `/projects/${projectId}/test-suite`,
+    );
+    return data;
+  },
+
+  async progressSummary(projectId: string): Promise<ProjectProgressSummary> {
+    const { data } = await http.get<ProjectProgressSummary>(
+      `/projects/${projectId}/progress-summary`,
+    );
+    return data;
+  },
+};
+
+export const assignmentsApi = {
+  async bulkAssign(
+    projectId: string,
+    studentIds: string[],
+  ): Promise<ProjectAssignmentEntity[]> {
+    const { data } = await http.post<ProjectAssignmentEntity[]>(
+      `/projects/${projectId}/assignments/bulk`,
+      { studentIds },
+    );
+    return data;
+  },
+
+  async listByProject(projectId: string): Promise<ProjectAssignmentEntity[]> {
+    const { data } = await http.get<ProjectAssignmentEntity[]>(
+      `/projects/${projectId}/assignments`,
+    );
+    return data;
+  },
+
+  async listMine(): Promise<ProjectAssignmentEntity[]> {
+    const { data } = await http.get<ProjectAssignmentEntity[]>('/assignments/me');
+    return data;
+  },
+
+  async revoke(assignmentId: string): Promise<{ message: string }> {
+    const { data } = await http.delete<{ message: string }>(
+      `/assignments/${assignmentId}`,
+    );
+    return data;
+  },
 };
 
 export const deliveriesApi = {
@@ -173,6 +254,7 @@ export const deliveriesApi = {
     page?: number;
     limit?: number;
     projectId?: string;
+    assignmentId?: string;
     authorId?: string;
     status?: DeliveryStatus;
     sortBy?: string;
@@ -190,8 +272,7 @@ export const deliveriesApi = {
   },
 
   async create(payload: {
-    projectId: string;
-    version: number;
+    assignmentId: string;
     status?: DeliveryStatus;
     notes?: string;
   }): Promise<DeliveryEntity> {
@@ -202,7 +283,7 @@ export const deliveriesApi = {
   async update(
     id: string,
     payload: Partial<{
-      version: number;
+      assignmentId: string;
       status: DeliveryStatus;
       notes: string;
     }>,
@@ -231,6 +312,9 @@ export const storageApi = {
     page?: number;
     limit?: number;
     deliveryId?: string;
+    projectId?: string;
+    scopeType?: StorageScopeType;
+    assetRole?: StorageAssetRole;
     uploaderId?: string;
     createdFrom?: string;
     createdTo?: string;

@@ -1,3 +1,7 @@
+/**
+ * Visor simple de respuestas JSON para paneles de prueba y soporte.
+ */
+
 import { pretty } from '../utils/errors';
 
 interface JsonResultProps {

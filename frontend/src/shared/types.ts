@@ -6,6 +6,8 @@ export type UserStatus =
   | "PENDING_VERIFICATION";
 export type ProjectStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
 export type DeliveryStatus = "DRAFT" | "SUBMITTED" | "IN_REVIEW" | "EVALUATED";
+export type StorageScopeType = "DELIVERY" | "PROJECT";
+export type StorageAssetRole = "STUDENT_SOURCE" | "TEACHER_TESTS";
 
 export interface ApiErrorPayload {
   message: string | string[];
@@ -64,6 +66,7 @@ export interface ProjectEntity {
   id: string;
   title: string;
   contextAcademico: string | null;
+  maxDeliveriesPerStudent: number;
   status: ProjectStatus;
   creatorId: string;
   createdAt: string;
@@ -71,13 +74,36 @@ export interface ProjectEntity {
   deletedAt?: string | null;
 }
 
-export interface DeliveryEntity {
+export interface ProjectAssignmentEntity {
   id: string;
   projectId: string;
+  projectTitle: string;
+  maxDeliveriesPerStudent: number;
+  studentId: string;
+  studentEmail: string;
+  studentName: string;
+  assignedById: string;
+  assignedAt: string;
+  revokedAt: string | null;
+  deliveryCount: number;
+  remainingDeliveries: number;
+  minimumRequirementMet: boolean;
+}
+
+export interface DeliveryEntity {
+  id: string;
+  assignmentId: string;
+  projectId: string;
+  projectTitle: string;
   authorId: string;
+  studentEmail: string;
+  studentName: string;
   version: number;
   status: DeliveryStatus;
   notes: string | null;
+  deliveryCount: number;
+  remainingDeliveries: number;
+  minimumRequirementMet: boolean;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -85,7 +111,11 @@ export interface DeliveryEntity {
 
 export interface StorageObjectEntity {
   id: string;
-  deliveryId: string;
+  scopeType: StorageScopeType;
+  scopeId: string;
+  assetRole: StorageAssetRole;
+  projectId: string | null;
+  deliveryId: string | null;
   logicalName: string;
   logicalPath: string;
   contentType: string;
@@ -111,7 +141,7 @@ export type BuildRunStatus =
   | "FAILED"
   | "CANCELLED";
 
-export type BuildRunKind = "STANDARD" | "FROZEN_REPLAY";
+export type BuildRunKind = "STANDARD";
 
 export type BuildStage =
   | "ANALYSIS"
@@ -122,12 +152,42 @@ export type BuildStage =
   | "TESTS"
   | "CLEANUP";
 
+export type TechnicalFeedbackSeverity = "low" | "medium" | "high";
+
+export interface TechnicalFeedbackItem {
+  title: string;
+  detail: string;
+  severity: TechnicalFeedbackSeverity;
+  file: string | null;
+  line: number | null;
+}
+
+export interface TechnicalFeedbackReport {
+  security: TechnicalFeedbackItem[];
+  architecture: TechnicalFeedbackItem[];
+  quality: TechnicalFeedbackItem[];
+}
+
+export interface BuilderSelfHealingReport {
+  attempted: boolean;
+  recovered: boolean;
+  attemptsUsed: number;
+  summary: string;
+}
+
+export interface BuilderReportEntity {
+  readableText?: string;
+  llmRecommendations?: string[];
+  overallOutcome?: "PASS" | "FAIL" | "PARTIAL" | "UNKNOWN";
+  technicalFeedback?: TechnicalFeedbackReport;
+  selfHealing?: BuilderSelfHealingReport;
+}
+
 export interface BuildRunEntity {
   id: string;
   deliveryId: string;
   triggeredById: string;
   runKind: BuildRunKind;
-  sourceRunId?: string | null;
   status: BuildRunStatus;
   activeStage?: BuildStage | null;
   latestEventSequence?: number | null;
@@ -152,10 +212,8 @@ export interface BuildRunEntity {
     recipe?: unknown;
   } | null;
   evidenceArtifacts?: unknown;
-  report?: unknown;
+  report?: BuilderReportEntity | null;
   executionContext?: unknown;
-  reproducibilitySnapshot?: unknown;
-  reproducibilityResult?: ReproducibilityResult | null;
   failureReason?: string | null;
   warnings: string[];
   imageTag?: string | null;
@@ -172,10 +230,6 @@ export interface EnqueueBuildRunResponse {
   deliveryId: string;
 }
 
-export interface ReplayBuildRunResponse extends EnqueueBuildRunResponse {
-  sourceRunId: string;
-}
-
 export interface BuildRunEvent {
   id: string;
   buildRunId: string;
@@ -189,7 +243,6 @@ export interface BuildRunEvent {
     | "WARNING_ADDED"
     | "ARTIFACT_ADDED"
     | "REPORT_READY"
-    | "REPRODUCIBILITY_READY"
     | "RUN_COMPLETED"
     | "RUN_FAILED"
     | "RUN_CANCELLED";
@@ -206,79 +259,16 @@ export interface BuildRunEventsPage {
   hasMore: boolean;
 }
 
-export interface ReproducibilityCheck {
-  id: string;
-  status: "MATCH" | "DRIFT" | "BLOCKED" | "INCONCLUSIVE";
-  expected: string;
-  observed: string;
-}
-
-export interface ReproducibilityResult {
-  sourceRunId: string;
-  replayRunId: string;
-  overallStatus: "MATCH" | "DRIFT" | "BLOCKED" | "INCONCLUSIVE";
-  summary: string;
-  checks: ReproducibilityCheck[];
-  evidenceRefs: string[];
-}
-
-export interface BuildRunComparison {
-  baseRunId: string;
-  candidateRunId: string;
-  deliveryId: string;
-  overallVerdict: "IMPROVED" | "REGRESSED" | "UNCHANGED" | "MIXED";
-  evaluativeStateDelta: {
-    base: string;
-    candidate: string;
-  };
-  confidenceDelta: {
-    base: string;
-    candidate: string;
-  };
-  capabilityDelta: Array<{
-    capabilityId: string;
-    baseStatus: string;
-    candidateStatus: string;
-    change: string;
+export interface ProjectProgressSummary {
+  projectId: string;
+  totalAssignments: number;
+  deliveredAtLeastOnce: number;
+  passedAllTests: number;
+  neverDelivered: number;
+  perStudent: Array<{
+    studentId: string;
+    studentEmail: string;
+    deliveryCount: number;
+    latestStatus: DeliveryStatus | null;
   }>;
-  stageDelta: Array<{
-    stage: string;
-    baseStatus: string;
-    candidateStatus: string;
-    change: string;
-  }>;
-  findingDelta: {
-    resolved: unknown[];
-    added: unknown[];
-    persisting: unknown[];
-  };
-  warningsDelta: {
-    resolved: string[];
-    added: string[];
-    persisting: string[];
-  };
-  failureReasonDelta: {
-    base: string | null;
-    candidate: string | null;
-  };
-  recipeHashDelta: {
-    base: string | null;
-    candidate: string | null;
-  };
-  dockerfileHashDelta: {
-    base: string | null;
-    candidate: string | null;
-  };
-  executionContextDelta: {
-    base: unknown;
-    candidate: unknown;
-    changedFields: string[];
-  };
-  technicalSummary: string;
-  evidenceRefs: string[];
-}
-
-export interface BuildRunComparisonResponse {
-  overallVerdict: BuildRunComparison["overallVerdict"];
-  comparison: BuildRunComparison;
 }

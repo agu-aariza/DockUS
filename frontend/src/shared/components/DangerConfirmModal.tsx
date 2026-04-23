@@ -1,3 +1,10 @@
+/**
+ * Modal reutilizable para operaciones destructivas.
+ *
+ * Obliga a escribir una palabra de confirmación para reducir borrados
+ * accidentales en pantallas operativas.
+ */
+
 import { useEffect, useState } from 'react';
 
 interface DangerConfirmModalProps {
@@ -21,6 +28,7 @@ export function DangerConfirmModal({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Cada apertura arranca limpia para no arrastrar confirmaciones anteriores.
     if (!open) {
       setTyped('');
       setLoading(false);

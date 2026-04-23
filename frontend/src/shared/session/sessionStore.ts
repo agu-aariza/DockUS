@@ -1,7 +1,7 @@
 import type { AuthResponse, SessionRecord } from '../types';
 
-const SESSIONS_KEY = 'dockus_smoke_sessions';
-const ACTIVE_SESSION_KEY = 'dockus_smoke_active_session';
+const SESSIONS_KEY = 'dockus_console_sessions';
+const ACTIVE_SESSION_KEY = 'dockus_console_active_session';
 
 export function readSessions(): SessionRecord[] {
   try {

@@ -1,11 +1,9 @@
 import { http } from "./http";
 import type {
-  BuildRunComparisonResponse,
   BuildRunEntity,
   BuildRunEventsPage,
   EnqueueBuildRunResponse,
   PaginatedResponse,
-  ReplayBuildRunResponse,
 } from "../types";
 
 function toParams(
@@ -79,27 +77,6 @@ export const builderApi = {
           limit: input.limit,
         }),
       },
-    );
-    return data;
-  },
-
-  async compareRuns(
-    baseRunId: string,
-    candidateRunId: string,
-  ): Promise<BuildRunComparisonResponse> {
-    const { data } = await http.post<BuildRunComparisonResponse>(
-      "/builder/runs/compare",
-      {
-        baseRunId,
-        candidateRunId,
-      },
-    );
-    return data;
-  },
-
-  async replay(buildRunId: string): Promise<ReplayBuildRunResponse> {
-    const { data } = await http.post<ReplayBuildRunResponse>(
-      `/builder/runs/${buildRunId}/replay`,
     );
     return data;
   },

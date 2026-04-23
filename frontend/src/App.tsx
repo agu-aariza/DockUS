@@ -1,3 +1,10 @@
+/**
+ * Shell principal del smoke tester.
+ *
+ * Centraliza la sesión activa y orquesta la navegación entre paneles de
+ * soporte para validar los distintos módulos del backend.
+ */
+
 import {
   Navigate,
   NavLink,
@@ -6,9 +13,9 @@ import {
   useLocation,
 } from "react-router-dom";
 import { AuthPanel } from "./auth/AuthPanel";
-import { BuilderPanel } from "./builder/BuilderPanel";
-import { DeliveriesPanel } from "./deliveries/DeliveriesPanel";
-import { ProjectsPanel } from "./projects/ProjectsPanel";
+import { TeacherBuilderPanel } from "./builder/TeacherBuilderPanel";
+import { TeacherDeliveriesPanel } from "./deliveries/TeacherDeliveriesPanel";
+import { TeacherProjectsPanel } from "./projects/TeacherProjectsPanel";
 import { StoragePanel } from "./storage/StoragePanel";
 import { UsersPanel } from "./users/UsersPanel";
 import { useSession } from "./shared/session/SessionContext";
@@ -21,11 +28,11 @@ interface NavTab {
 }
 
 const NAV_TABS: NavTab[] = [
-  { path: "/auth", label: "Auth", requiresAuth: false },
-  { path: "/users", label: "Users", requiresAuth: true },
-  { path: "/projects", label: "Projects", requiresAuth: true },
-  { path: "/deliveries", label: "Deliveries", requiresAuth: true },
+  { path: "/auth", label: "Acceso", requiresAuth: false },
+  { path: "/projects", label: "Proyectos", requiresAuth: true },
+  { path: "/deliveries", label: "Entregas", requiresAuth: true },
   { path: "/builder", label: "Builder", requiresAuth: true },
+  { path: "/users", label: "Usuarios", requiresAuth: true },
   { path: "/storage", label: "Storage", requiresAuth: true },
 ];
 
@@ -53,10 +60,12 @@ export default function App(): JSX.Element {
   return (
     <div className="app-shell">
       <header className="hero">
-        <h1>DockUS Smoke Tester</h1>
+        <p className="hero-kicker">Teacher-first workspace</p>
+        <h1>DockUS Academic Control Room</h1>
         <p>
-          Cliente funcional para validar Auth, RBAC y flujos de
-          Projects/Deliveries/Storage/Builder.
+          Consola operativa para profesorado con selección guiada de proyecto,
+          asignaciones, entregas y runs. Usuarios y storage siguen disponibles
+          como herramientas avanzadas.
         </p>
       </header>
 
@@ -114,6 +123,8 @@ export default function App(): JSX.Element {
 
       <nav className="nav-tabs" aria-label="Módulos">
         {NAV_TABS.map((tab) => {
+          // Las pestañas siguen visibles para mostrar el mapa funcional, pero
+          // bloqueamos la navegación si el módulo exige autenticación.
           const disabled = tab.requiresAuth && !hasAuthenticatedSession;
           return (
             <NavLink
@@ -157,7 +168,7 @@ export default function App(): JSX.Element {
             path="/projects"
             element={
               hasAuthenticatedSession ? (
-                <ProjectsPanel session={activeSession} />
+                <TeacherProjectsPanel session={activeSession} />
               ) : (
                 <Navigate to="/auth" replace />
               )
@@ -167,7 +178,7 @@ export default function App(): JSX.Element {
             path="/deliveries"
             element={
               hasAuthenticatedSession ? (
-                <DeliveriesPanel session={activeSession} />
+                <TeacherDeliveriesPanel session={activeSession} />
               ) : (
                 <Navigate to="/auth" replace />
               )
@@ -177,7 +188,7 @@ export default function App(): JSX.Element {
             path="/builder"
             element={
               hasAuthenticatedSession ? (
-                <BuilderPanel session={activeSession} />
+                <TeacherBuilderPanel session={activeSession} />
               ) : (
                 <Navigate to="/auth" replace />
               )
@@ -193,7 +204,15 @@ export default function App(): JSX.Element {
               )
             }
           />
-          <Route path="*" element={<Navigate to="/auth" replace />} />
+          <Route
+            path="*"
+            element={
+              <Navigate
+                to={hasAuthenticatedSession ? "/projects" : "/auth"}
+                replace
+              />
+            }
+          />
         </Routes>
       </main>
     </div>

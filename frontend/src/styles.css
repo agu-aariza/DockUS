@@ -60,6 +60,15 @@ body {
   letter-spacing: 0.2px;
 }
 
+.hero-kicker {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
 .hero p {
   margin: 8px 0 0;
   color: var(--muted);
@@ -165,6 +174,11 @@ textarea {
 textarea {
   min-height: 90px;
   resize: vertical;
+}
+
+select[multiple],
+.multi-select {
+  min-height: 180px;
 }
 
 .row {
@@ -361,6 +375,16 @@ th {
   padding-left: 18px;
   display: grid;
   gap: 6px;
+}
+
+.details-summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.details-summary::-webkit-details-marker {
+  color: var(--accent);
 }
 
 .modal-overlay {

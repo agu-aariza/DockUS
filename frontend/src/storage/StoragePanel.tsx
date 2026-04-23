@@ -1,3 +1,10 @@
+/**
+ * Panel funcional para validar el flujo de storage.
+ *
+ * Permite subir artefactos, consultar metadatos y ejecutar acciones
+ * administrativas mientras la UI de producto sigue evolucionando.
+ */
+
 import { type FormEvent, useState } from 'react';
 import { storageApi } from '../shared/api/services';
 import { DangerConfirmModal } from '../shared/components/DangerConfirmModal';
@@ -98,6 +105,8 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
     setFile(nextFile);
     if (!nextFile) return;
 
+    // Rellenamos campos evidentes a partir del archivo seleccionado para
+    // reducir errores manuales en pruebas repetitivas.
     setUploadForm((prev) => ({
       ...prev,
       logicalName: prev.logicalName || nextFile.name,
