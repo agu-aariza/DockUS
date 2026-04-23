@@ -8,7 +8,7 @@ import { BuilderPlanLlmService } from './builder-plan-llm.service';
 const buildAssessment = (
   overrides: Partial<BuilderLlmAssessment> = {},
 ): BuilderLlmAssessment => ({
-  structuralType: 'T4',
+  structuralType: 'Web API con FastAPI',
   capabilities: {
     C1: { status: 'yes', rationale: 'Instalable.' },
     C2: { status: 'yes', rationale: 'Ejecutable.' },
@@ -94,13 +94,14 @@ describe('BuilderPlanLlmService', () => {
     mockFetchJson(buildAssessment());
 
     const result = await service.generatePlan({
+      projectRootDir: tempDir,
       runtimeFiles,
       staticFindings: [],
     });
 
-    expect(result?.assessment.structuralType).toBe('T4');
+    expect(result?.assessment.structuralType).toBe('Web API con FastAPI');
     expect(result?.assessment.recipe.servicePort).toBe(8000);
-    expect(result?.model).toBe('qwen2.5-coder:7b');
+    expect(result?.model).toBe('dockus-builder-plan');
   });
 
   it('rechaza una salida incompleta', async () => {
@@ -110,6 +111,7 @@ describe('BuilderPlanLlmService', () => {
 
     await expect(
       service.generatePlan({
+        projectRootDir: tempDir,
         runtimeFiles,
         staticFindings: [],
       }),
@@ -128,6 +130,7 @@ describe('BuilderPlanLlmService', () => {
 
     await expect(
       service.generatePlan({
+        projectRootDir: tempDir,
         runtimeFiles,
         staticFindings: [],
       }),
@@ -146,83 +149,41 @@ describe('BuilderPlanLlmService', () => {
 
     await expect(
       service.generatePlan({
+        projectRootDir: tempDir,
         runtimeFiles,
         staticFindings: [],
       }),
     ).rejects.toThrow(/servicePort/i);
   });
 
-  it('rechaza taxonomías fuera de catálogo', async () => {
-    mockFetchJson({
-      ...buildAssessment(),
-      structuralType: 'TX',
-    });
 
-    await expect(
-      service.generatePlan({
-        runtimeFiles,
-        staticFindings: [],
-      }),
-    ).rejects.toThrow(/structuralType inválido/i);
-  });
 
   it.each([
-    ['T1', 'E2'],
-    ['T2', 'E2'],
-    ['T3', 'E2'],
-    ['T4', 'E1'],
-    ['T5', 'E1'],
-    ['T6', 'E2'],
-    ['T7', 'E3'],
-    ['T8', 'E4'],
+    ['Script de Análisis de Datos', 'E2'],
+    ['Web API con FastAPI', 'E1'],
+    ['Worker/batch job', 'E2'],
   ] as const)(
     'acepta un escenario representativo %s',
     async (structuralType, evaluativeState) => {
       const recipe =
-        structuralType === 'T8'
+        structuralType === 'Worker/batch job'
           ? {
-              install: [],
-              run: null,
-              test: [],
+              ...buildAssessment().recipe,
               healthcheck: null,
               servicePort: null,
-              systemPackages: [],
             }
-          : structuralType === 'T6'
-            ? {
-                ...buildAssessment().recipe,
-                healthcheck: null,
-                servicePort: null,
-              }
-            : buildAssessment().recipe;
+          : buildAssessment().recipe;
       const capabilities: BuilderLlmAssessment['capabilities'] =
-        structuralType === 'T8'
+        structuralType === 'Worker/batch job'
           ? {
-              C1: { status: 'unknown', rationale: 'No clasificable.' },
-              C2: { status: 'unknown', rationale: 'No clasificable.' },
-              C3: { status: 'unknown', rationale: 'No clasificable.' },
-              C4: { status: 'unknown', rationale: 'No clasificable.' },
-              C5: { status: 'unknown', rationale: 'No clasificable.' },
-              C6: { status: 'unknown', rationale: 'No clasificable.' },
+              ...buildAssessment().capabilities,
+              C3: { status: 'no', rationale: 'Job efímero, no servicio.' },
+              C5: {
+                status: 'no',
+                rationale: 'No aplica healthcheck de servicio.',
+              },
             }
-          : structuralType === 'T6'
-            ? {
-                ...buildAssessment().capabilities,
-                C3: { status: 'no', rationale: 'Job efímero, no servicio.' },
-                C5: {
-                  status: 'no',
-                  rationale: 'No aplica healthcheck de servicio.',
-                },
-              }
-            : structuralType === 'T7'
-              ? {
-                  ...buildAssessment().capabilities,
-                  C6: {
-                    status: 'yes',
-                    rationale: 'Requiere aclaración/configuración externa.',
-                  },
-                }
-              : buildAssessment().capabilities;
+          : buildAssessment().capabilities;
 
       mockFetchJson(
         buildAssessment({
@@ -234,6 +195,7 @@ describe('BuilderPlanLlmService', () => {
       );
 
       const result = await service.generatePlan({
+        projectRootDir: tempDir,
         runtimeFiles,
         staticFindings: [],
       });

@@ -4,7 +4,6 @@ import {
   CAPABILITY_IDS,
   CONFIDENCE_LEVELS,
   EVALUATIVE_STATES,
-  STRUCTURAL_TYPES,
 } from '../builder.types';
 import { toPosixPath } from '../../infrastructure/utils/builder-analysis.util';
 
@@ -165,25 +164,10 @@ function assertSemanticConsistency(
   mode: ParserOptions['mode'],
 ): void {
   if (
-    assessment.structuralType === 'T8' &&
-    assessment.evaluativeState !== 'E4'
-  ) {
-    throw new Error('T8 debe evaluar en E4.');
-  }
-
-  if (
-    assessment.structuralType === 'T7' &&
-    assessment.evaluativeState === 'E1'
-  ) {
-    throw new Error('T7 no puede evaluarse como E1.');
-  }
-
-  if (
     assessment.capabilities.C3.status === 'yes' &&
-    ['T4', 'T5'].includes(assessment.structuralType) &&
     assessment.recipe.run === null
   ) {
-    throw new Error('T4/T5 con C3=yes requieren recipe.run.');
+    throw new Error('C3=yes requiere recipe.run.');
   }
 
   if (
@@ -212,13 +196,6 @@ function assertSemanticConsistency(
   }
 
   if (
-    assessment.structuralType === 'T6' &&
-    assessment.capabilities.C3.status === 'yes'
-  ) {
-    throw new Error('T6 no debe marcarse como servicio persistente.');
-  }
-
-  if (
     assessment.recipe.run === null &&
     assessment.capabilities.C2.status === 'yes'
   ) {
@@ -235,15 +212,7 @@ function assertSemanticConsistency(
 }
 
 function normalizeStructuralType(value: unknown, mode: ParserOptions['mode']) {
-  const normalized = normalizeString(value, 'structuralType');
-  if (
-    !STRUCTURAL_TYPES.includes(normalized as (typeof STRUCTURAL_TYPES)[number])
-  ) {
-    throw new Error(
-      `structuralType inválido en ${mode === 'planning' ? 'planner' : 'evaluador'} LLM.`,
-    );
-  }
-  return normalized as BuilderLlmAssessment['structuralType'];
+  return normalizeString(value, 'structuralType');
 }
 
 function normalizeEvaluativeState(value: unknown, mode: ParserOptions['mode']) {

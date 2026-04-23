@@ -81,19 +81,30 @@ services:
       start_period: 20s
     volumes:
       - ollama_data:/root/.ollama
+      - ./backend:/app
     networks:
       - dockus-network
 
-  ollama-pull:
-    image: ollama/ollama:latest
-    container_name: dockus-ollama-pull
+  ollama-bootstrap:
+    image: curlimages/curl
+    container_name: dockus-ollama-bootstrap
     restart: "no"
     depends_on:
       ollama:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-    command: ["pull", "${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:7b}"]
+      MODEL_NAME: ${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:7b}
+    command: >
+      sh -c '
+      echo "Pulling base model..." &&
+      curl -s -X POST $$OLLAMA_HOST/api/pull -d "{\"name\": \"$$MODEL_NAME\"}" &&
+      echo "\nCreating plan model..." &&
+      curl -s -X POST $$OLLAMA_HOST/api/create -d "{\"name\": \"dockus-builder-plan\", \"path\": \"/app/scripts/ollama-plan.Modelfile\"}" &&
+      echo "\nCreating eval model..." &&
+      curl -s -X POST $$OLLAMA_HOST/api/create -d "{\"name\": \"dockus-builder-eval\", \"path\": \"/app/scripts/ollama-eval.Modelfile\"}" &&
+      echo "\nOllama bootstrap complete."
+      '
     networks:
       - dockus-network
 
@@ -122,14 +133,14 @@ services:
         condition: service_healthy
       ollama:
         condition: service_healthy
-      ollama-pull:
+      ollama-bootstrap:
         condition: service_completed_successfully
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
       - /var/run/docker.sock:/var/run/docker.sock
     command: >
-      sh -c "command -v docker >/dev/null || apk add --no-cache docker-cli docker-cli-buildx curl; command -v kubectl >/dev/null || (curl -sLo /usr/local/bin/kubectl https://dl.k8s.io/release/stable/bin/linux/amd64/kubectl && chmod +x /usr/local/bin/kubectl); command -v kind >/dev/null || (curl -sLo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.24.0/kind-linux-amd64 && chmod +x /usr/local/bin/kind); docker network connect kind dockus-backend 2>/dev/null || true; mkdir -p ~/.kube && kind get kubeconfig --name dockus-builder --internal > ~/.kube/config 2>/dev/null || true; [ -f node_modules/.package-lock.json ] && npm run start:dev || (npm install && npm run start:dev)"
+      sh -c "command -v docker >/dev/null || apk add --no-cache docker-cli docker-cli-buildx curl python3 py3-pip; command -v python3 >/dev/null || apk add --no-cache python3 py3-pip; python3 -m pip show ruff >/dev/null 2>&1 || python3 -m pip install --break-system-packages ruff; python3 -m pip show bandit >/dev/null 2>&1 || python3 -m pip install --break-system-packages bandit; command -v kubectl >/dev/null || (curl -sLo /usr/local/bin/kubectl https://dl.k8s.io/release/stable/bin/linux/amd64/kubectl && chmod +x /usr/local/bin/kubectl); command -v kind >/dev/null || (curl -sLo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.24.0/kind-linux-amd64 && chmod +x /usr/local/bin/kind); docker network connect kind dockus-backend 2>/dev/null || true; mkdir -p ~/.kube && kind get kubeconfig --name dockus-builder --internal > ~/.kube/config 2>/dev/null || true; [ -f node_modules/.package-lock.json ] && npm run start:dev || (npm install && npm run start:dev)"
     healthcheck:
       test:
         [

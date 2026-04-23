@@ -1,9 +1,10 @@
 import type { AuthenticatedUser } from '../../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../../users/entities/user.entity';
-import { BuildRunStatus } from '../domain/entities/build-run.entity';
+import { BuildRun, BuildRunStatus } from '../domain/entities/build-run.entity';
 import { BuilderService } from './builder.service';
-import { BuilderRunCommandsService } from './services/builder-run-commands.service';
-import { BuilderRunQueriesService } from './services/builder-run-queries.service';
+import type { ExecuteBuildRunJobData } from './services/builder-application.types';
+import type { BuilderRunCommandsService } from './services/builder-run-commands.service';
+import type { BuilderRunQueriesService } from './services/builder-run-queries.service';
 
 const buildActor = (
   role: UserRole,
@@ -16,91 +17,119 @@ const buildActor = (
 
 describe('BuilderService', () => {
   let service: BuilderService;
-
-  const builderRunCommandsService = {
-    enqueueDeliveryRun: jest.fn(),
-    enqueueFrozenReplay: jest.fn(),
-    cancelRun: jest.fn(),
-    processBuildRunJob: jest.fn(),
-    failStaleRunsOnStartup: jest.fn(),
+  let commandCalls: {
+    enqueueDeliveryRun?: [string, AuthenticatedUser];
+    cancelRun?: [string, AuthenticatedUser];
+    processBuildRunJob?: [ExecuteBuildRunJobData];
+    failStaleRunsOnStartup?: true;
   };
-
-  const builderRunQueriesService = {
-    getRunById: jest.fn(),
-    listRunsByDelivery: jest.fn(),
-    listRunEvents: jest.fn(),
-    subscribeToRunEvents: jest.fn(),
-    compareRuns: jest.fn(),
-    listEvidenceArtifacts: jest.fn(),
-    createEvidenceDownloadUrl: jest.fn(),
-    getRunReport: jest.fn(),
+  let queryCalls: {
+    getRunById?: [string, AuthenticatedUser];
+    listRunEvents?: [string, AuthenticatedUser, number, number];
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    commandCalls = {};
+    queryCalls = {};
+
+    const builderRunCommandsService: Pick<
+      BuilderRunCommandsService,
+      | 'enqueueDeliveryRun'
+      | 'cancelRun'
+      | 'processBuildRunJob'
+      | 'failStaleRunsOnStartup'
+    > = {
+      enqueueDeliveryRun(deliveryId, actor) {
+        commandCalls.enqueueDeliveryRun = [deliveryId, actor];
+        return Promise.resolve({
+          buildRunId: 'run-1',
+          status: BuildRunStatus.QUEUED,
+          deliveryId,
+        });
+      },
+      cancelRun(buildRunId, actor) {
+        commandCalls.cancelRun = [buildRunId, actor];
+        return Promise.resolve({
+          buildRunId,
+          status: BuildRunStatus.CANCELLED,
+        });
+      },
+      processBuildRunJob(data) {
+        commandCalls.processBuildRunJob = [data];
+        return Promise.resolve();
+      },
+      failStaleRunsOnStartup() {
+        commandCalls.failStaleRunsOnStartup = true;
+        return Promise.resolve();
+      },
+    };
+
+    const builderRunQueriesService: Pick<
+      BuilderRunQueriesService,
+      'getRunById' | 'listRunEvents'
+    > = {
+      getRunById(buildRunId, actor) {
+        queryCalls.getRunById = [buildRunId, actor];
+        return Promise.resolve({ id: buildRunId } as BuildRun);
+      },
+      listRunEvents(buildRunId, actor, afterSequence, limit) {
+        queryCalls.listRunEvents = [buildRunId, actor, afterSequence, limit];
+        return Promise.resolve({
+          events: [],
+          latestSequence: afterSequence,
+          hasMore: false,
+        });
+      },
+    };
+
     service = new BuilderService(
-      builderRunCommandsService as unknown as BuilderRunCommandsService,
-      builderRunQueriesService as unknown as BuilderRunQueriesService,
+      builderRunCommandsService as BuilderRunCommandsService,
+      builderRunQueriesService as BuilderRunQueriesService,
     );
   });
 
   it('delegates enqueueDeliveryRun to command service', async () => {
     const actor = buildActor(UserRole.TEACHER);
-    const expected = {
-      buildRunId: 'run-1',
-      status: BuildRunStatus.QUEUED,
-      deliveryId: 'delivery-1',
-    };
-    builderRunCommandsService.enqueueDeliveryRun.mockResolvedValue(expected);
 
     await expect(
       service.enqueueDeliveryRun('delivery-1', actor),
-    ).resolves.toEqual(expected);
-    expect(builderRunCommandsService.enqueueDeliveryRun).toHaveBeenCalledWith(
-      'delivery-1',
-      actor,
-    );
+    ).resolves.toEqual({
+      buildRunId: 'run-1',
+      status: BuildRunStatus.QUEUED,
+      deliveryId: 'delivery-1',
+    });
+    expect(commandCalls.enqueueDeliveryRun).toEqual(['delivery-1', actor]);
   });
 
   it('delegates getRunById to query service', async () => {
     const actor = buildActor(UserRole.TEACHER);
-    const run = { id: 'run-1' };
-    builderRunQueriesService.getRunById.mockResolvedValue(run);
 
-    await expect(service.getRunById('run-1', actor)).resolves.toBe(run);
-    expect(builderRunQueriesService.getRunById).toHaveBeenCalledWith(
-      'run-1',
-      actor,
-    );
+    await expect(service.getRunById('run-1', actor)).resolves.toMatchObject({
+      id: 'run-1',
+    });
+    expect(queryCalls.getRunById).toEqual(['run-1', actor]);
   });
 
-  it('delegates cancelRun to command service', async () => {
+  it('delegates listRunEvents preserving pagination arguments', async () => {
+    const actor = buildActor(UserRole.STUDENT);
+
+    await expect(
+      service.listRunEvents('run-9', actor, 15, 25),
+    ).resolves.toEqual({
+      events: [],
+      latestSequence: 15,
+      hasMore: false,
+    });
+    expect(queryCalls.listRunEvents).toEqual(['run-9', actor, 15, 25]);
+  });
+
+  it('delegates cancellation to command service', async () => {
     const actor = buildActor(UserRole.TEACHER);
-    const response = {
-      buildRunId: 'run-1',
+
+    await expect(service.cancelRun('run-4', actor)).resolves.toEqual({
+      buildRunId: 'run-4',
       status: BuildRunStatus.CANCELLED,
-    };
-    builderRunCommandsService.cancelRun.mockResolvedValue(response);
-
-    await expect(service.cancelRun('run-1', actor)).resolves.toEqual(response);
-    expect(builderRunCommandsService.cancelRun).toHaveBeenCalledWith(
-      'run-1',
-      actor,
-    );
-  });
-
-  it('delegates compareRuns to query service', async () => {
-    const actor = buildActor(UserRole.TEACHER);
-    const comparison = { overallVerdict: 'IMPROVED' };
-    builderRunQueriesService.compareRuns.mockResolvedValue(comparison);
-
-    await expect(service.compareRuns('run-1', 'run-2', actor)).resolves.toBe(
-      comparison,
-    );
-    expect(builderRunQueriesService.compareRuns).toHaveBeenCalledWith(
-      'run-1',
-      'run-2',
-      actor,
-    );
+    });
+    expect(commandCalls.cancelRun).toEqual(['run-4', actor]);
   });
 });

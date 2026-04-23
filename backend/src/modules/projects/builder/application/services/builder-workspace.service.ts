@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Preparación de workspaces efímeros para el builder.
+ *
+ * Contexto:
+ * - Materializa artefactos de storage en un árbol temporal seguro.
+ * - Fusiona código del alumno y suite docente preservando trazabilidad.
+ *
+ * @module BuilderWorkspaceService
+ */
+
 import {
   Injectable,
   NotFoundException,
@@ -5,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { access, mkdir, mkdtemp, writeFile } from 'fs/promises';
+import { access, chmod, mkdir, mkdtemp, writeFile } from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { Repository } from 'typeorm';
@@ -13,11 +23,13 @@ import {
   DEFAULT_MAX_EXTRACTED_BYTES,
   DEFAULT_MAX_EXTRACTED_FILES,
 } from '../../domain/builder.constants';
-import {
-  ReproducibilitySnapshotInput,
-  RuntimeFile,
-} from '../../domain/builder.types';
+import { RuntimeFile } from '../../domain/builder.types';
+import { Delivery } from '../../../deliveries/entities/delivery.entity';
 import { StorageObject } from '../../../storage/entities/storage-object.entity';
+import {
+  StorageAssetRole,
+  StorageScopeType,
+} from '../../../storage/entities/storage-object.entity';
 import { MinioStorageService } from '../../../../../shared/infrastructure/storage/minio-storage.service';
 import { extractArchiveToWorkspace } from '../../infrastructure/utils/archive-extractor.util';
 import {
@@ -27,6 +39,11 @@ import {
 
 interface WorkspaceInputObject {
   storageObjectId: string;
+  scopeType: 'DELIVERY' | 'PROJECT';
+  scopeId: string;
+  assetRole: 'STUDENT_SOURCE' | 'TEACHER_TESTS';
+  projectId: string | null;
+  deliveryId: string | null;
   logicalName: string;
   logicalPath: string;
   contentType: string;
@@ -38,8 +55,10 @@ interface WorkspaceInputObject {
 }
 
 export interface StageWorkspaceResult {
-  inputManifest: ReproducibilitySnapshotInput[];
+  inputManifest: unknown[];
   runtimeFiles: RuntimeFile[];
+  teacherTestRuntimeFiles: RuntimeFile[];
+  hasTeacherTests: boolean;
   projectRootDir: string;
   warnings: string[];
 }
@@ -52,6 +71,8 @@ export class BuilderWorkspaceService {
   constructor(
     @InjectRepository(StorageObject)
     private readonly storageRepository: Repository<StorageObject>,
+    @InjectRepository(Delivery)
+    private readonly deliveriesRepository: Repository<Delivery>,
     private readonly minioStorageService: MinioStorageService,
     private readonly configService: ConfigService,
   ) {
@@ -66,20 +87,69 @@ export class BuilderWorkspaceService {
   }
 
   async prepareWorkspace(deliveryId: string): Promise<StageWorkspaceResult> {
-    const storageObjects = await this.storageRepository.find({
-      where: { deliveryId },
-      order: { createdAt: 'ASC' },
+    const delivery = await this.deliveriesRepository.findOne({
+      where: { id: deliveryId },
+      relations: {
+        assignment: {
+          project: true,
+        },
+      },
     });
-
-    if (!storageObjects.length) {
+    if (!delivery) {
       throw new NotFoundException(
-        'La entrega no tiene artefactos para ejecutar builder.',
+        'Entrega no encontrada para preparar workspace.',
       );
     }
 
+    const studentSourceObjects = await this.storageRepository.find({
+      where: {
+        scopeType: StorageScopeType.DELIVERY,
+        scopeId: deliveryId,
+        assetRole: StorageAssetRole.STUDENT_SOURCE,
+      },
+      order: { createdAt: 'ASC' },
+    });
+
+    if (!studentSourceObjects.length) {
+      throw new NotFoundException(
+        'La entrega no tiene artefactos fuente del alumno para ejecutar builder.',
+      );
+    }
+
+    const teacherTestObjects = await this.storageRepository.find({
+      where: {
+        scopeType: StorageScopeType.PROJECT,
+        scopeId: delivery.assignment.projectId,
+        assetRole: StorageAssetRole.TEACHER_TESTS,
+      },
+      order: { createdAt: 'DESC' },
+      take: 1,
+    });
+
     return this.prepareWorkspaceFromInputs(
-      storageObjects.map((item) => ({
+      studentSourceObjects.map((item) => ({
         storageObjectId: item.id,
+        scopeType: item.scopeType,
+        scopeId: item.scopeId,
+        assetRole: item.assetRole,
+        projectId: item.projectId,
+        deliveryId: item.deliveryId,
+        logicalName: item.logicalName,
+        logicalPath: item.logicalPath,
+        contentType: item.contentType,
+        sizeBytes: item.sizeBytes,
+        hash: item.hash,
+        bucket: item.bucket,
+        objectKey: item.objectKey,
+        createdAt: item.createdAt,
+      })),
+      teacherTestObjects.map((item) => ({
+        storageObjectId: item.id,
+        scopeType: item.scopeType,
+        scopeId: item.scopeId,
+        assetRole: item.assetRole,
+        projectId: item.projectId,
+        deliveryId: item.deliveryId,
         logicalName: item.logicalName,
         logicalPath: item.logicalPath,
         contentType: item.contentType,
@@ -92,21 +162,11 @@ export class BuilderWorkspaceService {
     );
   }
 
-  async prepareWorkspaceFromSnapshot(
-    inputManifest: ReproducibilitySnapshotInput[],
-  ): Promise<StageWorkspaceResult> {
-    return this.prepareWorkspaceFromInputs(
-      inputManifest.map((item) => ({
-        ...item,
-        createdAt: new Date(item.createdAt),
-      })),
-    );
-  }
-
   private async prepareWorkspaceFromInputs(
-    inputObjects: WorkspaceInputObject[],
+    studentInputObjects: WorkspaceInputObject[],
+    teacherTestObjects: WorkspaceInputObject[],
   ): Promise<StageWorkspaceResult> {
-    if (!inputObjects.length) {
+    if (!studentInputObjects.length) {
       throw new UnprocessableEntityException(
         'No se encontraron artefactos utilizables para preparar el workspace.',
       );
@@ -117,60 +177,36 @@ export class BuilderWorkspaceService {
     );
     const projectRootDir = path.join(workspaceRoot, 'project');
     await mkdir(projectRootDir, { recursive: true });
+    const teacherTestsRootDir = path.join(
+      projectRootDir,
+      '.dockus',
+      'teacher-tests',
+    );
+    await mkdir(teacherTestsRootDir, { recursive: true });
 
     const warnings: string[] = [];
     const runtimeFiles: RuntimeFile[] = [];
+    const teacherTestRuntimeFiles: RuntimeFile[] = [];
     const counters = { files: 0, bytes: 0 };
-    const archives = inputObjects.filter((item) =>
-      this.isArchive(item.logicalName),
-    );
-    const regularFiles = inputObjects.filter(
-      (item) => !this.isArchive(item.logicalName),
-    );
-
-    for (const archiveObject of archives) {
-      const archiveBuffer = await this.fetchObjectBuffer(archiveObject);
-      const extractedFiles = await extractArchiveToWorkspace({
-        archiveName: archiveObject.logicalName,
-        archiveBuffer,
-        outputRootDir: projectRootDir,
-        counters,
-        limits: {
-          maxFiles: this.maxExtractedFiles,
-          maxBytes: this.maxExtractedBytes,
-        },
-      });
-      runtimeFiles.push(...extractedFiles);
-      warnings.push(
-        `Se extrajo ${archiveObject.logicalName} (${extractedFiles.length} archivos).`,
-      );
-    }
-
-    for (const fileObject of regularFiles) {
-      const relativePath = this.resolveLogicalPath(
-        fileObject.logicalPath,
-        fileObject.logicalName,
-      );
-      const destination = buildSafeDestination(projectRootDir, relativePath);
-      const objectBuffer = await this.fetchObjectBuffer(fileObject);
-      counters.files += 1;
-      counters.bytes += objectBuffer.length;
-      this.assertExtractionWithinLimits(counters);
-
-      if (await this.fileExists(destination)) {
-        warnings.push(
-          `El archivo ${relativePath} fue sobrescrito por artefacto subido individualmente.`,
-        );
-      }
-
-      await mkdir(path.dirname(destination), { recursive: true });
-      await writeFile(destination, objectBuffer);
-      runtimeFiles.push({
-        relativePath: toPosixPath(path.relative(projectRootDir, destination)),
-        absolutePath: destination,
-        sizeBytes: objectBuffer.length,
-      });
-    }
+    await this.materializeInputObjects({
+      inputObjects: studentInputObjects,
+      outputRootDir: projectRootDir,
+      projectRootDir,
+      counters,
+      warnings,
+      runtimeFiles,
+      mode: 'student_source',
+    });
+    await this.materializeInputObjects({
+      inputObjects: teacherTestObjects,
+      outputRootDir: teacherTestsRootDir,
+      projectRootDir,
+      counters,
+      warnings,
+      runtimeFiles: teacherTestRuntimeFiles,
+      mode: 'teacher_tests',
+    });
+    await this.makeReadOnly(teacherTestsRootDir, teacherTestRuntimeFiles);
 
     if (!runtimeFiles.length) {
       throw new UnprocessableEntityException(
@@ -179,21 +215,105 @@ export class BuilderWorkspaceService {
     }
 
     return {
-      inputManifest: inputObjects.map((item) => ({
-        storageObjectId: item.storageObjectId,
-        logicalName: item.logicalName,
-        logicalPath: item.logicalPath,
-        contentType: item.contentType,
-        sizeBytes: item.sizeBytes,
-        hash: item.hash,
-        bucket: item.bucket,
-        objectKey: item.objectKey,
-        createdAt: item.createdAt.toISOString(),
-      })),
+      inputManifest: [...studentInputObjects, ...teacherTestObjects].map(
+        (item) => ({
+          storageObjectId: item.storageObjectId,
+          scopeType: item.scopeType,
+          scopeId: item.scopeId,
+          assetRole: item.assetRole,
+          projectId: item.projectId,
+          deliveryId: item.deliveryId,
+          logicalName: item.logicalName,
+          logicalPath: item.logicalPath,
+          contentType: item.contentType,
+          sizeBytes: item.sizeBytes,
+          hash: item.hash,
+          bucket: item.bucket,
+          objectKey: item.objectKey,
+          createdAt: item.createdAt.toISOString(),
+        }),
+      ),
       runtimeFiles,
+      teacherTestRuntimeFiles,
+      hasTeacherTests: teacherTestRuntimeFiles.length > 0,
       projectRootDir,
       warnings,
     };
+  }
+
+  private async materializeInputObjects(input: {
+    inputObjects: WorkspaceInputObject[];
+    outputRootDir: string;
+    projectRootDir: string;
+    counters: { files: number; bytes: number };
+    warnings: string[];
+    runtimeFiles: RuntimeFile[];
+    mode: 'student_source' | 'teacher_tests';
+  }): Promise<void> {
+    const archives = input.inputObjects.filter((item) =>
+      this.isArchive(item.logicalName),
+    );
+    const regularFiles = input.inputObjects.filter(
+      (item) => !this.isArchive(item.logicalName),
+    );
+
+    for (const archiveObject of archives) {
+      // Los comprimidos se expanden con límites estrictos para prevenir bomb
+      // files y mantener el workspace dentro de los umbrales configurados.
+      const archiveBuffer = await this.fetchObjectBuffer(archiveObject);
+      const extractedFiles = await extractArchiveToWorkspace({
+        archiveName: archiveObject.logicalName,
+        archiveBuffer,
+        outputRootDir: input.outputRootDir,
+        counters: input.counters,
+        limits: {
+          maxFiles: this.maxExtractedFiles,
+          maxBytes: this.maxExtractedBytes,
+        },
+      });
+      input.runtimeFiles.push(...extractedFiles);
+      input.warnings.push(
+        input.mode === 'teacher_tests'
+          ? `Se extrajo suite docente ${archiveObject.logicalName} (${extractedFiles.length} archivos).`
+          : `Se extrajo ${archiveObject.logicalName} (${extractedFiles.length} archivos).`,
+      );
+    }
+
+    for (const fileObject of regularFiles) {
+      const relativePath =
+        input.mode === 'teacher_tests'
+          ? path.posix.basename(toPosixPath(fileObject.logicalName).trim())
+          : this.resolveLogicalPath(
+              fileObject.logicalPath,
+              fileObject.logicalName,
+            );
+      const destination = buildSafeDestination(
+        input.outputRootDir,
+        relativePath,
+      );
+      const objectBuffer = await this.fetchObjectBuffer(fileObject);
+      input.counters.files += 1;
+      input.counters.bytes += objectBuffer.length;
+      this.assertExtractionWithinLimits(input.counters);
+
+      if (await this.fileExists(destination)) {
+        input.warnings.push(
+          input.mode === 'teacher_tests'
+            ? `La suite docente sobrescribió ${relativePath}.`
+            : `El archivo ${relativePath} fue sobrescrito por artefacto subido individualmente.`,
+        );
+      }
+
+      await mkdir(path.dirname(destination), { recursive: true });
+      await writeFile(destination, objectBuffer);
+      input.runtimeFiles.push({
+        relativePath: toPosixPath(
+          path.relative(input.projectRootDir, destination),
+        ),
+        absolutePath: destination,
+        sizeBytes: objectBuffer.length,
+      });
+    }
   }
 
   private async fetchObjectBuffer(
@@ -255,6 +375,20 @@ export class BuilderWorkspaceService {
     } catch {
       return false;
     }
+  }
+
+  private async makeReadOnly(
+    rootDir: string,
+    runtimeFiles: RuntimeFile[],
+  ): Promise<void> {
+    if (!runtimeFiles.length) {
+      return;
+    }
+
+    await Promise.all(
+      runtimeFiles.map((runtimeFile) => chmod(runtimeFile.absolutePath, 0o444)),
+    );
+    await chmod(rootDir, 0o555).catch(() => undefined);
   }
 
   private toErrorMessage(error: unknown): string {

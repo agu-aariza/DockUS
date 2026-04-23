@@ -1,24 +1,28 @@
+/**
+ * @fileoverview Fachada de aplicación del subdominio builder.
+ *
+ * Contexto:
+ * - Expone una superficie acotada para controller y processor.
+ * - Deriva cada operación a los servicios especializados de comandos y consultas.
+ *
+ * @module BuilderService
+ */
+
 import { Injectable } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../../auth/interfaces/authenticated-user.interface';
 import { BuildRun, BuildRunStatus } from '../domain/entities/build-run.entity';
-import {
-  BuilderRunComparison,
-  BuilderRunEvent,
-  EvidenceArtifactPublic,
-} from '../domain/builder.types';
+import { EvidenceArtifactPublic } from '../domain/builder.types';
 import { ListBuildRunsDto } from '../presentation/dto/list-build-runs.dto';
 import { BuilderRunCommandsService } from './services/builder-run-commands.service';
 import { BuilderRunQueriesService } from './services/builder-run-queries.service';
 import type {
   EnqueueBuildRunResponse,
-  EnqueueReplayBuildRunResponse,
   ExecuteBuildRunJobData,
   PaginatedBuildRunsResponse,
 } from './services/builder-application.types';
 
 export type {
   EnqueueBuildRunResponse,
-  EnqueueReplayBuildRunResponse,
   ExecuteBuildRunJobData,
   PaginatedBuildRunsResponse,
 } from './services/builder-application.types';
@@ -30,21 +34,14 @@ export class BuilderService {
     private readonly builderRunQueriesService: BuilderRunQueriesService,
   ) {}
 
+  /**
+   * Encola una ejecución estándar sobre la entrega indicada.
+   */
   enqueueDeliveryRun(
     deliveryId: string,
     actor: AuthenticatedUser,
   ): Promise<EnqueueBuildRunResponse> {
     return this.builderRunCommandsService.enqueueDeliveryRun(deliveryId, actor);
-  }
-
-  enqueueFrozenReplay(
-    sourceRunId: string,
-    actor: AuthenticatedUser,
-  ): Promise<EnqueueReplayBuildRunResponse> {
-    return this.builderRunCommandsService.enqueueFrozenReplay(
-      sourceRunId,
-      actor,
-    );
   }
 
   cancelRun(
@@ -65,30 +62,6 @@ export class BuilderService {
       actor,
       afterSequence,
       limit,
-    );
-  }
-
-  subscribeToRunEvents(
-    buildRunId: string,
-    actor: AuthenticatedUser,
-    listener: (event: BuilderRunEvent) => void,
-  ): Promise<() => void> {
-    return this.builderRunQueriesService.subscribeToRunEvents(
-      buildRunId,
-      actor,
-      listener,
-    );
-  }
-
-  compareRuns(
-    baseRunId: string,
-    candidateRunId: string,
-    actor: AuthenticatedUser,
-  ): Promise<BuilderRunComparison> {
-    return this.builderRunQueriesService.compareRuns(
-      baseRunId,
-      candidateRunId,
-      actor,
     );
   }
 
@@ -131,18 +104,6 @@ export class BuilderService {
       buildRunId,
       artifactId,
       actor,
-    );
-  }
-
-  getRunReport(
-    buildRunId: string,
-    actor: AuthenticatedUser,
-    format: 'json' | 'text',
-  ): Promise<unknown> {
-    return this.builderRunQueriesService.getRunReport(
-      buildRunId,
-      actor,
-      format,
     );
   }
 

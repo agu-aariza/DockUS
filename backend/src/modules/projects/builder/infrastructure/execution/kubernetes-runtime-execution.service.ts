@@ -72,7 +72,10 @@ export class KubernetesRuntimeExecutionService {
   }
 
   collectPodLogs(namespace: string, podName: string): Promise<string> {
-    return this.kubernetesObservabilityService.collectPodLogs(namespace, podName);
+    return this.kubernetesObservabilityService.collectPodLogs(
+      namespace,
+      podName,
+    );
   }
 
   collectPodDescribe(namespace: string, podName: string): Promise<string> {

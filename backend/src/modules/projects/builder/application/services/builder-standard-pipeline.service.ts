@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Orquestador del pipeline estándar del builder.
+ *
+ * Contexto:
+ * - Coordina preparación de workspace, análisis, planificación, ejecución y
+ *   evaluación final.
+ * - Añade self-healing controlado para reparar recetas cuando fallan build o
+ *   arranque en Kubernetes por dependencias de entorno.
+ *
+ * @module BuilderStandardPipelineService
+ */
+
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { rm } from 'fs/promises';
@@ -5,6 +17,7 @@ import * as path from 'path';
 import {
   DEFAULT_BUILDER_CLEANUP_IMAGES,
   DEFAULT_K8S_NAMESPACE_PREFIX,
+  DEFAULT_SELF_HEAL_MAX_ATTEMPTS,
 } from '../../domain/builder.constants';
 import { BuildRunArtifactType } from '../../domain/entities/build-run-artifact.entity';
 import {
@@ -12,18 +25,14 @@ import {
   BuildRunStatus,
 } from '../../domain/entities/build-run.entity';
 import { BuilderEvaluationLlmService } from '../../domain/evaluation/builder-evaluation-llm.service';
+import { BuilderTechnicalFeedbackLlmService } from '../../domain/evaluation/builder-technical-feedback-llm.service';
+import { BuilderStaticReviewService } from '../../domain/findings/builder-static-review.service';
 import { StaticFindingsService } from '../../domain/findings/static-findings.service';
+import { BuilderLlmPhaseResult, BuilderSelfHealingAttempt, BuildStage, BuilderObservedEvidence, BuilderPipelineOutcome, BuilderTechnicalFeedback, LlmPlanRecipe, RuntimeFile, StageStatus, StaticReviewIssue } from '../../domain/builder.types';
 import { BuilderPlanLlmService } from '../../domain/planning/builder-plan-llm.service';
+import { BuilderRepairLlmService } from '../../domain/planning/builder-repair-llm.service';
 import { BuilderReportService } from '../../domain/reporting/builder-report.service';
 import { DockerfileTemplateService } from '../../domain/templates/dockerfile-template.service';
-import {
-  BuildStage,
-  BuilderObservedEvidence,
-  BuilderPipelineOutcome,
-  ReproducibilitySnapshotInput,
-  RuntimeFile,
-  StageStatus,
-} from '../../domain/builder.types';
 import { Delivery } from '../../../deliveries/entities/delivery.entity';
 import { EvidenceService } from '../../infrastructure/evidence/evidence.service';
 import { ExecutionAdapterService } from '../../infrastructure/execution/execution-adapter.service';
@@ -31,29 +40,45 @@ import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
 import { BuilderBuildStageService } from './builder-build-stage.service';
 import { BuilderCleanupStageService } from './builder-cleanup-stage.service';
 import { BuilderDeployStageService } from './builder-deploy-stage.service';
-import { BuilderReproducibilityService } from './builder-reproducibility.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
 import { BuilderValidationStageService } from './builder-validation-stage.service';
+import {
+  BuilderAttemptDiagnostics,
+  BuilderRuntimeState,
+} from './builder-runtime.types';
 import { BuilderWorkspaceService } from './builder-workspace.service';
-import { BuilderRuntimeState } from './builder-runtime.types';
+
+interface AnalysisStageOutput {
+  staticFindings: BuilderPipelineOutcome['staticFindings'];
+  staticReviewIssues: StaticReviewIssue[];
+}
+
+interface RepairDecision {
+  shouldRetry: boolean;
+  nextAssessment: BuilderPipelineOutcome['llmAssessment'] | null;
+  traceEntry: BuilderSelfHealingAttempt | null;
+}
 
 @Injectable()
 export class BuilderStandardPipelineService {
   private readonly namespacePrefix: string;
   private readonly basePythonImage: string;
   private readonly cleanupImages: boolean;
+  private readonly selfHealMaxAttempts: number;
 
   constructor(
     private readonly staticFindingsService: StaticFindingsService,
+    private readonly builderStaticReviewService: BuilderStaticReviewService,
     private readonly builderPlanLlmService: BuilderPlanLlmService,
+    private readonly builderRepairLlmService: BuilderRepairLlmService,
     private readonly builderEvaluationLlmService: BuilderEvaluationLlmService,
+    private readonly builderTechnicalFeedbackLlmService: BuilderTechnicalFeedbackLlmService,
     private readonly dockerfileTemplateService: DockerfileTemplateService,
     private readonly executionAdapterService: ExecutionAdapterService,
     private readonly evidenceService: EvidenceService,
     private readonly builderReportService: BuilderReportService,
     private readonly builderWorkspaceService: BuilderWorkspaceService,
     private readonly builderRunSupportService: BuilderRunSupportService,
-    private readonly builderReproducibilityService: BuilderReproducibilityService,
     private readonly builderBuildStageService: BuilderBuildStageService,
     private readonly builderDeployStageService: BuilderDeployStageService,
     private readonly builderValidationStageService: BuilderValidationStageService,
@@ -76,6 +101,10 @@ export class BuilderStandardPipelineService {
         'BUILDER_BASE_PYTHON_IMAGE',
         'python:3.11.9-slim-bookworm',
       ) ?? 'python:3.11.9-slim-bookworm';
+    this.selfHealMaxAttempts = this.configService.get<number>(
+      'BUILDER_SELF_HEAL_MAX_ATTEMPTS',
+      DEFAULT_SELF_HEAL_MAX_ATTEMPTS,
+    );
   }
 
   async execute(
@@ -83,9 +112,8 @@ export class BuilderStandardPipelineService {
     delivery: Delivery,
   ): Promise<BuilderPipelineOutcome> {
     const warnings: string[] = [];
-    let inputManifest: ReproducibilitySnapshotInput[] = [];
     let workspaceRootDir: string | null = null;
-    let imageTag: string | null = null;
+    let lastImageTag: string | null = null;
     let completed = false;
 
     const state: BuilderRuntimeState = {
@@ -93,11 +121,20 @@ export class BuilderStandardPipelineService {
       stageResults: [],
       evidenceArtifacts: [],
       observedEvidence: this.createObservedEvidence(),
+      staticReviewIssues: [],
+      staticReviewWarnings: [],
+      selfHealingTrace: [],
+      currentAttemptDiagnostics: this.createEmptyAttemptDiagnostics(),
       runtimeOutputs: {
         stackResult: null,
         dockerfileContent: null,
         buildLogs: null,
         timingsMs: {},
+        staticReview: {
+          issues: [],
+          warnings: [],
+        },
+        selfHealingTrace: [],
       },
     };
 
@@ -105,7 +142,6 @@ export class BuilderStandardPipelineService {
       const workspace = await this.builderWorkspaceService.prepareWorkspace(
         delivery.id,
       );
-      inputManifest = workspace.inputManifest;
       workspaceRootDir = path.dirname(workspace.projectRootDir);
       for (const warning of workspace.warnings) {
         await this.builderRunSupportService.recordWarning(
@@ -115,20 +151,30 @@ export class BuilderStandardPipelineService {
         );
       }
 
-      const staticFindings = await this.runAnalysisStage(
+      const analysis = await this.runAnalysisStage(
         run.id,
+        workspace.projectRootDir,
         workspace.runtimeFiles,
         state,
       );
       const planResult = await this.runPlanningPhase(
+        workspace.projectRootDir,
         workspace.runtimeFiles,
-        staticFindings.findings,
+        analysis.staticFindings,
         warnings,
       );
-      this.applyPlanningOutcome(state, workspace.runtimeFiles, planResult);
+      this.applyTeacherTestSuitePolicy(planResult, workspace.hasTeacherTests);
+      let currentAssessment = this.cloneAssessment(planResult.assessment);
+      this.applyAssessmentOutcome(
+        state,
+        workspace.runtimeFiles,
+        currentAssessment,
+        planResult.model,
+      );
       await this.persistPlanningArtifacts(
         run.id,
-        staticFindings.findings,
+        analysis.staticFindings,
+        analysis.staticReviewIssues,
         planResult,
         state,
       );
@@ -137,98 +183,146 @@ export class BuilderStandardPipelineService {
         await this.executionAdapterService.collectExecutionContext(
           this.basePythonImage,
         );
-      const dockerfile = this.dockerfileTemplateService.render(
-        planResult.assessment,
-      );
 
-      imageTag = await this.builderBuildStageService.run({
-        variant: 'standard',
-        runId: run.id,
-        deliveryId: delivery.id,
-        dockerfile,
-        projectRootDir: workspace.projectRootDir,
-        missingReasonCode: 'BUILD_SKIPPED_NO_RECIPE',
-        statusPayload: {
-          structuralType: planResult.assessment.structuralType,
-          executionMode: state.observedEvidence.runtime.mode,
-        },
-        state,
-      });
+      for (
+        let attemptNumber = 1;
+        attemptNumber <= this.selfHealMaxAttempts;
+        attemptNumber += 1
+      ) {
+        this.resetAttemptDiagnostics(state);
+        const runtimeMode =
+          this.builderRunSupportService.resolveExecutionMode(currentAssessment);
+        state.observedEvidence.runtime.mode = runtimeMode;
+        const dockerfile = this.dockerfileTemplateService.render(currentAssessment);
 
-      const namespace = await this.builderDeployStageService.run({
-        variant: 'standard',
-        run,
-        deliveryId: delivery.id,
-        recipe: planResult.assessment.recipe,
-        runtimeMode: state.observedEvidence.runtime.mode,
-        imageTag,
-        namespacePrefix: this.namespacePrefix,
-        state,
-      });
+        const imageTag = await this.builderBuildStageService.run({
+          runId: run.id,
+          deliveryId: delivery.id,
+          dockerfile,
+          projectRootDir: workspace.projectRootDir,
+          missingReasonCode: 'BUILD_SKIPPED_NO_RECIPE',
+          statusPayload: {
+            attemptNumber,
+            structuralType: currentAssessment.structuralType,
+            executionMode: runtimeMode,
+          },
+          state,
+        });
+        lastImageTag = imageTag;
 
-      await this.builderValidationStageService.runTests({
-        variant: 'standard',
-        run,
-        deliveryId: delivery.id,
-        recipe: planResult.assessment.recipe,
-        runtimeMode: state.observedEvidence.runtime.mode,
-        namespace,
-        imageTag,
-        state,
-      });
-      await this.builderValidationStageService.collectKubernetesEvents({
-        run,
-        namespace,
-        state,
-      });
-      await this.builderCleanupStageService.run({
-        variant: 'standard',
-        run,
-        namespace,
-        state,
-      });
+        const namespace = await this.builderDeployStageService.run({
+          run,
+          deliveryId: delivery.id,
+          recipe: currentAssessment.recipe,
+          runtimeMode,
+          imageTag,
+          namespacePrefix: this.namespacePrefix,
+          state,
+        });
+
+        const repairDecision = await this.evaluateRepairDecision({
+          run,
+          attemptNumber,
+          delivery,
+          projectRootDir: workspace.projectRootDir,
+          runtimeFiles: workspace.runtimeFiles,
+          currentAssessment,
+          staticFindings: analysis.staticFindings,
+          staticReviewIssues: analysis.staticReviewIssues,
+          namespace,
+          imageTag,
+          state,
+        });
+
+        if (repairDecision.traceEntry) {
+          state.selfHealingTrace.push(repairDecision.traceEntry);
+          state.runtimeOutputs.selfHealingTrace = [...state.selfHealingTrace];
+        }
+
+        if (repairDecision.shouldRetry && repairDecision.nextAssessment) {
+          lastImageTag = null;
+          currentAssessment = this.cloneAssessment(repairDecision.nextAssessment);
+          this.applyTeacherTestSuitePolicy(
+            { model: planResult.model, assessment: currentAssessment },
+            workspace.hasTeacherTests,
+          );
+          this.applyAssessmentOutcome(
+            state,
+            workspace.runtimeFiles,
+            currentAssessment,
+            planResult.model,
+          );
+          await this.cleanupAttemptResources(run, namespace, imageTag, state);
+          continue;
+        }
+
+        const deployStage = this.builderRunSupportService.latestStageResult(
+          state.stageResults,
+          BuildStage.DEPLOY,
+        );
+        const runtimeReady = deployStage?.status === StageStatus.PASS;
+
+        await this.builderValidationStageService.runTests({
+          run,
+          deliveryId: delivery.id,
+          recipe: currentAssessment.recipe,
+          runtimeMode,
+          namespace: runtimeReady ? namespace : null,
+          imageTag: runtimeReady ? imageTag : null,
+          state,
+        });
+        await this.builderValidationStageService.collectKubernetesEvents({
+          run,
+          namespace,
+          state,
+        });
+        await this.builderCleanupStageService.run({
+          run,
+          namespace,
+          state,
+        });
+        lastImageTag = imageTag;
+        break;
+      }
+
+      await this.persistSelfHealingTrace(run.id, state);
 
       const evaluationResult = await this.runEvaluationPhase(
-        planResult.assessment,
+        currentAssessment,
         executionContext,
         state,
-        staticFindings.findings,
+        analysis.staticFindings,
+        analysis.staticReviewIssues,
       );
+      const technicalFeedback = await this.runTechnicalFeedbackPhase({
+        assessment: evaluationResult.assessment,
+        runtimeFiles: workspace.runtimeFiles,
+        state,
+        staticFindings: analysis.staticFindings,
+        staticReviewIssues: analysis.staticReviewIssues,
+        runId: run.id,
+      });
       const report = this.builderReportService.create({
         assessment: evaluationResult.assessment,
         stageResults: state.stageResults,
-        relevantEvidence: state.evidenceArtifacts.map(
-          (artifact) => artifact.id,
-        ),
+        relevantEvidence: state.evidenceArtifacts.map((artifact) => artifact.id),
+        technicalFeedback,
+        selfHealingTrace: state.selfHealingTrace,
       });
 
       await this.persistReportArtifacts(run.id, report, state);
       state.runtimeOutputs.timingsMs = this.builderRunSupportService.toTimings(
         state.stageResults,
       );
-      const reproducibilitySnapshot =
-        this.builderReproducibilityService.buildSnapshot({
-          runId: run.id,
-          deliveryId: delivery.id,
-          inputManifest,
-          assessment: evaluationResult.assessment,
-          dockerfile,
-          executionContext,
-          stageResults: state.stageResults,
-          warnings,
-          failureReason: null,
-          staticFindings: staticFindings.findings,
-        });
       completed = true;
       return {
         llmAssessment: evaluationResult.assessment,
-        staticFindings: staticFindings.findings,
+        staticFindings: analysis.staticFindings,
+        staticReviewIssues: analysis.staticReviewIssues,
         stageResults: state.stageResults,
         evidenceArtifacts: state.evidenceArtifacts,
         report,
         executionContext,
-        reproducibilitySnapshot,
-        reproducibilityResult: null,
         runtimeOutputs: state.runtimeOutputs,
         failureReason: null,
         warnings,
@@ -238,8 +332,8 @@ export class BuilderStandardPipelineService {
         await rm(workspaceRootDir, { recursive: true, force: true });
       }
 
-      if (this.cleanupImages && imageTag && !completed) {
-        await this.builderRunSupportService.cleanupImage(imageTag, warnings);
+      if (this.cleanupImages && lastImageTag && !completed) {
+        await this.builderRunSupportService.cleanupImage(lastImageTag, warnings);
       }
     }
   }
@@ -264,11 +358,29 @@ export class BuilderStandardPipelineService {
     };
   }
 
+  private createEmptyAttemptDiagnostics(): BuilderAttemptDiagnostics {
+    return {
+      buildLogText: null,
+      buildLogTail: [],
+      podLogs: null,
+      podLogTail: [],
+      podDescribe: null,
+      kubernetesEvents: null,
+      imageTag: null,
+      namespace: null,
+    };
+  }
+
+  private resetAttemptDiagnostics(state: BuilderRuntimeState): void {
+    state.currentAttemptDiagnostics = this.createEmptyAttemptDiagnostics();
+  }
+
   private async runAnalysisStage(
     runId: string,
+    projectRootDir: string,
     runtimeFiles: RuntimeFile[],
     state: BuilderRuntimeState,
-  ) {
+  ): Promise<AnalysisStageOutput> {
     const analysisStarted = this.builderRunSupportService.beginStage(
       BuildStage.ANALYSIS,
     );
@@ -277,8 +389,17 @@ export class BuilderStandardPipelineService {
       BuildRunStatus.ANALYZING,
       BuildStage.ANALYSIS,
     );
-    const staticFindings =
-      await this.staticFindingsService.analyze(runtimeFiles);
+    const staticFindings = await this.staticFindingsService.analyze(runtimeFiles);
+    const staticReview = await this.builderStaticReviewService.analyze(
+      projectRootDir,
+    );
+    state.staticReviewIssues = staticReview.issues;
+    state.staticReviewWarnings = staticReview.warnings;
+    state.runtimeOutputs.staticReview = {
+      issues: staticReview.issues,
+      warnings: staticReview.warnings,
+    };
+
     const analysisStageResult = this.builderRunSupportService.finishStage({
       stage: BuildStage.ANALYSIS,
       startedAt: analysisStarted.startedAt,
@@ -286,14 +407,23 @@ export class BuilderStandardPipelineService {
       reasonCode: 'LLM_PLANNING_COMPLETED',
     });
     state.stageResults.push(analysisStageResult);
-    return staticFindings;
+
+    for (const warning of staticReview.warnings) {
+      await this.builderRunSupportService.recordWarning(runId, state.warnings, warning);
+    }
+
+    return {
+      staticFindings: staticFindings.findings,
+      staticReviewIssues: staticReview.issues,
+    };
   }
 
   private async runPlanningPhase(
+    projectRootDir: string,
     runtimeFiles: RuntimeFile[],
     staticFindings: BuilderPipelineOutcome['staticFindings'],
     warnings: string[],
-  ) {
+  ): Promise<BuilderLlmPhaseResult> {
     return this.builderRunSupportService.runLlmPhaseWithRetry(
       'planning',
       warnings,
@@ -304,6 +434,7 @@ export class BuilderStandardPipelineService {
           );
         }
         const result = await this.builderPlanLlmService.generatePlan({
+          projectRootDir,
           runtimeFiles,
           staticFindings,
         });
@@ -317,46 +448,69 @@ export class BuilderStandardPipelineService {
     );
   }
 
-  private applyPlanningOutcome(
+  private applyAssessmentOutcome(
     state: BuilderRuntimeState,
     runtimeFiles: RuntimeFile[],
-    planResult: Awaited<ReturnType<BuilderPlanLlmService['generatePlan']>>,
+    assessment: BuilderPipelineOutcome['llmAssessment'],
+    model: string,
   ): void {
-    if (!planResult) {
-      return;
-    }
-
-    state.observedEvidence.workspaceSummary =
-      planResult.assessment.evidenceSummary;
+    state.observedEvidence.workspaceSummary = assessment.evidenceSummary;
     state.observedEvidence.runtime.mode =
-      this.builderRunSupportService.resolveExecutionMode(planResult.assessment);
+      this.builderRunSupportService.resolveExecutionMode(assessment);
     state.observedEvidence.runtime.testSummary =
-      planResult.assessment.recipe.test.length > 0
-        ? 'Pendiente de ejecutar según receta del planner LLM.'
-        : 'El planner LLM no propuso tests.';
+      assessment.recipe.test.length > 0
+        ? 'Pendiente de ejecutar suite docente del profesor.'
+        : 'No existe suite docente activa; tests omitidos.';
     state.observedEvidence.runtime.healthcheckSummary =
-      planResult.assessment.recipe.healthcheck !== null
-        ? 'Pendiente de ejecutar según receta del planner LLM.'
-        : 'El planner LLM no propuso healthcheck.';
+      assessment.recipe.healthcheck !== null
+        ? 'Pendiente de ejecutar según receta activa.'
+        : 'La receta activa no propuso healthcheck.';
 
     state.runtimeOutputs.stackResult =
       this.builderRunSupportService.buildStackResult({
         runtimeFiles,
-        assessment: planResult.assessment,
-        model: planResult.model,
+        assessment,
+        model,
       });
+  }
+
+  private applyTeacherTestSuitePolicy(
+    planResult: BuilderLlmPhaseResult,
+    hasTeacherTests: boolean,
+  ): void {
+    if (!hasTeacherTests) {
+      planResult.assessment.recipe.test = [];
+      return;
+    }
+
+    planResult.assessment.recipe.test = [
+      ['pytest', '-q', '.dockus/teacher-tests'],
+    ];
+    if (
+      !planResult.assessment.recipe.install.some(
+        (command) =>
+          command.join(' ') === 'python -m pip install pytest' ||
+          command.join(' ') === 'pip install pytest' ||
+          command.join(' ') === 'pip3 install pytest',
+      )
+    ) {
+      planResult.assessment.recipe.install.push([
+        'python',
+        '-m',
+        'pip',
+        'install',
+        'pytest',
+      ]);
+    }
   }
 
   private async persistPlanningArtifacts(
     runId: string,
     staticFindings: BuilderPipelineOutcome['staticFindings'],
-    planResult: Awaited<ReturnType<BuilderPlanLlmService['generatePlan']>>,
+    staticReviewIssues: StaticReviewIssue[],
+    planResult: BuilderLlmPhaseResult,
     state: BuilderRuntimeState,
   ): Promise<void> {
-    if (!planResult) {
-      return;
-    }
-
     const planningArtifact = await this.evidenceService.persistJsonArtifact(
       runId,
       BuildRunArtifactType.CLASSIFICATION,
@@ -375,6 +529,15 @@ export class BuilderStandardPipelineService {
       BuildRunArtifactType.STATIC_FINDINGS,
       staticFindings,
     );
+    const staticReviewArtifact = await this.evidenceService.persistJsonArtifact(
+      runId,
+      BuildRunArtifactType.STATIC_REVIEW,
+      {
+        issues: staticReviewIssues,
+        warnings: state.staticReviewWarnings,
+      },
+    );
+
     await this.builderRunSupportService.recordArtifact(
       runId,
       state.evidenceArtifacts,
@@ -390,12 +553,18 @@ export class BuilderStandardPipelineService {
       state.evidenceArtifacts,
       findingsArtifact,
     );
+    await this.builderRunSupportService.recordArtifact(
+      runId,
+      state.evidenceArtifacts,
+      staticReviewArtifact,
+    );
 
     const analysisStageResult = state.stageResults[0];
     analysisStageResult.evidenceRefs = [
       `artifact:${planningArtifact.id}`,
       `artifact:${recipeArtifact.id}`,
       `artifact:${findingsArtifact.id}`,
+      `artifact:${staticReviewArtifact.id}`,
     ];
     await this.builderRunSupportService.emitStageFinished(
       runId,
@@ -404,11 +573,207 @@ export class BuilderStandardPipelineService {
     );
   }
 
+  private async evaluateRepairDecision(input: {
+    run: BuildRun;
+    attemptNumber: number;
+    delivery: Delivery;
+    projectRootDir: string;
+    runtimeFiles: RuntimeFile[];
+    currentAssessment: BuilderPipelineOutcome['llmAssessment'];
+    staticFindings: BuilderPipelineOutcome['staticFindings'];
+    staticReviewIssues: StaticReviewIssue[];
+    namespace: string | null;
+    imageTag: string | null;
+    state: BuilderRuntimeState;
+  }): Promise<RepairDecision> {
+    if (input.attemptNumber >= this.selfHealMaxAttempts) {
+      return { shouldRetry: false, nextAssessment: null, traceEntry: null };
+    }
+
+    const latestBuild = this.builderRunSupportService.latestStageResult(
+      input.state.stageResults,
+      BuildStage.BUILD,
+    );
+    const latestDeploy = this.builderRunSupportService.latestStageResult(
+      input.state.stageResults,
+      BuildStage.DEPLOY,
+    );
+
+    let triggerStage: BuildStage | null = null;
+    let triggerReasonCode = '';
+    let triggerSummary = '';
+    if (latestBuild?.status === StageStatus.FAIL) {
+      triggerStage = BuildStage.BUILD;
+      triggerReasonCode = latestBuild.reasonCode;
+      triggerSummary = 'El build de la imagen Docker falló.';
+    } else if (latestDeploy?.status === StageStatus.FAIL) {
+      await this.builderValidationStageService.collectKubernetesEvents({
+        run: input.run,
+        namespace: input.namespace,
+        state: input.state,
+      });
+      const hasRuntimeEvidence =
+        Boolean(input.state.currentAttemptDiagnostics.podLogs) ||
+        Boolean(input.state.currentAttemptDiagnostics.podDescribe) ||
+        Boolean(input.state.currentAttemptDiagnostics.kubernetesEvents);
+      if (hasRuntimeEvidence) {
+        triggerStage = BuildStage.DEPLOY;
+        triggerReasonCode = latestDeploy.reasonCode;
+        triggerSummary =
+          'El contenedor no arrancó correctamente en Kubernetes.';
+      }
+    }
+
+    if (!triggerStage || !this.builderRepairLlmService.isEnabled()) {
+      return { shouldRetry: false, nextAssessment: null, traceEntry: null };
+    }
+
+    try {
+      const repaired = await this.builderRunSupportService.runLlmPhaseWithRetry(
+        'repair',
+        input.state.warnings,
+        async () => {
+          const result = await this.builderRepairLlmService.repair({
+            projectRootDir: input.projectRootDir,
+            runtimeFiles: input.runtimeFiles,
+            assessment: input.currentAssessment,
+            staticFindings: input.staticFindings,
+            staticReviewIssues: input.staticReviewIssues,
+            failureStage: triggerStage,
+            failureReasonCode: triggerReasonCode,
+            buildLogText: input.state.currentAttemptDiagnostics.buildLogText,
+            podLogs: input.state.currentAttemptDiagnostics.podLogs,
+            podDescribe: input.state.currentAttemptDiagnostics.podDescribe,
+            kubernetesEvents: input.state.currentAttemptDiagnostics.kubernetesEvents,
+            priorRepairAttempts: input.state.selfHealingTrace.length,
+          });
+          if (!result) {
+            throw new ServiceUnavailableException(
+              'El repair LLM no devolvió una receta corregida.',
+            );
+          }
+          return result;
+        },
+      );
+
+      const recipeDiff = this.builderRunSupportService.diffRecipes(
+        input.currentAssessment.recipe,
+        repaired.assessment.recipe,
+      );
+      const traceEntry = this.buildSelfHealingTraceEntry({
+        attemptNumber: input.attemptNumber,
+        triggerStage,
+        triggerReasonCode,
+        triggerSummary,
+        recipeDiff,
+        outcome: recipeDiff.length > 0 ? 'repaired' : 'unchanged',
+        state: input.state,
+      });
+
+      if (recipeDiff.length === 0) {
+        return {
+          shouldRetry: false,
+          nextAssessment: null,
+          traceEntry,
+        };
+      }
+
+      return {
+        shouldRetry: true,
+        nextAssessment: repaired.assessment,
+        traceEntry,
+      };
+    } catch (error) {
+      return {
+        shouldRetry: false,
+        nextAssessment: null,
+        traceEntry: this.buildSelfHealingTraceEntry({
+          attemptNumber: input.attemptNumber,
+          triggerStage,
+          triggerReasonCode,
+          triggerSummary,
+          recipeDiff: [],
+          outcome: 'llm_failed',
+          state: input.state,
+        }),
+      };
+    }
+  }
+
+  private buildSelfHealingTraceEntry(input: {
+    attemptNumber: number;
+    triggerStage: BuildStage;
+    triggerReasonCode: string;
+    triggerSummary: string;
+    recipeDiff: string[];
+    outcome: BuilderSelfHealingAttempt['outcome'];
+    state: BuilderRuntimeState;
+  }): BuilderSelfHealingAttempt {
+    return {
+      attemptNumber: input.attemptNumber,
+      triggerStage: input.triggerStage,
+      triggerReasonCode: input.triggerReasonCode,
+      triggerSummary: input.triggerSummary,
+      recipeChanged: input.recipeDiff.length > 0,
+      recipeDiff: input.recipeDiff,
+      outcome: input.outcome,
+      diagnostics: {
+        buildLogTail: input.state.currentAttemptDiagnostics.buildLogTail,
+        podLogTail: input.state.currentAttemptDiagnostics.podLogTail,
+        errorHints: this.builderRunSupportService.buildSelfHealingHints({
+          buildLogText: input.state.currentAttemptDiagnostics.buildLogText,
+          podLogs: input.state.currentAttemptDiagnostics.podLogs,
+          podDescribe: input.state.currentAttemptDiagnostics.podDescribe,
+          kubernetesEvents: input.state.currentAttemptDiagnostics.kubernetesEvents,
+        }),
+      },
+    };
+  }
+
+  private async cleanupAttemptResources(
+    run: BuildRun,
+    namespace: string | null,
+    imageTag: string | null,
+    state: BuilderRuntimeState,
+  ): Promise<void> {
+    if (namespace) {
+      await this.builderCleanupStageService.run({
+        run,
+        namespace,
+        state,
+      });
+    }
+    if (imageTag) {
+      await this.builderRunSupportService.cleanupImage(imageTag, state.warnings);
+    }
+  }
+
+  private async persistSelfHealingTrace(
+    runId: string,
+    state: BuilderRuntimeState,
+  ): Promise<void> {
+    if (state.selfHealingTrace.length === 0) {
+      return;
+    }
+
+    const artifact = await this.evidenceService.persistJsonArtifact(
+      runId,
+      BuildRunArtifactType.SELF_HEALING_TRACE,
+      state.selfHealingTrace,
+    );
+    await this.builderRunSupportService.recordArtifact(
+      runId,
+      state.evidenceArtifacts,
+      artifact,
+    );
+  }
+
   private async runEvaluationPhase(
     planningAssessment: BuilderPipelineOutcome['llmAssessment'],
     executionContext: BuilderPipelineOutcome['executionContext'],
     state: BuilderRuntimeState,
     staticFindings: BuilderPipelineOutcome['staticFindings'],
+    staticReviewIssues: StaticReviewIssue[],
   ) {
     return this.builderRunSupportService.runLlmPhaseWithRetry(
       'evaluation',
@@ -423,6 +788,7 @@ export class BuilderStandardPipelineService {
           planningAssessment,
           stageResults: state.stageResults,
           staticFindings,
+          staticReviewIssues,
           warnings: state.warnings,
           executionContext,
           evidenceArtifacts: state.evidenceArtifacts.map((artifact) => ({
@@ -439,6 +805,50 @@ export class BuilderStandardPipelineService {
         return result;
       },
     );
+  }
+
+  private async runTechnicalFeedbackPhase(input: {
+    assessment: BuilderPipelineOutcome['llmAssessment'];
+    runtimeFiles: RuntimeFile[];
+    state: BuilderRuntimeState;
+    staticFindings: BuilderPipelineOutcome['staticFindings'];
+    staticReviewIssues: StaticReviewIssue[];
+    runId: string;
+  }): Promise<BuilderTechnicalFeedback> {
+    if (!this.builderTechnicalFeedbackLlmService.isEnabled()) {
+      return {
+        security: [],
+        architecture: [],
+        quality: [],
+      };
+    }
+
+    try {
+      return await this.builderRunSupportService.runLlmPhaseWithRetry(
+        'technical_feedback',
+        input.state.warnings,
+        () =>
+          this.builderTechnicalFeedbackLlmService.generate({
+            assessment: input.assessment,
+            runtimeFiles: input.runtimeFiles,
+            stageResults: input.state.stageResults,
+            staticFindings: input.staticFindings,
+            staticReviewIssues: input.staticReviewIssues,
+            warnings: input.state.warnings,
+          }),
+      );
+    } catch (error) {
+      await this.builderRunSupportService.recordWarning(
+        input.runId,
+        input.state.warnings,
+        `No se pudo generar feedback técnico multidimensional: ${this.builderRunSupportService.toErrorMessage(error)}`,
+      );
+      return {
+        security: [],
+        architecture: [],
+        quality: [],
+      };
+    }
   }
 
   private async persistReportArtifacts(
@@ -478,5 +888,11 @@ export class BuilderStandardPipelineService {
         reportTextArtifactId: reportTextArtifact.id,
       },
     });
+  }
+
+  private cloneAssessment(
+    assessment: BuilderPipelineOutcome['llmAssessment'],
+  ): BuilderPipelineOutcome['llmAssessment'] {
+    return JSON.parse(JSON.stringify(assessment)) as BuilderPipelineOutcome['llmAssessment'];
   }
 }

@@ -7,10 +7,7 @@ import { BuildStage, StageStatus } from '../../domain/builder.types';
 import { EvidenceService } from '../../infrastructure/evidence/evidence.service';
 import { ExecutionAdapterService } from '../../infrastructure/execution/execution-adapter.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
-import {
-  BuilderRuntimeState,
-  BuilderRuntimeVariant,
-} from './builder-runtime.types';
+import { BuilderRuntimeState } from './builder-runtime.types';
 
 @Injectable()
 export class BuilderBuildStageService {
@@ -21,7 +18,6 @@ export class BuilderBuildStageService {
   ) {}
 
   async run(input: {
-    variant: BuilderRuntimeVariant;
     runId: string;
     deliveryId: string;
     dockerfile: string | null;
@@ -40,10 +36,7 @@ export class BuilderBuildStageService {
       runStatus: BuildRunStatus.BUILDING,
       stage: BuildStage.BUILD,
       activeStage: BuildStage.BUILD,
-      message:
-        input.variant === 'standard'
-          ? 'Run entrando en fase de build.'
-          : 'Frozen replay entrando en build.',
+      message: 'Run entrando en fase de build.',
       payload: input.statusPayload ?? {},
     });
 
@@ -85,6 +78,7 @@ export class BuilderBuildStageService {
         input.projectRootDir,
         imageTag,
       );
+      const buildLogText = `${dockerBuild.stdout}\n${dockerBuild.stderr}`.trim();
 
       input.state.runtimeOutputs.buildLogs = {
         exitCode: dockerBuild.exitCode,
@@ -92,24 +86,23 @@ export class BuilderBuildStageService {
         logsTail: dockerBuild.logsTail,
         imageTag,
       };
+      input.state.currentAttemptDiagnostics.buildLogText = buildLogText;
+      input.state.currentAttemptDiagnostics.buildLogTail = dockerBuild.logsTail;
+      input.state.currentAttemptDiagnostics.imageTag = imageTag;
       input.state.observedEvidence.build = {
         attempted: true,
         succeeded: dockerBuild.exitCode === 0,
         summary:
           dockerBuild.exitCode === 0
-            ? input.variant === 'standard'
-              ? 'La imagen Docker se construyó correctamente.'
-              : 'La imagen Docker congelada se construyó correctamente.'
-            : input.variant === 'standard'
-              ? 'La construcción de la imagen Docker falló.'
-              : 'La imagen Docker congelada falló al construirse.',
+            ? 'La imagen Docker se construyó correctamente.'
+            : 'La construcción de la imagen Docker falló.',
         logTail: dockerBuild.logsTail,
       };
 
       const buildLogArtifact = await this.evidenceService.persistTextArtifact(
         input.runId,
         BuildRunArtifactType.BUILD_LOG,
-        `${dockerBuild.stdout}\n${dockerBuild.stderr}`.trim(),
+        buildLogText,
       );
       await this.builderRunSupportService.recordArtifact(
         input.runId,
@@ -144,6 +137,7 @@ export class BuilderBuildStageService {
       );
 
       if (dockerBuild.exitCode !== 0) {
+        input.state.currentAttemptDiagnostics.imageTag = null;
         imageTag = null;
       }
       return imageTag;
@@ -152,21 +146,21 @@ export class BuilderBuildStageService {
       await this.builderRunSupportService.recordWarning(
         input.runId,
         input.state.warnings,
-        `${input.variant === 'standard' ? 'Build no disponible' : 'Build congelado no disponible'}: ${errorMessage}`,
+        `Build no disponible: ${errorMessage}`,
       );
       input.state.observedEvidence.build = {
         attempted: true,
         succeeded: false,
-        summary:
-          input.variant === 'standard'
-            ? `Build no completado: ${errorMessage}`
-            : 'Build congelado no completado.',
+        summary: `Build no completado: ${errorMessage}`,
         logTail: [],
       };
       input.state.runtimeOutputs.buildLogs = {
         error: errorMessage,
         imageTag: null,
       };
+      input.state.currentAttemptDiagnostics.buildLogText = errorMessage;
+      input.state.currentAttemptDiagnostics.buildLogTail = [errorMessage];
+      input.state.currentAttemptDiagnostics.imageTag = null;
       const buildStageResult = this.builderRunSupportService.finishStage({
         stage: BuildStage.BUILD,
         startedAt: buildStage.startedAt,

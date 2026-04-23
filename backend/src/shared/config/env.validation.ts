@@ -38,16 +38,30 @@ export const envValidationSchema = Joi.object({
     .uri({ scheme: ['http', 'https'] })
     .default('http://localhost:11434'),
   BUILDER_OLLAMA_MODEL: Joi.string().default('qwen2.5-coder:7b'),
+  BUILDER_OLLAMA_PLAN_MODEL: Joi.string().default('dockus-builder-plan'),
+  BUILDER_OLLAMA_EVAL_MODEL: Joi.string().default('dockus-builder-eval'),
   BUILDER_OLLAMA_TIMEOUT_MS: Joi.number().integer().min(1000).default(120000),
-  BUILDER_LLM_BUILDER_ENABLED: Joi.boolean().default(true),
-  BUILDER_LLM_BUILDER_MAX_INPUT_CHARS: Joi.number()
+  BUILDER_LLM_ASSIST_ENABLED: Joi.boolean().default(true),
+  BUILDER_SELF_HEAL_MAX_ATTEMPTS: Joi.number().integer().min(1).max(5).default(3),
+  BUILDER_STATIC_REVIEW_ENABLED: Joi.boolean().default(true),
+  BUILDER_RUFF_BIN: Joi.string().default('ruff'),
+  BUILDER_BANDIT_BIN: Joi.string().default('bandit'),
+  BUILDER_STATIC_REVIEW_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(5000)
+    .default(30000),
+  BUILDER_LLM_ASSIST_MAX_INPUT_CHARS: Joi.number()
     .integer()
     .min(2000)
-    .default(35000),
-  BUILDER_LLM_EVALUATION_MAX_INPUT_CHARS: Joi.number()
+    .default(15000),
+  BUILDER_LLM_PLAN_MAX_INPUT_CHARS: Joi.number()
     .integer()
     .min(2000)
-    .default(35000),
+    .default(15000),
+  BUILDER_LLM_EVAL_MAX_INPUT_CHARS: Joi.number()
+    .integer()
+    .min(2000)
+    .default(15000),
   BUILDER_DOCKER_BUILD_TIMEOUT_MS: Joi.number()
     .integer()
     .min(10000)

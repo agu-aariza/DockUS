@@ -13,7 +13,7 @@ export class BuilderCleanupStageService {
   ) {}
 
   async run(
-    input: Pick<BuilderRuntimeStageInput, 'variant' | 'run' | 'state'> & {
+    input: Pick<BuilderRuntimeStageInput, 'run' | 'state'> & {
       namespace: string | null;
     },
   ): Promise<void> {
@@ -27,10 +27,7 @@ export class BuilderCleanupStageService {
       runStatus: BuildRunStatus.CLEANING,
       stage: BuildStage.CLEANUP,
       activeStage: BuildStage.CLEANUP,
-      message:
-        input.variant === 'standard'
-          ? 'Run entrando en cleanup.'
-          : 'Frozen replay entrando en cleanup.',
+      message: 'Run entrando en cleanup.',
     });
 
     const cleanupStarted = this.builderRunSupportService.beginStage(
@@ -69,8 +66,9 @@ export class BuilderCleanupStageService {
       BuildRunStatus.CLEANING,
       cleanupStageResult,
     );
+    input.state.currentAttemptDiagnostics.namespace = null;
 
-    if (input.variant === 'standard' && orphanedResources.length > 0) {
+    if (orphanedResources.length > 0) {
       await this.builderRunSupportService.recordWarning(
         input.run.id,
         input.state.warnings,

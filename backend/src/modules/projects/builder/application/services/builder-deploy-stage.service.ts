@@ -26,18 +26,16 @@ export class BuilderDeployStageService {
       !input.recipe.run ||
       input.runtimeMode === 'analysis_only'
     ) {
-      if (input.variant === 'standard') {
-        input.state.observedEvidence.runtime.deploySummary =
-          input.recipe.run === null
-            ? 'El planner LLM no propuso un comando de arranque.'
-            : input.imageTag === null
-              ? 'Despliegue omitido porque no se construyó una imagen ejecutable.'
-              : 'No se planificó despliegue persistente.';
-        input.state.observedEvidence.runtime.probeSummary =
-          'No se ejecutaron probes porque no hubo servicio desplegado.';
-        input.state.observedEvidence.runtime.stabilitySummary =
-          'No se ejecutó stability porque no hubo servicio desplegado.';
-      }
+      input.state.observedEvidence.runtime.deploySummary =
+        input.recipe.run === null
+          ? 'El planner LLM no propuso un comando de arranque.'
+          : input.imageTag === null
+            ? 'Despliegue omitido porque no se construyó una imagen ejecutable.'
+            : 'No se planificó despliegue persistente.';
+      input.state.observedEvidence.runtime.probeSummary =
+        'No se ejecutaron probes porque no hubo servicio desplegado.';
+      input.state.observedEvidence.runtime.stabilitySummary =
+        'No se ejecutó stability porque no hubo servicio desplegado.';
 
       const deployStageResult = this.builderRunSupportService.toSkippedStage(
         BuildStage.DEPLOY,
@@ -86,10 +84,7 @@ export class BuilderDeployStageService {
       runStatus: BuildRunStatus.DEPLOYING,
       stage: BuildStage.DEPLOY,
       activeStage: BuildStage.DEPLOY,
-      message:
-        input.variant === 'standard'
-          ? 'Run entrando en despliegue/ejecución.'
-          : 'Frozen replay entrando en despliegue/ejecución.',
+      message: 'Run entrando en despliegue/ejecución.',
       payload: {
         mode: input.runtimeMode,
       },
@@ -103,6 +98,7 @@ export class BuilderDeployStageService {
         .slice(0, 8)
         .toLowerCase()}`;
       await this.executionAdapterService.createNamespace(namespace);
+      input.state.currentAttemptDiagnostics.namespace = namespace;
 
       const deployStarted = this.builderRunSupportService.beginStage(
         BuildStage.DEPLOY,
@@ -130,19 +126,17 @@ export class BuilderDeployStageService {
       return namespace;
     } catch (error) {
       const errorMessage = this.builderRunSupportService.toErrorMessage(error);
+      input.state.currentAttemptDiagnostics.podDescribe ??= errorMessage;
       await this.builderRunSupportService.recordWarning(
         input.run.id,
         input.state.warnings,
-        `${input.variant === 'standard' ? 'Despliegue no disponible' : 'Despliegue congelado no disponible'}: ${errorMessage}`,
+        `Despliegue no disponible: ${errorMessage}`,
       );
-
-      if (input.variant === 'standard') {
-        input.state.observedEvidence.runtime.deploySummary = `Despliegue no completado: ${errorMessage}`;
-        input.state.observedEvidence.runtime.probeSummary =
-          'Probes omitidas por fallo previo en despliegue.';
-        input.state.observedEvidence.runtime.stabilitySummary =
-          'Stability omitida por fallo previo en despliegue.';
-      }
+      input.state.observedEvidence.runtime.deploySummary = `Despliegue no completado: ${errorMessage}`;
+      input.state.observedEvidence.runtime.probeSummary =
+        'Probes omitidas por fallo previo en despliegue.';
+      input.state.observedEvidence.runtime.stabilitySummary =
+        'Stability omitida por fallo previo en despliegue.';
 
       const deployStageResult = this.builderRunSupportService.toManualStage(
         BuildStage.DEPLOY,
@@ -202,18 +196,20 @@ export class BuilderDeployStageService {
     });
     input.state.observedEvidence.runtime.deploySummary =
       batchResult.reasonCode === 'BATCH_VALIDATED'
-        ? input.variant === 'standard'
-          ? 'El job efímero completó correctamente.'
-          : 'El frozen replay batch completó correctamente.'
-        : input.variant === 'standard'
-          ? 'El job efímero no completó correctamente.'
-          : 'El frozen replay batch no completó correctamente.';
+        ? 'El job efímero completó correctamente.'
+        : 'El job efímero no completó correctamente.';
     input.state.observedEvidence.runtime.probeSummary =
       'No aplica para ejecución batch.';
     input.state.observedEvidence.runtime.stabilitySummary =
       'No aplica para ejecución batch.';
 
     if (batchResult.logs) {
+      input.state.currentAttemptDiagnostics.podLogs = batchResult.logs;
+      input.state.currentAttemptDiagnostics.podLogTail = batchResult.logs
+        .split(/\r?\n/u)
+        .map((line) => line.trimEnd())
+        .filter(Boolean)
+        .slice(-80);
       const batchLogsArtifact = await this.evidenceService.persistTextArtifact(
         input.run.id,
         BuildRunArtifactType.K8S_POD_LOG,
@@ -295,26 +291,25 @@ export class BuilderDeployStageService {
         'STABILITY_',
       );
 
-    if (input.variant === 'standard') {
-      input.state.observedEvidence.runtime.deploySummary =
-        deployStatus === StageStatus.PASS
-          ? 'El deployment quedó listo en Kubernetes.'
-          : 'El deployment no llegó a estado listo.';
-      input.state.observedEvidence.runtime.probeSummary =
-        probesStatus === StageStatus.PASS
-          ? 'La comprobación TCP del servicio fue satisfactoria.'
-          : 'La comprobación TCP del servicio falló.';
-      input.state.observedEvidence.runtime.stabilitySummary =
-        stabilityStatus === StageStatus.PASS
-          ? 'La ventana de estabilidad no detectó reinicios.'
-          : 'Se detectó inestabilidad o reinicios.';
-    }
+    input.state.observedEvidence.runtime.deploySummary =
+      deployStatus === StageStatus.PASS
+        ? 'El deployment quedó listo en Kubernetes.'
+        : 'El deployment no llegó a estado listo.';
+    input.state.observedEvidence.runtime.probeSummary =
+      probesStatus === StageStatus.PASS
+        ? 'La comprobación TCP del servicio fue satisfactoria.'
+        : 'La comprobación TCP del servicio falló.';
+    input.state.observedEvidence.runtime.stabilitySummary =
+      stabilityStatus === StageStatus.PASS
+        ? 'La ventana de estabilidad no detectó reinicios.'
+        : 'Se detectó inestabilidad o reinicios.';
 
     if (serviceResult.podName) {
       const podDescribe = await this.executionAdapterService.collectPodDescribe(
         namespace,
         serviceResult.podName,
       );
+      input.state.currentAttemptDiagnostics.podDescribe = podDescribe;
       const podDescribeArtifact =
         await this.evidenceService.persistTextArtifact(
           input.run.id,
@@ -332,6 +327,12 @@ export class BuilderDeployStageService {
         serviceResult.podName,
       );
       if (podLogs) {
+        input.state.currentAttemptDiagnostics.podLogs = podLogs;
+        input.state.currentAttemptDiagnostics.podLogTail = podLogs
+          .split(/\r?\n/u)
+          .map((line) => line.trimEnd())
+          .filter(Boolean)
+          .slice(-80);
         const podLogsArtifact = await this.evidenceService.persistTextArtifact(
           input.run.id,
           BuildRunArtifactType.K8S_POD_LOG,
@@ -379,11 +380,9 @@ export class BuilderDeployStageService {
         await this.builderRunSupportService.recordWarning(
           input.run.id,
           input.state.warnings,
-          `${input.variant === 'standard' ? 'Healthcheck no ejecutable' : 'Healthcheck congelado no ejecutable'}: ${errorMessage}`,
+          `Healthcheck no ejecutable: ${errorMessage}`,
         );
-        if (input.variant === 'standard') {
-          input.state.observedEvidence.runtime.healthcheckSummary = `Healthcheck no ejecutado: ${errorMessage}`;
-        }
+        input.state.observedEvidence.runtime.healthcheckSummary = `Healthcheck no ejecutado: ${errorMessage}`;
         probesStatus = StageStatus.FAIL;
       }
     }

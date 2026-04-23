@@ -31,10 +31,7 @@ export class BuilderValidationStageService {
       runStatus: BuildRunStatus.VALIDATING,
       stage: BuildStage.TESTS,
       activeStage: BuildStage.TESTS,
-      message:
-        input.variant === 'standard'
-          ? 'Run entrando en validación.'
-          : 'Frozen replay entrando en validación.',
+      message: 'Run entrando en validación.',
     });
     const testsStarted = this.builderRunSupportService.beginStage(
       BuildStage.TESTS,
@@ -89,11 +86,9 @@ export class BuilderValidationStageService {
         await this.builderRunSupportService.recordWarning(
           input.run.id,
           input.state.warnings,
-          `${input.variant === 'standard' ? 'Tests no ejecutables' : 'Tests congelados no ejecutables'}: ${errorMessage}`,
+          `Tests no ejecutables: ${errorMessage}`,
         );
-        if (input.variant === 'standard') {
-          input.state.observedEvidence.runtime.testSummary = `Tests no ejecutados correctamente: ${errorMessage}`;
-        }
+        input.state.observedEvidence.runtime.testSummary = `Tests no ejecutados correctamente: ${errorMessage}`;
         const testsStageResult = this.builderRunSupportService.finishStage({
           stage: BuildStage.TESTS,
           startedAt: testsStarted.startedAt,
@@ -113,12 +108,10 @@ export class BuilderValidationStageService {
       return;
     }
 
-    if (input.variant === 'standard') {
-      input.state.observedEvidence.runtime.testSummary =
-        input.recipe.test.length > 0
-          ? 'Los tests no se ejecutaron porque faltó un runtime utilizable.'
-          : 'El planner LLM no propuso tests.';
-    }
+    input.state.observedEvidence.runtime.testSummary =
+      input.recipe.test.length > 0
+        ? 'Los tests no se ejecutaron porque faltó un runtime utilizable.'
+        : 'El planner LLM no propuso tests.';
     const testsStageResult = this.builderRunSupportService.toSkippedStage(
       BuildStage.TESTS,
       input.recipe.test.length > 0
@@ -147,6 +140,7 @@ export class BuilderValidationStageService {
         input.namespace,
       );
       if (k8sEvents) {
+        input.state.currentAttemptDiagnostics.kubernetesEvents = k8sEvents;
         const eventsArtifact = await this.evidenceService.persistTextArtifact(
           input.run.id,
           BuildRunArtifactType.K8S_EVENTS,

@@ -15,6 +15,7 @@ import {
   BuilderExecutionMode,
   BuilderPipelineOutcome,
   EvidenceArtifactPublic,
+  LlmPlanRecipe,
   RuntimeFile,
   StageResult,
   StageStatus,
@@ -63,7 +64,6 @@ export class BuilderRunSupportService {
       | 'WARNING_ADDED'
       | 'ARTIFACT_ADDED'
       | 'REPORT_READY'
-      | 'REPRODUCIBILITY_READY'
       | 'RUN_COMPLETED'
       | 'RUN_FAILED'
       | 'RUN_CANCELLED';
@@ -211,7 +211,7 @@ export class BuilderRunSupportService {
   }
 
   async runLlmPhaseWithRetry<T>(
-    phase: 'planning' | 'evaluation',
+    phase: string,
     warnings: string[],
     operation: () => Promise<T>,
   ): Promise<T> {
@@ -289,6 +289,81 @@ export class BuilderRunSupportService {
     return matching.every((check) => check.status === StageStatus.PASS)
       ? StageStatus.PASS
       : StageStatus.FAIL;
+  }
+
+  latestStageResult(
+    stageResults: StageResult[],
+    stage: BuildStage,
+  ): StageResult | null {
+    for (let index = stageResults.length - 1; index >= 0; index -= 1) {
+      const candidate = stageResults[index];
+      if (candidate.stage === stage) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  diffRecipes(previous: LlmPlanRecipe, next: LlmPlanRecipe): string[] {
+    const diff: string[] = [];
+
+    if (JSON.stringify(previous.install) !== JSON.stringify(next.install)) {
+      diff.push('install');
+    }
+    if (JSON.stringify(previous.systemPackages) !== JSON.stringify(next.systemPackages)) {
+      diff.push('systemPackages');
+    }
+    if (JSON.stringify(previous.run) !== JSON.stringify(next.run)) {
+      diff.push('run');
+    }
+    if (JSON.stringify(previous.healthcheck) !== JSON.stringify(next.healthcheck)) {
+      diff.push('healthcheck');
+    }
+    if (previous.servicePort !== next.servicePort) {
+      diff.push('servicePort');
+    }
+
+    return diff;
+  }
+
+  buildSelfHealingHints(input: {
+    buildLogText?: string | null;
+    podLogs?: string | null;
+    podDescribe?: string | null;
+    kubernetesEvents?: string | null;
+  }): string[] {
+    const corpus = [
+      input.buildLogText ?? '',
+      input.podLogs ?? '',
+      input.podDescribe ?? '',
+      input.kubernetesEvents ?? '',
+    ].join('\n');
+    const hints = new Set<string>();
+
+    const lower = corpus.toLowerCase();
+    if (
+      lower.includes('no module named psycopg2') ||
+      lower.includes("can't find libpq") ||
+      lower.includes('pg_config executable not found')
+    ) {
+      hints.add('Puede faltar psycopg2-binary o el paquete de sistema libpq-dev.');
+    }
+    if (lower.includes('mysqlclient') && lower.includes('pkg-config')) {
+      hints.add('Puede faltar pkg-config y librerías de desarrollo de MySQL/MariaDB.');
+    }
+    if (lower.includes('modulenotfounderror')) {
+      hints.add('El runtime parece fallar por una dependencia Python ausente.');
+    }
+    if (lower.includes('fatal error:') || lower.includes('failed building wheel')) {
+      hints.add(
+        'La compilación parece requerir toolchain o headers del sistema adicionales.',
+      );
+    }
+    if (lower.includes('error loading shared libraries')) {
+      hints.add('El contenedor parece necesitar una librería compartida del sistema.');
+    }
+
+    return [...hints];
   }
 
   toTimings(stageResults: StageResult[]): Record<string, number> {

@@ -17,15 +17,20 @@ import {
   DEFAULT_IMAGE_TTL_MS,
   DEFAULT_STALE_RUN_THRESHOLD_MS,
 } from '../../domain/builder.constants';
-import { BuildRun, BuildRunStatus } from '../../domain/entities/build-run.entity';
+import {
+  BuildRun,
+  BuildRunStatus,
+} from '../../domain/entities/build-run.entity';
 import { BuildStage } from '../../domain/builder.types';
+import {
+  Delivery,
+  DeliveryStatus,
+} from '../../../deliveries/entities/delivery.entity';
 import { BuilderAccessService } from './builder-access.service';
 import {
   EnqueueBuildRunResponse,
-  EnqueueReplayBuildRunResponse,
   ExecuteBuildRunJobData,
 } from './builder-application.types';
-import { BuilderFrozenReplayPipelineService } from './builder-frozen-replay-pipeline.service';
 import { BuilderRunQueriesService } from './builder-run-queries.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
 import { BuilderStandardPipelineService } from './builder-standard-pipeline.service';
@@ -38,13 +43,14 @@ export class BuilderRunCommandsService {
   constructor(
     @InjectRepository(BuildRun)
     private readonly buildRunsRepository: Repository<BuildRun>,
+    @InjectRepository(Delivery)
+    private readonly deliveriesRepository: Repository<Delivery>,
     @InjectQueue(BUILDER_RUNS_QUEUE_NAME)
     private readonly builderRunsQueue: Queue,
     private readonly builderAccessService: BuilderAccessService,
     private readonly builderRunQueriesService: BuilderRunQueriesService,
     private readonly builderRunSupportService: BuilderRunSupportService,
     private readonly builderStandardPipelineService: BuilderStandardPipelineService,
-    private readonly builderFrozenReplayPipelineService: BuilderFrozenReplayPipelineService,
     private readonly configService: ConfigService,
   ) {
     this.imageTtlMs = this.configService.get<number>(
@@ -61,16 +67,14 @@ export class BuilderRunCommandsService {
     deliveryId: string,
     actor: AuthenticatedUser,
   ): Promise<EnqueueBuildRunResponse> {
-    const delivery = await this.builderAccessService.findDeliveryOrThrow(
-      deliveryId,
-    );
+    const delivery =
+      await this.builderAccessService.findDeliveryOrThrow(deliveryId);
     this.builderAccessService.assertCanAccessDelivery(delivery, actor);
 
     const run = this.buildRunsRepository.create({
       deliveryId: delivery.id,
       triggeredById: actor.userId,
       runKind: 'STANDARD',
-      sourceRunId: null,
       status: BuildRunStatus.QUEUED,
       activeStage: null,
       latestEventSequence: null,
@@ -119,83 +123,14 @@ export class BuilderRunCommandsService {
     };
   }
 
-  async enqueueFrozenReplay(
-    sourceRunId: string,
-    actor: AuthenticatedUser,
-  ): Promise<EnqueueReplayBuildRunResponse> {
-    const sourceRun = await this.builderRunQueriesService.getRunById(
-      sourceRunId,
-      actor,
-    );
-    if (sourceRun.runKind !== 'STANDARD') {
-      throw new ConflictException(
-        'Solo se pueden relanzar runs estándar como frozen replay.',
-      );
-    }
-    if (!this.builderRunSupportService.isTerminalStatus(sourceRun.status)) {
-      throw new ConflictException(
-        'El frozen replay solo se permite sobre runs terminales.',
-      );
-    }
-    if (!sourceRun.reproducibilitySnapshot) {
-      throw new ConflictException(
-        'El run origen no contiene snapshot de reproducibilidad.',
-      );
-    }
-
-    const replayRun = this.buildRunsRepository.create({
-      deliveryId: sourceRun.deliveryId,
-      triggeredById: actor.userId,
-      runKind: 'FROZEN_REPLAY',
-      sourceRunId: sourceRun.id,
-      status: BuildRunStatus.QUEUED,
-      activeStage: null,
-      latestEventSequence: null,
-      warnings: [],
-      llmAssessment: sourceRun.llmAssessment,
-      report: sourceRun.report,
-      reproducibilitySnapshot: sourceRun.reproducibilitySnapshot,
-    });
-
-    const savedRun = await this.buildRunsRepository.save(replayRun);
-    try {
-      await this.enqueueRunJob(savedRun.id, sourceRun.deliveryId, actor);
-    } catch (error) {
-      await this.builderRunSupportService.markRunAsFailed(
-        savedRun.id,
-        this.builderRunSupportService.toErrorMessage(error),
-      );
-      throw new ServiceUnavailableException(
-        'No se pudo encolar el frozen replay.',
-      );
-    }
-
-    await this.builderRunSupportService.emitEvent({
-      buildRunId: savedRun.id,
-      eventType: 'RUN_ENQUEUED',
-      runStatus: BuildRunStatus.QUEUED,
-      message: 'Frozen replay encolado.',
-      payload: {
-        deliveryId: sourceRun.deliveryId,
-        runKind: 'FROZEN_REPLAY',
-        sourceRunId: sourceRun.id,
-      },
-      activeStage: null,
-    });
-
-    return {
-      buildRunId: savedRun.id,
-      status: BuildRunStatus.QUEUED,
-      deliveryId: sourceRun.deliveryId,
-      sourceRunId: sourceRun.id,
-    };
-  }
-
   async cancelRun(
     buildRunId: string,
     actor: AuthenticatedUser,
   ): Promise<{ buildRunId: string; status: BuildRunStatus }> {
-    const run = await this.builderRunQueriesService.getRunById(buildRunId, actor);
+    const run = await this.builderRunQueriesService.getRunById(
+      buildRunId,
+      actor,
+    );
     const cancellable = new Set<BuildRunStatus>([
       BuildRunStatus.QUEUED,
       BuildRunStatus.ANALYZING,
@@ -245,6 +180,8 @@ export class BuilderRunCommandsService {
       data.deliveryId,
     );
     this.builderAccessService.assertCanAccessDelivery(delivery, data.actor);
+    delivery.status = DeliveryStatus.IN_REVIEW;
+    await this.deliveriesRepository.save(delivery);
 
     run.startedAt = new Date();
     await this.builderRunSupportService.updateRunStatus(
@@ -258,18 +195,17 @@ export class BuilderRunCommandsService {
       runStatus: BuildRunStatus.ANALYZING,
       stage: BuildStage.ANALYSIS,
       activeStage: BuildStage.ANALYSIS,
-      message: `Run ${run.runKind ?? 'STANDARD'} iniciado.`,
+      message: 'Run iniciado.',
       payload: {
         runKind: run.runKind ?? 'STANDARD',
-        sourceRunId: run.sourceRunId ?? null,
       },
     });
 
     try {
-      const pipelineOutcome =
-        run.runKind === 'FROZEN_REPLAY'
-          ? await this.builderFrozenReplayPipelineService.execute(run, delivery)
-          : await this.builderStandardPipelineService.execute(run, delivery);
+      const pipelineOutcome = await this.builderStandardPipelineService.execute(
+        run,
+        delivery,
+      );
       const finalStatus = pipelineOutcome.failureReason
         ? BuildRunStatus.FAILED
         : BuildRunStatus.SUCCESS;
@@ -288,8 +224,6 @@ export class BuilderRunCommandsService {
         report: pipelineOutcome.report,
         evidenceArtifacts: pipelineOutcome.evidenceArtifacts,
         executionContext: pipelineOutcome.executionContext,
-        reproducibilitySnapshot: pipelineOutcome.reproducibilitySnapshot,
-        reproducibilityResult: pipelineOutcome.reproducibilityResult,
         failureReason: pipelineOutcome.failureReason,
         warnings: pipelineOutcome.warnings,
         imageTag:
@@ -321,10 +255,12 @@ export class BuilderRunCommandsService {
             : 'Run finalizado con error.',
         payload: {
           failureReason: pipelineOutcome.failureReason,
-          reproducibilityStatus:
-            pipelineOutcome.reproducibilityResult?.overallStatus ?? null,
         },
       });
+      await this.updateDeliveryStatusIfPresent(
+        delivery.id,
+        DeliveryStatus.EVALUATED,
+      );
     } catch (error) {
       if (
         error instanceof ConflictException &&
@@ -334,11 +270,19 @@ export class BuilderRunCommandsService {
           run.id,
           error.message,
         );
+        await this.updateDeliveryStatusIfPresent(
+          delivery.id,
+          DeliveryStatus.SUBMITTED,
+        );
         return;
       }
       await this.builderRunSupportService.markRunAsFailed(
         run.id,
         this.builderRunSupportService.toErrorMessage(error),
+      );
+      await this.updateDeliveryStatusIfPresent(
+        delivery.id,
+        DeliveryStatus.EVALUATED,
       );
       throw error;
     }
@@ -406,5 +350,20 @@ export class BuilderRunCommandsService {
       } satisfies ExecuteBuildRunJobData,
       jobOptions,
     );
+  }
+
+  private async updateDeliveryStatusIfPresent(
+    deliveryId: string,
+    status: DeliveryStatus,
+  ): Promise<void> {
+    const delivery = await this.deliveriesRepository.findOne({
+      where: { id: deliveryId },
+    });
+    if (!delivery) {
+      return;
+    }
+
+    delivery.status = status;
+    await this.deliveriesRepository.save(delivery);
   }
 }

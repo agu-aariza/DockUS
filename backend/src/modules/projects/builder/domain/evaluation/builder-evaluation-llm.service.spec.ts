@@ -5,7 +5,7 @@ import { BuilderEvaluationLlmService } from './builder-evaluation-llm.service';
 const buildAssessment = (
   overrides: Partial<BuilderLlmAssessment> = {},
 ): BuilderLlmAssessment => ({
-  structuralType: 'T4',
+  structuralType: 'Web API con FastAPI',
   capabilities: {
     C1: { status: 'yes', rationale: 'Instalable.' },
     C2: { status: 'yes', rationale: 'Ejecutable.' },
@@ -73,6 +73,7 @@ describe('BuilderEvaluationLlmService', () => {
         },
       ],
       staticFindings: [],
+      staticReviewIssues: [],
       warnings: [],
       executionContext: {
         pythonBaseImage: 'python:3.11.9-slim-bookworm',
@@ -95,41 +96,7 @@ describe('BuilderEvaluationLlmService', () => {
     expect(result?.assessment.capabilities.C5.status).toBe('yes');
   });
 
-  it('rechaza una salida incoherente con T7 en E1', async () => {
-    const service = new BuilderEvaluationLlmService(configService);
-    mockFetchJson(
-      buildAssessment({
-        structuralType: 'T7',
-      }),
-    );
 
-    await expect(
-      service.evaluate({
-        planningAssessment: buildAssessment({
-          structuralType: 'T7',
-          evaluativeState: 'E3',
-        }),
-        stageResults: [],
-        staticFindings: [],
-        warnings: [],
-        executionContext: {
-          pythonBaseImage: 'python:3.11.9-slim-bookworm',
-          pythonBaseImageDigest: null,
-          dockerVersion: null,
-          kindVersion: null,
-          kubectlVersion: null,
-          clusterName: 'dockus-builder',
-          limits: {
-            batchTimeoutSeconds: 60,
-            serviceReadyTimeoutSeconds: 90,
-            stabilityWindowSeconds: 30,
-          },
-        },
-        evidenceArtifacts: [],
-        observedEvidence: {},
-      }),
-    ).rejects.toThrow(/T7 no puede evaluarse como E1/i);
-  });
 
   function mockFetchJson(payload: unknown): void {
     global.fetch = jest.fn().mockResolvedValue({

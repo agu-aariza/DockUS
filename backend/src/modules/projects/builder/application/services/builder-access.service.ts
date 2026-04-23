@@ -20,6 +20,12 @@ export class BuilderAccessService {
   async findDeliveryOrThrow(deliveryId: string): Promise<Delivery> {
     const delivery = await this.deliveriesRepository.findOne({
       where: { id: deliveryId },
+      relations: {
+        assignment: {
+          project: true,
+          student: true,
+        },
+      },
     });
     if (!delivery) {
       throw new NotFoundException(
@@ -37,11 +43,21 @@ export class BuilderAccessService {
     this.assertCanAccessDelivery(delivery, actor);
   }
 
-  assertCanAccessDelivery(
-    delivery: Delivery,
-    actor: AuthenticatedUser,
-  ): void {
-    if (actor.role === UserRole.STUDENT && delivery.authorId !== actor.userId) {
+  assertCanAccessDelivery(delivery: Delivery, actor: AuthenticatedUser): void {
+    if (actor.role === UserRole.ADMIN) {
+      return;
+    }
+
+    if (actor.role === UserRole.STUDENT) {
+      if (delivery.authorId !== actor.userId) {
+        throw new ForbiddenException(
+          'No tiene permisos para ejecutar builder sobre una entrega ajena.',
+        );
+      }
+      return;
+    }
+
+    if (delivery.assignment.project.creatorId !== actor.userId) {
       throw new ForbiddenException(
         'No tiene permisos para ejecutar builder sobre una entrega ajena.',
       );

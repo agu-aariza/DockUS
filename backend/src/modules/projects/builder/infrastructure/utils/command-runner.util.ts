@@ -60,6 +60,8 @@ export async function runCommand(
 
     child.on('error', (error) => {
       clearTimeout(timer);
+      console.error(`[runCommand ERROR] Command failed: ${command} ${args.join(' ')}`);
+      console.error(`[runCommand ERROR] Details:`, error);
       reject(error);
     });
 

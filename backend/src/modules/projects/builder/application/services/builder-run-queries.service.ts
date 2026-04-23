@@ -1,26 +1,25 @@
-import {
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+/**
+ * @fileoverview Consultas de lectura para runs del builder.
+ *
+ * Contexto:
+ * - Centraliza paginación, acceso a evidencias y lectura de runs.
+ * - Mantiene separada la lectura de las operaciones que mutan el pipeline.
+ *
+ * @module BuilderRunQueriesService
+ */
+
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  buildPaginationMeta,
-} from '../../../../../shared/utils/pagination.util';
+import { buildPaginationMeta } from '../../../../../shared/utils/pagination.util';
 import type { AuthenticatedUser } from '../../../../auth/interfaces/authenticated-user.interface';
-import { BuilderRunComparisonService } from '../../domain/comparison/builder-run-comparison.service';
 import { BuildRun } from '../../domain/entities/build-run.entity';
 import { BuilderRunEventsService } from '../../domain/events/builder-run-events.service';
-import {
-  BuilderRunComparison,
-  BuilderRunEvent,
-  EvidenceArtifactPublic,
-} from '../../domain/builder.types';
+import { EvidenceArtifactPublic } from '../../domain/builder.types';
 import { EvidenceService } from '../../infrastructure/evidence/evidence.service';
 import { ListBuildRunsDto } from '../../presentation/dto/list-build-runs.dto';
 import { BuilderAccessService } from './builder-access.service';
-import { PaginatedBuildRunsResponse } from './builder-application.types';
+import type { PaginatedBuildRunsResponse } from './builder-application.types';
 
 @Injectable()
 export class BuilderRunQueriesService {
@@ -29,7 +28,6 @@ export class BuilderRunQueriesService {
     private readonly buildRunsRepository: Repository<BuildRun>,
     private readonly builderAccessService: BuilderAccessService,
     private readonly builderRunEventsService: BuilderRunEventsService,
-    private readonly builderRunComparisonService: BuilderRunComparisonService,
     private readonly evidenceService: EvidenceService,
   ) {}
 
@@ -52,9 +50,8 @@ export class BuilderRunQueriesService {
     query: ListBuildRunsDto,
     actor: AuthenticatedUser,
   ): Promise<PaginatedBuildRunsResponse> {
-    const delivery = await this.builderAccessService.findDeliveryOrThrow(
-      deliveryId,
-    );
+    const delivery =
+      await this.builderAccessService.findDeliveryOrThrow(deliveryId);
     this.builderAccessService.assertCanAccessDelivery(delivery, actor);
 
     const page = query.page ?? 1;
@@ -91,25 +88,6 @@ export class BuilderRunQueriesService {
     return this.builderRunEventsService.list(buildRunId, afterSequence, limit);
   }
 
-  async subscribeToRunEvents(
-    buildRunId: string,
-    actor: AuthenticatedUser,
-    listener: (event: BuilderRunEvent) => void,
-  ): Promise<() => void> {
-    await this.getRunById(buildRunId, actor);
-    return this.builderRunEventsService.subscribe(buildRunId, listener);
-  }
-
-  async compareRuns(
-    baseRunId: string,
-    candidateRunId: string,
-    actor: AuthenticatedUser,
-  ): Promise<BuilderRunComparison> {
-    const baseRun = await this.getRunById(baseRunId, actor);
-    const candidateRun = await this.getRunById(candidateRunId, actor);
-    return this.builderRunComparisonService.compare(baseRun, candidateRun);
-  }
-
   async listEvidenceArtifacts(
     buildRunId: string,
     actor: AuthenticatedUser,
@@ -128,26 +106,5 @@ export class BuilderRunQueriesService {
       buildRunId,
       artifactId,
     );
-  }
-
-  async getRunReport(
-    buildRunId: string,
-    actor: AuthenticatedUser,
-    format: 'json' | 'text',
-  ): Promise<unknown> {
-    const run = await this.getRunById(buildRunId, actor);
-    const report = run.report as { readableText?: string } | null;
-    if (!report) {
-      throw new NotFoundException('El run no contiene report.');
-    }
-    if (format === 'text') {
-      return { format: 'text', report: report.readableText ?? '' };
-    }
-    if (format !== 'json') {
-      throw new UnprocessableEntityException(
-        'Formato de reporte inválido. Use format=json o format=text.',
-      );
-    }
-    return { format: 'json', report };
   }
 }
