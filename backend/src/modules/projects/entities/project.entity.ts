@@ -47,6 +47,10 @@ export class Project {
   @Column({ type: 'text', nullable: true })
   contextAcademico: string | null;
 
+  /** Máximo de entregas permitidas por alumno asignado. */
+  @Column({ type: 'int', default: 1 })
+  maxDeliveriesPerStudent: number;
+
   /** Estado de ciclo de vida del proyecto. */
   @Column({ type: 'enum', enum: ProjectStatus, default: ProjectStatus.DRAFT })
   status: ProjectStatus;
