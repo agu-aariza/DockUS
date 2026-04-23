@@ -25,4 +25,4 @@ backend/.env
 docs/
 
 # Casos de uso
-cases/
+fixtures/*

@@ -1,225 +1,204 @@
 # DockUS
 
-[![Backend CI](https://github.com/agu-aariza/DockUS/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/agu-aariza/DockUS/actions/workflows/backend-ci.yml)
-[![NestJS](https://img.shields.io/badge/NestJS-11.0-e0234e.svg?logo=nestjs)](https://nestjs.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-316192?logo=postgresql)](https://www.postgresql.org/)
+DockUS es una plataforma académica para gestionar proyectos, asignaciones, entregas y evaluación automática desde una consola orientada a profesorado. El repositorio contiene un backend en NestJS, un frontend en React/Vite y una infraestructura local basada en PostgreSQL, Redis, MinIO, Ollama y un clúster `kind` compartido para la ejecución del builder.
 
-Plataforma para entornos reproducibles y evaluación de proyectos, con backend en NestJS y enfoque en autenticación, RBAC y operaciones administrativas de usuarios.
+La iteración actual está enfocada en un flujo `teacher-first`: preparar el proyecto, asignar alumnado, recibir entregas, lanzar runs del builder y leer un informe técnico estructurado sin salir de la aplicación.
 
 ## Estado actual
 
-- Backend operativo con NestJS 11 + TypeScript.
-- Frontend smoke tester con React + TypeScript + Vite (`frontend/`).
-- Módulos de dominio: `auth`, `users`, `projects`, `deliveries`, `storage` y `health`.
-- Capa de infraestructura separada (`config` + `infrastructure`) para configuración, logging, rate limit, PostgreSQL y Redis/BullMQ.
-- Hardening activo: Helmet, Throttler, validación global y logging estructurado con Pino.
-- CI en GitHub Actions con lint, auditoría, build, tests unitarios y e2e.
+- Backend HTTP en NestJS 11 con JWT, RBAC, TypeORM, BullMQ y OpenAPI.
+- Frontend React 18 + Vite con rutas operativas para `Projects`, `Deliveries`, `Builder`, `Users` y `Storage`.
+- Builder Python-first con:
+  - planificación asistida por LLM,
+  - autocorrección limitada de build/deploy,
+  - análisis estático con `ruff` y `bandit`,
+  - informe final con feedback técnico estructurado.
+- Persistencia de código y suites docentes en MinIO.
+- Ejecución asíncrona de runs mediante Redis + BullMQ.
+- CI con build de frontend y build + tests de backend.
+
+## Arquitectura de alto nivel
+
+```mermaid
+graph TD
+    UI["Frontend React / Vite"]
+    API["Backend NestJS"]
+    DB["PostgreSQL"]
+    RQ["Redis + BullMQ"]
+    S3["MinIO"]
+    LLM["Ollama"]
+    K8S["kind + kubectl"]
+
+    UI -->|HTTP / JWT| API
+    API --> DB
+    API --> RQ
+    API --> S3
+    API --> LLM
+    API --> K8S
+    RQ -->|jobs builder| API
+```
+
+## Componentes del repositorio
+
+| Componente | Propósito |
+| --- | --- |
+| [`backend/`](./backend/README.md) | API, dominio, colas, builder, storage y observabilidad. |
+| [`frontend/`](./frontend/README.md) | Consola operativa para profesorado y alumnado. |
+| [`docker-compose.yml`](./docker-compose.yml) | Stack local completo para desarrollo y pruebas manuales. |
+| [`.github/workflows/backend-ci.yml`](./.github/workflows/backend-ci.yml) | Workflow de CI para build y test básicos. |
+
+## Modelo funcional actual
+
+### Dominio
+
+- `Project`: define el proyecto académico, su estado y el máximo de entregas por alumno.
+- `ProjectAssignment`: vincula proyecto y estudiante.
+- `Delivery`: representa una entrega versionada de una asignación.
+- `StorageObject`: guarda artefactos en MinIO, principalmente código de alumno y suite docente.
+- `BuildRun`: registra una ejecución del builder asociada a una entrega.
+
+### Flujo principal
+
+1. Un profesor crea un proyecto.
+2. Asigna estudiantes al proyecto.
+3. Sube la suite docente de tests al proyecto.
+4. El alumnado crea una entrega y sube su código.
+5. Profesor o alumno lanza un `BuildRun` sobre la entrega.
+6. El builder analiza, construye, despliega, valida y limpia.
+7. El informe final queda embebido en el detalle del run.
+
+## Builder: comportamiento real hoy
+
+El builder no crea un clúster por proyecto. En el estado actual:
+
+- usa un clúster `kind` compartido configurable mediante `BUILDER_KIND_CLUSTER_NAME`,
+- crea un `namespace` efímero por run,
+- carga la imagen Docker en ese clúster local,
+- despliega `Job` o `Deployment` según la receta del planner,
+- ejecuta probes, ventana de estabilidad y tests docentes,
+- persiste evidencias y reporte al final del run.
+
+Además:
+
+- si el build o el arranque fallan por dependencias faltantes de entorno, intenta reparar la receta con un bucle acotado de self-healing;
+- la revisión estática alimenta al evaluador con hallazgos de `ruff`, `bandit` y heurísticas propias;
+- el frontend consume historial y detalle de runs, y sigue el timeline mediante eventos incrementales.
+
+## Requisitos
+
+### Requisitos mínimos
+
+- Docker y `docker compose`
+- Node.js 22 si se quiere ejecutar backend o frontend fuera de contenedores
+- npm 10+
+
+### Requisitos adicionales para usar el builder fuera de Docker Compose
+
+- Docker daemon accesible desde el proceso backend
+- `kubectl`
+- `kind`
+- `python3`
+- `pip`
+- `ruff`
+- `bandit`
+
+En la práctica, el camino más sencillo para arrancar todo el entorno es `docker compose`.
+
+## Arranque rápido con Docker Compose
+
+1. Copia la configuración base:
+
+```bash
+cp .env.example .env
+```
+
+2. Arranca la plataforma:
+
+```bash
+docker compose up --build
+```
+
+3. Abre los servicios principales:
+
+- Frontend: [http://localhost:5173](http://localhost:5173)
+- Backend API: [http://localhost:3000/api](http://localhost:3000/api)
+- Swagger: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+- MinIO Console: [http://localhost:9001](http://localhost:9001)
+- Ollama expuesto al host: `http://localhost:11435`
+
+### Qué levanta el compose
+
+- `postgres`
+- `redis`
+- `minio`
+- `ollama`
+- `ollama-bootstrap`
+- `backend`
+- `frontend`
+
+La primera subida puede tardar más porque `ollama-bootstrap` descarga el modelo base y crea los modelos derivados para planificación y evaluación.
+
+## Ejecución manual por separado
+
+### Backend
+
+```bash
+cd backend
+npm install
+npm run start:dev
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Si no usas Docker Compose, asegúrate de que PostgreSQL, Redis, MinIO y el tooling del builder estén disponibles y alineados con el `.env`.
+
+## Verificación recomendada
+
+```bash
+cd backend && npm run build
+cd backend && npm test -- --runInBand
+cd frontend && npm run build
+```
+
+El backend compila a `backend/build`. Los tests del backend usan un wrapper que fija temporales y caché en `/tmp` en Linux para evitar problemas por rutas del host.
+
+## CI
+
+El workflow actual valida:
+
+- `frontend`: `npm ci` + `npm run build`
+- `backend`: `npm ci` + `npm run build` + `npm test -- --runInBand`
+
+Archivo relevante:
+
+- [`.github/workflows/backend-ci.yml`](./.github/workflows/backend-ci.yml)
 
 ## Estructura del repositorio
 
 ```text
-.
-├── backend/                         # API NestJS
-│   ├── src/
-│   │   ├── modules/                 # Dominios (auth, users, projects, health)
-│   │   ├── shared/                  # Config e infraestructura técnica
-│   │   ├── bootstrap.ts             # Config global HTTP compartida
-│   │   ├── app.module.ts            # Composición de módulos
-│   │   └── main.ts                  # Entry point
-│   ├── test/                        # Tests e2e
-│   ├── ARCHITECTURE.md              # Convenciones de arquitectura backend
-│   └── package.json
-├── frontend/                        # Cliente smoke para probar endpoints
-├── docker-compose.yml               # PostgreSQL, Redis, MinIO y frontend dev
-├── .env.example
-└── .github/workflows/backend-ci.yml
+DockUS/
+├── backend/                # API y dominio
+├── frontend/               # Consola React/Vite
+├── .github/workflows/      # CI
+├── docker-compose.yml      # Stack local completo
+└── .env.example            # Configuración base
 ```
 
-Documentación más detallada del backend: [backend/README.md](./backend/README.md)
+## Documentación por componente
 
-## Requisitos
+- [Backend README](./backend/README.md)
+- [Frontend README](./frontend/README.md)
 
-- Node.js 22
-- npm >= 9
-- Docker + Docker Compose v2
+## Notas importantes
 
-## Puesta en marcha local
-
-```bash
-# 1) Crear entorno local
-cp .env.example .env
-
-# 2) Levantar infraestructura (sin frontend)
-docker compose up -d postgres redis minio
-
-# 3) Levantar API
-npm --prefix backend ci
-npm --prefix backend run start:dev
-
-# 4) Levantar frontend smoke tester
-npm --prefix frontend install
-npm --prefix frontend run dev
-```
-
-Con la API levantada:
-
-- Liveness oficial: `GET http://localhost:3000/api/health/live`
-- Readiness oficial: `GET http://localhost:3000/api/health/readiness`
-- Swagger: `GET http://localhost:3000/api/docs`
-- Frontend smoke tester: `http://localhost:5173`
-
-También puedes levantar el frontend con Docker Compose:
-
-```bash
-docker compose up -d frontend
-```
-
-## Endpoints principales
-
-### IAM
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/profile` (JWT)
-
-### Usuarios (RBAC)
-
-- `GET /api/users` (ADMIN, TEACHER)
-- `GET /api/users/:id` (ADMIN, TEACHER)
-- `POST /api/users` (ADMIN)
-- `PATCH /api/users/:id` (ADMIN)
-- `DELETE /api/users/:id` (ADMIN, soft delete)
-- `PATCH /api/users/:id/restore` (ADMIN)
-- `PATCH /api/users/:id/status/:status` (ADMIN)
-
-### Projects
-
-- `POST /api/projects` (ADMIN, TEACHER)
-- `GET /api/projects` (ADMIN, TEACHER, STUDENT)
-- `GET /api/projects/:id` (ADMIN, TEACHER, STUDENT)
-- `PATCH /api/projects/:id` (ADMIN, TEACHER)
-- `PATCH /api/projects/:id/status/:status` (ADMIN, TEACHER)
-- `DELETE /api/projects/:id` (ADMIN, soft delete)
-- `PATCH /api/projects/:id/restore` (ADMIN)
-
-Parámetros de listado en `GET /api/projects`:
-
-- `page`, `limit`
-- `status`, `creatorId`, `search`
-- `createdFrom`, `createdTo`
-- `sortBy`, `sortOrder`
-
-### Deliveries
-
-- `POST /api/deliveries` (ADMIN, TEACHER, STUDENT)
-- `GET /api/deliveries` (ADMIN, TEACHER, STUDENT)
-- `GET /api/deliveries/:id` (ADMIN, TEACHER, STUDENT)
-- `PATCH /api/deliveries/:id` (ADMIN, TEACHER)
-- `PATCH /api/deliveries/:id/status/:status` (ADMIN, TEACHER)
-- `DELETE /api/deliveries/:id` (ADMIN, TEACHER, soft delete)
-- `PATCH /api/deliveries/:id/restore` (ADMIN)
-
-Parámetros de listado en `GET /api/deliveries`:
-
-- `page`, `limit`
-- `projectId`, `authorId`, `status`, `search`
-- `createdFrom`, `createdTo`
-- `sortBy`, `sortOrder`
-
-### Storage
-
-- `POST /api/storage/upload` (ADMIN, TEACHER, STUDENT)
-- `GET /api/storage` (ADMIN, TEACHER, STUDENT)
-- `GET /api/storage/:id` (ADMIN, TEACHER, STUDENT)
-- `POST /api/storage/:id/download-url` (ADMIN, TEACHER, STUDENT)
-- `DELETE /api/storage/:id` (ADMIN, TEACHER, soft delete)
-- `DELETE /api/storage/:id/purge` (ADMIN, purge física)
-- `PATCH /api/storage/:id/restore` (ADMIN)
-
-Parámetros de listado en `GET /api/storage`:
-
-- `page`, `limit`
-- `deliveryId`, `uploaderId`
-- `createdFrom`, `createdTo`
-- `sortBy`, `sortOrder`
-
-Respuesta típica del listado:
-
-```json
-{
-  "data": [
-    {
-      "id": "uuid",
-      "deliveryId": "uuid",
-      "logicalName": "main.py",
-      "logicalPath": "src/main.py",
-      "contentType": "text/x-python",
-      "sizeBytes": 2048,
-      "hash": "sha256...",
-      "uploaderId": "uuid",
-      "createdAt": "2026-04-01T10:00:00.000Z"
-    }
-  ],
-  "meta": {
-    "page": 1,
-    "limit": 20,
-    "total": 1,
-    "totalPages": 1,
-    "hasNextPage": false,
-    "hasPrevPage": false
-  }
-}
-```
-
-## Variables de entorno
-
-Variables principales usadas por el backend:
-
-- `NODE_ENV`
-- `PORT`
-- `FRONTEND_URL`
-- `VITE_API_BASE_URL`
-- `DB_HOST`
-- `DB_PORT`
-- `DB_USERNAME`
-- `DB_PASSWORD`
-- `DB_NAME`
-- `REDIS_HOST`
-- `REDIS_PORT`
-- `JWT_SECRET`
-- `JWT_EXPIRES_IN`
-
-Variables de infraestructura local (`docker-compose.yml`):
-
-- `POSTGRES_PORT`
-- `MINIO_ROOT_USER`
-- `MINIO_ROOT_PASSWORD`
-- `MINIO_API_PORT`
-- `MINIO_CONSOLE_PORT`
-- `MINIO_ENDPOINT`
-- `MINIO_BUCKET_NAME`
-- `MINIO_USE_SSL`
-- `STORAGE_SIGNED_URL_TTL_SECONDS`
-- `STORAGE_BOOTSTRAP_ON_STARTUP`
-
-Nota: `DATABASE_URL` puede existir para tooling externo, pero la configuración activa del backend usa los parámetros `DB_*`.
-
-## Scripts útiles
-
-Desde la raíz del repo:
-
-```bash
-npm --prefix backend run start:dev
-npm --prefix backend run build
-npm --prefix backend run lint
-npm --prefix backend run lint:fix
-npm --prefix backend run test
-npm --prefix backend run test:e2e
-npm --prefix frontend run dev
-npm --prefix frontend run build
-```
-
-## Calidad y flujo
-
-- Convención recomendada de commits: Conventional Commits (`feat`, `fix`, `docs`, `chore`, `ci`, `refactor`).
-- Pipeline CI: [`.github/workflows/backend-ci.yml`](./.github/workflows/backend-ci.yml).
+- El backend aplica prefijo global `/api`.
+- Swagger se expone fuera de producción.
+- El builder actual está optimizado para proyectos Python.
+- El reporte final se obtiene desde el detalle del run; no existe un endpoint separado de informe.
+- La infraestructura descrita en el repositorio es la realmente soportada hoy; cualquier evolución hacia runtime por proyecto, clúster dedicado o streaming SSE completo debe considerarse trabajo futuro hasta que el código lo implemente.

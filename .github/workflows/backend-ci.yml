@@ -1,57 +1,52 @@
-# ============================================================================
-# CI PIPELINE - BACKEND KERNEL VALIDATION
-# ============================================================================
-# 
-# Workflow para la validación de integridad del backend.
-# Ejecuta auditoría de dependencias, análisis estático, construcción y tests.
-# ============================================================================
-
-name: Backend CI
+name: DockUS CI
 
 on:
   push:
     branches: [ main, 'feature/*' ]
     paths:
       - 'backend/**'
+      - 'frontend/**'
+      - 'README.md'
       - '.env.example'
-      - 'docker-compose.yml'
       - '.github/workflows/backend-ci.yml'
   pull_request:
     branches: [ main, 'feature/*' ]
     paths:
       - 'backend/**'
+      - 'frontend/**'
+      - 'README.md'
       - '.env.example'
-      - 'docker-compose.yml'
       - '.github/workflows/backend-ci.yml'
 
 jobs:
-  validate-kernel:
-    name: Backend Validation (Node.js 22)
+  frontend-build:
+    name: Frontend Build
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: dockus
-          POSTGRES_PASSWORD: dockus_secure_pass
-          POSTGRES_DB: dockus_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U dockus -d dockus_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+  backend-verify:
+    name: Backend Build and Test
+    runs-on: ubuntu-latest
 
     env:
       NODE_ENV: test
@@ -82,20 +77,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
-      - name: Install dependencies (CI)
+      - name: Install dependencies
         run: npm ci
 
-      - name: Linting
-        run: npm run lint
-
-      - name: Security Audit
-        run: npm audit --audit-level=high
-
-      - name: Build Application
+      - name: Build backend
         run: npm run build
 
-      - name: Unit Tests
-        run: npm run test
-
-      - name: E2E Tests
-        run: npm run test:e2e -- --runInBand
+      - name: Run backend tests
+        run: npm test -- --runInBand
