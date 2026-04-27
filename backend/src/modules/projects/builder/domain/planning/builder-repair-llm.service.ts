@@ -11,7 +11,10 @@ import {
   StaticReviewIssue,
 } from '../builder.types';
 import { parseBuilderLlmAssessment } from '../llm/builder-llm-assessment.parser';
-import { readTextFileSafe, toPosixPath } from '../../infrastructure/utils/builder-analysis.util';
+import {
+  readTextFileSafe,
+  toPosixPath,
+} from '../../infrastructure/utils/builder-analysis.util';
 import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
 
 @Injectable()
@@ -48,13 +51,12 @@ export class BuilderRepairLlmService {
       'BUILDER_OLLAMA_TIMEOUT_MS',
       120000,
     );
-    this.maxInputChars = this.configService.get<number>(
-      'BUILDER_LLM_PLAN_MAX_INPUT_CHARS',
+    this.maxInputChars =
+      this.configService.get<number>('BUILDER_LLM_REPAIR_MAX_INPUT_CHARS') ??
       this.configService.get<number>(
         'BUILDER_LLM_ASSIST_MAX_INPUT_CHARS',
         15000,
-      ),
-    );
+      );
     const promptPath = path.resolve(
       __dirname,
       '../../../../../../scripts/repair-system-prompt.txt',

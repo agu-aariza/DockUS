@@ -1,7 +1,6 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  DEFAULT_KIND_CLUSTER_NAME,
   DEFAULT_KUBECTL_TIMEOUT_MS,
   DEFAULT_LOG_TAIL_LINES,
 } from '../../domain/builder.constants';
@@ -11,16 +10,11 @@ import { CommandExecutionResult } from './execution.types';
 @Injectable()
 export class KubectlExecutionService {
   private readonly kubectlTimeoutMs: number;
-  private readonly clusterName: string;
 
   constructor(private readonly configService: ConfigService) {
     this.kubectlTimeoutMs = this.configService.get<number>(
       'BUILDER_KUBECTL_TIMEOUT_MS',
       DEFAULT_KUBECTL_TIMEOUT_MS,
-    );
-    this.clusterName = this.configService.get<string>(
-      'BUILDER_KIND_CLUSTER_NAME',
-      DEFAULT_KIND_CLUSTER_NAME,
     );
   }
 
@@ -39,12 +33,16 @@ export class KubectlExecutionService {
     }
   }
 
-  async applyManifest(namespace: string, manifest: string): Promise<void> {
+  async applyManifest(
+    clusterName: string,
+    namespace: string,
+    manifest: string,
+  ): Promise<void> {
     const result = await runCommand(
       'kubectl',
       [
         '--context',
-        `kind-${this.clusterName}`,
+        this.contextName(clusterName),
         '-n',
         namespace,
         'apply',
@@ -63,8 +61,13 @@ export class KubectlExecutionService {
     }
   }
 
-  async runKubectl(args: string[], namespace?: string): Promise<void> {
+  async runKubectl(
+    clusterName: string,
+    args: string[],
+    namespace?: string,
+  ): Promise<void> {
     const result = await this.runKubectlResult(
+      clusterName,
       args,
       namespace,
       this.kubectlTimeoutMs,
@@ -77,6 +80,7 @@ export class KubectlExecutionService {
   }
 
   async runKubectlResult(
+    clusterName: string,
     args: string[],
     namespace: string | undefined,
     timeoutMs: number,
@@ -84,7 +88,7 @@ export class KubectlExecutionService {
     const startedAt = Date.now();
     const commandArgs = [
       '--context',
-      `kind-${this.clusterName}`,
+      this.contextName(clusterName),
       ...(namespace ? ['-n', namespace] : []),
       ...args,
     ];
@@ -103,8 +107,13 @@ export class KubectlExecutionService {
     };
   }
 
-  async collectPodLogs(namespace: string, podName: string): Promise<string> {
+  async collectPodLogs(
+    clusterName: string,
+    namespace: string,
+    podName: string,
+  ): Promise<string> {
     const result = await this.runKubectlResult(
+      clusterName,
       ['logs', podName, '--timestamps=true'],
       namespace,
       this.kubectlTimeoutMs,
@@ -113,10 +122,12 @@ export class KubectlExecutionService {
   }
 
   async collectPodDescribe(
+    clusterName: string,
     namespace: string,
     podName: string,
   ): Promise<string> {
     const result = await this.runKubectlResult(
+      clusterName,
       ['describe', 'pod', podName],
       namespace,
       this.kubectlTimeoutMs,
@@ -124,8 +135,9 @@ export class KubectlExecutionService {
     return `${result.stdout}\n${result.stderr}`.trim();
   }
 
-  async collectEvents(namespace: string): Promise<string> {
+  async collectEvents(clusterName: string, namespace: string): Promise<string> {
     const result = await this.runKubectlResult(
+      clusterName,
       ['get', 'events', '-o', 'json'],
       namespace,
       this.kubectlTimeoutMs,
@@ -134,11 +146,13 @@ export class KubectlExecutionService {
   }
 
   async tryResolvePodName(
+    clusterName: string,
     namespace: string,
     selectors: string[],
   ): Promise<string | null> {
     const selector = selectors.join(',');
     const result = await this.runKubectlResult(
+      clusterName,
       [
         'get',
         'pods',
@@ -155,11 +169,13 @@ export class KubectlExecutionService {
   }
 
   async runTcpProbe(
+    clusterName: string,
     namespace: string,
     serviceName: string,
     port: number,
   ): Promise<boolean> {
     const endpointResult = await this.runKubectlResult(
+      clusterName,
       [
         'get',
         'endpoints',
@@ -177,6 +193,7 @@ export class KubectlExecutionService {
   }
 
   async evaluateStability(
+    clusterName: string,
     namespace: string,
     podName: string | null,
     windowSeconds: number,
@@ -185,6 +202,7 @@ export class KubectlExecutionService {
       return false;
     }
     const initialRestarts = await this.resolvePodRestartCount(
+      clusterName,
       namespace,
       podName,
     );
@@ -192,7 +210,11 @@ export class KubectlExecutionService {
       return false;
     }
     await new Promise((resolve) => setTimeout(resolve, windowSeconds * 1000));
-    const finalRestarts = await this.resolvePodRestartCount(namespace, podName);
+    const finalRestarts = await this.resolvePodRestartCount(
+      clusterName,
+      namespace,
+      podName,
+    );
     return finalRestarts === initialRestarts;
   }
 
@@ -215,10 +237,12 @@ export class KubectlExecutionService {
   }
 
   private async resolvePodRestartCount(
+    clusterName: string,
     namespace: string,
     podName: string,
   ): Promise<number> {
     const result = await this.runKubectlResult(
+      clusterName,
       [
         'get',
         'pod',
@@ -231,5 +255,9 @@ export class KubectlExecutionService {
     );
     const parsed = Number.parseInt(result.stdout.trim(), 10);
     return Number.isFinite(parsed) ? parsed : -1;
+  }
+
+  private contextName(clusterName: string): string {
+    return `kind-${clusterName}`;
   }
 }

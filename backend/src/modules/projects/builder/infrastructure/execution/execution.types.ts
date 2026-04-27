@@ -40,10 +40,12 @@ export interface TestExecutionResult {
   status: StageStatus;
   details: string;
   logs: string;
+  podName?: string | null;
 }
 
 export interface HealthcheckExecutionResult {
   status: StageStatus;
   details: string;
   logs: string;
+  podName?: string | null;
 }

@@ -10,6 +10,7 @@ import {
   StageResult,
   StaticFinding,
   StaticReviewIssue,
+  AssignmentContext,
 } from '../builder.types';
 import { parseBuilderLlmAssessment } from '../llm/builder-llm-assessment.parser';
 
@@ -64,7 +65,6 @@ export class BuilderEvaluationLlmService {
   isEnabled(): boolean {
     return this.enabled;
   }
-
   async evaluate(input: {
     planningAssessment: BuilderLlmAssessment;
     stageResults: StageResult[];
@@ -74,6 +74,7 @@ export class BuilderEvaluationLlmService {
     executionContext: ExecutionContext;
     evidenceArtifacts: Array<{ id: string; type: string }>;
     observedEvidence: unknown;
+    assignmentContext: AssignmentContext;
   }): Promise<BuilderLlmPhaseResult | null> {
     if (!this.enabled) {
       return null;
@@ -86,7 +87,6 @@ export class BuilderEvaluationLlmService {
       assessment: this.parseResponse(response),
     };
   }
-
   private buildPrompts(input: {
     planningAssessment: BuilderLlmAssessment;
     stageResults: StageResult[];
@@ -96,6 +96,7 @@ export class BuilderEvaluationLlmService {
     executionContext: ExecutionContext;
     evidenceArtifacts: Array<{ id: string; type: string }>;
     observedEvidence: unknown;
+    assignmentContext: AssignmentContext;
   }): { systemPrompt: string; userPrompt: string } {
     const payload = JSON.stringify(
       {
@@ -112,6 +113,7 @@ export class BuilderEvaluationLlmService {
             type: artifact.type,
           })),
         observedEvidence: input.observedEvidence,
+        assignmentContext: input.assignmentContext,
       },
       null,
       2,

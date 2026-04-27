@@ -14,6 +14,8 @@ import {
   BuildStage,
   BuilderExecutionMode,
   BuilderPipelineOutcome,
+  BuilderPreflightSummary,
+  BuildRunRuntimeTarget,
   EvidenceArtifactPublic,
   LlmPlanRecipe,
   RuntimeFile,
@@ -61,6 +63,7 @@ export class BuilderRunSupportService {
       | 'RUN_STATUS_CHANGED'
       | 'STAGE_STARTED'
       | 'STAGE_FINISHED'
+      | 'LOG_CHUNK'
       | 'WARNING_ADDED'
       | 'ARTIFACT_ADDED'
       | 'REPORT_READY'
@@ -151,6 +154,40 @@ export class BuilderRunSupportService {
     });
   }
 
+  async emitLogChunk(input: {
+    buildRunId: string;
+    source: 'build' | 'runtime' | 'tests' | 'probes' | 'cleanup';
+    stream: 'stdout' | 'stderr' | 'combined';
+    text: string;
+    podName?: string | null;
+    containerName?: string | null;
+    stage?: BuildStage | null;
+  }): Promise<void> {
+    const normalized = input.text.replace(/\r\n/gu, '\n');
+    const maxChars = 4096;
+    for (let index = 0; index < normalized.length; index += maxChars) {
+      const chunk = normalized.slice(index, index + maxChars);
+      if (!chunk) {
+        continue;
+      }
+      await this.emitEvent({
+        buildRunId: input.buildRunId,
+        eventType: 'LOG_CHUNK',
+        runStatus: null,
+        stage: input.stage ?? null,
+        activeStage: input.stage ?? null,
+        message: 'Chunk de logs recibido.',
+        payload: {
+          source: input.source,
+          stream: input.stream,
+          podName: input.podName ?? null,
+          containerName: input.containerName ?? null,
+          text: chunk,
+        },
+      });
+    }
+  }
+
   beginStage(stage: BuildStage): {
     stage: BuildStage;
     startedAt: Date;
@@ -236,6 +273,7 @@ export class BuilderRunSupportService {
     runtimeFiles: RuntimeFile[];
     assessment: BuilderPipelineOutcome['llmAssessment'];
     model: string;
+    preflightSummary?: BuilderPreflightSummary | null;
   }): Record<string, unknown> {
     const fileList = input.runtimeFiles.map((file) =>
       toPosixPath(file.relativePath),
@@ -248,14 +286,47 @@ export class BuilderRunSupportService {
       setupPy: fileList.filter((file) => file.endsWith('setup.py')),
       setupCfg: fileList.filter((file) => file.endsWith('setup.cfg')),
       managePy: fileList.filter((file) => file.endsWith('manage.py')),
+      dockusManifest: fileList.filter((file) =>
+        /(^|\/)dockus\.ya?ml$/u.test(file),
+      ),
     };
 
     return {
       language: 'python',
+      dependencyManager:
+        input.preflightSummary?.dependencyManager ??
+        input.assessment.recipe.dependencyManager ??
+        'unknown',
+      executionProfile:
+        input.preflightSummary?.executionProfile ??
+        input.assessment.recipe.executionProfile ??
+        'unknown',
+      workingDirectory:
+        input.preflightSummary?.workingDirectory ??
+        input.assessment.recipe.workingDirectory ??
+        '.',
+      manifestSource:
+        input.preflightSummary?.manifestSource ??
+        input.assessment.recipe.manifestSource ??
+        'AUTO',
       manifests,
       pythonFiles: fileList.filter((file) => file.endsWith('.py')).length,
+      resolvedCommands: input.preflightSummary
+        ? {
+            install: input.preflightSummary.resolvedCommands.install,
+            run: input.preflightSummary.resolvedCommands.run,
+            test: input.preflightSummary.resolvedCommands.test,
+            healthcheck: input.preflightSummary.resolvedCommands.healthcheck,
+          }
+        : null,
       planner: {
-        source: 'llm-only',
+        source:
+          input.preflightSummary?.compatibility === 'SUPPORTED_AUTO'
+            ? 'preflight-auto'
+            : input.preflightSummary?.compatibility ===
+                'SUPPORTED_WITH_MANIFEST'
+              ? 'dockus-manifest'
+              : 'llm-assisted',
         model: input.model,
         structuralType: input.assessment.structuralType,
         evaluativeState: input.assessment.evaluativeState,
@@ -310,13 +381,18 @@ export class BuilderRunSupportService {
     if (JSON.stringify(previous.install) !== JSON.stringify(next.install)) {
       diff.push('install');
     }
-    if (JSON.stringify(previous.systemPackages) !== JSON.stringify(next.systemPackages)) {
+    if (
+      JSON.stringify(previous.systemPackages) !==
+      JSON.stringify(next.systemPackages)
+    ) {
       diff.push('systemPackages');
     }
     if (JSON.stringify(previous.run) !== JSON.stringify(next.run)) {
       diff.push('run');
     }
-    if (JSON.stringify(previous.healthcheck) !== JSON.stringify(next.healthcheck)) {
+    if (
+      JSON.stringify(previous.healthcheck) !== JSON.stringify(next.healthcheck)
+    ) {
       diff.push('healthcheck');
     }
     if (previous.servicePort !== next.servicePort) {
@@ -346,21 +422,30 @@ export class BuilderRunSupportService {
       lower.includes("can't find libpq") ||
       lower.includes('pg_config executable not found')
     ) {
-      hints.add('Puede faltar psycopg2-binary o el paquete de sistema libpq-dev.');
+      hints.add(
+        'Puede faltar psycopg2-binary o el paquete de sistema libpq-dev.',
+      );
     }
     if (lower.includes('mysqlclient') && lower.includes('pkg-config')) {
-      hints.add('Puede faltar pkg-config y librerías de desarrollo de MySQL/MariaDB.');
+      hints.add(
+        'Puede faltar pkg-config y librerías de desarrollo de MySQL/MariaDB.',
+      );
     }
     if (lower.includes('modulenotfounderror')) {
       hints.add('El runtime parece fallar por una dependencia Python ausente.');
     }
-    if (lower.includes('fatal error:') || lower.includes('failed building wheel')) {
+    if (
+      lower.includes('fatal error:') ||
+      lower.includes('failed building wheel')
+    ) {
       hints.add(
         'La compilación parece requerir toolchain o headers del sistema adicionales.',
       );
     }
     if (lower.includes('error loading shared libraries')) {
-      hints.add('El contenedor parece necesitar una librería compartida del sistema.');
+      hints.add(
+        'El contenedor parece necesitar una librería compartida del sistema.',
+      );
     }
 
     return [...hints];
@@ -383,6 +468,73 @@ export class BuilderRunSupportService {
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '');
     return `dockus-delivery-${normalizedDeliveryId}:run-${Date.now()}`;
+  }
+
+  async updateRuntimeTarget(
+    runId: string,
+    patch: Partial<BuildRunRuntimeTarget>,
+  ): Promise<BuildRunRuntimeTarget | null> {
+    const run = await this.buildRunsRepository.findOne({
+      where: { id: runId },
+    });
+    if (!run) {
+      return null;
+    }
+
+    const runtimeTarget = {
+      projectId:
+        typeof run.runtimeTarget?.projectId === 'string'
+          ? run.runtimeTarget.projectId
+          : '',
+      clusterName:
+        typeof run.runtimeTarget?.clusterName === 'string'
+          ? run.runtimeTarget.clusterName
+          : '',
+      namespace:
+        typeof run.runtimeTarget?.namespace === 'string'
+          ? run.runtimeTarget.namespace
+          : '',
+      primaryPodName:
+        typeof run.runtimeTarget?.primaryPodName === 'string'
+          ? run.runtimeTarget.primaryPodName
+          : null,
+      helperPodNames: Array.isArray(run.runtimeTarget?.helperPodNames)
+        ? run.runtimeTarget.helperPodNames.filter(
+            (value): value is string =>
+              typeof value === 'string' && value.length > 0,
+          )
+        : [],
+      ...patch,
+    } satisfies BuildRunRuntimeTarget;
+
+    run.runtimeTarget = runtimeTarget;
+    await this.buildRunsRepository.save(run);
+    return runtimeTarget;
+  }
+
+  async appendRuntimeHelperPod(
+    runId: string,
+    podName: string | null | undefined,
+  ): Promise<BuildRunRuntimeTarget | null> {
+    if (!podName) {
+      return null;
+    }
+
+    const run = await this.buildRunsRepository.findOne({
+      where: { id: runId },
+    });
+    if (!run || !run.runtimeTarget) {
+      return null;
+    }
+
+    run.runtimeTarget = {
+      ...run.runtimeTarget,
+      helperPodNames: [
+        ...new Set([...(run.runtimeTarget.helperPodNames ?? []), podName]),
+      ],
+    };
+    await this.buildRunsRepository.save(run);
+    return run.runtimeTarget;
   }
 
   async cleanupImage(imageTag: string, warnings: string[]): Promise<void> {

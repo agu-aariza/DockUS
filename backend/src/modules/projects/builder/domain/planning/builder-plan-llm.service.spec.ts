@@ -156,8 +156,6 @@ describe('BuilderPlanLlmService', () => {
     ).rejects.toThrow(/servicePort/i);
   });
 
-
-
   it.each([
     ['Script de Análisis de Datos', 'E2'],
     ['Web API con FastAPI', 'E1'],

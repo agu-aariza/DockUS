@@ -65,6 +65,20 @@ export class BuilderService {
     );
   }
 
+  subscribeRunEvents(
+    buildRunId: string,
+    actor: AuthenticatedUser,
+    listener: (
+      event: import('../domain/builder.types').BuilderRunEvent,
+    ) => void,
+  ) {
+    return this.builderRunQueriesService.subscribeRunEvents(
+      buildRunId,
+      actor,
+      listener,
+    );
+  }
+
   processBuildRunJob(data: ExecuteBuildRunJobData): Promise<void> {
     return this.builderRunCommandsService.processBuildRunJob(data);
   }

@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import {
   DEFAULT_DOCKER_BUILD_TIMEOUT_MS,
   DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
-  DEFAULT_KIND_CLUSTER_NAME,
   DEFAULT_STABILITY_WINDOW_SECONDS,
   DEFAULT_BATCH_TIMEOUT_SECONDS,
   DEFAULT_SERVICE_READY_TIMEOUT_SECONDS,
@@ -42,7 +41,10 @@ export class ExecutionEnvironmentService {
     );
   }
 
-  async collectExecutionContext(baseImage: string): Promise<ExecutionContext> {
+  async collectExecutionContext(
+    baseImage: string,
+    clusterName: string,
+  ): Promise<ExecutionContext> {
     const dockerVersion = await this.tryVersion('docker', ['--version']);
     const kindVersion = await this.kubectlExecutionService.tryVersion('kind', [
       '--version',
@@ -59,7 +61,7 @@ export class ExecutionEnvironmentService {
       dockerVersion,
       kindVersion,
       kubectlVersion,
-      clusterName: this.resolveClusterName(),
+      clusterName,
       limits: {
         batchTimeoutSeconds: this.batchTimeoutSeconds,
         serviceReadyTimeoutSeconds: this.serviceReadyTimeoutSeconds,
@@ -96,12 +98,18 @@ export class ExecutionEnvironmentService {
   async dockerBuild(
     projectRootDir: string,
     imageTag: string,
+    options?: {
+      onStdoutChunk?: (chunk: string) => void;
+      onStderrChunk?: (chunk: string) => void;
+    },
   ): Promise<CommandExecutionResult> {
     const startedAt = Date.now();
     const result = await runCommand('docker', ['build', '-t', imageTag, '.'], {
       cwd: projectRootDir,
       timeoutMs: this.dockerBuildTimeoutMs,
       maxBufferedChars: 1_500_000,
+      onStdoutChunk: options?.onStdoutChunk,
+      onStderrChunk: options?.onStderrChunk,
     });
 
     const combinedLogs = `${result.stdout}\n${result.stderr}`.trim();
@@ -115,10 +123,10 @@ export class ExecutionEnvironmentService {
     };
   }
 
-  async loadImageInKind(imageTag: string): Promise<void> {
+  async loadImageInKind(imageTag: string, clusterName: string): Promise<void> {
     const result = await runCommand(
       'kind',
-      ['load', 'docker-image', imageTag, '--name', this.resolveClusterName()],
+      ['load', 'docker-image', imageTag, '--name', clusterName],
       {
         timeoutMs: this.kubectlExecutionService.getTimeoutMs(),
       },
@@ -172,14 +180,5 @@ export class ExecutionEnvironmentService {
     } catch {
       return null;
     }
-  }
-
-  private resolveClusterName(): string {
-    return (
-      this.configService.get<string>(
-        'BUILDER_KIND_CLUSTER_NAME',
-        DEFAULT_KIND_CLUSTER_NAME,
-      ) ?? DEFAULT_KIND_CLUSTER_NAME
-    );
   }
 }

@@ -17,8 +17,14 @@ export class ExecutionAdapterService {
     private readonly kubernetesRuntimeExecutionService: KubernetesRuntimeExecutionService,
   ) {}
 
-  collectExecutionContext(baseImage: string): Promise<ExecutionContext> {
-    return this.executionEnvironmentService.collectExecutionContext(baseImage);
+  collectExecutionContext(
+    baseImage: string,
+    clusterName: string,
+  ): Promise<ExecutionContext> {
+    return this.executionEnvironmentService.collectExecutionContext(
+      baseImage,
+      clusterName,
+    );
   }
 
   assertDockerAvailable(): Promise<void> {
@@ -32,26 +38,38 @@ export class ExecutionAdapterService {
   dockerBuild(
     projectRootDir: string,
     imageTag: string,
+    options?: {
+      onStdoutChunk?: (chunk: string) => void;
+      onStderrChunk?: (chunk: string) => void;
+    },
   ): Promise<CommandExecutionResult> {
     return this.executionEnvironmentService.dockerBuild(
       projectRootDir,
       imageTag,
+      options,
     );
   }
 
-  loadImageInKind(imageTag: string): Promise<void> {
-    return this.executionEnvironmentService.loadImageInKind(imageTag);
+  loadImageInKind(imageTag: string, clusterName: string): Promise<void> {
+    return this.executionEnvironmentService.loadImageInKind(
+      imageTag,
+      clusterName,
+    );
   }
 
   removeDockerImage(imageTag: string): Promise<boolean> {
     return this.executionEnvironmentService.removeDockerImage(imageTag);
   }
 
-  createNamespace(namespace: string): Promise<void> {
-    return this.kubernetesRuntimeExecutionService.createNamespace(namespace);
+  createNamespace(clusterName: string, namespace: string): Promise<void> {
+    return this.kubernetesRuntimeExecutionService.createNamespace(
+      clusterName,
+      namespace,
+    );
   }
 
   runBatchJob(params: {
+    clusterName: string;
     namespace: string;
     jobName: string;
     imageTag: string;
@@ -63,6 +81,7 @@ export class ExecutionAdapterService {
   }
 
   runServiceDeployment(params: {
+    clusterName: string;
     namespace: string;
     deploymentName: string;
     serviceName: string;
@@ -75,6 +94,7 @@ export class ExecutionAdapterService {
   }
 
   runTests(params: {
+    clusterName: string;
     namespace: string;
     imageTag: string;
     commands?: string[][];
@@ -85,6 +105,7 @@ export class ExecutionAdapterService {
   }
 
   runHealthcheck(params: {
+    clusterName: string;
     namespace: string;
     imageTag: string;
     command: string[];
@@ -94,30 +115,49 @@ export class ExecutionAdapterService {
     return this.kubernetesRuntimeExecutionService.runHealthcheck(params);
   }
 
-  cleanupNamespace(namespace: string): Promise<{
+  cleanupNamespace(
+    clusterName: string,
+    namespace: string,
+  ): Promise<{
     status: StageStatus;
     reasonCode: string;
     orphanedResources: string[];
   }> {
-    return this.kubernetesRuntimeExecutionService.cleanupNamespace(namespace);
+    return this.kubernetesRuntimeExecutionService.cleanupNamespace(
+      clusterName,
+      namespace,
+    );
   }
 
-  collectPodLogs(namespace: string, podName: string): Promise<string> {
+  collectPodLogs(
+    clusterName: string,
+    namespace: string,
+    podName: string,
+  ): Promise<string> {
     return this.kubernetesRuntimeExecutionService.collectPodLogs(
+      clusterName,
       namespace,
       podName,
     );
   }
 
-  collectPodDescribe(namespace: string, podName: string): Promise<string> {
+  collectPodDescribe(
+    clusterName: string,
+    namespace: string,
+    podName: string,
+  ): Promise<string> {
     return this.kubernetesRuntimeExecutionService.collectPodDescribe(
+      clusterName,
       namespace,
       podName,
     );
   }
 
-  collectEvents(namespace: string): Promise<string> {
-    return this.kubernetesRuntimeExecutionService.collectEvents(namespace);
+  collectEvents(clusterName: string, namespace: string): Promise<string> {
+    return this.kubernetesRuntimeExecutionService.collectEvents(
+      clusterName,
+      namespace,
+    );
   }
 }
 

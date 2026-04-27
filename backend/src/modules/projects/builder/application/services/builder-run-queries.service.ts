@@ -15,7 +15,10 @@ import { buildPaginationMeta } from '../../../../../shared/utils/pagination.util
 import type { AuthenticatedUser } from '../../../../auth/interfaces/authenticated-user.interface';
 import { BuildRun } from '../../domain/entities/build-run.entity';
 import { BuilderRunEventsService } from '../../domain/events/builder-run-events.service';
-import { EvidenceArtifactPublic } from '../../domain/builder.types';
+import {
+  BuilderRunEvent,
+  EvidenceArtifactPublic,
+} from '../../domain/builder.types';
 import { EvidenceService } from '../../infrastructure/evidence/evidence.service';
 import { ListBuildRunsDto } from '../../presentation/dto/list-build-runs.dto';
 import { BuilderAccessService } from './builder-access.service';
@@ -86,6 +89,15 @@ export class BuilderRunQueriesService {
   ) {
     await this.getRunById(buildRunId, actor);
     return this.builderRunEventsService.list(buildRunId, afterSequence, limit);
+  }
+
+  async subscribeRunEvents(
+    buildRunId: string,
+    actor: AuthenticatedUser,
+    listener: (event: BuilderRunEvent) => void,
+  ): Promise<() => void> {
+    await this.getRunById(buildRunId, actor);
+    return this.builderRunEventsService.subscribe(buildRunId, listener);
   }
 
   async listEvidenceArtifacts(

@@ -96,8 +96,6 @@ describe('BuilderEvaluationLlmService', () => {
     expect(result?.assessment.capabilities.C5.status).toBe('yes');
   });
 
-
-
   function mockFetchJson(payload: unknown): void {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,

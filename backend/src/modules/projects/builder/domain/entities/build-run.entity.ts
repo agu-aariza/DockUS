@@ -21,7 +21,12 @@ import {
 } from 'typeorm';
 import { Delivery } from '../../../deliveries/entities/delivery.entity';
 import { User } from '../../../../users/entities/user.entity';
-import { BUILD_RUN_KINDS, BuildStage } from '../builder.types';
+import {
+  BUILD_RUN_KINDS,
+  BuildStage,
+  BuilderPreflightSummary,
+  BuildRunRuntimeTarget,
+} from '../builder.types';
 import type { BuildRunKind } from '../builder.types';
 import { BuildRunArtifact } from './build-run-artifact.entity';
 import { BuildRunEventEntity } from './build-run-event.entity';
@@ -109,6 +114,9 @@ export class BuildRun {
   llmAssessment!: unknown;
 
   @Column({ type: 'jsonb', nullable: true })
+  preflightSummary!: BuilderPreflightSummary | null;
+
+  @Column({ type: 'jsonb', nullable: true })
   report!: unknown;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -116,6 +124,9 @@ export class BuildRun {
 
   @Column({ type: 'jsonb', nullable: true })
   executionContext!: unknown;
+
+  @Column({ type: 'jsonb', nullable: true })
+  runtimeTarget!: BuildRunRuntimeTarget | null;
 
   @Column({ type: 'text', nullable: true })
   failureReason!: string | null;

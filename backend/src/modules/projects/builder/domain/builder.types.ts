@@ -31,6 +31,7 @@ export const TECHNICAL_FEEDBACK_AXES = [
   'security',
   'architecture',
   'quality',
+  'rubricCompliance',
 ] as const;
 
 export type TechnicalFeedbackAxis = (typeof TECHNICAL_FEEDBACK_AXES)[number];
@@ -67,6 +68,7 @@ export const BUILD_RUN_EVENT_TYPES = [
   'RUN_STATUS_CHANGED',
   'STAGE_STARTED',
   'STAGE_FINISHED',
+  'LOG_CHUNK',
   'WARNING_ADDED',
   'ARTIFACT_ADDED',
   'REPORT_READY',
@@ -78,6 +80,146 @@ export const BUILD_RUN_EVENT_TYPES = [
 export type BuildRunEventType = (typeof BUILD_RUN_EVENT_TYPES)[number];
 
 export type BuilderExecutionMode = 'analysis_only' | 'batch' | 'service';
+
+export const SUPPORTED_PROJECT_TYPES = [
+  'CLI',
+  'MODULE_CLI',
+  'WEB_ASGI',
+  'WEB_WSGI',
+  'DJANGO_SERVICE',
+  'BATCH_WORKER',
+  'PYPROJECT_GENERIC',
+  'CUSTOM_MANIFEST',
+  'UNKNOWN',
+] as const;
+
+export type SupportedProjectType = (typeof SUPPORTED_PROJECT_TYPES)[number];
+
+export const PREFLIGHT_COMPATIBILITIES = [
+  'SUPPORTED_AUTO',
+  'SUPPORTED_WITH_MANIFEST',
+  'PARTIAL',
+  'UNSUPPORTED',
+] as const;
+
+export type PreflightCompatibility = (typeof PREFLIGHT_COMPATIBILITIES)[number];
+
+export const PYTHON_DEPENDENCY_MANAGERS = [
+  'pip-requirements',
+  'pyproject',
+  'poetry',
+  'pdm',
+  'uv',
+  'pipenv',
+  'setuptools',
+  'unknown',
+] as const;
+
+export type DependencyManager = (typeof PYTHON_DEPENDENCY_MANAGERS)[number];
+
+export const PYTHON_PROJECT_LAYOUTS = [
+  'flat-root',
+  'src-layout',
+  'package-installable',
+  'monorepo-subdir',
+  'unknown',
+] as const;
+
+export type PythonProjectLayout = (typeof PYTHON_PROJECT_LAYOUTS)[number];
+
+export const PYTHON_EXECUTION_PROFILES = [
+  'cli-script',
+  'module-cli',
+  'web-asgi',
+  'web-wsgi',
+  'django-service',
+  'batch-worker',
+  'custom-manifest',
+  'unknown',
+] as const;
+
+export type PythonExecutionProfile = (typeof PYTHON_EXECUTION_PROFILES)[number];
+
+export const MANIFEST_SOURCES = ['AUTO', 'DOCKUS_MANIFEST'] as const;
+
+export type ManifestSource = (typeof MANIFEST_SOURCES)[number];
+
+export interface PythonTestStrategy {
+  studentTestsPresent: boolean;
+  teacherTestsSupported: boolean;
+  suggestedCommand: string[] | null;
+}
+
+export interface PythonHealthStrategy {
+  kind: 'http' | 'command' | 'none';
+  command: string[] | null;
+  servicePort: number | null;
+  path: string | null;
+}
+
+export interface PythonProjectModel {
+  pythonVersionConstraint: string | null;
+  dependencyManager: DependencyManager;
+  projectLayout: PythonProjectLayout;
+  executionProfile: PythonExecutionProfile;
+  entrypoints: string[];
+  testStrategy: PythonTestStrategy;
+  healthStrategy: PythonHealthStrategy;
+  systemDependencies: string[];
+  workingDirectory: string;
+  detectedFramework: string | null;
+  packageRoot: string | null;
+}
+
+export interface ResolvedExecutionPlan {
+  dependencyManager: DependencyManager;
+  executionProfile: PythonExecutionProfile;
+  workingDirectory: string;
+  manifestSource: ManifestSource;
+  pythonVersionConstraint: string | null;
+  entrypoint: string | null;
+  install: string[][];
+  run: string[] | null;
+  test: string[][];
+  healthcheck: string[] | null;
+  servicePort: number | null;
+  systemPackages: string[];
+  env: Record<string, string>;
+}
+
+export interface BuilderPreflightFinding {
+  level: 'info' | 'warning' | 'error';
+  code: string;
+  message: string;
+  file?: string | null;
+  line?: number | null;
+}
+
+export interface BuilderPreflightSummary {
+  supportedProjectType: SupportedProjectType;
+  compatibility: PreflightCompatibility;
+  entrypointCandidates: string[];
+  testsPresent: boolean;
+  detectedFramework: string | null;
+  detectedProjectModel: PythonProjectModel;
+  dependencyManager: DependencyManager;
+  pythonVersionConstraint: string | null;
+  executionProfile: PythonExecutionProfile;
+  workingDirectory: string;
+  manifestSource: ManifestSource;
+  manifestPath: string | null;
+  resolvedCommands: {
+    install: string[][];
+    run: string[] | null;
+    test: string[][];
+    healthcheck: string[] | null;
+  };
+  resolvedEnvironment: Record<string, string>;
+  resolvedServicePort: number | null;
+  systemDependencies: string[];
+  findings: BuilderPreflightFinding[];
+  failureCode?: string | null;
+}
 
 export interface CapabilityAssessment {
   status: Assessment;
@@ -91,6 +233,11 @@ export interface LlmPlanRecipe {
   healthcheck: string[] | null;
   servicePort: number | null;
   systemPackages: string[];
+  workingDirectory?: string | null;
+  dependencyManager?: DependencyManager | null;
+  executionProfile?: PythonExecutionProfile | null;
+  manifestSource?: ManifestSource | null;
+  environment?: Record<string, string> | null;
 }
 
 export interface BuilderLlmAssessment {
@@ -130,10 +277,24 @@ export interface TechnicalFeedbackItem {
   line: number | null;
 }
 
+export interface AssignmentContext {
+  expectedType: string | null;
+  rubricInstructions: string | null;
+}
+
 export interface BuilderTechnicalFeedback {
   security: TechnicalFeedbackItem[];
   architecture: TechnicalFeedbackItem[];
   quality: TechnicalFeedbackItem[];
+  rubricCompliance: TechnicalFeedbackItem[];
+}
+
+export interface BuildRunRuntimeTarget {
+  projectId: string;
+  clusterName: string;
+  namespace: string;
+  primaryPodName: string | null;
+  helperPodNames: string[];
 }
 
 export interface BuilderSelfHealingAttempt {
@@ -252,6 +413,7 @@ export interface BuilderRunEventsPage {
 }
 
 export interface BuilderPipelineOutcome {
+  preflightSummary: BuilderPreflightSummary;
   llmAssessment: BuilderLlmAssessment;
   staticFindings: StaticFinding[];
   staticReviewIssues: StaticReviewIssue[];

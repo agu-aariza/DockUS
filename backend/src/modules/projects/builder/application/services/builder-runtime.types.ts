@@ -36,6 +36,7 @@ export interface BuilderRuntimeState {
 export interface BuilderRuntimeStageInput {
   run: BuildRun;
   deliveryId: string;
+  clusterName: string;
   recipe: LlmPlanRecipe;
   runtimeMode: BuilderExecutionMode;
   state: BuilderRuntimeState;

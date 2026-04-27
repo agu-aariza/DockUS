@@ -19,6 +19,7 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Res,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -29,6 +30,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 import {
   INVALID_UUID_DESCRIPTION,
   FORBIDDEN_DESCRIPTION,
@@ -104,7 +106,7 @@ export class BuilderController {
     description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
   @HttpCode(HttpStatus.ACCEPTED)
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Post('deliveries/:deliveryId/run')
   async runForDelivery(
     @Param('deliveryId', ParseUUIDPipe) deliveryId: string,
@@ -187,6 +189,77 @@ export class BuilderController {
   }
 
   @ApiOperation({
+    summary: 'Streaming SSE de un run',
+    description:
+      'Entrega backlog inicial y nuevos eventos del run mediante Server-Sent Events.',
+  })
+  @ApiParam(BUILD_RUN_ID_PARAM)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Get('runs/:buildRunId/stream')
+  async getRunEventsStream(
+    @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
+    @Query('afterSequence', new DefaultValuePipe(0), ParseIntPipe)
+    afterSequence: number,
+    @Req() request: AuthenticatedRequest,
+    @Res() response: Response,
+  ): Promise<void> {
+    response.setHeader('Content-Type', 'text/event-stream');
+    response.setHeader('Cache-Control', 'no-cache, no-transform');
+    response.setHeader('Connection', 'keep-alive');
+    response.setHeader('X-Accel-Buffering', 'no');
+    response.flushHeaders?.();
+
+    const firstPage = await this.builderService.listRunEvents(
+      buildRunId,
+      request.user,
+      afterSequence,
+      200,
+    );
+    let latestSequence = Math.max(afterSequence, firstPage.latestSequence);
+    response.write(
+      `event: ready\ndata: ${JSON.stringify({ latestSequence })}\n\n`,
+    );
+
+    for (const event of firstPage.events) {
+      response.write(`event: run-event\ndata: ${JSON.stringify(event)}\n\n`);
+    }
+
+    let hasMore = firstPage.hasMore;
+    while (hasMore) {
+      const page = await this.builderService.listRunEvents(
+        buildRunId,
+        request.user,
+        latestSequence,
+        200,
+      );
+      latestSequence = Math.max(latestSequence, page.latestSequence);
+      hasMore = page.hasMore;
+      for (const event of page.events) {
+        response.write(`event: run-event\ndata: ${JSON.stringify(event)}\n\n`);
+      }
+    }
+
+    const unsubscribe = await this.builderService.subscribeRunEvents(
+      buildRunId,
+      request.user,
+      (event) => {
+        latestSequence = Math.max(latestSequence, event.sequence);
+        response.write(`event: run-event\ndata: ${JSON.stringify(event)}\n\n`);
+      },
+    );
+
+    const heartbeat = setInterval(() => {
+      response.write(': heartbeat\n\n');
+    }, 15000);
+
+    request.on('close', () => {
+      clearInterval(heartbeat);
+      unsubscribe();
+      response.end();
+    });
+  }
+
+  @ApiOperation({
     summary: 'Listar historial de ejecuciones por entrega',
     description: 'Devuelve runs paginados de una entrega.',
   })
@@ -244,7 +317,7 @@ export class BuilderController {
     description: 'Run cancelado correctamente.',
     type: CancelBuildRunResponseDto,
   })
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Post('runs/:buildRunId/cancel')
   async cancelRun(
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,

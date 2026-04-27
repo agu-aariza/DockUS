@@ -9,6 +9,7 @@ import { toPosixPath } from '../../infrastructure/utils/builder-analysis.util';
 
 const ALLOWED_EXECUTABLES = new Set([
   'coverage',
+  'curl',
   'flask',
   'gunicorn',
   'hatch',
@@ -66,18 +67,26 @@ export function parseBuilderLlmAssessment(
       options.mode,
     ),
     confidence: normalizeConfidence(object.confidence, options.mode),
-    rationale: normalizeString(object.rationale, 'rationale'),
+    rationale: normalizeOptionalString(
+      object.rationale,
+      'rationale',
+      'Sin justificacion detallada.',
+    ),
     externalRequirements: normalizeStringArray(
       object.externalRequirements,
       'externalRequirements',
     ),
     recipe: normalizeRecipe(object.recipe, options.mode),
-    evidenceSummary: normalizeString(object.evidenceSummary, 'evidenceSummary'),
-    observedEvidence: normalizeStringArray(
+    evidenceSummary: normalizeOptionalString(
+      object.evidenceSummary,
+      'evidenceSummary',
+      '',
+    ),
+    observedEvidence: normalizeOptionalStringArray(
       object.observedEvidence,
       'observedEvidence',
     ),
-    evaluationLimits: normalizeStringArray(
+    evaluationLimits: normalizeOptionalStringArray(
       object.evaluationLimits,
       'evaluationLimits',
     ),
@@ -99,12 +108,27 @@ function normalizeCapabilities(
 
   for (const capabilityId of CAPABILITY_IDS) {
     const rawCapability = object[capabilityId];
+
+    // Resiliencia: Si el LLM manda solo el string de estado, lo convertimos en objeto
+    if (typeof rawCapability === 'string') {
+      const status = rawCapability.toLowerCase().trim();
+      capabilities[capabilityId] = {
+        status: (ASSESSMENTS.includes(status as any)
+          ? status
+          : 'unknown') as any,
+        rationale: 'Estado inferido por formato plano del LLM.',
+      };
+      continue;
+    }
+
     if (
       !rawCapability ||
       typeof rawCapability !== 'object' ||
       Array.isArray(rawCapability)
     ) {
-      throw new Error(`capabilities.${capabilityId} debe ser un objeto.`);
+      throw new Error(
+        `capabilities.${capabilityId} debe ser un objeto o un string de estado.`,
+      );
     }
 
     const capability = rawCapability as Record<string, unknown>;
@@ -118,11 +142,19 @@ function normalizeCapabilities(
 
     capabilities[capabilityId] = {
       status: status as BuilderLlmAssessment['capabilities']['C1']['status'],
-      rationale: normalizeString(
+      rationale: normalizeOptionalString(
         capability.rationale,
         `capabilities.${capabilityId}.rationale`,
+        'Sin justificación detallada.',
       ),
     };
+  }
+
+  // AUTO-CORRECCIÓN LÓGICA: Si hay healthcheck (C5), debe haber servicio (C3)
+  if (capabilities.C5.status === 'yes' && capabilities.C3.status !== 'yes') {
+    capabilities.C3.status = 'yes';
+    capabilities.C3.rationale =
+      '[Auto-corregido] Servicio implícito por presencia de healthcheck.';
   }
 
   return capabilities;
@@ -334,9 +366,32 @@ function normalizeStringArray(value: unknown, field: string): string[] {
   );
 }
 
+function normalizeOptionalStringArray(value: unknown, field: string): string[] {
+  if (value === undefined || value === null) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter(Boolean);
+}
+
 function normalizeString(value: unknown, field: string): string {
   if (typeof value !== 'string' || !value.trim()) {
     throw new Error(`${field} debe ser un string no vacío.`);
+  }
+  return value.trim();
+}
+
+function normalizeOptionalString(
+  value: unknown,
+  field: string,
+  defaultValue: string,
+): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    return defaultValue;
   }
   return value.trim();
 }

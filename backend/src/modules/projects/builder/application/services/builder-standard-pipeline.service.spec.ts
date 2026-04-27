@@ -78,6 +78,13 @@ describe('BuilderStandardPipelineService', () => {
       deliveryId: 'delivery-1',
       status: BuildRunStatus.QUEUED,
       warnings: [],
+      runtimeTarget: {
+        projectId: 'project-1',
+        clusterName: 'dockus-project-project1',
+        namespace: 'dockus-run-run1',
+        primaryPodName: null,
+        helperPodNames: [],
+      },
     } as BuildRun;
     const delivery = {
       id: 'delivery-1',
@@ -121,12 +128,16 @@ describe('BuilderStandardPipelineService', () => {
 
     let buildAttempt = 0;
     const evidenceService = {
-      persistJsonArtifact: jest.fn().mockImplementation(async (_runId, type) => {
-        return createArtifact(type);
-      }),
-      persistTextArtifact: jest.fn().mockImplementation(async (_runId, type) => {
-        return createArtifact(type);
-      }),
+      persistJsonArtifact: jest
+        .fn()
+        .mockImplementation(async (_runId, type) => {
+          return createArtifact(type);
+        }),
+      persistTextArtifact: jest
+        .fn()
+        .mockImplementation(async (_runId, type) => {
+          return createArtifact(type);
+        }),
     };
     const builderBuildStageService = {
       run: jest.fn().mockImplementation(async ({ state, deliveryId }) => {
@@ -223,11 +234,14 @@ describe('BuilderStandardPipelineService', () => {
           ),
         );
       }),
-      collectKubernetesEvents: jest.fn().mockImplementation(async ({ state, namespace }) => {
-        if (namespace) {
-          state.currentAttemptDiagnostics.kubernetesEvents = 'Back-off restarting failed container';
-        }
-      }),
+      collectKubernetesEvents: jest
+        .fn()
+        .mockImplementation(async ({ state, namespace }) => {
+          if (namespace) {
+            state.currentAttemptDiagnostics.kubernetesEvents =
+              'Back-off restarting failed container';
+          }
+        }),
     };
     const builderCleanupStageService = {
       run: jest.fn().mockImplementation(async ({ state }) => {
@@ -273,7 +287,9 @@ describe('BuilderStandardPipelineService', () => {
 
     const service = new BuilderStandardPipelineService(
       {
-        analyze: jest.fn().mockResolvedValue({ findings: [], portabilityRisks: [] }),
+        analyze: jest
+          .fn()
+          .mockResolvedValue({ findings: [], portabilityRisks: [] }),
       } as never,
       {
         analyze: jest.fn().mockResolvedValue({
@@ -302,10 +318,12 @@ describe('BuilderStandardPipelineService', () => {
       builderRepairLlmService as never,
       {
         isEnabled: jest.fn().mockReturnValue(true),
-        evaluate: jest.fn().mockImplementation(async ({ planningAssessment }) => ({
-          model: 'dockus-builder-eval',
-          assessment: planningAssessment,
-        })),
+        evaluate: jest
+          .fn()
+          .mockImplementation(async ({ planningAssessment }) => ({
+            model: 'dockus-builder-eval',
+            assessment: planningAssessment,
+          })),
       } as never,
       {
         isEnabled: jest.fn().mockReturnValue(true),

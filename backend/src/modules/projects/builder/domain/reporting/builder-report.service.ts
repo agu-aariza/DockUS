@@ -126,7 +126,10 @@ export class BuilderReportService {
     return items
       .slice(0, 3)
       .map((item) =>
-        [item.title, item.file ? `${item.file}${item.line ? `:${item.line}` : ''}` : null]
+        [
+          item.title,
+          item.file ? `${item.file}${item.line ? `:${item.line}` : ''}` : null,
+        ]
           .filter(Boolean)
           .join(' @ '),
       )
@@ -166,19 +169,26 @@ export class BuilderReportService {
     ];
     if (
       assessment.evaluativeState === 'E4' ||
-      hardFailureStages.some((stage) => stageOutcome[stage] === StageStatus.FAIL)
+      hardFailureStages.some(
+        (stage) => stageOutcome[stage] === StageStatus.FAIL,
+      )
     ) {
       return 'FAIL';
     }
 
     if (
       assessment.evaluativeState === 'E1' &&
-      hardFailureStages.every((stage) => stageOutcome[stage] !== StageStatus.FAIL)
+      hardFailureStages.every(
+        (stage) => stageOutcome[stage] !== StageStatus.FAIL,
+      )
     ) {
       return 'PASS';
     }
 
-    if (assessment.evaluativeState === 'E2' || assessment.evaluativeState === 'E3') {
+    if (
+      assessment.evaluativeState === 'E2' ||
+      assessment.evaluativeState === 'E3'
+    ) {
       return 'PARTIAL';
     }
 
@@ -221,7 +231,10 @@ export class BuilderReportService {
       ? Math.max(...trace.map((attempt) => attempt.attemptNumber)) + 1
       : 1;
     const latestBuild = this.latestStageStatus(stageResults, BuildStage.BUILD);
-    const latestDeploy = this.latestStageStatus(stageResults, BuildStage.DEPLOY);
+    const latestDeploy = this.latestStageStatus(
+      stageResults,
+      BuildStage.DEPLOY,
+    );
     const recovered =
       attempted &&
       trace.some((attempt) => attempt.outcome === 'repaired') &&

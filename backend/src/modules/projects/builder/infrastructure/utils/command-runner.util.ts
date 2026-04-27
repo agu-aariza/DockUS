@@ -5,6 +5,8 @@ export interface CommandRunOptions {
   timeoutMs: number;
   maxBufferedChars?: number;
   stdin?: string;
+  onStdoutChunk?: (chunk: string) => void;
+  onStderrChunk?: (chunk: string) => void;
 }
 
 export interface CommandRunResult {
@@ -51,16 +53,20 @@ export async function runCommand(
     child.stdin.end();
 
     child.stdout.on('data', (chunk: Buffer) => {
+      options.onStdoutChunk?.(chunk.toString('utf8'));
       stdout = appendBuffer(stdout, chunk);
     });
 
     child.stderr.on('data', (chunk: Buffer) => {
+      options.onStderrChunk?.(chunk.toString('utf8'));
       stderr = appendBuffer(stderr, chunk);
     });
 
     child.on('error', (error) => {
       clearTimeout(timer);
-      console.error(`[runCommand ERROR] Command failed: ${command} ${args.join(' ')}`);
+      console.error(
+        `[runCommand ERROR] Command failed: ${command} ${args.join(' ')}`,
+      );
       console.error(`[runCommand ERROR] Details:`, error);
       reject(error);
     });

@@ -29,7 +29,8 @@ export class BuilderStaticReviewService {
     this.ruffBin =
       this.configService.get<string>('BUILDER_RUFF_BIN', 'ruff') ?? 'ruff';
     this.banditBin =
-      this.configService.get<string>('BUILDER_BANDIT_BIN', 'bandit') ?? 'bandit';
+      this.configService.get<string>('BUILDER_BANDIT_BIN', 'bandit') ??
+      'bandit';
     this.timeoutMs = this.configService.get<number>(
       'BUILDER_STATIC_REVIEW_TIMEOUT_MS',
       30000,
@@ -194,7 +195,9 @@ export class BuilderStaticReviewService {
     return null;
   }
 
-  private normalizeBanditSeverity(value: unknown): StaticReviewIssue['severity'] {
+  private normalizeBanditSeverity(
+    value: unknown,
+  ): StaticReviewIssue['severity'] {
     const normalized =
       typeof value === 'string' ? value.trim().toUpperCase() : 'MEDIUM';
     if (normalized === 'HIGH') {

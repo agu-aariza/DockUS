@@ -11,8 +11,12 @@ import {
   TECHNICAL_FEEDBACK_AXES,
   TECHNICAL_FEEDBACK_SEVERITIES,
   TechnicalFeedbackItem,
+  AssignmentContext,
 } from '../builder.types';
-import { readTextFileSafe, toPosixPath } from '../../infrastructure/utils/builder-analysis.util';
+import {
+  readTextFileSafe,
+  toPosixPath,
+} from '../../infrastructure/utils/builder-analysis.util';
 import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
 
 @Injectable()
@@ -49,13 +53,12 @@ export class BuilderTechnicalFeedbackLlmService {
       'BUILDER_OLLAMA_TIMEOUT_MS',
       120000,
     );
-    this.maxInputChars = this.configService.get<number>(
-      'BUILDER_LLM_EVAL_MAX_INPUT_CHARS',
+    this.maxInputChars =
+      this.configService.get<number>('BUILDER_LLM_FEEDBACK_MAX_INPUT_CHARS') ??
       this.configService.get<number>(
         'BUILDER_LLM_ASSIST_MAX_INPUT_CHARS',
         15000,
-      ),
-    );
+      );
     const promptPath = path.resolve(
       __dirname,
       '../../../../../../scripts/technical-feedback-system-prompt.txt',
@@ -74,6 +77,7 @@ export class BuilderTechnicalFeedbackLlmService {
     staticReviewIssues: StaticReviewIssue[];
     warnings: string[];
     runtimeFiles: RuntimeFile[];
+    assignmentContext: AssignmentContext;
   }): Promise<BuilderTechnicalFeedback> {
     if (!this.enabled) {
       return this.emptyFeedback();
@@ -91,6 +95,7 @@ export class BuilderTechnicalFeedbackLlmService {
     staticReviewIssues: StaticReviewIssue[];
     warnings: string[];
     runtimeFiles: RuntimeFile[];
+    assignmentContext: AssignmentContext;
   }): Promise<{ systemPrompt: string; userPrompt: string }> {
     const snippets = await this.collectSnippets(input.runtimeFiles);
     const payload = JSON.stringify(
@@ -101,6 +106,7 @@ export class BuilderTechnicalFeedbackLlmService {
         staticReviewIssues: input.staticReviewIssues.slice(0, 40),
         warnings: input.warnings.slice(0, 20),
         snippets,
+        assignmentContext: input.assignmentContext,
       },
       null,
       2,
@@ -183,7 +189,9 @@ export class BuilderTechnicalFeedbackLlmService {
 
       const payload = (await response.json()) as { response?: unknown };
       if (typeof payload.response !== 'string') {
-        throw new Error('Respuesta de feedback técnico sin campo response string.');
+        throw new Error(
+          'Respuesta de feedback técnico sin campo response string.',
+        );
       }
 
       return payload.response;
@@ -198,7 +206,11 @@ export class BuilderTechnicalFeedbackLlmService {
   }
 
   private parseResponse(raw: string): BuilderTechnicalFeedback {
-    const normalized = raw.trim().replace(/^```(?:json)?/u, '').replace(/```$/u, '').trim();
+    const normalized = raw
+      .trim()
+      .replace(/^```(?:json)?/u, '')
+      .replace(/```$/u, '')
+      .trim();
     const parsed = JSON.parse(normalized) as Record<string, unknown>;
     const feedback = this.emptyFeedback();
 
@@ -255,6 +267,7 @@ export class BuilderTechnicalFeedbackLlmService {
       security: [],
       architecture: [],
       quality: [],
+      rubricCompliance: [],
     };
   }
 }

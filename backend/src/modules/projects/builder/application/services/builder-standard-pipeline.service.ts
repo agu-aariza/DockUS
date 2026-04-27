@@ -28,7 +28,20 @@ import { BuilderEvaluationLlmService } from '../../domain/evaluation/builder-eva
 import { BuilderTechnicalFeedbackLlmService } from '../../domain/evaluation/builder-technical-feedback-llm.service';
 import { BuilderStaticReviewService } from '../../domain/findings/builder-static-review.service';
 import { StaticFindingsService } from '../../domain/findings/static-findings.service';
-import { BuilderLlmPhaseResult, BuilderSelfHealingAttempt, BuildStage, BuilderObservedEvidence, BuilderPipelineOutcome, BuilderTechnicalFeedback, LlmPlanRecipe, RuntimeFile, StageStatus, StaticReviewIssue } from '../../domain/builder.types';
+import {
+  BuilderLlmPhaseResult,
+  BuilderPreflightSummary,
+  BuilderSelfHealingAttempt,
+  BuildStage,
+  BuilderObservedEvidence,
+  BuilderPipelineOutcome,
+  BuilderTechnicalFeedback,
+  LlmPlanRecipe,
+  RuntimeFile,
+  StageStatus,
+  StaticReviewIssue,
+  AssignmentContext,
+} from '../../domain/builder.types';
 import { BuilderPlanLlmService } from '../../domain/planning/builder-plan-llm.service';
 import { BuilderRepairLlmService } from '../../domain/planning/builder-repair-llm.service';
 import { BuilderReportService } from '../../domain/reporting/builder-report.service';
@@ -47,6 +60,15 @@ import {
   BuilderRuntimeState,
 } from './builder-runtime.types';
 import { BuilderWorkspaceService } from './builder-workspace.service';
+import {
+  buildAssessmentFromPreflightSummary,
+  detectBuilderPreflightSummary,
+  isDirectlyRunnablePreflight,
+} from '../../infrastructure/utils/builder-analysis.util';
+
+interface BuilderInternalState extends BuilderRuntimeState {
+  assignmentContext: AssignmentContext;
+}
 
 interface AnalysisStageOutput {
   staticFindings: BuilderPipelineOutcome['staticFindings'];
@@ -110,13 +132,14 @@ export class BuilderStandardPipelineService {
   async execute(
     run: BuildRun,
     delivery: Delivery,
+    assignmentContext: AssignmentContext,
   ): Promise<BuilderPipelineOutcome> {
     const warnings: string[] = [];
     let workspaceRootDir: string | null = null;
     let lastImageTag: string | null = null;
     let completed = false;
 
-    const state: BuilderRuntimeState = {
+    const state: BuilderInternalState = {
       warnings,
       stageResults: [],
       evidenceArtifacts: [],
@@ -125,6 +148,7 @@ export class BuilderStandardPipelineService {
       staticReviewWarnings: [],
       selfHealingTrace: [],
       currentAttemptDiagnostics: this.createEmptyAttemptDiagnostics(),
+      assignmentContext,
       runtimeOutputs: {
         stackResult: null,
         dockerfileContent: null,
@@ -139,6 +163,16 @@ export class BuilderStandardPipelineService {
     };
 
     try {
+      const clusterName =
+        typeof run.runtimeTarget?.clusterName === 'string' &&
+        run.runtimeTarget.clusterName.trim()
+          ? run.runtimeTarget.clusterName
+          : null;
+      if (!clusterName) {
+        throw new ServiceUnavailableException(
+          'El run no dispone de un cluster de runtime asociado.',
+        );
+      }
       const workspace = await this.builderWorkspaceService.prepareWorkspace(
         delivery.id,
       );
@@ -150,6 +184,27 @@ export class BuilderStandardPipelineService {
           warning,
         );
       }
+      const preflightSummary = await detectBuilderPreflightSummary(
+        workspace.runtimeFiles,
+      );
+      await this.recordPreflightWarnings(run.id, warnings, preflightSummary);
+
+      const executionContext =
+        await this.executionAdapterService.collectExecutionContext(
+          this.basePythonImage,
+          clusterName,
+        );
+
+      if (preflightSummary.compatibility === 'UNSUPPORTED') {
+        completed = true;
+        return this.completeUnsupportedPreflight({
+          runId: run.id,
+          runtimeFiles: workspace.runtimeFiles,
+          preflightSummary,
+          executionContext,
+          state,
+        });
+      }
 
       const analysis = await this.runAnalysisStage(
         run.id,
@@ -157,12 +212,22 @@ export class BuilderStandardPipelineService {
         workspace.runtimeFiles,
         state,
       );
-      const planResult = await this.runPlanningPhase(
-        workspace.projectRootDir,
-        workspace.runtimeFiles,
-        analysis.staticFindings,
-        warnings,
-      );
+      const planResult = isDirectlyRunnablePreflight(preflightSummary)
+        ? {
+            model:
+              preflightSummary.compatibility === 'SUPPORTED_WITH_MANIFEST'
+                ? 'dockus-manifest'
+                : 'preflight-auto',
+            assessment: buildAssessmentFromPreflightSummary(preflightSummary),
+          }
+        : await this.runPlanningPhase(
+            workspace.projectRootDir,
+            workspace.runtimeFiles,
+            analysis.staticFindings,
+            warnings,
+            state.assignmentContext,
+            preflightSummary,
+          );
       this.applyTeacherTestSuitePolicy(planResult, workspace.hasTeacherTests);
       let currentAssessment = this.cloneAssessment(planResult.assessment);
       this.applyAssessmentOutcome(
@@ -170,19 +235,16 @@ export class BuilderStandardPipelineService {
         workspace.runtimeFiles,
         currentAssessment,
         planResult.model,
+        preflightSummary,
       );
       await this.persistPlanningArtifacts(
         run.id,
         analysis.staticFindings,
         analysis.staticReviewIssues,
         planResult,
+        preflightSummary,
         state,
       );
-
-      const executionContext =
-        await this.executionAdapterService.collectExecutionContext(
-          this.basePythonImage,
-        );
 
       for (
         let attemptNumber = 1;
@@ -193,7 +255,8 @@ export class BuilderStandardPipelineService {
         const runtimeMode =
           this.builderRunSupportService.resolveExecutionMode(currentAssessment);
         state.observedEvidence.runtime.mode = runtimeMode;
-        const dockerfile = this.dockerfileTemplateService.render(currentAssessment);
+        const dockerfile =
+          this.dockerfileTemplateService.render(currentAssessment);
 
         const imageTag = await this.builderBuildStageService.run({
           runId: run.id,
@@ -213,6 +276,7 @@ export class BuilderStandardPipelineService {
         const namespace = await this.builderDeployStageService.run({
           run,
           deliveryId: delivery.id,
+          clusterName,
           recipe: currentAssessment.recipe,
           runtimeMode,
           imageTag,
@@ -224,6 +288,7 @@ export class BuilderStandardPipelineService {
           run,
           attemptNumber,
           delivery,
+          clusterName,
           projectRootDir: workspace.projectRootDir,
           runtimeFiles: workspace.runtimeFiles,
           currentAssessment,
@@ -241,7 +306,9 @@ export class BuilderStandardPipelineService {
 
         if (repairDecision.shouldRetry && repairDecision.nextAssessment) {
           lastImageTag = null;
-          currentAssessment = this.cloneAssessment(repairDecision.nextAssessment);
+          currentAssessment = this.cloneAssessment(
+            repairDecision.nextAssessment,
+          );
           this.applyTeacherTestSuitePolicy(
             { model: planResult.model, assessment: currentAssessment },
             workspace.hasTeacherTests,
@@ -251,8 +318,15 @@ export class BuilderStandardPipelineService {
             workspace.runtimeFiles,
             currentAssessment,
             planResult.model,
+            preflightSummary,
           );
-          await this.cleanupAttemptResources(run, namespace, imageTag, state);
+          await this.cleanupAttemptResources(
+            run,
+            clusterName,
+            namespace,
+            imageTag,
+            state,
+          );
           continue;
         }
 
@@ -265,6 +339,7 @@ export class BuilderStandardPipelineService {
         await this.builderValidationStageService.runTests({
           run,
           deliveryId: delivery.id,
+          clusterName,
           recipe: currentAssessment.recipe,
           runtimeMode,
           namespace: runtimeReady ? namespace : null,
@@ -273,11 +348,13 @@ export class BuilderStandardPipelineService {
         });
         await this.builderValidationStageService.collectKubernetesEvents({
           run,
+          clusterName,
           namespace,
           state,
         });
         await this.builderCleanupStageService.run({
           run,
+          clusterName,
           namespace,
           state,
         });
@@ -287,25 +364,34 @@ export class BuilderStandardPipelineService {
 
       await this.persistSelfHealingTrace(run.id, state);
 
-      const evaluationResult = await this.runEvaluationPhase(
+      const evaluationPromise = this.runEvaluationPhase(
         currentAssessment,
         executionContext,
         state,
         analysis.staticFindings,
         analysis.staticReviewIssues,
       );
-      const technicalFeedback = await this.runTechnicalFeedbackPhase({
-        assessment: evaluationResult.assessment,
+
+      const technicalFeedbackPromise = this.runTechnicalFeedbackPhase({
+        assessment: currentAssessment, // Using currentAssessment to allow concurrent execution
         runtimeFiles: workspace.runtimeFiles,
         state,
         staticFindings: analysis.staticFindings,
         staticReviewIssues: analysis.staticReviewIssues,
         runId: run.id,
       });
+
+      const [evaluationResult, technicalFeedback] = await Promise.all([
+        evaluationPromise,
+        technicalFeedbackPromise,
+      ]);
+
       const report = this.builderReportService.create({
         assessment: evaluationResult.assessment,
         stageResults: state.stageResults,
-        relevantEvidence: state.evidenceArtifacts.map((artifact) => artifact.id),
+        relevantEvidence: state.evidenceArtifacts.map(
+          (artifact) => artifact.id,
+        ),
         technicalFeedback,
         selfHealingTrace: state.selfHealingTrace,
       });
@@ -316,6 +402,7 @@ export class BuilderStandardPipelineService {
       );
       completed = true;
       return {
+        preflightSummary,
         llmAssessment: evaluationResult.assessment,
         staticFindings: analysis.staticFindings,
         staticReviewIssues: analysis.staticReviewIssues,
@@ -333,7 +420,10 @@ export class BuilderStandardPipelineService {
       }
 
       if (this.cleanupImages && lastImageTag && !completed) {
-        await this.builderRunSupportService.cleanupImage(lastImageTag, warnings);
+        await this.builderRunSupportService.cleanupImage(
+          lastImageTag,
+          warnings,
+        );
       }
     }
   }
@@ -389,10 +479,10 @@ export class BuilderStandardPipelineService {
       BuildRunStatus.ANALYZING,
       BuildStage.ANALYSIS,
     );
-    const staticFindings = await this.staticFindingsService.analyze(runtimeFiles);
-    const staticReview = await this.builderStaticReviewService.analyze(
-      projectRootDir,
-    );
+    const staticFindings =
+      await this.staticFindingsService.analyze(runtimeFiles);
+    const staticReview =
+      await this.builderStaticReviewService.analyze(projectRootDir);
     state.staticReviewIssues = staticReview.issues;
     state.staticReviewWarnings = staticReview.warnings;
     state.runtimeOutputs.staticReview = {
@@ -409,7 +499,11 @@ export class BuilderStandardPipelineService {
     state.stageResults.push(analysisStageResult);
 
     for (const warning of staticReview.warnings) {
-      await this.builderRunSupportService.recordWarning(runId, state.warnings, warning);
+      await this.builderRunSupportService.recordWarning(
+        runId,
+        state.warnings,
+        warning,
+      );
     }
 
     return {
@@ -423,6 +517,8 @@ export class BuilderStandardPipelineService {
     runtimeFiles: RuntimeFile[],
     staticFindings: BuilderPipelineOutcome['staticFindings'],
     warnings: string[],
+    assignmentContext: AssignmentContext,
+    preflightSummary: BuilderPreflightSummary,
   ): Promise<BuilderLlmPhaseResult> {
     return this.builderRunSupportService.runLlmPhaseWithRetry(
       'planning',
@@ -437,6 +533,8 @@ export class BuilderStandardPipelineService {
           projectRootDir,
           runtimeFiles,
           staticFindings,
+          assignmentContext,
+          preflightSummary,
         });
         if (!result) {
           throw new ServiceUnavailableException(
@@ -453,6 +551,7 @@ export class BuilderStandardPipelineService {
     runtimeFiles: RuntimeFile[],
     assessment: BuilderPipelineOutcome['llmAssessment'],
     model: string,
+    preflightSummary: BuilderPreflightSummary,
   ): void {
     state.observedEvidence.workspaceSummary = assessment.evidenceSummary;
     state.observedEvidence.runtime.mode =
@@ -466,12 +565,15 @@ export class BuilderStandardPipelineService {
         ? 'Pendiente de ejecutar según receta activa.'
         : 'La receta activa no propuso healthcheck.';
 
-    state.runtimeOutputs.stackResult =
-      this.builderRunSupportService.buildStackResult({
+    state.runtimeOutputs.stackResult = {
+      ...this.builderRunSupportService.buildStackResult({
         runtimeFiles,
         assessment,
         model,
-      });
+        preflightSummary,
+      }),
+      preflight: preflightSummary,
+    };
   }
 
   private applyTeacherTestSuitePolicy(
@@ -484,7 +586,7 @@ export class BuilderStandardPipelineService {
     }
 
     planResult.assessment.recipe.test = [
-      ['pytest', '-q', '.dockus/teacher-tests'],
+      ['pytest', '-q', '/app/.dockus/teacher-tests'],
     ];
     if (
       !planResult.assessment.recipe.install.some(
@@ -509,8 +611,14 @@ export class BuilderStandardPipelineService {
     staticFindings: BuilderPipelineOutcome['staticFindings'],
     staticReviewIssues: StaticReviewIssue[],
     planResult: BuilderLlmPhaseResult,
+    preflightSummary: BuilderPreflightSummary,
     state: BuilderRuntimeState,
   ): Promise<void> {
+    const preflightArtifact = await this.evidenceService.persistJsonArtifact(
+      runId,
+      BuildRunArtifactType.PREFLIGHT,
+      preflightSummary,
+    );
     const planningArtifact = await this.evidenceService.persistJsonArtifact(
       runId,
       BuildRunArtifactType.CLASSIFICATION,
@@ -541,6 +649,11 @@ export class BuilderStandardPipelineService {
     await this.builderRunSupportService.recordArtifact(
       runId,
       state.evidenceArtifacts,
+      preflightArtifact,
+    );
+    await this.builderRunSupportService.recordArtifact(
+      runId,
+      state.evidenceArtifacts,
       planningArtifact,
     );
     await this.builderRunSupportService.recordArtifact(
@@ -561,6 +674,7 @@ export class BuilderStandardPipelineService {
 
     const analysisStageResult = state.stageResults[0];
     analysisStageResult.evidenceRefs = [
+      `artifact:${preflightArtifact.id}`,
       `artifact:${planningArtifact.id}`,
       `artifact:${recipeArtifact.id}`,
       `artifact:${findingsArtifact.id}`,
@@ -577,6 +691,7 @@ export class BuilderStandardPipelineService {
     run: BuildRun;
     attemptNumber: number;
     delivery: Delivery;
+    clusterName: string;
     projectRootDir: string;
     runtimeFiles: RuntimeFile[];
     currentAssessment: BuilderPipelineOutcome['llmAssessment'];
@@ -609,6 +724,7 @@ export class BuilderStandardPipelineService {
     } else if (latestDeploy?.status === StageStatus.FAIL) {
       await this.builderValidationStageService.collectKubernetesEvents({
         run: input.run,
+        clusterName: input.clusterName,
         namespace: input.namespace,
         state: input.state,
       });
@@ -644,7 +760,8 @@ export class BuilderStandardPipelineService {
             buildLogText: input.state.currentAttemptDiagnostics.buildLogText,
             podLogs: input.state.currentAttemptDiagnostics.podLogs,
             podDescribe: input.state.currentAttemptDiagnostics.podDescribe,
-            kubernetesEvents: input.state.currentAttemptDiagnostics.kubernetesEvents,
+            kubernetesEvents:
+              input.state.currentAttemptDiagnostics.kubernetesEvents,
             priorRepairAttempts: input.state.selfHealingTrace.length,
           });
           if (!result) {
@@ -724,7 +841,8 @@ export class BuilderStandardPipelineService {
           buildLogText: input.state.currentAttemptDiagnostics.buildLogText,
           podLogs: input.state.currentAttemptDiagnostics.podLogs,
           podDescribe: input.state.currentAttemptDiagnostics.podDescribe,
-          kubernetesEvents: input.state.currentAttemptDiagnostics.kubernetesEvents,
+          kubernetesEvents:
+            input.state.currentAttemptDiagnostics.kubernetesEvents,
         }),
       },
     };
@@ -732,6 +850,7 @@ export class BuilderStandardPipelineService {
 
   private async cleanupAttemptResources(
     run: BuildRun,
+    clusterName: string,
     namespace: string | null,
     imageTag: string | null,
     state: BuilderRuntimeState,
@@ -739,12 +858,16 @@ export class BuilderStandardPipelineService {
     if (namespace) {
       await this.builderCleanupStageService.run({
         run,
+        clusterName,
         namespace,
         state,
       });
     }
     if (imageTag) {
-      await this.builderRunSupportService.cleanupImage(imageTag, state.warnings);
+      await this.builderRunSupportService.cleanupImage(
+        imageTag,
+        state.warnings,
+      );
     }
   }
 
@@ -771,7 +894,7 @@ export class BuilderStandardPipelineService {
   private async runEvaluationPhase(
     planningAssessment: BuilderPipelineOutcome['llmAssessment'],
     executionContext: BuilderPipelineOutcome['executionContext'],
-    state: BuilderRuntimeState,
+    state: BuilderInternalState,
     staticFindings: BuilderPipelineOutcome['staticFindings'],
     staticReviewIssues: StaticReviewIssue[],
   ) {
@@ -796,6 +919,7 @@ export class BuilderStandardPipelineService {
             type: artifact.type,
           })),
           observedEvidence: state.observedEvidence,
+          assignmentContext: state.assignmentContext,
         });
         if (!result) {
           throw new ServiceUnavailableException(
@@ -820,6 +944,7 @@ export class BuilderStandardPipelineService {
         security: [],
         architecture: [],
         quality: [],
+        rubricCompliance: [],
       };
     }
 
@@ -835,6 +960,8 @@ export class BuilderStandardPipelineService {
             staticFindings: input.staticFindings,
             staticReviewIssues: input.staticReviewIssues,
             warnings: input.state.warnings,
+            assignmentContext: (input.state as BuilderInternalState)
+              .assignmentContext,
           }),
       );
     } catch (error) {
@@ -847,6 +974,7 @@ export class BuilderStandardPipelineService {
         security: [],
         architecture: [],
         quality: [],
+        rubricCompliance: [],
       };
     }
   }
@@ -893,6 +1021,222 @@ export class BuilderStandardPipelineService {
   private cloneAssessment(
     assessment: BuilderPipelineOutcome['llmAssessment'],
   ): BuilderPipelineOutcome['llmAssessment'] {
-    return JSON.parse(JSON.stringify(assessment)) as BuilderPipelineOutcome['llmAssessment'];
+    return JSON.parse(
+      JSON.stringify(assessment),
+    ) as BuilderPipelineOutcome['llmAssessment'];
+  }
+
+  private async recordPreflightWarnings(
+    runId: string,
+    warnings: string[],
+    preflightSummary: BuilderPreflightSummary,
+  ): Promise<void> {
+    for (const finding of preflightSummary.findings) {
+      if (finding.level === 'info') {
+        continue;
+      }
+
+      await this.builderRunSupportService.recordWarning(
+        runId,
+        warnings,
+        `[${finding.code}] ${finding.message}`,
+      );
+    }
+  }
+
+  private async completeUnsupportedPreflight(input: {
+    runId: string;
+    runtimeFiles: RuntimeFile[];
+    preflightSummary: BuilderPreflightSummary;
+    executionContext: BuilderPipelineOutcome['executionContext'];
+    state: BuilderRuntimeState;
+  }): Promise<BuilderPipelineOutcome> {
+    const analysisStarted = this.builderRunSupportService.beginStage(
+      BuildStage.ANALYSIS,
+    );
+    await this.builderRunSupportService.emitStageStarted(
+      input.runId,
+      BuildRunStatus.ANALYZING,
+      BuildStage.ANALYSIS,
+    );
+
+    const preflightArtifact = await this.evidenceService.persistJsonArtifact(
+      input.runId,
+      BuildRunArtifactType.PREFLIGHT,
+      input.preflightSummary,
+    );
+    await this.builderRunSupportService.recordArtifact(
+      input.runId,
+      input.state.evidenceArtifacts,
+      preflightArtifact,
+    );
+
+    const analysisStageResult = this.builderRunSupportService.finishStage({
+      stage: BuildStage.ANALYSIS,
+      startedAt: analysisStarted.startedAt,
+      status: StageStatus.FAIL,
+      reasonCode:
+        input.preflightSummary.failureCode ??
+        'PREFLIGHT_UNSUPPORTED_PROJECT_TYPE',
+      evidenceRefs: [`artifact:${preflightArtifact.id}`],
+    });
+    input.state.stageResults.push(analysisStageResult);
+    await this.builderRunSupportService.emitStageFinished(
+      input.runId,
+      BuildRunStatus.ANALYZING,
+      analysisStageResult,
+      {
+        compatibility: input.preflightSummary.compatibility,
+        supportedProjectType: input.preflightSummary.supportedProjectType,
+      },
+    );
+
+    const assessment = this.buildUnsupportedPreflightAssessment(
+      input.preflightSummary,
+    );
+    input.state.observedEvidence.workspaceSummary =
+      this.buildPreflightSummaryText(input.preflightSummary);
+    input.state.observedEvidence.runtime.mode = 'analysis_only';
+    input.state.observedEvidence.runtime.deploySummary =
+      'No desplegado porque el preflight rechazó la entrega antes del build.';
+    input.state.observedEvidence.runtime.probeSummary =
+      'No ejecutado por rechazo temprano en preflight.';
+    input.state.observedEvidence.runtime.stabilitySummary =
+      'No ejecutado por rechazo temprano en preflight.';
+    input.state.observedEvidence.runtime.testSummary = input.preflightSummary
+      .testsPresent
+      ? 'Se detectaron tests, pero el preflight bloqueó el pipeline antes de ejecutarlos.'
+      : 'Sin tests detectados; el preflight bloqueó el pipeline antes de ejecutar la suite docente.';
+    input.state.observedEvidence.runtime.healthcheckSummary =
+      'No ejecutado por rechazo temprano en preflight.';
+    input.state.runtimeOutputs.stackResult = {
+      ...this.builderRunSupportService.buildStackResult({
+        runtimeFiles: input.runtimeFiles,
+        assessment,
+        model: 'preflight-only',
+        preflightSummary: input.preflightSummary,
+      }),
+      preflight: input.preflightSummary,
+    };
+    input.state.runtimeOutputs.timingsMs =
+      this.builderRunSupportService.toTimings(input.state.stageResults);
+
+    const report = this.builderReportService.create({
+      assessment,
+      stageResults: input.state.stageResults,
+      relevantEvidence: input.state.evidenceArtifacts.map(
+        (artifact) => artifact.id,
+      ),
+      technicalFeedback: {
+        security: [],
+        architecture: [],
+        quality: [],
+        rubricCompliance: [],
+      },
+      selfHealingTrace: [],
+    });
+    await this.persistReportArtifacts(input.runId, report, input.state);
+
+    return {
+      preflightSummary: input.preflightSummary,
+      llmAssessment: assessment,
+      staticFindings: [],
+      staticReviewIssues: [],
+      stageResults: input.state.stageResults,
+      evidenceArtifacts: input.state.evidenceArtifacts,
+      report,
+      executionContext: input.executionContext,
+      runtimeOutputs: input.state.runtimeOutputs,
+      failureReason:
+        input.preflightSummary.failureCode ??
+        'PREFLIGHT_UNSUPPORTED_PROJECT_TYPE',
+      warnings: input.state.warnings,
+    };
+  }
+
+  private buildUnsupportedPreflightAssessment(
+    preflightSummary: BuilderPreflightSummary,
+  ): BuilderPipelineOutcome['llmAssessment'] {
+    const rationale =
+      preflightSummary.findings[0]?.message ??
+      'El preflight determinó que la entrega no encaja en la matriz Python-first soportada.';
+
+    return {
+      structuralType: `PREFLIGHT_${preflightSummary.supportedProjectType}`,
+      capabilities: {
+        C1: {
+          status: 'unknown',
+          rationale:
+            'La ejecución se detuvo antes de validar la estructura completa del proyecto.',
+        },
+        C2: {
+          status: 'no',
+          rationale:
+            'No se ejecutó build porque la entrega fue rechazada en preflight.',
+        },
+        C3: {
+          status: 'no',
+          rationale:
+            'No se desplegó ningún servicio porque la entrega fue rechazada en preflight.',
+        },
+        C4: {
+          status: 'no',
+          rationale:
+            'No se ejecutó la validación runtime al detenerse el pipeline antes del despliegue.',
+        },
+        C5: {
+          status: preflightSummary.testsPresent ? 'unknown' : 'no',
+          rationale: preflightSummary.testsPresent
+            ? 'Hay indicios de tests, pero no se ejecutaron por rechazo temprano.'
+            : 'No se detectaron tests y el pipeline no continuó.',
+        },
+        C6: {
+          status: 'no',
+          rationale:
+            'La entrega no alcanzó el mínimo evaluable por incompatibilidad detectada en preflight.',
+        },
+      },
+      evaluativeState: 'E4',
+      confidence: 'high',
+      rationale,
+      externalRequirements: [],
+      recipe: {
+        install: [],
+        run: null,
+        test: [],
+        healthcheck: null,
+        servicePort: null,
+        systemPackages: [],
+        workingDirectory: preflightSummary.workingDirectory,
+        dependencyManager: preflightSummary.dependencyManager,
+        executionProfile: preflightSummary.executionProfile,
+        manifestSource: preflightSummary.manifestSource,
+        environment: {},
+      },
+      evidenceSummary: this.buildPreflightSummaryText(preflightSummary),
+      observedEvidence: preflightSummary.findings.map(
+        (finding) => finding.message,
+      ),
+      evaluationLimits: [
+        'El pipeline se detuvo en preflight antes del plan LLM completo.',
+      ],
+    };
+  }
+
+  private buildPreflightSummaryText(
+    preflightSummary: BuilderPreflightSummary,
+  ): string {
+    const framework =
+      preflightSummary.detectedFramework ?? 'sin framework claro';
+    const compatibilityMap: Record<string, string> = {
+      SUPPORTED_AUTO: 'soportado automáticamente',
+      SUPPORTED_WITH_MANIFEST: 'soportado mediante dockus.yml',
+      PARTIAL: 'parcial',
+      UNSUPPORTED: 'no soportado',
+    };
+    const compatibility =
+      compatibilityMap[preflightSummary.compatibility] ??
+      preflightSummary.compatibility.toLowerCase();
+    return `Preflight ${compatibility} para ${preflightSummary.supportedProjectType} (${framework}).`;
   }
 }

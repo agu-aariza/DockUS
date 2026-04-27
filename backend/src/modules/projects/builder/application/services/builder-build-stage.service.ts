@@ -77,8 +77,29 @@ export class BuilderBuildStageService {
       const dockerBuild = await this.executionAdapterService.dockerBuild(
         input.projectRootDir,
         imageTag,
+        {
+          onStdoutChunk: (chunk) => {
+            void this.builderRunSupportService.emitLogChunk({
+              buildRunId: input.runId,
+              source: 'build',
+              stream: 'stdout',
+              text: chunk,
+              stage: BuildStage.BUILD,
+            });
+          },
+          onStderrChunk: (chunk) => {
+            void this.builderRunSupportService.emitLogChunk({
+              buildRunId: input.runId,
+              source: 'build',
+              stream: 'stderr',
+              text: chunk,
+              stage: BuildStage.BUILD,
+            });
+          },
+        },
       );
-      const buildLogText = `${dockerBuild.stdout}\n${dockerBuild.stderr}`.trim();
+      const buildLogText =
+        `${dockerBuild.stdout}\n${dockerBuild.stderr}`.trim();
 
       input.state.runtimeOutputs.buildLogs = {
         exitCode: dockerBuild.exitCode,

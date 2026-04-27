@@ -117,6 +117,13 @@ export class BuildRunResponseDto {
   llmAssessment?: unknown;
 
   @ApiPropertyOptional({
+    description:
+      'Resumen de preflight Python-first con compatibilidad detectada antes del pipeline completo.',
+    type: Object,
+  })
+  preflightSummary?: unknown;
+
+  @ApiPropertyOptional({
     description: 'Artefactos de evidencia asociados al run.',
     type: Object,
   })
@@ -134,6 +141,12 @@ export class BuildRunResponseDto {
     type: Object,
   })
   executionContext?: unknown;
+
+  @ApiPropertyOptional({
+    description: 'Destino runtime del run dentro del cluster del proyecto.',
+    type: Object,
+  })
+  runtimeTarget?: unknown;
 
   @ApiPropertyOptional({
     description: 'Causa exacta de fallo (si aplica).',

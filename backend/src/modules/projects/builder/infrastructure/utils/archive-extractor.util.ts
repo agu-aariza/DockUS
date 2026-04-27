@@ -47,16 +47,26 @@ async function extractZipArchive(
   input: ArchiveExtractionInput,
 ): Promise<RuntimeFile[]> {
   const entries = parseZipEntries(input.archiveBuffer);
+  const commonPrefix = getCommonRootPrefix(entries.map((e) => e.path));
   const extractedFiles: RuntimeFile[] = [];
 
   for (const entry of entries) {
-    if (entry.isDirectory) {
+    if (entry.path.startsWith('__MACOSX/') || entry.path === '.DS_Store') {
       continue;
     }
 
-    registerExtraction(entry.path, entry.content.length, input);
+    let targetPath = entry.path;
+    if (commonPrefix && targetPath.startsWith(commonPrefix)) {
+      targetPath = targetPath.slice(commonPrefix.length);
+    }
 
-    const destination = buildSafeDestination(input.outputRootDir, entry.path);
+    if (!targetPath || entry.isDirectory) {
+      continue;
+    }
+
+    registerExtraction(targetPath, entry.content.length, input);
+
+    const destination = buildSafeDestination(input.outputRootDir, targetPath);
     await mkdir(path.dirname(destination), { recursive: true });
     await writeFile(destination, entry.content);
 
@@ -77,15 +87,15 @@ async function extractTarGzArchive(
 ): Promise<RuntimeFile[]> {
   const tarBuffer = gunzipSync(input.archiveBuffer);
   const extractedFiles: RuntimeFile[] = [];
+  const entries: Array<{ path: string; content: Buffer }> = [];
   let offset = 0;
 
+  // First pass: collect all files in memory (safe since it's already gunzipped and limited size)
   while (offset + 512 <= tarBuffer.length) {
     const header = tarBuffer.subarray(offset, offset + 512);
     offset += 512;
 
-    if (isTarZeroBlock(header)) {
-      break;
-    }
+    if (isTarZeroBlock(header)) break;
 
     const entryName = readTarString(header, 0, 100);
     const prefix = readTarString(header, 345, 155);
@@ -100,21 +110,9 @@ async function extractTarGzArchive(
     }
 
     if (typeFlag === '0' || typeFlag === '\0') {
-      registerExtraction(normalizedPath, size, input);
-
-      const destination = buildSafeDestination(
-        input.outputRootDir,
-        normalizedPath,
-      );
-      await mkdir(path.dirname(destination), { recursive: true });
-      await writeFile(destination, tarBuffer.subarray(offset, offset + size));
-
-      extractedFiles.push({
-        relativePath: toPosixPath(
-          path.relative(input.outputRootDir, destination),
-        ),
-        absolutePath: destination,
-        sizeBytes: size,
+      entries.push({
+        path: normalizedPath,
+        content: tarBuffer.subarray(offset, offset + size),
       });
     } else if (typeFlag !== '5') {
       throw new Error(
@@ -123,6 +121,36 @@ async function extractTarGzArchive(
     }
 
     offset += paddedSize;
+  }
+
+  // Auto-flatten logic
+  const commonPrefix = getCommonRootPrefix(entries.map((e) => e.path));
+
+  for (const entry of entries) {
+    if (entry.path.startsWith('__MACOSX/') || entry.path === '.DS_Store') {
+      continue;
+    }
+
+    let targetPath = entry.path;
+    if (commonPrefix && targetPath.startsWith(commonPrefix)) {
+      targetPath = targetPath.slice(commonPrefix.length);
+    }
+
+    if (!targetPath) continue;
+
+    registerExtraction(targetPath, entry.content.length, input);
+
+    const destination = buildSafeDestination(input.outputRootDir, targetPath);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await writeFile(destination, entry.content);
+
+    extractedFiles.push({
+      relativePath: toPosixPath(
+        path.relative(input.outputRootDir, destination),
+      ),
+      absolutePath: destination,
+      sizeBytes: entry.content.length,
+    });
   }
 
   return extractedFiles;
@@ -320,4 +348,24 @@ function parseTarOctal(value: string): number {
   }
 
   return parsed;
+}
+
+function getCommonRootPrefix(paths: string[]): string {
+  const meaningfulPaths = paths.filter(
+    (p) =>
+      !p.startsWith('__MACOSX/') && !p.endsWith('.DS_Store') && p.trim() !== '',
+  );
+  if (meaningfulPaths.length === 0) return '';
+
+  const firstPath = meaningfulPaths[0];
+  const firstSegment = firstPath.split('/')[0];
+  if (!firstSegment || firstPath === firstSegment) return ''; // root file exists, no common prefix
+
+  const prefix = firstSegment + '/';
+  for (const p of meaningfulPaths) {
+    if (!p.startsWith(prefix)) {
+      return '';
+    }
+  }
+  return prefix;
 }

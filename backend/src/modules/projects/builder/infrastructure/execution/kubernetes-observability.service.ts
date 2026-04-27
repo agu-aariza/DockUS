@@ -8,13 +8,17 @@ export class KubernetesObservabilityService {
     private readonly kubectlExecutionService: KubectlExecutionService,
   ) {}
 
-  async cleanupNamespace(namespace: string): Promise<{
+  async cleanupNamespace(
+    clusterName: string,
+    namespace: string,
+  ): Promise<{
     status: StageStatus;
     reasonCode: string;
     orphanedResources: string[];
   }> {
     const orphanedResources: string[] = [];
     const deleteResult = await this.kubectlExecutionService.runKubectlResult(
+      clusterName,
       ['delete', 'namespace', namespace, '--wait=true', '--timeout=30s'],
       undefined,
       40000,
@@ -28,6 +32,7 @@ export class KubernetesObservabilityService {
     }
 
     const remaining = await this.kubectlExecutionService.runKubectlResult(
+      clusterName,
       ['get', 'namespace', namespace, '-o', 'name'],
       undefined,
       10000,
@@ -42,15 +47,31 @@ export class KubernetesObservabilityService {
     };
   }
 
-  collectPodLogs(namespace: string, podName: string): Promise<string> {
-    return this.kubectlExecutionService.collectPodLogs(namespace, podName);
+  collectPodLogs(
+    clusterName: string,
+    namespace: string,
+    podName: string,
+  ): Promise<string> {
+    return this.kubectlExecutionService.collectPodLogs(
+      clusterName,
+      namespace,
+      podName,
+    );
   }
 
-  collectPodDescribe(namespace: string, podName: string): Promise<string> {
-    return this.kubectlExecutionService.collectPodDescribe(namespace, podName);
+  collectPodDescribe(
+    clusterName: string,
+    namespace: string,
+    podName: string,
+  ): Promise<string> {
+    return this.kubectlExecutionService.collectPodDescribe(
+      clusterName,
+      namespace,
+      podName,
+    );
   }
 
-  collectEvents(namespace: string): Promise<string> {
-    return this.kubectlExecutionService.collectEvents(namespace);
+  collectEvents(clusterName: string, namespace: string): Promise<string> {
+    return this.kubectlExecutionService.collectEvents(clusterName, namespace);
   }
 }

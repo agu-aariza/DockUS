@@ -45,6 +45,7 @@ export class BuilderValidationStageService {
     if (input.namespace && input.imageTag && input.recipe.test.length > 0) {
       try {
         const testsResult = await this.executionAdapterService.runTests({
+          clusterName: input.clusterName,
           namespace: input.namespace,
           imageTag: input.imageTag,
           commands: input.recipe.test,
@@ -52,6 +53,22 @@ export class BuilderValidationStageService {
           deliveryId: input.deliveryId,
         });
         input.state.observedEvidence.runtime.testSummary = testsResult.details;
+        if (testsResult.podName) {
+          await this.builderRunSupportService.appendRuntimeHelperPod(
+            input.run.id,
+            testsResult.podName,
+          );
+        }
+        if (testsResult.logs) {
+          await this.builderRunSupportService.emitLogChunk({
+            buildRunId: input.run.id,
+            source: 'tests',
+            stream: 'combined',
+            text: testsResult.logs,
+            podName: testsResult.podName ?? null,
+            stage: BuildStage.TESTS,
+          });
+        }
         if (testsResult.logs) {
           const testLogArtifact =
             await this.evidenceService.persistTextArtifact(
@@ -127,7 +144,7 @@ export class BuilderValidationStageService {
   }
 
   async collectKubernetesEvents(
-    input: Pick<BuilderRuntimeStageInput, 'run' | 'state'> & {
+    input: Pick<BuilderRuntimeStageInput, 'run' | 'state' | 'clusterName'> & {
       namespace: string | null;
     },
   ): Promise<void> {
@@ -137,6 +154,7 @@ export class BuilderValidationStageService {
 
     try {
       const k8sEvents = await this.executionAdapterService.collectEvents(
+        input.clusterName,
         input.namespace,
       );
       if (k8sEvents) {

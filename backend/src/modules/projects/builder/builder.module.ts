@@ -16,6 +16,7 @@ import { StorageInfrastructureModule } from '../../../shared/infrastructure/stor
 import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
 import { Project } from '../entities/project.entity';
+import { ProjectRuntimeModule } from '../runtime/project-runtime.module';
 import { StorageObject } from '../storage/entities/storage-object.entity';
 import { BuilderService } from './application/builder.service';
 import { BuilderBuildStageService } from './application/services/builder-build-stage.service';
@@ -60,6 +61,7 @@ import { BuilderProcessor } from './presentation/builder.processor';
       name: BUILDER_RUNS_QUEUE_NAME,
     }),
     InfrastructureModule,
+    ProjectRuntimeModule,
     TypeOrmModule.forFeature([
       Project,
       ProjectAssignment,

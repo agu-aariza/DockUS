@@ -63,4 +63,30 @@ export class BuilderAccessService {
       );
     }
   }
+
+  async assertCanManageBuildRun(
+    run: BuildRun,
+    actor: AuthenticatedUser,
+  ): Promise<void> {
+    const delivery = await this.findDeliveryOrThrow(run.deliveryId);
+    this.assertCanManageDelivery(delivery, actor);
+  }
+
+  assertCanManageDelivery(delivery: Delivery, actor: AuthenticatedUser): void {
+    if (actor.role === UserRole.ADMIN) {
+      return;
+    }
+
+    if (actor.role !== UserRole.TEACHER) {
+      throw new ForbiddenException(
+        'Solo profesorado y administradores pueden operar ejecuciones.',
+      );
+    }
+
+    if (delivery.assignment.project.creatorId !== actor.userId) {
+      throw new ForbiddenException(
+        'No tiene permisos para operar ejecuciones sobre una entrega ajena.',
+      );
+    }
+  }
 }

@@ -112,8 +112,8 @@ export class KubernetesWorkloadExecutionService {
     };
   }
 
-  async createNamespace(namespace: string): Promise<void> {
-    await this.kubectlExecutionService.runKubectl([
+  async createNamespace(clusterName: string, namespace: string): Promise<void> {
+    await this.kubectlExecutionService.runKubectl(clusterName, [
       'create',
       'namespace',
       namespace,
@@ -121,6 +121,7 @@ export class KubernetesWorkloadExecutionService {
   }
 
   async runBatchJob(params: {
+    clusterName: string;
     namespace: string;
     jobName: string;
     imageTag: string;
@@ -134,11 +135,13 @@ export class KubernetesWorkloadExecutionService {
       timeoutSeconds: this.batchTimeoutSeconds,
     });
     await this.kubectlExecutionService.applyManifest(
+      params.clusterName,
       params.namespace,
       manifest,
     );
 
     const waitResult = await this.kubectlExecutionService.runKubectlResult(
+      params.clusterName,
       [
         'wait',
         '--for=condition=complete',
@@ -152,17 +155,23 @@ export class KubernetesWorkloadExecutionService {
     );
 
     const podName = await this.kubectlExecutionService.tryResolvePodName(
+      params.clusterName,
       params.namespace,
       [`job-name=${params.jobName}`],
     );
     const logs = podName
       ? await this.kubectlExecutionService.collectPodLogs(
+          params.clusterName,
           params.namespace,
           podName,
         )
       : '';
     const restartCount = podName
-      ? await this.resolveRestartCount(params.namespace, podName)
+      ? await this.resolveRestartCount(
+          params.clusterName,
+          params.namespace,
+          podName,
+        )
       : -1;
 
     const checks: BatchExecutionResult['checks'] = [
@@ -194,6 +203,7 @@ export class KubernetesWorkloadExecutionService {
   }
 
   async runServiceDeployment(params: {
+    clusterName: string;
     namespace: string;
     deploymentName: string;
     serviceName: string;
@@ -207,11 +217,13 @@ export class KubernetesWorkloadExecutionService {
       resources: this.serviceResources,
     });
     await this.kubectlExecutionService.applyManifest(
+      params.clusterName,
       params.namespace,
       manifest,
     );
 
     const waitReady = await this.kubectlExecutionService.runKubectlResult(
+      params.clusterName,
       [
         'rollout',
         'status',
@@ -224,16 +236,19 @@ export class KubernetesWorkloadExecutionService {
         this.serviceReadyTimeoutSeconds * 1000,
     );
     const podName = await this.kubectlExecutionService.tryResolvePodName(
+      params.clusterName,
       params.namespace,
       [`app=${params.deploymentName}`],
     );
 
     const tcpProbe = await this.kubectlExecutionService.runTcpProbe(
+      params.clusterName,
       params.namespace,
       params.serviceName,
       params.port,
     );
     const stability = await this.kubectlExecutionService.evaluateStability(
+      params.clusterName,
       params.namespace,
       podName,
       this.stabilityWindowSeconds,
@@ -273,6 +288,7 @@ export class KubernetesWorkloadExecutionService {
   }
 
   async runTests(params: {
+    clusterName: string;
     namespace: string;
     imageTag: string;
     commands?: string[][];
@@ -286,6 +302,7 @@ export class KubernetesWorkloadExecutionService {
         status: StageStatus.SKIP,
         details: 'El planner LLM no propuso comandos de test.',
         logs: '',
+        podName: null,
       };
     }
 
@@ -293,6 +310,7 @@ export class KubernetesWorkloadExecutionService {
   }
 
   async runHealthcheck(params: {
+    clusterName: string;
     namespace: string;
     imageTag: string;
     command: string[];
@@ -300,6 +318,7 @@ export class KubernetesWorkloadExecutionService {
     deliveryId: string;
   }): Promise<HealthcheckExecutionResult> {
     const result = await this.runSingleCommandJob({
+      clusterName: params.clusterName,
       namespace: params.namespace,
       imageTag: params.imageTag,
       command: params.command,
@@ -316,10 +335,12 @@ export class KubernetesWorkloadExecutionService {
           ? 'Healthcheck ejecutado correctamente.'
           : 'Healthcheck falló o no completó a tiempo.',
       logs: result.logs,
+      podName: result.podName,
     };
   }
 
   private async runSuggestedTestCommand(params: {
+    clusterName: string;
     namespace: string;
     imageTag: string;
     commands?: string[][];
@@ -330,6 +351,7 @@ export class KubernetesWorkloadExecutionService {
 
     for (const [index, command] of (params.commands ?? []).entries()) {
       const result = await this.runSingleCommandJob({
+        clusterName: params.clusterName,
         namespace: params.namespace,
         imageTag: params.imageTag,
         command,
@@ -350,6 +372,7 @@ export class KubernetesWorkloadExecutionService {
           status: StageStatus.PASS,
           details: `Comando de tests ejecutado correctamente: ${command.join(' ')}`,
           logs,
+          podName: result.podName,
         };
       }
     }
@@ -364,10 +387,12 @@ export class KubernetesWorkloadExecutionService {
       details:
         'Los comandos de tests sugeridos por el LLM no finalizaron correctamente.',
       logs: attemptedLogs.join('\n\n'),
+      podName: null,
     };
   }
 
   private async runSingleCommandJob(params: {
+    clusterName: string;
     namespace: string;
     imageTag: string;
     command: string[];
@@ -378,10 +403,12 @@ export class KubernetesWorkloadExecutionService {
   }): Promise<{
     status: StageStatus;
     logs: string;
+    podName: string | null;
   }> {
     const jobName =
       `${params.jobPrefix}-${Date.now().toString().slice(-6)}`.slice(0, 52);
     await this.kubectlExecutionService.applyManifest(
+      params.clusterName,
       params.namespace,
       this.kubernetesManifestService.renderBatchJobManifest({
         namespace: params.namespace,
@@ -396,6 +423,7 @@ export class KubernetesWorkloadExecutionService {
     );
 
     const result = await this.kubectlExecutionService.runKubectlResult(
+      params.clusterName,
       [
         'wait',
         '--for=condition=complete',
@@ -409,11 +437,13 @@ export class KubernetesWorkloadExecutionService {
     );
 
     const podName = await this.kubectlExecutionService.tryResolvePodName(
+      params.clusterName,
       params.namespace,
       [`job-name=${jobName}`],
     );
     const logs = podName
       ? await this.kubectlExecutionService.collectPodLogs(
+          params.clusterName,
           params.namespace,
           podName,
         )
@@ -425,14 +455,17 @@ export class KubernetesWorkloadExecutionService {
           ? StageStatus.PASS
           : StageStatus.FAIL,
       logs,
+      podName,
     };
   }
 
   private async resolveRestartCount(
+    clusterName: string,
     namespace: string,
     podName: string,
   ): Promise<number> {
     const result = await this.kubectlExecutionService.runKubectlResult(
+      clusterName,
       [
         'get',
         'pod',

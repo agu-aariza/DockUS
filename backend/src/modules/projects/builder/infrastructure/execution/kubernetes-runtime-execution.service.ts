@@ -16,11 +16,15 @@ export class KubernetesRuntimeExecutionService {
     private readonly kubernetesObservabilityService: KubernetesObservabilityService,
   ) {}
 
-  createNamespace(namespace: string): Promise<void> {
-    return this.kubernetesWorkloadExecutionService.createNamespace(namespace);
+  createNamespace(clusterName: string, namespace: string): Promise<void> {
+    return this.kubernetesWorkloadExecutionService.createNamespace(
+      clusterName,
+      namespace,
+    );
   }
 
   runBatchJob(params: {
+    clusterName: string;
     namespace: string;
     jobName: string;
     imageTag: string;
@@ -32,6 +36,7 @@ export class KubernetesRuntimeExecutionService {
   }
 
   runServiceDeployment(params: {
+    clusterName: string;
     namespace: string;
     deploymentName: string;
     serviceName: string;
@@ -44,6 +49,7 @@ export class KubernetesRuntimeExecutionService {
   }
 
   runTests(params: {
+    clusterName: string;
     namespace: string;
     imageTag: string;
     commands?: string[][];
@@ -54,6 +60,7 @@ export class KubernetesRuntimeExecutionService {
   }
 
   runHealthcheck(params: {
+    clusterName: string;
     namespace: string;
     imageTag: string;
     command: string[];
@@ -63,29 +70,48 @@ export class KubernetesRuntimeExecutionService {
     return this.kubernetesWorkloadExecutionService.runHealthcheck(params);
   }
 
-  cleanupNamespace(namespace: string): Promise<{
+  cleanupNamespace(
+    clusterName: string,
+    namespace: string,
+  ): Promise<{
     status: StageStatus;
     reasonCode: string;
     orphanedResources: string[];
   }> {
-    return this.kubernetesObservabilityService.cleanupNamespace(namespace);
+    return this.kubernetesObservabilityService.cleanupNamespace(
+      clusterName,
+      namespace,
+    );
   }
 
-  collectPodLogs(namespace: string, podName: string): Promise<string> {
+  collectPodLogs(
+    clusterName: string,
+    namespace: string,
+    podName: string,
+  ): Promise<string> {
     return this.kubernetesObservabilityService.collectPodLogs(
+      clusterName,
       namespace,
       podName,
     );
   }
 
-  collectPodDescribe(namespace: string, podName: string): Promise<string> {
+  collectPodDescribe(
+    clusterName: string,
+    namespace: string,
+    podName: string,
+  ): Promise<string> {
     return this.kubernetesObservabilityService.collectPodDescribe(
+      clusterName,
       namespace,
       podName,
     );
   }
 
-  collectEvents(namespace: string): Promise<string> {
-    return this.kubernetesObservabilityService.collectEvents(namespace);
+  collectEvents(clusterName: string, namespace: string): Promise<string> {
+    return this.kubernetesObservabilityService.collectEvents(
+      clusterName,
+      namespace,
+    );
   }
 }

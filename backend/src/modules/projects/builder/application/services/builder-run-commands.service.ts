@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -21,11 +22,12 @@ import {
   BuildRun,
   BuildRunStatus,
 } from '../../domain/entities/build-run.entity';
-import { BuildStage } from '../../domain/builder.types';
+import { BuildStage, AssignmentContext } from '../../domain/builder.types';
 import {
   Delivery,
   DeliveryStatus,
 } from '../../../deliveries/entities/delivery.entity';
+import { ProjectRuntimeService } from '../../../runtime/project-runtime.service';
 import { BuilderAccessService } from './builder-access.service';
 import {
   EnqueueBuildRunResponse,
@@ -51,6 +53,7 @@ export class BuilderRunCommandsService {
     private readonly builderRunQueriesService: BuilderRunQueriesService,
     private readonly builderRunSupportService: BuilderRunSupportService,
     private readonly builderStandardPipelineService: BuilderStandardPipelineService,
+    private readonly projectRuntimeService: ProjectRuntimeService,
     private readonly configService: ConfigService,
   ) {
     this.imageTtlMs = this.configService.get<number>(
@@ -69,7 +72,10 @@ export class BuilderRunCommandsService {
   ): Promise<EnqueueBuildRunResponse> {
     const delivery =
       await this.builderAccessService.findDeliveryOrThrow(deliveryId);
-    this.builderAccessService.assertCanAccessDelivery(delivery, actor);
+    this.builderAccessService.assertCanManageDelivery(delivery, actor);
+    this.projectRuntimeService.assertProjectRuntimeReady(
+      delivery.assignment.project,
+    );
 
     const run = this.buildRunsRepository.create({
       deliveryId: delivery.id,
@@ -84,6 +90,11 @@ export class BuilderRunCommandsService {
     let savedRun: BuildRun;
     try {
       savedRun = await this.buildRunsRepository.save(run);
+      savedRun.runtimeTarget = this.projectRuntimeService.createRuntimeTarget(
+        delivery.assignment.project,
+        savedRun.id,
+      );
+      savedRun = await this.buildRunsRepository.save(savedRun);
     } catch (error) {
       throwIfUniqueViolation(
         error,
@@ -131,6 +142,7 @@ export class BuilderRunCommandsService {
       buildRunId,
       actor,
     );
+    await this.builderAccessService.assertCanManageBuildRun(run, actor);
     const cancellable = new Set<BuildRunStatus>([
       BuildRunStatus.QUEUED,
       BuildRunStatus.ANALYZING,
@@ -179,7 +191,7 @@ export class BuilderRunCommandsService {
     const delivery = await this.builderAccessService.findDeliveryOrThrow(
       data.deliveryId,
     );
-    this.builderAccessService.assertCanAccessDelivery(delivery, data.actor);
+    this.builderAccessService.assertCanManageDelivery(delivery, data.actor);
     delivery.status = DeliveryStatus.IN_REVIEW;
     await this.deliveriesRepository.save(delivery);
 
@@ -202,13 +214,20 @@ export class BuilderRunCommandsService {
     });
 
     try {
+      const assignmentContext: AssignmentContext = {
+        expectedType: delivery.assignment.project.expectedType,
+        rubricInstructions: delivery.assignment.project.rubricInstructions,
+      };
+
       const pipelineOutcome = await this.builderStandardPipelineService.execute(
         run,
         delivery,
+        assignmentContext,
       );
       const finalStatus = pipelineOutcome.failureReason
         ? BuildRunStatus.FAILED
         : BuildRunStatus.SUCCESS;
+      const finishedAt = new Date();
 
       await this.buildRunsRepository.save({
         ...run,
@@ -221,6 +240,7 @@ export class BuilderRunCommandsService {
         staticFindings: pipelineOutcome.staticFindings,
         stageResults: pipelineOutcome.stageResults,
         llmAssessment: pipelineOutcome.llmAssessment,
+        preflightSummary: pipelineOutcome.preflightSummary,
         report: pipelineOutcome.report,
         evidenceArtifacts: pipelineOutcome.evidenceArtifacts,
         executionContext: pipelineOutcome.executionContext,
@@ -238,7 +258,7 @@ export class BuilderRunCommandsService {
           finalStatus === BuildRunStatus.SUCCESS
             ? new Date(Date.now() + this.imageTtlMs)
             : null,
-        finishedAt: new Date(),
+        finishedAt,
       });
       await this.builderRunSupportService.emitEvent({
         buildRunId: run.id,

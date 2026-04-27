@@ -93,12 +93,21 @@ export class BuilderDeployStageService {
     let namespace: string | null = null;
     try {
       await this.executionAdapterService.assertKubernetesTooling();
-      await this.executionAdapterService.loadImageInKind(input.imageTag);
+      await this.executionAdapterService.loadImageInKind(
+        input.imageTag,
+        input.clusterName,
+      );
       namespace = `${input.namespacePrefix}-${input.run.id
         .slice(0, 8)
         .toLowerCase()}`;
-      await this.executionAdapterService.createNamespace(namespace);
+      await this.executionAdapterService.createNamespace(
+        input.clusterName,
+        namespace,
+      );
       input.state.currentAttemptDiagnostics.namespace = namespace;
+      await this.builderRunSupportService.updateRuntimeTarget(input.run.id, {
+        namespace,
+      });
 
       const deployStarted = this.builderRunSupportService.beginStage(
         BuildStage.DEPLOY,
@@ -187,6 +196,7 @@ export class BuilderDeployStageService {
     startedAt: Date,
   ): Promise<void> {
     const batchResult = await this.executionAdapterService.runBatchJob({
+      clusterName: input.clusterName,
       namespace,
       jobName: `run-${input.run.id.slice(0, 8)}`,
       imageTag: input.imageTag,
@@ -204,6 +214,17 @@ export class BuilderDeployStageService {
       'No aplica para ejecución batch.';
 
     if (batchResult.logs) {
+      await this.builderRunSupportService.updateRuntimeTarget(input.run.id, {
+        primaryPodName: batchResult.podName,
+      });
+      await this.builderRunSupportService.emitLogChunk({
+        buildRunId: input.run.id,
+        source: 'runtime',
+        stream: 'combined',
+        text: batchResult.logs,
+        podName: batchResult.podName,
+        stage: BuildStage.DEPLOY,
+      });
       input.state.currentAttemptDiagnostics.podLogs = batchResult.logs;
       input.state.currentAttemptDiagnostics.podLogTail = batchResult.logs
         .split(/\r?\n/u)
@@ -268,6 +289,7 @@ export class BuilderDeployStageService {
   ): Promise<void> {
     const serviceResult =
       await this.executionAdapterService.runServiceDeployment({
+        clusterName: input.clusterName,
         namespace,
         deploymentName: `app-${input.run.id.slice(0, 8)}`,
         serviceName: `svc-${input.run.id.slice(0, 8)}`,
@@ -305,7 +327,11 @@ export class BuilderDeployStageService {
         : 'Se detectó inestabilidad o reinicios.';
 
     if (serviceResult.podName) {
+      await this.builderRunSupportService.updateRuntimeTarget(input.run.id, {
+        primaryPodName: serviceResult.podName,
+      });
       const podDescribe = await this.executionAdapterService.collectPodDescribe(
+        input.clusterName,
         namespace,
         serviceResult.podName,
       );
@@ -323,10 +349,19 @@ export class BuilderDeployStageService {
       );
 
       const podLogs = await this.executionAdapterService.collectPodLogs(
+        input.clusterName,
         namespace,
         serviceResult.podName,
       );
       if (podLogs) {
+        await this.builderRunSupportService.emitLogChunk({
+          buildRunId: input.run.id,
+          source: 'runtime',
+          stream: 'combined',
+          text: podLogs,
+          podName: serviceResult.podName,
+          stage: BuildStage.DEPLOY,
+        });
         input.state.currentAttemptDiagnostics.podLogs = podLogs;
         input.state.currentAttemptDiagnostics.podLogTail = podLogs
           .split(/\r?\n/u)
@@ -350,6 +385,7 @@ export class BuilderDeployStageService {
       try {
         const healthcheckResult =
           await this.executionAdapterService.runHealthcheck({
+            clusterName: input.clusterName,
             namespace,
             imageTag: input.imageTag,
             command: input.recipe.healthcheck,
@@ -358,6 +394,22 @@ export class BuilderDeployStageService {
           });
         input.state.observedEvidence.runtime.healthcheckSummary =
           healthcheckResult.details;
+        if (healthcheckResult.podName) {
+          await this.builderRunSupportService.appendRuntimeHelperPod(
+            input.run.id,
+            healthcheckResult.podName,
+          );
+        }
+        if (healthcheckResult.logs) {
+          await this.builderRunSupportService.emitLogChunk({
+            buildRunId: input.run.id,
+            source: 'probes',
+            stream: 'combined',
+            text: healthcheckResult.logs,
+            podName: healthcheckResult.podName ?? null,
+            stage: BuildStage.PROBES,
+          });
+        }
         if (healthcheckResult.logs) {
           const healthcheckArtifact =
             await this.evidenceService.persistTextArtifact(

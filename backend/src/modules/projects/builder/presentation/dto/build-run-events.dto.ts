@@ -18,6 +18,7 @@ export class BuildRunEventDto {
       'RUN_STATUS_CHANGED',
       'STAGE_STARTED',
       'STAGE_FINISHED',
+      'LOG_CHUNK',
       'WARNING_ADDED',
       'ARTIFACT_ADDED',
       'REPORT_READY',

@@ -4,9 +4,12 @@ import { readFileSync } from 'fs';
 import * as path from 'path';
 import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
 import {
+  BuilderLlmAssessment,
   BuilderLlmPhaseResult,
+  BuilderPreflightSummary,
   RuntimeFile,
   StaticFinding,
+  AssignmentContext,
 } from '../builder.types';
 import { parseBuilderLlmAssessment } from '../llm/builder-llm-assessment.parser';
 import {
@@ -89,12 +92,27 @@ export class BuilderPlanLlmService {
     projectRootDir: string;
     runtimeFiles: RuntimeFile[];
     staticFindings: StaticFinding[];
+    assignmentContext?: AssignmentContext;
+    preflightSummary?: BuilderPreflightSummary;
   }): Promise<BuilderLlmPhaseResult | null> {
     if (!this.enabled) {
       return null;
     }
 
-    const { systemPrompt, userPrompt } = await this.buildPrompts(input);
+    const { systemPrompt, userPrompt, astSkeleton, fileList } =
+      await this.buildPrompts(input);
+
+    const fastPathAssessment = this.evaluateFastPath(astSkeleton, fileList);
+    if (fastPathAssessment) {
+      this.logger.log(
+        'Fast-path aplicado exitosamente. Omitiendo LLM planner.',
+      );
+      return {
+        model: 'fast-path-heuristic',
+        assessment: fastPathAssessment,
+      };
+    }
+
     const { response, model } = await this.callModel(systemPrompt, userPrompt);
     return {
       model,
@@ -106,22 +124,130 @@ export class BuilderPlanLlmService {
     projectRootDir: string;
     runtimeFiles: RuntimeFile[];
     staticFindings: StaticFinding[];
-  }): Promise<{ systemPrompt: string; userPrompt: string }> {
-    const workspaceSnapshot = await this.buildWorkspaceSnapshot(input);
+    assignmentContext?: AssignmentContext;
+    preflightSummary?: BuilderPreflightSummary;
+  }): Promise<{
+    systemPrompt: string;
+    userPrompt: string;
+    astSkeleton: any;
+    fileList: string[];
+  }> {
+    const { payload, astSkeleton, fileList } =
+      await this.buildWorkspaceSnapshot(input);
+    const assignmentContext = input.assignmentContext ?? {
+      expectedType: null,
+      rubricInstructions: null,
+    };
 
     const userPrompt = [
+      'Expectativas del Profesor:',
+      `- Tipo de proyecto esperado: ${assignmentContext.expectedType || 'No especificado'}`,
+      `- Instrucciones de la Rúbrica: ${assignmentContext.rubricInstructions || 'No especificadas'}`,
+      '',
+      'Preflight capability-first:',
+      input.preflightSummary
+        ? JSON.stringify(
+            {
+              compatibility: input.preflightSummary.compatibility,
+              supportedProjectType: input.preflightSummary.supportedProjectType,
+              executionProfile: input.preflightSummary.executionProfile,
+              dependencyManager: input.preflightSummary.dependencyManager,
+              workingDirectory: input.preflightSummary.workingDirectory,
+              manifestSource: input.preflightSummary.manifestSource,
+              manifestPath: input.preflightSummary.manifestPath,
+              entrypointCandidates: input.preflightSummary.entrypointCandidates,
+              resolvedCommands: input.preflightSummary.resolvedCommands,
+            },
+            null,
+            2,
+          )
+        : 'Sin preflight adicional.',
+      '',
       'Hechos observables del workspace:',
-      workspaceSnapshot,
+      payload,
     ].join('\n');
 
-    return { systemPrompt: this.systemPrompt, userPrompt };
+    return {
+      systemPrompt: this.systemPrompt,
+      userPrompt,
+      astSkeleton,
+      fileList,
+    };
   }
 
   private async buildWorkspaceSnapshot(input: {
     projectRootDir: string;
     runtimeFiles: RuntimeFile[];
     staticFindings: StaticFinding[];
-  }): Promise<string> {
+  }): Promise<{ payload: string; astSkeleton: any; fileList: string[] }> {
+    let astSkeleton = null;
+    try {
+      const scriptPath = path.resolve(
+        __dirname,
+        '../../../../../../../scripts/ast_analyzer.py',
+      );
+      const result = await runCommand(
+        'python3',
+        [scriptPath, input.projectRootDir],
+        {
+          timeoutMs: 15000,
+          maxBufferedChars: 1_500_000,
+        },
+      );
+      if (result.exitCode === 0 && result.stdout.trim()) {
+        astSkeleton = JSON.parse(result.stdout);
+
+        // Auto-Generate requirements.txt if no manifests exist
+        const hasManifest = input.runtimeFiles.some(
+          (f) =>
+            f.relativePath.includes('requirements.txt') ||
+            f.relativePath.endsWith('pyproject.toml') ||
+            f.relativePath.endsWith('setup.py'),
+        );
+
+        if (!hasManifest) {
+          const allImports = new Set<string>();
+          const astEntries =
+            astSkeleton && typeof astSkeleton === 'object'
+              ? Object.values(
+                  astSkeleton as Record<
+                    string,
+                    { external_imports?: string[] }
+                  >,
+                )
+              : [];
+
+          for (const fileAnalysis of astEntries) {
+            if (
+              fileAnalysis.external_imports &&
+              Array.isArray(fileAnalysis.external_imports)
+            ) {
+              for (const imp of fileAnalysis.external_imports) {
+                allImports.add(imp);
+              }
+            }
+          }
+          if (allImports.size > 0) {
+            const reqContent = Array.from(allImports).join('\n') + '\n';
+            const reqPath = path.join(input.projectRootDir, 'requirements.txt');
+            await require('fs/promises').writeFile(reqPath, reqContent);
+            input.runtimeFiles.push({
+              relativePath: 'requirements.txt',
+              absolutePath: reqPath,
+              sizeBytes: reqContent.length,
+            });
+            this.logger.log(
+              `Auto-generado requirements.txt con: ${Array.from(allImports).join(', ')}`,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo ejecutar ast_analyzer.py: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
     const fileList = input.runtimeFiles
       .map((file) => toPosixPath(file.relativePath))
       .sort((a, b) => a.localeCompare(b))
@@ -138,23 +264,6 @@ export class BuilderPlanLlmService {
         file.startsWith('test_') ||
         file.includes('/test_'),
     );
-
-    let astSkeleton = null;
-    try {
-      const scriptPath = path.resolve(
-        __dirname,
-        '../../../../../../../scripts/ast_analyzer.py',
-      );
-      const result = await runCommand('python3', [scriptPath, input.projectRootDir], {
-        timeoutMs: 15000,
-        maxBufferedChars: 1_500_000,
-      });
-      if (result.exitCode === 0 && result.stdout.trim()) {
-        astSkeleton = JSON.parse(result.stdout);
-      }
-    } catch (error) {
-      this.logger.warn(`No se pudo ejecutar ast_analyzer.py: ${error instanceof Error ? error.message : String(error)}`);
-    }
 
     const payload = {
       summary: {
@@ -194,7 +303,144 @@ export class BuilderPlanLlmService {
       ...(astSkeleton ? { astSkeleton } : {}),
     };
 
-    return JSON.stringify(payload, null, 2).slice(0, this.maxInputChars);
+    return {
+      payload: JSON.stringify(payload, null, 2).slice(0, this.maxInputChars),
+      astSkeleton,
+      fileList,
+    };
+  }
+
+  private evaluateFastPath(
+    astSkeleton: any,
+    fileList: string[],
+  ): BuilderLlmAssessment | null {
+    if (!astSkeleton) return null;
+
+    let hasDjango = false;
+    let hasFastAPI = false;
+    let hasFlask = false;
+    let hasStreamlit = false;
+
+    for (const analysis of Object.values(astSkeleton)) {
+      const external = (analysis as any).external_imports || [];
+      if (external.includes('django')) hasDjango = true;
+      if (external.includes('fastapi')) hasFastAPI = true;
+      if (external.includes('flask')) hasFlask = true;
+      if (external.includes('streamlit')) hasStreamlit = true;
+    }
+
+    let recipeRun: string[] | null = null;
+    let structuralType: BuilderLlmAssessment['structuralType'] = 'T6';
+    let servicePort = 8000;
+
+    if (fileList.includes('manage.py')) {
+      recipeRun = ['python', 'manage.py', 'runserver', '0.0.0.0:8000'];
+      structuralType = 'T4';
+      servicePort = 8000;
+    } else if (hasFastAPI) {
+      const appFile = fileList.find(
+        (f) =>
+          f.endsWith('main.py') || f.endsWith('app.py') || f.endsWith('api.py'),
+      );
+      if (appFile) {
+        const moduleName = appFile.replace('.py', '');
+        recipeRun = [
+          'uvicorn',
+          `${moduleName}:app`,
+          '--host',
+          '0.0.0.0',
+          '--port',
+          '8000',
+        ];
+        structuralType = 'T4';
+        servicePort = 8000;
+      }
+    } else if (hasFlask) {
+      const appFile = fileList.find(
+        (f) => f.endsWith('app.py') || f.endsWith('main.py'),
+      );
+      if (appFile) {
+        const moduleName = appFile.replace('.py', '');
+        recipeRun = ['gunicorn', `${moduleName}:app`, '--bind', '0.0.0.0:5000'];
+        structuralType = 'T4';
+        servicePort = 5000;
+      }
+    } else if (hasStreamlit) {
+      const appFile = fileList.find(
+        (f) => f.endsWith('app.py') || f.endsWith('main.py'),
+      );
+      if (appFile) {
+        recipeRun = [
+          'streamlit',
+          'run',
+          appFile,
+          '--server.port',
+          '8501',
+          '--server.address',
+          '0.0.0.0',
+        ];
+        structuralType = 'T5';
+        servicePort = 8501;
+      }
+    } else {
+      const mainScript = fileList.find(
+        (f) => f.endsWith('main.py') || f.endsWith('script.py'),
+      );
+      if (mainScript) {
+        recipeRun = ['python', mainScript];
+        structuralType = 'T6';
+      }
+    }
+
+    if (!recipeRun) return null;
+
+    const isService = structuralType === 'T4' || structuralType === 'T5';
+
+    return {
+      structuralType,
+      capabilities: {
+        C1: {
+          status: 'yes',
+          rationale: 'Fast-Path: Dependencias auto-gestionadas por heurística.',
+        },
+        C2: {
+          status: 'yes',
+          rationale: 'Fast-Path: Receta generada determinísticamente.',
+        },
+        C3: {
+          status: isService ? 'yes' : 'no',
+          rationale: isService
+            ? 'Fast-Path: Framework persistente.'
+            : 'Fast-Path: Script efímero.',
+        },
+        C4: { status: 'unknown', rationale: 'Pruebas no configuradas.' },
+        C5: {
+          status: 'no',
+          rationale: 'Healthcheck no inyectado por defecto.',
+        },
+        C6: {
+          status: 'unknown',
+          rationale: 'Sin análisis avanzado de variables.',
+        },
+      },
+      evaluativeState: isService ? 'E3' : 'E4',
+      confidence: 'high',
+      rationale: 'Generado instantáneamente vía Motor Heurístico Fast-Path.',
+      externalRequirements: [],
+      recipe: {
+        install: [['pip', 'install', '-r', 'requirements.txt']],
+        run: recipeRun,
+        test: [],
+        healthcheck: null,
+        servicePort: isService ? servicePort : null,
+        systemPackages: [],
+      },
+      evidenceSummary: 'Patrones arquitectónicos detectados vía AST.',
+      observedEvidence: [
+        'Framework detectado en los external_imports del AST.',
+      ],
+      evaluationLimits: [],
+    };
   }
 
   private buildDirectoryHistogram(fileList: string[]): Array<{
