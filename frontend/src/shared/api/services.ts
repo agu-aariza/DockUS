@@ -8,13 +8,22 @@
 import { http } from './http';
 import type {
   AuthResponse,
+  BulkGroupEnrollResponse,
+  BuilderOutcome,
+  BulkAssignResponse,
+  CourseGroupEntity,
   DeliveryEntity,
   DeliveryStatus,
   DownloadUrlResponse,
+  GroupEnrollmentEntity,
   PaginatedResponse,
   ProjectAssignmentEntity,
   ProjectEntity,
+  ProjectGradebookRow,
+  ProjectOperationalIssuesReconcileResult,
+  ProjectOperationalIssuesSummary,
   ProjectProgressSummary,
+  ProjectRuntimeStatusResponse,
   ProjectStatus,
   StorageAssetRole,
   StorageObjectEntity,
@@ -35,6 +44,18 @@ function toParams(input: Record<string, string | number | undefined>): URLSearch
   return params;
 }
 
+function normalizeStringArray(values?: string[]): string[] | undefined {
+  if (!Array.isArray(values)) {
+    return undefined;
+  }
+
+  const normalized = values
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 export const authApi = {
   async register(payload: {
     email: string;
@@ -53,6 +74,11 @@ export const authApi = {
 
   async profile(): Promise<{ userId: string; email: string; role: UserRole }> {
     const { data } = await http.get<{ userId: string; email: string; role: UserRole }>('/auth/profile');
+    return data;
+  },
+
+  async refresh(refreshToken: string): Promise<AuthResponse> {
+    const { data } = await http.post<AuthResponse>('/auth/refresh', { refreshToken });
     return data;
   },
 };
@@ -148,6 +174,10 @@ export const projectsApi = {
     contextAcademico?: string;
     status?: ProjectStatus;
     maxDeliveriesPerStudent?: number;
+    expectedType?: string;
+    rubricInstructions?: string;
+    opensAt?: string;
+    closesAt?: string;
   }): Promise<ProjectEntity> {
     const { data } = await http.post<ProjectEntity>('/projects', payload);
     return data;
@@ -160,6 +190,10 @@ export const projectsApi = {
       contextAcademico: string;
       status: ProjectStatus;
       maxDeliveriesPerStudent: number;
+      expectedType: string;
+      rubricInstructions: string;
+      opensAt: string;
+      closesAt: string;
     }>,
   ): Promise<ProjectEntity> {
     const { data } = await http.patch<ProjectEntity>(`/projects/${id}`, payload);
@@ -209,9 +243,124 @@ export const projectsApi = {
     return data;
   },
 
-  async progressSummary(projectId: string): Promise<ProjectProgressSummary> {
+  async progressSummary(
+    projectId: string,
+    query?: {
+      deliveryStatus?: DeliveryStatus;
+      builderOutcome?: BuilderOutcome;
+      lateOnly?: boolean;
+      groupId?: string;
+    },
+  ): Promise<ProjectProgressSummary> {
     const { data } = await http.get<ProjectProgressSummary>(
       `/projects/${projectId}/progress-summary`,
+      {
+        params: toParams({
+          deliveryStatus: query?.deliveryStatus,
+          builderOutcome: query?.builderOutcome,
+          lateOnly: query?.lateOnly ? "true" : undefined,
+          groupId: query?.groupId,
+        }),
+      },
+    );
+    return data;
+  },
+
+  async gradebook(
+    projectId: string,
+    query?: {
+      deliveryStatus?: DeliveryStatus;
+      builderOutcome?: BuilderOutcome;
+      lateOnly?: boolean;
+      groupId?: string;
+    },
+  ): Promise<ProjectGradebookRow[]> {
+    const { data } = await http.get<ProjectGradebookRow[]>(
+      `/projects/${projectId}/gradebook`,
+      {
+        params: toParams({
+          deliveryStatus: query?.deliveryStatus,
+          builderOutcome: query?.builderOutcome,
+          lateOnly: query?.lateOnly ? "true" : undefined,
+          groupId: query?.groupId,
+        }),
+      },
+    );
+    return data;
+  },
+
+  async operationalIssues(): Promise<ProjectOperationalIssuesSummary> {
+    const { data } = await http.get<ProjectOperationalIssuesSummary>(
+      "/projects/operational-issues",
+    );
+    return data;
+  },
+
+  async reconcileOperationalIssues(payload: {
+    mode?: "dry-run" | "apply";
+    categories?: Array<
+      "orphanAssignments" | "orphanDeliveries" | "orphanStorageObjects"
+    >;
+  }): Promise<ProjectOperationalIssuesReconcileResult> {
+    const { data } = await http.post<ProjectOperationalIssuesReconcileResult>(
+      "/projects/operational-issues/reconcile",
+      payload,
+    );
+    return data;
+  },
+
+  async exportProgressSummary(
+    projectId: string,
+    query?: {
+      deliveryStatus?: DeliveryStatus;
+      builderOutcome?: BuilderOutcome;
+      lateOnly?: boolean;
+      groupId?: string;
+    },
+  ): Promise<Blob> {
+    const response = await http.get(`/projects/${projectId}/progress-summary/export`, {
+      params: toParams({
+        deliveryStatus: query?.deliveryStatus,
+        builderOutcome: query?.builderOutcome,
+        lateOnly: query?.lateOnly ? "true" : undefined,
+        groupId: query?.groupId,
+      }),
+      responseType: "blob",
+    });
+    return response.data as Blob;
+  },
+
+  async exportGradebook(
+    projectId: string,
+    query?: {
+      deliveryStatus?: DeliveryStatus;
+      builderOutcome?: BuilderOutcome;
+      lateOnly?: boolean;
+      groupId?: string;
+    },
+  ): Promise<Blob> {
+    const response = await http.get(`/projects/${projectId}/gradebook/export`, {
+      params: toParams({
+        deliveryStatus: query?.deliveryStatus,
+        builderOutcome: query?.builderOutcome,
+        lateOnly: query?.lateOnly ? "true" : undefined,
+        groupId: query?.groupId,
+      }),
+      responseType: "blob",
+    });
+    return response.data as Blob;
+  },
+
+  async runtime(projectId: string): Promise<ProjectRuntimeStatusResponse> {
+    const { data } = await http.get<ProjectRuntimeStatusResponse>(
+      `/projects/${projectId}/runtime`,
+    );
+    return data;
+  },
+
+  async reconcileRuntime(projectId: string): Promise<ProjectEntity> {
+    const { data } = await http.post<ProjectEntity>(
+      `/projects/${projectId}/runtime/reconcile`,
     );
     return data;
   },
@@ -220,11 +369,20 @@ export const projectsApi = {
 export const assignmentsApi = {
   async bulkAssign(
     projectId: string,
-    studentIds: string[],
-  ): Promise<ProjectAssignmentEntity[]> {
-    const { data } = await http.post<ProjectAssignmentEntity[]>(
+    payload: {
+      studentIds?: string[];
+      studentEmails?: string[];
+      groupIds?: string[];
+    },
+  ): Promise<BulkAssignResponse> {
+    const sanitizedPayload = {
+      studentIds: normalizeStringArray(payload.studentIds),
+      studentEmails: normalizeStringArray(payload.studentEmails),
+      groupIds: normalizeStringArray(payload.groupIds),
+    };
+    const { data } = await http.post<BulkAssignResponse>(
       `/projects/${projectId}/assignments/bulk`,
-      { studentIds },
+      sanitizedPayload,
     );
     return data;
   },
@@ -244,6 +402,54 @@ export const assignmentsApi = {
   async revoke(assignmentId: string): Promise<{ message: string }> {
     const { data } = await http.delete<{ message: string }>(
       `/assignments/${assignmentId}`,
+    );
+    return data;
+  },
+};
+
+export const groupsApi = {
+  async list(): Promise<CourseGroupEntity[]> {
+    const { data } = await http.get<CourseGroupEntity[]>('/groups');
+    return data;
+  },
+
+  async create(payload: {
+    name: string;
+    code?: string;
+    description?: string;
+  }): Promise<CourseGroupEntity> {
+    const { data } = await http.post<CourseGroupEntity>('/groups', payload);
+    return data;
+  },
+
+  async listEnrollments(groupId: string): Promise<GroupEnrollmentEntity[]> {
+    const { data } = await http.get<GroupEnrollmentEntity[]>(
+      `/groups/${groupId}/enrollments`,
+    );
+    return data;
+  },
+
+  async bulkEnroll(
+    groupId: string,
+    payload: {
+      studentIds?: string[];
+      studentEmails?: string[];
+    },
+  ): Promise<BulkGroupEnrollResponse> {
+    const sanitizedPayload = {
+      studentIds: normalizeStringArray(payload.studentIds),
+      studentEmails: normalizeStringArray(payload.studentEmails),
+    };
+    const { data } = await http.post<BulkGroupEnrollResponse>(
+      `/groups/${groupId}/enrollments/bulk`,
+      sanitizedPayload,
+    );
+    return data;
+  },
+
+  async revokeEnrollment(enrollmentId: string): Promise<{ message: string }> {
+    const { data } = await http.delete<{ message: string }>(
+      `/groups/enrollments/${enrollmentId}`,
     );
     return data;
   },
@@ -294,6 +500,20 @@ export const deliveriesApi = {
 
   async updateStatus(id: string, status: DeliveryStatus): Promise<DeliveryEntity> {
     const { data } = await http.patch<DeliveryEntity>(`/deliveries/${id}/status/${status}`);
+    return data;
+  },
+
+  async updateGrading(
+    id: string,
+    payload: Partial<{
+      grade: number | null;
+      graderNotes: string;
+    }>,
+  ): Promise<DeliveryEntity> {
+    const { data } = await http.patch<DeliveryEntity>(
+      `/deliveries/${id}/grading`,
+      payload,
+    );
     return data;
   },
 

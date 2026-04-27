@@ -43,6 +43,7 @@ export function createSessionRecord(
     email: auth.user.email,
     role: auth.user.role,
     accessToken: auth.accessToken,
+    refreshToken: auth.refreshToken,
     createdAt: new Date().toISOString(),
   };
 }

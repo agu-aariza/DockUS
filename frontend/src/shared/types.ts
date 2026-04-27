@@ -5,9 +5,66 @@ export type UserStatus =
   | "SUSPENDED"
   | "PENDING_VERIFICATION";
 export type ProjectStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+export type ProjectClusterStatus =
+  | "ABSENT"
+  | "PROVISIONING"
+  | "READY"
+  | "ERROR"
+  | "DELETING";
 export type DeliveryStatus = "DRAFT" | "SUBMITTED" | "IN_REVIEW" | "EVALUATED";
 export type StorageScopeType = "DELIVERY" | "PROJECT";
 export type StorageAssetRole = "STUDENT_SOURCE" | "TEACHER_TESTS";
+export type BuilderOutcome = "PASS" | "FAIL" | "PARTIAL" | "UNKNOWN";
+export type SupportedProjectType =
+  | "CLI"
+  | "MODULE_CLI"
+  | "WEB_ASGI"
+  | "WEB_WSGI"
+  | "DJANGO_SERVICE"
+  | "BATCH_WORKER"
+  | "PYPROJECT_GENERIC"
+  | "CUSTOM_MANIFEST"
+  | "UNKNOWN";
+export type PreflightCompatibility =
+  | "SUPPORTED_AUTO"
+  | "SUPPORTED_WITH_MANIFEST"
+  | "PARTIAL"
+  | "UNSUPPORTED";
+export type DependencyManager =
+  | "pip-requirements"
+  | "pyproject"
+  | "poetry"
+  | "pdm"
+  | "uv"
+  | "pipenv"
+  | "setuptools"
+  | "unknown";
+export type PythonProjectLayout =
+  | "flat-root"
+  | "src-layout"
+  | "package-installable"
+  | "monorepo-subdir"
+  | "unknown";
+export type PythonExecutionProfile =
+  | "cli-script"
+  | "module-cli"
+  | "web-asgi"
+  | "web-wsgi"
+  | "django-service"
+  | "batch-worker"
+  | "custom-manifest"
+  | "unknown";
+export type ManifestSource = "AUTO" | "DOCKUS_MANIFEST";
+export type StudentWorkflowState =
+  | "NOT_ASSIGNED"
+  | "WINDOW_NOT_OPEN"
+  | "READY_TO_SUBMIT"
+  | "RECEIVED"
+  | "QUEUED"
+  | "RUNNING"
+  | "REPORT_READY"
+  | "AWAITING_TEACHER_REVIEW"
+  | "GRADED";
 
 export interface ApiErrorPayload {
   message: string | string[];
@@ -38,6 +95,7 @@ export interface AuthUser {
 export interface AuthResponse {
   user: AuthUser;
   accessToken: string;
+  refreshToken: string;
 }
 
 export interface SessionRecord {
@@ -47,6 +105,7 @@ export interface SessionRecord {
   email: string;
   role: UserRole;
   accessToken: string;
+  refreshToken: string;
   createdAt: string;
 }
 
@@ -67,11 +126,27 @@ export interface ProjectEntity {
   title: string;
   contextAcademico: string | null;
   maxDeliveriesPerStudent: number;
+  expectedType: string | null;
+  rubricInstructions: string | null;
+  opensAt?: string | null;
+  closesAt?: string | null;
   status: ProjectStatus;
   creatorId: string;
+  runtimeClusterName?: string | null;
+  runtimeClusterStatus?: ProjectClusterStatus;
+  runtimeProvisionedAt?: string | null;
+  runtimeLastError?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+}
+
+export interface BuildRunRuntimeTarget {
+  projectId: string;
+  clusterName: string;
+  namespace: string;
+  primaryPodName: string | null;
+  helperPodNames: string[];
 }
 
 export interface ProjectAssignmentEntity {
@@ -85,9 +160,62 @@ export interface ProjectAssignmentEntity {
   assignedById: string;
   assignedAt: string;
   revokedAt: string | null;
+  opensAt: string | null;
+  closesAt: string | null;
   deliveryCount: number;
   remainingDeliveries: number;
   minimumRequirementMet: boolean;
+  sourceGroupIds: string[];
+}
+
+export interface CourseGroupEntity {
+  id: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  studentCount: number;
+}
+
+export interface GroupEnrollmentEntity {
+  id: string;
+  groupId: string;
+  groupName: string;
+  studentId: string;
+  studentEmail: string;
+  studentName: string;
+  enrolledById: string;
+  enrolledAt: string;
+  revokedAt: string | null;
+}
+
+export interface BulkAssignResponse {
+  assignments: ProjectAssignmentEntity[];
+  summary: {
+    requestedIds: string[];
+    requestedEmails: string[];
+    requestedGroupIds: string[];
+    resolvedStudentIds: string[];
+    assignedCount: number;
+    reactivatedCount: number;
+    alreadyActiveCount: number;
+    unresolvedEmails: string[];
+  };
+}
+
+export interface BulkGroupEnrollResponse {
+  enrollments: GroupEnrollmentEntity[];
+  summary: {
+    requestedIds: string[];
+    requestedEmails: string[];
+    resolvedStudentIds: string[];
+    enrolledCount: number;
+    reactivatedCount: number;
+    alreadyActiveCount: number;
+    unresolvedEmails: string[];
+  };
 }
 
 export interface DeliveryEntity {
@@ -101,6 +229,9 @@ export interface DeliveryEntity {
   version: number;
   status: DeliveryStatus;
   notes: string | null;
+  isLate: boolean;
+  grade: number | null;
+  graderNotes: string | null;
   deliveryCount: number;
   remainingDeliveries: number;
   minimumRequirementMet: boolean;
@@ -166,6 +297,7 @@ export interface TechnicalFeedbackReport {
   security: TechnicalFeedbackItem[];
   architecture: TechnicalFeedbackItem[];
   quality: TechnicalFeedbackItem[];
+  rubricCompliance: TechnicalFeedbackItem[];
 }
 
 export interface BuilderSelfHealingReport {
@@ -173,6 +305,67 @@ export interface BuilderSelfHealingReport {
   recovered: boolean;
   attemptsUsed: number;
   summary: string;
+}
+
+export interface BuilderPreflightFinding {
+  level: "info" | "warning" | "error";
+  code: string;
+  message: string;
+  file?: string | null;
+  line?: number | null;
+}
+
+export interface PythonTestStrategy {
+  studentTestsPresent: boolean;
+  teacherTestsSupported: boolean;
+  suggestedCommand: string[] | null;
+}
+
+export interface PythonHealthStrategy {
+  kind: "http" | "command" | "none";
+  command: string[] | null;
+  servicePort: number | null;
+  path: string | null;
+}
+
+export interface PythonProjectModel {
+  pythonVersionConstraint: string | null;
+  dependencyManager: DependencyManager;
+  projectLayout: PythonProjectLayout;
+  executionProfile: PythonExecutionProfile;
+  entrypoints: string[];
+  testStrategy: PythonTestStrategy;
+  healthStrategy: PythonHealthStrategy;
+  systemDependencies: string[];
+  workingDirectory: string;
+  detectedFramework: string | null;
+  packageRoot: string | null;
+}
+
+export interface BuilderPreflightSummary {
+  supportedProjectType: SupportedProjectType;
+  compatibility: PreflightCompatibility;
+  entrypointCandidates: string[];
+  testsPresent: boolean;
+  detectedFramework: string | null;
+  detectedProjectModel: PythonProjectModel;
+  dependencyManager: DependencyManager;
+  pythonVersionConstraint: string | null;
+  executionProfile: PythonExecutionProfile;
+  workingDirectory: string;
+  manifestSource: ManifestSource;
+  manifestPath: string | null;
+  resolvedCommands: {
+    install: string[][];
+    run: string[] | null;
+    test: string[][];
+    healthcheck: string[] | null;
+  };
+  resolvedEnvironment: Record<string, string>;
+  resolvedServicePort: number | null;
+  systemDependencies: string[];
+  findings: BuilderPreflightFinding[];
+  failureCode?: string | null;
 }
 
 export interface BuilderReportEntity {
@@ -211,9 +404,11 @@ export interface BuildRunEntity {
     >;
     recipe?: unknown;
   } | null;
+  preflightSummary?: BuilderPreflightSummary | null;
   evidenceArtifacts?: unknown;
   report?: BuilderReportEntity | null;
   executionContext?: unknown;
+  runtimeTarget?: BuildRunRuntimeTarget | null;
   failureReason?: string | null;
   warnings: string[];
   imageTag?: string | null;
@@ -240,6 +435,7 @@ export interface BuildRunEvent {
     | "RUN_STATUS_CHANGED"
     | "STAGE_STARTED"
     | "STAGE_FINISHED"
+    | "LOG_CHUNK"
     | "WARNING_ADDED"
     | "ARTIFACT_ADDED"
     | "REPORT_READY"
@@ -265,10 +461,126 @@ export interface ProjectProgressSummary {
   deliveredAtLeastOnce: number;
   passedAllTests: number;
   neverDelivered: number;
+  statusTotals: {
+    pending: number;
+    submitted: number;
+    inReview: number;
+    evaluated: number;
+  };
+  outcomeTotals: Record<BuilderOutcome, number>;
   perStudent: Array<{
     studentId: string;
+    studentName: string;
     studentEmail: string;
     deliveryCount: number;
     latestStatus: DeliveryStatus | null;
+    latestDeliveryId: string | null;
+    latestDeliveryCreatedAt: string | null;
+    latestBuilderOutcome: BuilderOutcome | null;
+    grade: number | null;
+    isLate: boolean;
+    remainingDeliveries: number;
   }>;
+}
+
+export interface ProjectGradebookRow {
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  groupIds: string[];
+  groupLabels: string[];
+  assignmentId: string;
+  deliveryCount: number;
+  remainingDeliveries: number;
+  latestDeliveryId: string | null;
+  latestDeliveryCreatedAt: string | null;
+  latestStatus: DeliveryStatus | null;
+  latestBuilderOutcome: BuilderOutcome | null;
+  grade: number | null;
+  graderNotes: string | null;
+  isLate: boolean;
+  lastActivityAt: string;
+}
+
+export interface ProjectOperationalIssue {
+  id: string;
+  category: "assignment" | "delivery" | "storage";
+  severity: "warning" | "error";
+  title: string;
+  detail: string;
+  projectId: string | null;
+  projectTitle: string | null;
+  createdAt: string | null;
+}
+
+export interface ProjectOperationalIssuesSummary {
+  counts: {
+    orphanAssignments: number;
+    orphanDeliveries: number;
+    orphanStorageObjects: number;
+    revokedAssignments: number;
+    lateDeliveries: number;
+    ungradedEvaluatedDeliveries: number;
+  };
+  issues: ProjectOperationalIssue[];
+}
+
+export interface ProjectOperationalIssuesReconcileResult {
+  mode: "dry-run" | "apply";
+  requestedCategories: Array<
+    "orphanAssignments" | "orphanDeliveries" | "orphanStorageObjects"
+  >;
+  matched: Record<
+    "orphanAssignments" | "orphanDeliveries" | "orphanStorageObjects",
+    number
+  >;
+  applied: Record<
+    "orphanAssignments" | "orphanDeliveries" | "orphanStorageObjects",
+    number
+  >;
+  actions: Array<{
+    category:
+      | "orphanAssignments"
+      | "orphanDeliveries"
+      | "orphanStorageObjects";
+    targetId: string;
+    action: string;
+    outcome: "would_apply" | "applied" | "failed";
+    detail: string;
+  }>;
+}
+
+export interface ProjectRuntimePodSummary {
+  name: string;
+  phase: string;
+  readyContainers: number;
+  totalContainers: number;
+  restartCount: number;
+}
+
+export interface ProjectRuntimeNamespaceSummary {
+  name: string;
+  phase: "Active" | "Terminating" | "Unknown";
+  pods: ProjectRuntimePodSummary[];
+}
+
+export interface ProjectRuntimeActiveRunSummary {
+  buildRunId: string;
+  deliveryId: string;
+  status: BuildRunStatus;
+  activeStage: BuildStage | null;
+  namespace: string | null;
+  primaryPodName: string | null;
+  helperPodNames: string[];
+  createdAt: string;
+}
+
+export interface ProjectRuntimeStatusResponse {
+  projectId: string;
+  clusterName: string | null;
+  status: ProjectClusterStatus;
+  provisionedAt: string | null;
+  lastError: string | null;
+  activeRuns: ProjectRuntimeActiveRunSummary[];
+  namespaces: ProjectRuntimeNamespaceSummary[];
 }

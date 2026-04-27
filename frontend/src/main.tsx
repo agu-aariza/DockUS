@@ -4,15 +4,21 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { ErrorBoundary } from './shared/components/ErrorBoundary';
 import { SessionProvider } from './shared/session/SessionContext';
+import { ToastProvider } from './shared/toast/ToastContext';
+import { WorkspaceProvider } from './shared/workspace/WorkspaceContext';
 import './styles.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <SessionProvider>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
+        <ToastProvider>
+          <WorkspaceProvider>
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
+          </WorkspaceProvider>
+        </ToastProvider>
       </SessionProvider>
     </BrowserRouter>
   </React.StrictMode>,

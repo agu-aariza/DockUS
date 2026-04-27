@@ -4,9 +4,10 @@ import {
   useEffect,
   useMemo,
   useState,
+  useCallback,
   type PropsWithChildren,
 } from 'react';
-import { setAccessToken, subscribeAuthWarning } from '../api/http';
+import { setAccessToken, setRefreshToken, subscribeAuthWarning, subscribeTokenUpdate } from '../api/http';
 import type { AuthResponse, SessionRecord } from '../types';
 import {
   createSessionRecord,
@@ -50,9 +51,11 @@ export function SessionProvider({ children }: PropsWithChildren): JSX.Element {
     writeActiveSessionId(activeSessionId);
   }, [activeSessionId]);
 
+  // Sync both tokens to the HTTP layer whenever the active session changes
   useEffect(() => {
     setAccessToken(activeSession?.accessToken ?? null);
-  }, [activeSession?.accessToken]);
+    setRefreshToken(activeSession?.refreshToken ?? null);
+  }, [activeSession?.accessToken, activeSession?.refreshToken]);
 
   useEffect(() => {
     const unsubscribe = subscribeAuthWarning((message) => {
@@ -62,18 +65,38 @@ export function SessionProvider({ children }: PropsWithChildren): JSX.Element {
     return unsubscribe;
   }, []);
 
-  const addSession = (auth: AuthResponse, label?: string): SessionRecord => {
+  // Listen for token updates from the auto-refresh interceptor
+  useEffect(() => {
+    const unsubscribe = subscribeTokenUpdate((newAccess, newRefresh) => {
+      setSessions((prev) =>
+        prev.map((session) => {
+          if (session.id === activeSessionId) {
+            return {
+              ...session,
+              accessToken: newAccess,
+              refreshToken: newRefresh,
+            };
+          }
+          return session;
+        }),
+      );
+    });
+
+    return unsubscribe;
+  }, [activeSessionId]);
+
+  const addSession = useCallback((auth: AuthResponse, label?: string): SessionRecord => {
     const created = createSessionRecord(auth, label);
     setSessions((prev) => [created, ...prev]);
     setActiveSessionIdState(created.id);
     return created;
-  };
+  }, []);
 
-  const setActiveSessionId = (sessionId: string): void => {
+  const setActiveSessionId = useCallback((sessionId: string): void => {
     setActiveSessionIdState(sessionId);
-  };
+  }, []);
 
-  const removeSession = (sessionId: string): void => {
+  const removeSession = useCallback((sessionId: string): void => {
     setSessions((prev) => {
       const next = prev.filter((session) => session.id !== sessionId);
       if (sessionId === activeSessionId) {
@@ -81,19 +104,20 @@ export function SessionProvider({ children }: PropsWithChildren): JSX.Element {
       }
       return next;
     });
-  };
+  }, [activeSessionId]);
 
-  const clearSessions = (): void => {
+  const clearSessions = useCallback((): void => {
     setSessions([]);
     setActiveSessionIdState(null);
     setAccessToken(null);
-  };
+    setRefreshToken(null);
+  }, []);
 
-  const clearAuthWarning = (): void => {
+  const clearAuthWarning = useCallback((): void => {
     setAuthWarning(null);
-  };
+  }, []);
 
-  const value: SessionContextValue = {
+  const value: SessionContextValue = useMemo(() => ({
     sessions,
     activeSessionId,
     activeSession,
@@ -103,7 +127,7 @@ export function SessionProvider({ children }: PropsWithChildren): JSX.Element {
     removeSession,
     clearSessions,
     clearAuthWarning,
-  };
+  }), [sessions, activeSessionId, activeSession, authWarning, addSession, setActiveSessionId, removeSession, clearSessions, clearAuthWarning]);
 
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>

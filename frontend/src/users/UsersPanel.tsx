@@ -1,619 +1,215 @@
-import { type FormEvent, useState } from 'react';
-import { usersApi } from '../shared/api/services';
+import { useEffect, useState } from 'react';
 import { DangerConfirmModal } from '../shared/components/DangerConfirmModal';
 import { JsonResult } from '../shared/components/JsonResult';
-import type {
-  PaginatedResponse,
-  SessionRecord,
-  UserEntity,
-  UserRole,
-  UserStatus,
-} from '../shared/types';
-import { getErrorMessage } from '../shared/utils/errors';
-import { hasRole } from '../shared/utils/permissions';
+import { Button } from '../shared/components/ui/Button';
+import { Card, Badge } from '../shared/components/ui/Layout';
+import { useToast } from '../shared/toast/ToastContext';
+import type { SessionRecord, UserRole, UserStatus } from '../shared/types';
+import { useUserManagement } from './hooks/useUserManagement';
 
 interface UsersPanelProps {
   session: SessionRecord | null;
 }
 
+type UsersTab = 'consulta' | 'alta';
+
 const USER_ROLES: UserRole[] = ['ADMIN', 'TEACHER', 'STUDENT'];
-const USER_STATUSES: UserStatus[] = [
-  'ACTIVE',
-  'INACTIVE',
-  'SUSPENDED',
-  'PENDING_VERIFICATION',
-];
-
+const USER_STATUSES: UserStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
 export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
-  const [query, setQuery] = useState({
-    page: '1',
-    limit: '20',
-    role: '',
-    status: '',
-    search: '',
-  });
-  const [listResponse, setListResponse] =
-    useState<PaginatedResponse<UserEntity> | null>(null);
-  const [detailId, setDetailId] = useState('');
-  const [createForm, setCreateForm] = useState({
-    email: '',
-    password: 'Password123!',
-    firstName: '',
-    lastName: '',
-    role: 'STUDENT' as UserRole,
-    status: 'ACTIVE' as UserStatus,
-  });
-  const [updateForm, setUpdateForm] = useState({
-    id: '',
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    role: '',
-    status: '',
-  });
-  const [statusForm, setStatusForm] = useState({
-    id: '',
-    status: 'ACTIVE' as UserStatus,
-  });
-  const [restoreId, setRestoreId] = useState('');
-  const [deleteId, setDeleteId] = useState('');
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [result, setResult] = useState<unknown>(null);
-  const [message, setMessage] = useState('');
+  const uc = useUserManagement(session);
+  const [activeTab, setActiveTab] = useState<UsersTab>('consulta');
+  const { pushToast } = useToast();
 
-  const canList = hasRole(session, ['ADMIN', 'TEACHER']);
-  const canAdmin = hasRole(session, ['ADMIN']);
-
-  const showError = (error: unknown) => setMessage(getErrorMessage(error));
-
-  const handleList = async () => {
-    if (!canList) return;
-    setMessage('');
-    try {
-      const response = await usersApi.list({
-        page: Number(query.page) || 1,
-        limit: Number(query.limit) || 20,
-        role: (query.role || undefined) as UserRole | undefined,
-        status: (query.status || undefined) as UserStatus | undefined,
-        search: query.search || undefined,
-      });
-      setListResponse(response);
-      setResult(response);
-    } catch (error) {
-      showError(error);
+  useEffect(() => {
+    if (!uc.message.trim()) {
+      return;
     }
-  };
 
-  const handleDetail = async (inputId?: string) => {
-    const targetId = (inputId ?? detailId).trim();
-    if (!canList || !targetId) return;
-    setMessage('');
-    try {
-      const response = await usersApi.detail(targetId);
-      setResult(response);
-    } catch (error) {
-      showError(error);
-    }
-  };
-
-  const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!canAdmin) return;
-    setMessage('');
-    try {
-      const response = await usersApi.create({
-        email: createForm.email,
-        password: createForm.password,
-        firstName: createForm.firstName,
-        lastName: createForm.lastName,
-        role: createForm.role,
-        status: createForm.status,
-      });
-      setResult(response);
-      setMessage('Usuario creado correctamente.');
-    } catch (error) {
-      showError(error);
-    }
-  };
-
-  const handleUpdate = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!canAdmin || !updateForm.id.trim()) return;
-    setMessage('');
-    const payload: Record<string, string> = {};
-    if (updateForm.email.trim()) payload.email = updateForm.email.trim();
-    if (updateForm.password.trim()) payload.password = updateForm.password.trim();
-    if (updateForm.firstName.trim()) payload.firstName = updateForm.firstName.trim();
-    if (updateForm.lastName.trim()) payload.lastName = updateForm.lastName.trim();
-    if (updateForm.role) payload.role = updateForm.role;
-    if (updateForm.status) payload.status = updateForm.status;
-
-    try {
-      const response = await usersApi.update(updateForm.id.trim(), payload);
-      setResult(response);
-      setMessage('Usuario actualizado correctamente.');
-    } catch (error) {
-      showError(error);
-    }
-  };
-
-  const handleStatusUpdate = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!canAdmin || !statusForm.id.trim()) return;
-    setMessage('');
-    try {
-      const response = await usersApi.updateStatus(
-        statusForm.id.trim(),
-        statusForm.status,
-      );
-      setResult(response);
-      setMessage('Estado de usuario actualizado.');
-    } catch (error) {
-      showError(error);
-    }
-  };
-
-  const handleRestore = async () => {
-    if (!canAdmin || !restoreId.trim()) return;
-    setMessage('');
-    try {
-      const response = await usersApi.restore(restoreId.trim());
-      setResult(response);
-      setMessage('Usuario restaurado.');
-    } catch (error) {
-      showError(error);
-    }
-  };
-
-  const openDeleteConfirm = (id: string) => {
-    if (!canAdmin || !id.trim()) return;
-    setDeleteId(id.trim());
-    setConfirmOpen(true);
-  };
-
-  const executeDelete = async () => {
-    if (!canAdmin || !deleteId.trim()) return;
-    try {
-      await usersApi.remove(deleteId.trim());
-      setResult({ message: `Usuario ${deleteId.trim()} eliminado (soft delete).` });
-      setMessage('Usuario eliminado lógicamente.');
-    } catch (error) {
-      showError(error);
-      throw error;
-    }
-  };
+    pushToast({
+      title: 'Usuarios',
+      description: uc.message,
+      tone: uc.message.includes('[4') || uc.message.toLowerCase().includes('error') ? 'error' : 'info',
+    });
+    uc.setMessage('');
+  }, [pushToast, uc.message, uc.setMessage]);
 
   return (
-    <section className="stack">
-      <header className="panel-header">
-        <h2>Users</h2>
-        <p>
-          Rol activo: <strong>{session?.role ?? 'Sin sesión'}</strong>
-        </p>
+    <div className="space-y-8 animate-fade-in">
+      <header>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Directorio de usuarios</h2>
+        <p className="text-slate-500 text-sm">Gestiona cuentas, roles y niveles de acceso dentro de DockUS.</p>
       </header>
 
-      <article className="card">
-        <h3>Listado</h3>
-        <div className="grid four-col">
-          <label>
-            Page
-            <input
-              value={query.page}
-              onChange={(event) =>
-                setQuery((prev) => ({ ...prev, page: event.target.value }))
-              }
-            />
-          </label>
-          <label>
-            Limit
-            <input
-              value={query.limit}
-              onChange={(event) =>
-                setQuery((prev) => ({ ...prev, limit: event.target.value }))
-              }
-            />
-          </label>
-          <label>
-            Role
-            <select
-              value={query.role}
-              onChange={(event) =>
-                setQuery((prev) => ({ ...prev, role: event.target.value }))
-              }
-            >
-              <option value="">--</option>
-              {USER_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Status
-            <select
-              value={query.status}
-              onChange={(event) =>
-                setQuery((prev) => ({ ...prev, status: event.target.value }))
-              }
-            >
-              <option value="">--</option>
-              {USER_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <label>
-          Search
-          <input
-            value={query.search}
-            onChange={(event) =>
-              setQuery((prev) => ({ ...prev, search: event.target.value }))
-            }
-          />
-        </label>
-        <div className="row gap-8">
-          <button className="btn" onClick={handleList} disabled={!canList}>
-            Cargar usuarios
+      <div className="flex flex-wrap gap-1 border-b border-slate-200">
+        {[
+          { id: 'consulta', label: 'Consulta' },
+          { id: 'alta', label: 'Alta' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            className={`px-4 py-3 text-sm font-semibold transition ${
+              activeTab === tab.id
+                ? 'border-b-2 border-slate-900 text-slate-950'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+            onClick={() => setActiveTab(tab.id as UsersTab)}
+          >
+            {tab.label}
           </button>
-          <span className="hint">
-            {canList ? 'Permitido' : 'Solo ADMIN/TEACHER'}
-          </span>
+        ))}
+      </div>
+
+      {activeTab === 'consulta' ? (
+        <div className="space-y-8">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-8">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Filtros del directorio</h3>
+          <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <label className="label-text">Rol</label>
+              <select className="input-field" value={uc.query.role} onChange={e => uc.setQuery(p => ({ ...p, role: e.target.value }))}>
+                <option value="">Todos los roles</option>
+                {USER_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label-text">Estado de la cuenta</label>
+              <select className="input-field" value={uc.query.status} onChange={e => uc.setQuery(p => ({ ...p, status: e.target.value }))}>
+                <option value="">Todos los estados</option>
+                {USER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="mb-6">
+            <label className="label-text">Buscar usuario</label>
+            <input className="input-field" placeholder="Busca por nombre o correo..." value={uc.query.search} onChange={e => uc.setQuery(p => ({ ...p, search: e.target.value }))} />
+          </div>
+          <button className="btn-primary w-full" onClick={() => void uc.handleList()} disabled={!uc.canList}>
+            Aplicar filtros
+          </button>
         </div>
 
-        {listResponse ? (
-          <div className="table-wrap">
-            <table>
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Usuarios cargados</h3>
+        </div>
+        {uc.listResponse ? (
+          <>
+          <div className="space-y-3 p-4 lg:hidden">
+            {uc.listResponse.data.map((user) => (
+              <article key={user.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="text-sm font-semibold text-slate-950">
+                  {user.firstName} {user.lastName}
+                </div>
+                <div className="mt-1 text-xs text-slate-500">{user.email}</div>
+                <div className="mt-3 grid gap-2 text-sm text-slate-600">
+                  <div>Rol: {user.role}</div>
+                  <div>Estado: {user.status}</div>
+                </div>
+                <button 
+                  className="mt-4 text-xs font-bold text-rose-600 hover:text-rose-800 uppercase tracking-widest"
+                  onClick={() => { uc.setDeleteId(user.id); uc.setConfirmOpen(true); }} 
+                  disabled={!uc.canAdmin}
+                >
+                  Eliminar
+                </button>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto lg:block">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  <th className="px-6 py-4">Usuario</th>
+                  <th className="px-6 py-4">Rol</th>
+                  <th className="px-6 py-4">Estado</th>
+                  <th className="px-6 py-4 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody>
-                {listResponse.data.map((user) => (
-                  <tr key={user.id}>
-                    <td>{user.id}</td>
-                    <td>{user.email}</td>
-                    <td>{user.role}</td>
-                    <td>{user.status}</td>
-                    <td>
-                      <div className="row gap-8">
-                        <button
-                          className="btn ghost"
-                          onClick={() => {
-                            setDetailId(user.id);
-                            void handleDetail(user.id);
-                          }}
-                        >
-                          Detail
-                        </button>
-                        <button
-                          className="btn danger"
-                          disabled={!canAdmin}
-                          onClick={() => openDeleteConfirm(user.id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
+              <tbody className="divide-y divide-slate-100">
+                {uc.listResponse.data.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-bold text-slate-900">{user.firstName} {user.lastName}</div>
+                      <div className="text-xs text-slate-400">{user.email}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded uppercase tracking-tighter border border-slate-200">
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                        user.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        className="text-xs font-bold text-rose-600 hover:text-rose-800 uppercase tracking-widest"
+                        onClick={() => { uc.setDeleteId(user.id); uc.setConfirmOpen(true); }} 
+                        disabled={!uc.canAdmin}
+                      >
+                        Eliminar
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        ) : null}
-      </article>
-
-      <article className="card">
-        <h3>Detalle por ID</h3>
-        <div className="row gap-8">
-          <input
-            value={detailId}
-            onChange={(event) => setDetailId(event.target.value)}
-            placeholder="user uuid"
-          />
-          <button
-            className="btn"
-            onClick={() => {
-              void handleDetail();
-            }}
-            disabled={!canList}
-          >
-            Buscar
-          </button>
-        </div>
-      </article>
-
-      <section className="grid two-col">
-        <article className="card">
-          <h3>Crear</h3>
-          <form className="form" onSubmit={handleCreate}>
-            <label>
-              Email
-              <input
-                type="email"
-                required
-                value={createForm.email}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({ ...prev, email: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Password
-              <input
-                required
-                value={createForm.password}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    password: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label>
-              First name
-              <input
-                required
-                value={createForm.firstName}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    firstName: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Last name
-              <input
-                required
-                value={createForm.lastName}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    lastName: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Role
-              <select
-                value={createForm.role}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    role: event.target.value as UserRole,
-                  }))
-                }
-              >
-                {USER_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Status
-              <select
-                value={createForm.status}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    status: event.target.value as UserStatus,
-                  }))
-                }
-              >
-                {USER_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="btn" type="submit" disabled={!canAdmin}>
-              Crear usuario
-            </button>
-          </form>
-        </article>
-
-        <article className="card">
-          <h3>Actualizar</h3>
-          <form className="form" onSubmit={handleUpdate}>
-            <label>
-              User ID
-              <input
-                required
-                value={updateForm.id}
-                onChange={(event) =>
-                  setUpdateForm((prev) => ({ ...prev, id: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Email
-              <input
-                value={updateForm.email}
-                onChange={(event) =>
-                  setUpdateForm((prev) => ({
-                    ...prev,
-                    email: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Password
-              <input
-                value={updateForm.password}
-                onChange={(event) =>
-                  setUpdateForm((prev) => ({
-                    ...prev,
-                    password: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label>
-              First name
-              <input
-                value={updateForm.firstName}
-                onChange={(event) =>
-                  setUpdateForm((prev) => ({
-                    ...prev,
-                    firstName: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Last name
-              <input
-                value={updateForm.lastName}
-                onChange={(event) =>
-                  setUpdateForm((prev) => ({
-                    ...prev,
-                    lastName: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label>
-              Role (optional)
-              <select
-                value={updateForm.role}
-                onChange={(event) =>
-                  setUpdateForm((prev) => ({
-                    ...prev,
-                    role: event.target.value,
-                  }))
-                }
-              >
-                <option value="">--</option>
-                {USER_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Status (optional)
-              <select
-                value={updateForm.status}
-                onChange={(event) =>
-                  setUpdateForm((prev) => ({
-                    ...prev,
-                    status: event.target.value,
-                  }))
-                }
-              >
-                <option value="">--</option>
-                {USER_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="btn" type="submit" disabled={!canAdmin}>
-              Actualizar usuario
-            </button>
-          </form>
-        </article>
-      </section>
-
-      <section className="grid two-col">
-        <article className="card">
-          <h3>Cambio de estado</h3>
-          <form className="form" onSubmit={handleStatusUpdate}>
-            <label>
-              User ID
-              <input
-                required
-                value={statusForm.id}
-                onChange={(event) =>
-                  setStatusForm((prev) => ({ ...prev, id: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Status
-              <select
-                value={statusForm.status}
-                onChange={(event) =>
-                  setStatusForm((prev) => ({
-                    ...prev,
-                    status: event.target.value as UserStatus,
-                  }))
-                }
-              >
-                {USER_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="btn" type="submit" disabled={!canAdmin}>
-              Aplicar estado
-            </button>
-          </form>
-        </article>
-
-        <article className="card">
-          <h3>Restore / Delete</h3>
-          <div className="form">
-            <label>
-              Restore ID
-              <input
-                value={restoreId}
-                onChange={(event) => setRestoreId(event.target.value)}
-              />
-            </label>
-            <button className="btn" onClick={handleRestore} disabled={!canAdmin}>
-              Restaurar usuario
-            </button>
-            <label>
-              Delete ID
-              <input
-                value={deleteId}
-                onChange={(event) => setDeleteId(event.target.value)}
-              />
-            </label>
-            <button
-              className="btn danger"
-              onClick={() => openDeleteConfirm(deleteId)}
-              disabled={!canAdmin}
-            >
-              Eliminar (soft)
-            </button>
+          </>
+        ) : (
+          <div className="p-12 text-center text-slate-400 text-sm italic">
+            Aplica filtros para cargar el directorio.
           </div>
-        </article>
-      </section>
+        )}
+      </div>
+      </div>
+      ) : null}
 
-      {message ? <p className="message">{message}</p> : null}
-      {result ? <JsonResult title="Resultado" value={result} /> : null}
+      {activeTab === 'alta' ? (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-8">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Crear usuario</h3>
+          <form className="space-y-6" onSubmit={uc.handleCreate}>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <label className="label-text">Correo</label>
+                <input required className="input-field" type="email" value={uc.createForm.email} onChange={e => uc.setCreateForm(p => ({ ...p, email: e.target.value }))} />
+              </div>
+              <div>
+                <label className="label-text">Rol asignado</label>
+                <select className="input-field" value={uc.createForm.role} onChange={e => uc.setCreateForm(p => ({ ...p, role: e.target.value as UserRole }))}>
+                  {USER_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <label className="label-text">Nombre</label>
+                <input required className="input-field" value={uc.createForm.firstName} onChange={e => uc.setCreateForm(p => ({ ...p, firstName: e.target.value }))} />
+              </div>
+              <div>
+                <label className="label-text">Apellidos</label>
+                <input required className="input-field" value={uc.createForm.lastName} onChange={e => uc.setCreateForm(p => ({ ...p, lastName: e.target.value }))} />
+              </div>
+            </div>
+            <button type="submit" className="btn-secondary w-full sm:w-auto" disabled={!uc.canAdmin}>
+              Crear cuenta
+            </button>
+          </form>
+        </div>
+      ) : null}
 
       <DangerConfirmModal
-        open={confirmOpen}
-        title="Confirmar eliminación de usuario"
-        description={`Se eliminará lógicamente el usuario ${deleteId}.`}
+        open={uc.confirmOpen}
+        title="Eliminar acceso"
+        description={`¿Seguro que quieres eliminar de forma permanente la cuenta ${uc.deleteId}? El usuario perderá el acceso inmediatamente.`}
         confirmWord="DELETE"
-        onCancel={() => setConfirmOpen(false)}
-        onConfirm={executeDelete}
+        onCancel={() => uc.setConfirmOpen(false)}
+        onConfirm={() => uc.executeDelete()}
       />
-    </section>
+    </div>
   );
 }
