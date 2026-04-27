@@ -74,6 +74,28 @@ export class Delivery {
   @Column({ type: 'text', nullable: true })
   notes: string | null;
 
+  /** Indica si la entrega quedó registrada fuera de plazo. */
+  @Column({ type: 'boolean', default: false })
+  isLate: boolean;
+
+  /** Nota oficial de la entrega consolidada por el profesorado. */
+  @Column({
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+    transformer: {
+      to: (value?: number | null) => value,
+      from: (value: string | null) =>
+        value === null ? null : Number.parseFloat(value),
+    },
+  })
+  grade: number | null;
+
+  /** Comentarios manuales de corrección docente. */
+  @Column({ type: 'text', nullable: true })
+  graderNotes: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

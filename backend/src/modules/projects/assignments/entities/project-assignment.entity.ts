@@ -43,6 +43,9 @@ export class ProjectAssignment {
   @Column({ type: 'timestamp', nullable: true })
   revokedAt: Date | null;
 
+  @Column({ type: 'uuid', array: true, default: () => "'{}'" })
+  sourceGroupIds: string[];
+
   @UpdateDateColumn()
   updatedAt: Date;
 }

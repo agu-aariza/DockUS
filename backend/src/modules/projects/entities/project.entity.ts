@@ -33,6 +33,14 @@ export enum ProjectStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
+export enum ProjectClusterStatus {
+  ABSENT = 'ABSENT',
+  PROVISIONING = 'PROVISIONING',
+  READY = 'READY',
+  ERROR = 'ERROR',
+  DELETING = 'DELETING',
+}
+
 @Entity('projects')
 export class Project {
   /** Identificador unico de proyecto. */
@@ -54,6 +62,38 @@ export class Project {
   /** Estado de ciclo de vida del proyecto. */
   @Column({ type: 'enum', enum: ProjectStatus, default: ProjectStatus.DRAFT })
   status: ProjectStatus;
+
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  runtimeClusterName: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: ProjectClusterStatus,
+    default: ProjectClusterStatus.ABSENT,
+  })
+  runtimeClusterStatus: ProjectClusterStatus;
+
+  @Column({ type: 'timestamp', nullable: true })
+  runtimeProvisionedAt: Date | null;
+
+  @Column({ type: 'text', nullable: true })
+  runtimeLastError: string | null;
+
+  /** Tipo de proyecto esperado (ej: Web API con FastAPI, Script CLI, etc.) */
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  expectedType: string | null;
+
+  /** Instrucciones detalladas de la rúbrica para evaluación por LLM. */
+  @Column({ type: 'text', nullable: true })
+  rubricInstructions: string | null;
+
+  /** Momento a partir del que se permiten entregas. */
+  @Column({ type: 'timestamp', nullable: true })
+  opensAt: Date | null;
+
+  /** Momento tras el que las entregas quedan marcadas como tardías. */
+  @Column({ type: 'timestamp', nullable: true })
+  closesAt: Date | null;
 
   /** Identidad autora del proyecto en terminos de negocio. */
   @Column({ type: 'uuid' })

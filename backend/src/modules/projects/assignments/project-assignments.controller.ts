@@ -22,6 +22,7 @@ import { Roles, RolesGuard } from '../../auth/guards/roles.guard';
 import { UserRole } from '../../users/entities/user.entity';
 import { CreateProjectAssignmentsBulkDto } from './dto/create-project-assignment.dto';
 import {
+  BulkAssignResponse,
   ProjectAssignmentResponse,
   ProjectAssignmentsService,
 } from './project-assignments.service';
@@ -49,10 +50,10 @@ export class ProjectAssignmentsController {
     @Param('id', ParseUUIDPipe) projectId: string,
     @Body() dto: CreateProjectAssignmentsBulkDto,
     @Req() request: AuthenticatedRequest,
-  ): Promise<ProjectAssignmentResponse[]> {
+  ): Promise<BulkAssignResponse> {
     return this.projectAssignmentsService.createBulk(
       projectId,
-      dto.studentIds,
+      dto,
       request.user,
     );
   }

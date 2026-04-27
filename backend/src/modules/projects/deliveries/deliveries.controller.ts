@@ -44,6 +44,7 @@ import type { AuthenticatedRequest } from '../../auth/interfaces/authenticated-u
 import { UserRole } from '../../users/entities/user.entity';
 import {
   CreateDeliveryDto,
+  UpdateDeliveryGradingDto,
   UpdateDeliveryDto,
 } from './dto/create-delivery.dto';
 import { ListDeliveriesQueryDto } from './dto/list-deliveries-query.dto';
@@ -206,6 +207,34 @@ export class DeliveriesController {
     @Req() request: AuthenticatedRequest,
   ): Promise<DeliveryResponse> {
     return this.deliveriesService.updateStatus(id, status, request.user);
+  }
+
+  @ApiOperation({
+    summary: 'Calificar entrega',
+    description:
+      'Actualiza la nota oficial y las observaciones manuales de una entrega.',
+  })
+  @ApiParam(DELIVERY_ID_PARAM)
+  @ApiResponse({
+    status: 200,
+    description: 'Calificación de entrega actualizada correctamente.',
+  })
+  @ApiResponse({ status: 400, description: INVALID_INPUT_DESCRIPTION })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
+  @ApiResponse({ status: 403, description: FORBIDDEN_DESCRIPTION })
+  @ApiResponse({ status: 404, description: DELIVERY_NOT_FOUND_DESCRIPTION })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Patch(':id/grading')
+  async updateGrading(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateDeliveryGradingDto: UpdateDeliveryGradingDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<DeliveryResponse> {
+    return this.deliveriesService.updateGrading(
+      id,
+      updateDeliveryGradingDto,
+      request.user,
+    );
   }
 
   @ApiOperation({

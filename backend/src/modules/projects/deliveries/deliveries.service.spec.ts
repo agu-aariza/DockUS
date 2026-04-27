@@ -27,6 +27,7 @@ const createQueryBuilder = (config: {
 }) => {
   const builder = {
     leftJoinAndSelect: () => builder,
+    innerJoinAndSelect: () => builder,
     where: () => builder,
     withDeleted: () => builder,
     andWhere: () => builder,
@@ -106,6 +107,9 @@ describe('DeliveriesService', () => {
       version: 1,
       status: DeliveryStatus.DRAFT,
       notes: 'Entrega base',
+      isLate: false,
+      grade: null,
+      graderNotes: null,
     });
     expect(result).toMatchObject({
       id: created.id,

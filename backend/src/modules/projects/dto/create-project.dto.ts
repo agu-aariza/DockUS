@@ -9,6 +9,7 @@
  */
 
 import {
+  IsDateString,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -62,6 +63,42 @@ export class CreateProjectDto {
   @Min(1, { message: 'El máximo de entregas por alumno debe ser al menos 1.' })
   @IsOptional()
   maxDeliveriesPerStudent?: number;
+
+  @ApiPropertyOptional({
+    example: 'Web API con FastAPI',
+    description: 'Tipo de proyecto esperado para validación por LLM.',
+    maxLength: 100,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  expectedType?: string;
+
+  @ApiPropertyOptional({
+    example: 'Usa async/await y valida que los modelos usen Pydantic v2.',
+    description:
+      'Instrucciones detalladas de la rúbrica para el evaluador LLM.',
+  })
+  @IsString()
+  @IsOptional()
+  rubricInstructions?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-05-10T08:00:00.000Z',
+    description: 'Momento de apertura del plazo de entregas.',
+  })
+  @IsDateString({}, { message: 'opensAt debe ser una fecha ISO válida.' })
+  @IsOptional()
+  opensAt?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-05-24T23:59:59.000Z',
+    description:
+      'Momento a partir del que las entregas pasan a considerarse tardías.',
+  })
+  @IsDateString({}, { message: 'closesAt debe ser una fecha ISO válida.' })
+  @IsOptional()
+  closesAt?: string;
 }
 
 /**

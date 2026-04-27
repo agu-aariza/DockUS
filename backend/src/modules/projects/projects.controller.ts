@@ -15,6 +15,7 @@ import {
   Get,
   HttpCode,
   NotFoundException,
+  Optional,
   Param,
   ParseEnumPipe,
   ParseUUIDPipe,
@@ -22,6 +23,7 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -32,10 +34,12 @@ import {
   ApiConsumes,
   ApiOperation,
   ApiParam,
+  ApiProduces,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import {
   FORBIDDEN_DESCRIPTION,
   INTERNAL_SERVER_ERROR_DESCRIPTION,
@@ -49,8 +53,16 @@ import type { AuthenticatedRequest } from '../auth/interfaces/authenticated-user
 import { UserRole } from '../users/entities/user.entity';
 import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
 import { ListProjectsQueryDto } from './dto/list-projects-query.dto';
+import { ProjectProgressQueryDto } from './dto/project-progress-query.dto';
+import { ReconcileOperationalIssuesDto } from './dto/reconcile-operational-issues.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
-import { PaginatedProjectsResponse, ProjectsService } from './projects.service';
+import {
+  ProjectGradebookRow,
+  ProjectOperationalIssuesReconcileResult,
+  PaginatedProjectsResponse,
+  ProjectOperationalIssuesSummary,
+  ProjectsService,
+} from './projects.service';
 import {
   StorageObjectResponse,
   StorageService,
@@ -123,6 +135,41 @@ export class ProjectsController {
     @Req() request: AuthenticatedRequest,
   ): Promise<PaginatedProjectsResponse> {
     return this.projectsService.findAll(query, request.user);
+  }
+
+  @ApiOperation({
+    summary: 'Consultar incidencias operativas del dominio proyectos',
+    description:
+      'Resume registros inconsistentes o sensibles para que el profesorado detecte problemas de integridad y seguimiento.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Incidencias operativas recuperadas correctamente.',
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get('operational-issues')
+  async getOperationalIssues(
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProjectOperationalIssuesSummary> {
+    return this.projectsService.getOperationalIssues(request.user);
+  }
+
+  @ApiOperation({
+    summary: 'Reconciliar incidencias operativas del dominio proyectos',
+    description:
+      'Permite simular o aplicar una limpieza segura sobre incidencias reconciliables.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reconciliación ejecutada correctamente.',
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Post('operational-issues/reconcile')
+  async reconcileOperationalIssues(
+    @Body() dto: ReconcileOperationalIssuesDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProjectOperationalIssuesReconcileResult> {
+    return this.projectsService.reconcileOperationalIssues(dto, request.user);
   }
 
   /**
@@ -246,7 +293,12 @@ export class ProjectsController {
     @UploadedFile() file: UploadedStorageFile | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<StorageObjectResponse> {
-    return this.storageService.uploadProjectTestSuite(id, file, request.user);
+    const uploaded = await this.storageService.uploadProjectTestSuite(
+      id,
+      file,
+      request.user,
+    );
+    return uploaded;
   }
 
   @ApiOperation({
@@ -272,7 +324,11 @@ export class ProjectsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<{ message: string }> {
-    return this.storageService.removeProjectTestSuite(id, request.user);
+    const result = await this.storageService.removeProjectTestSuite(
+      id,
+      request.user,
+    );
+    return result;
   }
 
   /**
@@ -352,8 +408,92 @@ export class ProjectsController {
   @Get(':id/progress-summary')
   async progressSummary(
     @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: ProjectProgressQueryDto,
     @Req() request: AuthenticatedRequest,
   ) {
-    return this.projectsService.getProgressSummary(id, request.user);
+    return this.projectsService.getProgressSummary(id, request.user, query);
+  }
+
+  @ApiOperation({
+    summary: 'Gradebook del proyecto',
+    description:
+      'Devuelve una tabla plana por alumno para seguimiento y calificación operativa.',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @ApiResponse({
+    status: 200,
+    description: 'Gradebook recuperado correctamente.',
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get(':id/gradebook')
+  async gradebook(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: ProjectProgressQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProjectGradebookRow[]> {
+    return this.projectsService.getGradebook(id, request.user, query);
+  }
+
+  @ApiOperation({
+    summary: 'Exportar gradebook del proyecto en CSV',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @ApiProduces('text/csv')
+  @ApiResponse({
+    status: 200,
+    description: 'Exportación CSV del gradebook generada correctamente.',
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get(':id/gradebook/export')
+  async exportGradebook(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: ProjectProgressQueryDto,
+    @Req() request: AuthenticatedRequest,
+    @Res() response: Response,
+  ): Promise<void> {
+    const csv = await this.projectsService.exportGradebookCsv(
+      id,
+      request.user,
+      query,
+    );
+    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="project-${id}-gradebook.csv"`,
+    );
+    response.send(csv);
+  }
+
+  @ApiOperation({
+    summary: 'Exportar seguimiento del proyecto en CSV',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @ApiProduces('text/csv')
+  @ApiResponse({
+    status: 200,
+    description: 'Exportación CSV generada correctamente.',
+  })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
+  @ApiResponse({ status: 403, description: FORBIDDEN_DESCRIPTION })
+  @ApiResponse({ status: 404, description: PROJECT_NOT_FOUND_DESCRIPTION })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get(':id/progress-summary/export')
+  async exportProgressSummary(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: ProjectProgressQueryDto,
+    @Req() request: AuthenticatedRequest,
+    @Res() response: Response,
+  ): Promise<void> {
+    const csv = await this.projectsService.exportProgressSummaryCsv(
+      id,
+      request.user,
+      query,
+    );
+    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="project-${id}-progress.csv"`,
+    );
+    response.send(csv);
   }
 }

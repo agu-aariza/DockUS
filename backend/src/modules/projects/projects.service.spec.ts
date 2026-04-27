@@ -17,6 +17,7 @@ import { Delivery } from './deliveries/entities/delivery.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
 import { ProjectsService } from './projects.service';
+import { ProjectRuntimeService } from './runtime/project-runtime.service';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -47,6 +48,16 @@ describe('ProjectsService', () => {
     createQueryBuilder: jest.fn(),
   };
 
+  const projectRuntimeService = {
+    syncCreatedProject: jest.fn(async (project: Project) => project),
+    transitionProjectStatus: jest.fn(
+      async (project: Project, status: ProjectStatus) => ({
+        ...project,
+        status,
+      }),
+    ),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     queryBuilder.andWhere.mockReturnThis();
@@ -57,6 +68,7 @@ describe('ProjectsService', () => {
       projectsRepository as unknown as Repository<Project>,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
       deliveriesRepository as unknown as Repository<Delivery>,
+      projectRuntimeService as unknown as ProjectRuntimeService,
     );
   });
 
@@ -83,7 +95,14 @@ describe('ProjectsService', () => {
       status: ProjectStatus.DRAFT,
       creatorId,
       maxDeliveriesPerStudent: 1,
+      expectedType: null,
+      rubricInstructions: null,
+      opensAt: null,
+      closesAt: null,
     });
+    expect(projectRuntimeService.syncCreatedProject).toHaveBeenCalledWith(
+      savedProject,
+    );
     expect(result.creatorId).toBe(creatorId);
   });
 
@@ -150,7 +169,7 @@ describe('ProjectsService', () => {
     const project = buildProject();
     const updated = buildProject({ status: ProjectStatus.ARCHIVED });
     projectsRepository.findOne.mockResolvedValue(project);
-    projectsRepository.save.mockResolvedValue(updated);
+    projectRuntimeService.transitionProjectStatus.mockResolvedValue(updated);
 
     const result = await service.updateStatus(
       project.id,
@@ -158,11 +177,9 @@ describe('ProjectsService', () => {
       actor,
     );
 
-    expect(projectsRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: project.id,
-        status: ProjectStatus.ARCHIVED,
-      }),
+    expect(projectRuntimeService.transitionProjectStatus).toHaveBeenCalledWith(
+      project,
+      ProjectStatus.ARCHIVED,
     );
     expect(result.status).toBe(ProjectStatus.ARCHIVED);
   });

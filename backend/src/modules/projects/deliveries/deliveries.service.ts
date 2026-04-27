@@ -14,6 +14,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -27,6 +28,7 @@ import {
 import { throwIfUniqueViolation } from '../../../shared/database/unique-violation.util';
 import {
   CreateDeliveryDto,
+  UpdateDeliveryGradingDto,
   UpdateDeliveryDto,
 } from './dto/create-delivery.dto';
 import {
@@ -53,6 +55,9 @@ export interface DeliveryResponse {
   version: number;
   status: DeliveryStatus;
   notes: string | null;
+  isLate: boolean;
+  grade: number | null;
+  graderNotes: string | null;
   deliveryCount: number;
   remainingDeliveries: number;
   minimumRequirementMet: boolean;
@@ -97,9 +102,9 @@ export class DeliveriesService {
   ): Promise<Delivery | null> {
     const queryBuilder = this.deliveriesRepository
       .createQueryBuilder('delivery')
-      .leftJoinAndSelect('delivery.assignment', 'assignment')
-      .leftJoinAndSelect('assignment.project', 'project')
-      .leftJoinAndSelect('assignment.student', 'student')
+      .innerJoinAndSelect('delivery.assignment', 'assignment')
+      .innerJoinAndSelect('assignment.project', 'project')
+      .innerJoinAndSelect('assignment.student', 'student')
       .where('delivery.id = :id', { id });
 
     if (includeDeleted) {
@@ -124,9 +129,9 @@ export class DeliveriesService {
 
     const queryBuilder = this.deliveriesRepository
       .createQueryBuilder('delivery')
-      .leftJoinAndSelect('delivery.assignment', 'assignment')
-      .leftJoinAndSelect('assignment.project', 'project')
-      .leftJoinAndSelect('assignment.student', 'student');
+      .innerJoinAndSelect('delivery.assignment', 'assignment')
+      .innerJoinAndSelect('assignment.project', 'project')
+      .innerJoinAndSelect('assignment.student', 'student');
 
     this.applyActorScope(queryBuilder, actor);
 
@@ -184,12 +189,29 @@ export class DeliveriesService {
       );
     }
 
+    const now = new Date();
+    if (
+      assignment.project.opensAt &&
+      now.getTime() < assignment.project.opensAt.getTime()
+    ) {
+      throw new ConflictException(
+        'El plazo de entregas aún no está abierto para este proyecto.',
+      );
+    }
+    const isLate =
+      assignment.project.closesAt !== null &&
+      assignment.project.closesAt !== undefined &&
+      now.getTime() > assignment.project.closesAt.getTime();
+
     const delivery = this.deliveriesRepository.create({
       assignmentId: assignment.id,
       authorId: assignment.studentId,
       version: nextVersion,
       status: dto.status ?? DeliveryStatus.DRAFT,
       notes: dto.notes?.trim() || null,
+      isLate,
+      grade: null,
+      graderNotes: null,
     });
 
     try {
@@ -266,6 +288,35 @@ export class DeliveriesService {
     if (!enriched) {
       throw new NotFoundException(
         'No se pudo reconstruir la entrega actualizada.',
+      );
+    }
+
+    return this.toResponse(enriched);
+  }
+
+  async updateGrading(
+    id: string,
+    dto: UpdateDeliveryGradingDto,
+    actor: AuthenticatedUser,
+  ): Promise<DeliveryResponse> {
+    const delivery = await this.findEntityForManagement(id, actor);
+    if (!delivery) {
+      throw new NotFoundException('Entrega no encontrada para calificación.');
+    }
+
+    if (dto.grade !== undefined) {
+      delivery.grade = dto.grade ?? null;
+    }
+
+    if (dto.graderNotes !== undefined) {
+      delivery.graderNotes = dto.graderNotes?.trim() || null;
+    }
+
+    const saved = await this.deliveriesRepository.save(delivery);
+    const enriched = await this.findEntityById(saved.id, actor);
+    if (!enriched) {
+      throw new NotFoundException(
+        'No se pudo reconstruir la entrega calificada.',
       );
     }
 
@@ -440,24 +491,32 @@ export class DeliveriesService {
     const deliveryCount =
       deliveryCountOverride ??
       (await this.resolveCurrentMaxVersion(delivery.assignmentId));
+    const assignment = delivery.assignment;
+    const project = assignment?.project ?? null;
+    const student = assignment?.student ?? null;
+    const studentName =
+      `${student?.firstName ?? ''} ${student?.lastName ?? ''}`.trim() ||
+      student?.email ||
+      'Alumno no disponible';
+    const maxDeliveriesPerStudent =
+      project?.maxDeliveriesPerStudent ?? deliveryCount;
 
     return {
       id: delivery.id,
       assignmentId: delivery.assignmentId,
-      projectId: delivery.assignment.projectId,
-      projectTitle: delivery.assignment.project.title,
+      projectId: assignment?.projectId ?? '',
+      projectTitle: project?.title ?? 'Proyecto no disponible',
       authorId: delivery.authorId,
-      studentEmail: delivery.assignment.student.email,
-      studentName:
-        `${delivery.assignment.student.firstName} ${delivery.assignment.student.lastName}`.trim(),
+      studentEmail: student?.email ?? '',
+      studentName,
       version: delivery.version,
       status: delivery.status,
       notes: delivery.notes,
+      isLate: delivery.isLate,
+      grade: delivery.grade ?? null,
+      graderNotes: delivery.graderNotes ?? null,
       deliveryCount,
-      remainingDeliveries: Math.max(
-        0,
-        delivery.assignment.project.maxDeliveriesPerStudent - deliveryCount,
-      ),
+      remainingDeliveries: Math.max(0, maxDeliveriesPerStudent - deliveryCount),
       minimumRequirementMet: deliveryCount >= 1,
       createdAt: delivery.createdAt.toISOString(),
       updatedAt: delivery.updatedAt.toISOString(),

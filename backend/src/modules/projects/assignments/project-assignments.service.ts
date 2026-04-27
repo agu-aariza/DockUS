@@ -3,9 +3,10 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { User, UserRole } from '../../users/entities/user.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
@@ -17,15 +18,34 @@ export interface ProjectAssignmentResponse {
   projectId: string;
   projectTitle: string;
   maxDeliveriesPerStudent: number;
+  sourceGroupIds: string[];
   studentId: string;
   studentEmail: string;
   studentName: string;
   assignedById: string;
   assignedAt: string;
   revokedAt: string | null;
+  opensAt: string | null;
+  closesAt: string | null;
   deliveryCount: number;
   remainingDeliveries: number;
   minimumRequirementMet: boolean;
+}
+
+export interface BulkAssignSummary {
+  requestedIds: string[];
+  requestedEmails: string[];
+  requestedGroupIds: string[];
+  resolvedStudentIds: string[];
+  assignedCount: number;
+  reactivatedCount: number;
+  alreadyActiveCount: number;
+  unresolvedEmails: string[];
+}
+
+export interface BulkAssignResponse {
+  assignments: ProjectAssignmentResponse[];
+  summary: BulkAssignSummary;
 }
 
 @Injectable()
@@ -42,14 +62,52 @@ export class ProjectAssignmentsService {
 
   async createBulk(
     projectId: string,
-    studentIds: string[],
+    input: {
+      studentIds?: string[];
+      studentEmails?: string[];
+    },
     actor: AuthenticatedUser,
-  ): Promise<ProjectAssignmentResponse[]> {
+  ): Promise<BulkAssignResponse> {
     const project = await this.projectsService.findOwnedProjectOrThrow(
       projectId,
       actor,
     );
-    const uniqueStudentIds = [...new Set(studentIds)];
+    const requestedIds = [...new Set((input.studentIds ?? []).filter(Boolean))];
+    const requestedEmails = [
+      ...new Set(
+        (input.studentEmails ?? [])
+          .map((email) => email.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ];
+
+    if (requestedIds.length === 0 && requestedEmails.length === 0) {
+      throw new ConflictException(
+        'Debes indicar al menos un studentId o studentEmail para asignar.',
+      );
+    }
+
+    const groupStudentIds: string[] = [];
+    const usersByEmail = requestedEmails.length
+      ? await this.usersRepository.find({
+          where: requestedEmails.map((email) => ({ email })),
+        })
+      : [];
+    const emailToStudentId = new Map(
+      usersByEmail.map((user) => [user.email.toLowerCase(), user.id]),
+    );
+    const unresolvedEmails = requestedEmails.filter(
+      (email) => !emailToStudentId.has(email),
+    );
+    const uniqueStudentIds = [
+      ...new Set([
+        ...requestedIds,
+        ...groupStudentIds,
+        ...requestedEmails
+          .map((email) => emailToStudentId.get(email))
+          .filter((candidateId): candidateId is string => Boolean(candidateId)),
+      ]),
+    ];
     const students = await this.usersRepository.find({
       where: { id: In(uniqueStudentIds) },
     });
@@ -68,6 +126,9 @@ export class ProjectAssignmentsService {
       }
     }
 
+    let assignedCount = 0;
+    let reactivatedCount = 0;
+    let alreadyActiveCount = 0;
     for (const student of students) {
       const existing = await this.assignmentsRepository.findOne({
         where: {
@@ -88,8 +149,10 @@ export class ProjectAssignmentsService {
             assignedById: actor.userId,
             assignedAt: new Date(),
             revokedAt: null,
+            sourceGroupIds: [],
           }),
         );
+        assignedCount += 1;
         continue;
       }
 
@@ -97,11 +160,30 @@ export class ProjectAssignmentsService {
         existing.assignedById = actor.userId;
         existing.assignedAt = new Date();
         existing.revokedAt = null;
+        existing.sourceGroupIds = [];
         await this.assignmentsRepository.save(existing);
+        reactivatedCount += 1;
+        continue;
       }
+
+      alreadyActiveCount += 1;
     }
 
-    return this.listByProject(project.id, actor);
+    const assignments = await this.listByProject(project.id, actor);
+
+    return {
+      assignments,
+      summary: {
+        requestedIds,
+        requestedEmails,
+        requestedGroupIds: [],
+        resolvedStudentIds: uniqueStudentIds,
+        assignedCount,
+        reactivatedCount,
+        alreadyActiveCount,
+        unresolvedEmails,
+      },
+    };
   }
 
   async listByProject(
@@ -110,16 +192,14 @@ export class ProjectAssignmentsService {
   ): Promise<ProjectAssignmentResponse[]> {
     await this.projectsService.assertCanAccessProject(projectId, actor);
 
-    const assignments = await this.assignmentsRepository.find({
-      where: { projectId },
-      relations: {
-        project: true,
-        student: true,
-      },
-      order: {
-        assignedAt: 'DESC',
-      },
-    });
+    const assignments = await this.assignmentsRepository
+      .createQueryBuilder('assignment')
+      .innerJoinAndSelect('assignment.project', 'project')
+      .innerJoinAndSelect('assignment.student', 'student')
+      .where('assignment.projectId = :projectId', { projectId })
+      .andWhere('assignment.revokedAt IS NULL')
+      .orderBy('assignment.assignedAt', 'DESC')
+      .getMany();
 
     return this.toResponses(assignments);
   }
@@ -133,19 +213,14 @@ export class ProjectAssignmentsService {
       );
     }
 
-    const assignments = await this.assignmentsRepository.find({
-      where: {
-        studentId: actor.userId,
-        revokedAt: IsNull(),
-      },
-      relations: {
-        project: true,
-        student: true,
-      },
-      order: {
-        assignedAt: 'DESC',
-      },
-    });
+    const assignments = await this.assignmentsRepository
+      .createQueryBuilder('assignment')
+      .innerJoinAndSelect('assignment.project', 'project')
+      .innerJoinAndSelect('assignment.student', 'student')
+      .where('assignment.studentId = :studentId', { studentId: actor.userId })
+      .andWhere('assignment.revokedAt IS NULL')
+      .orderBy('assignment.assignedAt', 'DESC')
+      .getMany();
 
     return this.toResponses(assignments);
   }
@@ -226,23 +301,33 @@ export class ProjectAssignmentsService {
 
     return assignments.map((assignment) => {
       const deliveryCount = progressByAssignment.get(assignment.id) ?? 0;
+      const project = assignment.project ?? null;
+      const student = assignment.student ?? null;
+      const maxDeliveriesPerStudent =
+        project?.maxDeliveriesPerStudent ?? deliveryCount;
+      const studentName =
+        `${student?.firstName ?? ''} ${student?.lastName ?? ''}`.trim() ||
+        student?.email ||
+        'Alumno no disponible';
       const remainingDeliveries = Math.max(
         0,
-        assignment.project.maxDeliveriesPerStudent - deliveryCount,
+        maxDeliveriesPerStudent - deliveryCount,
       );
 
       return {
         id: assignment.id,
         projectId: assignment.projectId,
-        projectTitle: assignment.project.title,
-        maxDeliveriesPerStudent: assignment.project.maxDeliveriesPerStudent,
+        projectTitle: project?.title ?? 'Proyecto no disponible',
+        maxDeliveriesPerStudent,
+        sourceGroupIds: assignment.sourceGroupIds ?? [],
         studentId: assignment.studentId,
-        studentEmail: assignment.student.email,
-        studentName:
-          `${assignment.student.firstName} ${assignment.student.lastName}`.trim(),
+        studentEmail: student?.email ?? '',
+        studentName,
         assignedById: assignment.assignedById,
         assignedAt: assignment.assignedAt.toISOString(),
         revokedAt: assignment.revokedAt?.toISOString() ?? null,
+        opensAt: project?.opensAt?.toISOString() ?? null,
+        closesAt: project?.closesAt?.toISOString() ?? null,
         deliveryCount,
         remainingDeliveries,
         minimumRequirementMet: deliveryCount >= 1,

@@ -14,6 +14,7 @@ import { ProjectAssignmentsController } from './assignments/project-assignments.
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import { ProjectAssignmentsService } from './assignments/project-assignments.service';
 import { BuilderModule } from './builder/builder.module';
+import { BuildRun } from './builder/domain/entities/build-run.entity';
 import { DeliveriesController } from './deliveries/deliveries.controller';
 import { DeliveriesService } from './deliveries/deliveries.service';
 import { Delivery } from './deliveries/entities/delivery.entity';
@@ -21,12 +22,24 @@ import { User } from '../users/entities/user.entity';
 import { Project } from './entities/project.entity';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
+import { ProjectRuntimeModule } from './runtime/project-runtime.module';
+import { StorageObject } from './storage/entities/storage-object.entity';
 import { StorageModule } from './storage/storage.module';
+import { StorageInfrastructureModule } from '../../shared/infrastructure/storage/storage-infrastructure.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Project, ProjectAssignment, Delivery, User]),
+    TypeOrmModule.forFeature([
+      Project,
+      ProjectAssignment,
+      Delivery,
+      BuildRun,
+      User,
+      StorageObject,
+    ]),
     StorageModule,
+    StorageInfrastructureModule,
+    ProjectRuntimeModule,
     BuilderModule,
   ],
   controllers: [
