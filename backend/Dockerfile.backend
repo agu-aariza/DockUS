@@ -1,0 +1,15 @@
+FROM node:22-alpine
+
+RUN apk add --no-cache \
+    docker-cli \
+    docker-cli-buildx \
+    curl \
+    python3 \
+    py3-pip \
+  && python3 -m pip install --break-system-packages ruff bandit \
+  && curl -sLo /usr/local/bin/kubectl https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl \
+  && chmod +x /usr/local/bin/kubectl \
+  && curl -sLo /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/v0.24.0/kind-linux-amd64 \
+  && chmod +x /usr/local/bin/kind
+
+WORKDIR /app

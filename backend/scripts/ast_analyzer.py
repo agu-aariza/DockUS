@@ -18,6 +18,8 @@ def analyze_file(filepath):
     classes = []
     functions = []
     env_vars = set()
+    imports = set()
+    stdlib = sys.stdlib_module_names if hasattr(sys, 'stdlib_module_names') else set()
 
     class Analyzer(ast.NodeVisitor):
         def visit_ClassDef(self, node):
@@ -61,11 +63,28 @@ def analyze_file(filepath):
                     env_vars.add(str(node.slice.value))
             self.generic_visit(node)
 
+        def visit_Import(self, node):
+            for alias in node.names:
+                root_module = alias.name.split('.')[0]
+                imports.add(root_module)
+            self.generic_visit(node)
+
+        def visit_ImportFrom(self, node):
+            if node.level == 0 and node.module:
+                root_module = node.module.split('.')[0]
+                imports.add(root_module)
+            self.generic_visit(node)
+
     Analyzer().visit(tree)
+    
+    # Filtrar imports para dejar solo librerías externas (no stdlib)
+    external_imports = [m for m in imports if m not in stdlib and m != '']
+    
     return {
         "classes": classes,
         "functions": functions,
-        "env_vars": list(env_vars)
+        "env_vars": list(env_vars),
+        "external_imports": external_imports
     }
 
 def main():

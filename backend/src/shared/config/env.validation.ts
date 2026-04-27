@@ -10,6 +10,13 @@
 
 import * as Joi from 'joi';
 
+const insecureJwtPlaceholders = [
+  'tu_secreto_jwt_seguro_de_al_menos_32_chars',
+  'tu_secreto_refresh_seguro_de_al_menos_32_chars',
+  'CHANGE_ME_JWT_SECRET',
+  'CHANGE_ME_REFRESH_SECRET',
+] as const;
+
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
@@ -21,8 +28,18 @@ export const envValidationSchema = Joi.object({
   DB_USERNAME: Joi.string().required(),
   DB_PASSWORD: Joi.string().required(),
   DB_NAME: Joi.string().required(),
-  JWT_SECRET: Joi.string().min(32).required(),
-  JWT_EXPIRES_IN: Joi.string().default('1d'),
+  JWT_SECRET: Joi.string()
+    .min(32)
+    .invalid(...insecureJwtPlaceholders)
+    .required(),
+  JWT_EXPIRES_IN: Joi.string().default('15m'),
+  JWT_REFRESH_SECRET: Joi.string()
+    .min(32)
+    .invalid(...insecureJwtPlaceholders)
+    .optional(),
+  JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
+  SEED_ADMIN_EMAIL: Joi.string().email().optional(),
+  SEED_ADMIN_PASSWORD: Joi.string().optional(),
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().default(6379),
   REDIS_PASSWORD: Joi.string().optional(),
@@ -42,7 +59,11 @@ export const envValidationSchema = Joi.object({
   BUILDER_OLLAMA_EVAL_MODEL: Joi.string().default('dockus-builder-eval'),
   BUILDER_OLLAMA_TIMEOUT_MS: Joi.number().integer().min(1000).default(120000),
   BUILDER_LLM_ASSIST_ENABLED: Joi.boolean().default(true),
-  BUILDER_SELF_HEAL_MAX_ATTEMPTS: Joi.number().integer().min(1).max(5).default(3),
+  BUILDER_SELF_HEAL_MAX_ATTEMPTS: Joi.number()
+    .integer()
+    .min(1)
+    .max(5)
+    .default(3),
   BUILDER_STATIC_REVIEW_ENABLED: Joi.boolean().default(true),
   BUILDER_RUFF_BIN: Joi.string().default('ruff'),
   BUILDER_BANDIT_BIN: Joi.string().default('bandit'),
@@ -62,6 +83,14 @@ export const envValidationSchema = Joi.object({
     .integer()
     .min(2000)
     .default(15000),
+  BUILDER_LLM_REPAIR_MAX_INPUT_CHARS: Joi.number()
+    .integer()
+    .min(2000)
+    .default(15000),
+  BUILDER_LLM_FEEDBACK_MAX_INPUT_CHARS: Joi.number()
+    .integer()
+    .min(2000)
+    .default(15000),
   BUILDER_DOCKER_BUILD_TIMEOUT_MS: Joi.number()
     .integer()
     .min(10000)
@@ -77,8 +106,20 @@ export const envValidationSchema = Joi.object({
   BUILDER_BASE_PYTHON_IMAGE: Joi.string().default(
     'python:3.11.9-slim-bookworm',
   ),
-  BUILDER_KIND_CLUSTER_NAME: Joi.string().default('dockus-builder'),
   BUILDER_K8S_NAMESPACE_PREFIX: Joi.string().default('dockus-run'),
+  PROJECT_RUNTIME_KIND_PREFIX: Joi.string().default('dockus-project'),
+  PROJECT_RUNTIME_PROVISION_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(10000)
+    .default(600000),
+  PROJECT_RUNTIME_DELETE_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(10000)
+    .default(240000),
+  PROJECT_RUNTIME_INSPECT_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(5000)
+    .default(30000),
   BUILDER_BATCH_TIMEOUT_SECONDS: Joi.number().integer().min(10).default(60),
   BUILDER_SERVICE_READY_TIMEOUT_SECONDS: Joi.number()
     .integer()

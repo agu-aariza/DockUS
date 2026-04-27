@@ -3,16 +3,14 @@ services:
     image: postgres:16-alpine
     container_name: dockus-postgres
     restart: unless-stopped
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: ${DB_USERNAME:-dockus}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-dockus_secure_pass}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dockus_pass}
       POSTGRES_DB: ${DB_NAME:-dockus_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-dockus}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,12 +21,10 @@ services:
     image: redis:7-alpine
     container_name: dockus-redis
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     command: >
       sh -c "if [ -z \"$$REDIS_PASSWORD\" ]; then redis-server --appendonly yes; else redis-server --requirepass $$REDIS_PASSWORD --appendonly yes; fi"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     volumes:
       - redis_data:/data
     healthcheck:
@@ -56,7 +52,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "mc alias set myminio http://localhost:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD >/dev/null 2>&1 && mc ready myminio >/dev/null 2>&1 || exit 1",
+          "mc alias set myminio http://localhost:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD >/dev/null 2>&1 && mc ready myminio >/dev/null 2>&1 || exit 1",
         ]
       interval: 10s
       timeout: 5s
@@ -81,37 +77,49 @@ services:
       start_period: 20s
     volumes:
       - ollama_data:/root/.ollama
-      - ./backend:/app
     networks:
       - dockus-network
 
+  ollama-gpu:
+    extends: ollama
+    container_name: dockus-ollama-gpu
+    profiles: ["gpu"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
   ollama-bootstrap:
-    image: curlimages/curl
+    image: node:22-alpine
     container_name: dockus-ollama-bootstrap
     restart: "no"
+    working_dir: /app
     depends_on:
       ollama:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
       MODEL_NAME: ${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:7b}
-    command: >
-      sh -c '
-      echo "Pulling base model..." &&
-      curl -s -X POST $$OLLAMA_HOST/api/pull -d "{\"name\": \"$$MODEL_NAME\"}" &&
-      echo "\nCreating plan model..." &&
-      curl -s -X POST $$OLLAMA_HOST/api/create -d "{\"name\": \"dockus-builder-plan\", \"path\": \"/app/scripts/ollama-plan.Modelfile\"}" &&
-      echo "\nCreating eval model..." &&
-      curl -s -X POST $$OLLAMA_HOST/api/create -d "{\"name\": \"dockus-builder-eval\", \"path\": \"/app/scripts/ollama-eval.Modelfile\"}" &&
-      echo "\nOllama bootstrap complete."
-      '
+      PLAN_MODEL_NAME: ${BUILDER_OLLAMA_PLAN_MODEL:-dockus-builder-plan}
+      EVAL_MODEL_NAME: ${BUILDER_OLLAMA_EVAL_MODEL:-dockus-builder-eval}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-16384}
+    volumes:
+      - ./backend:/app
+    command: sh -c "node /app/scripts/ollama-bootstrap.mjs"
     networks:
       - dockus-network
 
   backend:
-    image: node:22-alpine
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.backend
+    image: dockus-backend-dev
     container_name: dockus-backend
     restart: unless-stopped
+    profiles: ["dev"]
     working_dir: /app
     ports:
       - "${PORT:-3000}:3000"
@@ -140,13 +148,17 @@ services:
       - backend_node_modules:/app/node_modules
       - /var/run/docker.sock:/var/run/docker.sock
     command: >
-      sh -c "command -v docker >/dev/null || apk add --no-cache docker-cli docker-cli-buildx curl python3 py3-pip; command -v python3 >/dev/null || apk add --no-cache python3 py3-pip; python3 -m pip show ruff >/dev/null 2>&1 || python3 -m pip install --break-system-packages ruff; python3 -m pip show bandit >/dev/null 2>&1 || python3 -m pip install --break-system-packages bandit; command -v kubectl >/dev/null || (curl -sLo /usr/local/bin/kubectl https://dl.k8s.io/release/stable/bin/linux/amd64/kubectl && chmod +x /usr/local/bin/kubectl); command -v kind >/dev/null || (curl -sLo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.24.0/kind-linux-amd64 && chmod +x /usr/local/bin/kind); docker network connect kind dockus-backend 2>/dev/null || true; mkdir -p ~/.kube && kind get kubeconfig --name dockus-builder --internal > ~/.kube/config 2>/dev/null || true; [ -f node_modules/.package-lock.json ] && npm run start:dev || (npm install && npm run start:dev)"
+      sh -c "
+      docker network connect kind dockus-backend 2>/dev/null || true;
+      mkdir -p ~/.kube && kind export kubeconfig --name dockus-v1 --internal 2>/dev/null || true;
+      if [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
+        npm install &&
+        cp package-lock.json node_modules/.package-lock.json;
+      fi &&
+      npm run start:dev
+      "
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget -qO- http://localhost:3000/api/health/live || exit 1",
-        ]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health/live || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -154,10 +166,40 @@ services:
     networks:
       - dockus-network
 
+  backend-prod:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.prod
+    image: dockus-backend-prod
+    container_name: dockus-backend-prod
+    restart: unless-stopped
+    profiles: ["prod"]
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      MINIO_ENDPOINT: minio
+      DOCKER_HOST: unix:///var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - dockus-network
+
   frontend:
     image: node:22-alpine
     container_name: dockus-frontend
     restart: unless-stopped
+    profiles: ["dev"]
     working_dir: /app
     ports:
       - "5173:5173"
@@ -171,13 +213,31 @@ services:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     command: >
-      sh -c "[ -f node_modules/.package-lock.json ] && npm run dev -- --host 0.0.0.0 --port 5173 || (npm install && npm run dev -- --host 0.0.0.0 --port 5173)"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173/ || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+      sh -c "
+      if [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
+        npm install &&
+        cp package-lock.json node_modules/.package-lock.json;
+      fi &&
+      npm run dev -- --host 0.0.0.0 --port 5173
+      "
+    networks:
+      - dockus-network
+
+  frontend-prod:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api}
+    image: dockus-frontend-prod
+    container_name: dockus-frontend-prod
+    restart: unless-stopped
+    profiles: ["prod"]
+    depends_on:
+      backend-prod:
+        condition: service_started
+    ports:
+      - "8080:80"
     networks:
       - dockus-network
 
