@@ -111,15 +111,20 @@ export function listPythonFiles(files: RuntimeFile[]): RuntimeFile[] {
 }
 
 export async function readTextFileSafe(absolutePath: string): Promise<string> {
-  const fileBuffer = await readFile(absolutePath);
-  if (fileBuffer.includes(0)) {
+  try {
+    const fileBuffer = await readFile(absolutePath);
+    if (fileBuffer.includes(0)) {
+      return '';
+    }
+    return fileBuffer.toString('utf8');
+  } catch {
     return '';
   }
-  return fileBuffer.toString('utf8');
 }
 
 export async function detectEntrypointCandidates(
   pythonFiles: RuntimeFile[],
+  textContentMap: Map<string, string>,
 ): Promise<string[]> {
   const preferredCandidates = new Set([
     'main.py',
@@ -144,8 +149,8 @@ export async function detectEntrypointCandidates(
   }
 
   for (const file of pythonFiles) {
-    const content = await readTextFileSafe(file.absolutePath);
-    if (/if\s+__name__\s*==\s*["']__main__["']\s*:/.test(content)) {
+    const content = textContentMap.get(toPosixPath(file.relativePath));
+    if (content && /if\s+__name__\s*==\s*["']__main__["']\s*:/.test(content)) {
       candidates.add(file.relativePath);
     }
   }
@@ -272,10 +277,17 @@ export function buildAssessmentFromPreflightSummary(
 export async function detectBuilderPreflightSummary(
   runtimeFiles: RuntimeFile[],
 ): Promise<BuilderPreflightSummary> {
+  const textContentMap = await readTextContentMap(runtimeFiles);
   const pythonFiles = listPythonFiles(runtimeFiles);
-  const entrypointCandidates = await detectEntrypointCandidates(pythonFiles);
+  const entrypointCandidates = await detectEntrypointCandidates(
+    pythonFiles,
+    textContentMap,
+  );
   const testsPresent = detectTestsPresent(runtimeFiles);
-  const absolutePathFindings = await scanAbsolutePathsInFiles(runtimeFiles);
+  const absolutePathFindings = await scanAbsolutePathsInFiles(
+    runtimeFiles,
+    textContentMap,
+  );
   const findings: BuilderPreflightFinding[] = [];
 
   for (const finding of absolutePathFindings.slice(0, 10)) {
@@ -326,7 +338,6 @@ export async function detectBuilderPreflightSummary(
   }
 
   const manifestData = await loadDockusManifest(runtimeFiles);
-  const textContentMap = await readTextContentMap(runtimeFiles);
   const workingDirectory = detectWorkingDirectory({
     runtimeFiles,
     entrypointCandidates,
@@ -465,6 +476,7 @@ export function detectTestsPresent(files: RuntimeFile[]): boolean {
 
 export async function scanAbsolutePathsInFiles(
   runtimeFiles: RuntimeFile[],
+  textContentMap: Map<string, string>,
 ): Promise<AbsolutePathFinding[]> {
   const findings: AbsolutePathFinding[] = [];
 
@@ -473,12 +485,12 @@ export async function scanAbsolutePathsInFiles(
       continue;
     }
 
-    const content = await readFile(file.absolutePath);
-    if (content.includes(0)) {
+    const content = textContentMap.get(toPosixPath(file.relativePath));
+    if (!content) {
       continue;
     }
 
-    const lines = content.toString('utf8').split(/\r?\n/);
+    const lines = content.split(/\r?\n/);
     lines.forEach((line, index) => {
       for (const pattern of ABSOLUTE_PATH_PATTERNS) {
         pattern.lastIndex = 0;

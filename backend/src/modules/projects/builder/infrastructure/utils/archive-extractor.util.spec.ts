@@ -98,7 +98,7 @@ describe('archive-extractor.util', () => {
     });
 
     expect(files).toHaveLength(1);
-    const appPyContent = await readFile(path.join(outputDir, 'src', 'app.py'));
+    const appPyContent = await readFile(path.join(outputDir, 'app.py'));
     expect(appPyContent.toString('utf8')).toContain('print("tar")');
   });
 });

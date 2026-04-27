@@ -14,6 +14,7 @@ import { Logger } from 'nestjs-pino';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { User, UserRole, UserStatus } from '../users/entities/user.entity';
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 
 const buildUser = (overrides: Partial<User> = {}): User => ({
@@ -46,6 +47,11 @@ describe('AuthService', () => {
     sign: jest.MockedFunction<JwtService['sign']>;
   };
 
+  let configService: {
+    get: jest.Mock;
+    getOrThrow: jest.Mock;
+  };
+
   let logger: {
     warn: jest.Mock<any, any>;
   };
@@ -62,6 +68,11 @@ describe('AuthService', () => {
       sign: jest.fn().mockReturnValue('signed-token'),
     };
 
+    configService = {
+      get: jest.fn(),
+      getOrThrow: jest.fn().mockReturnValue('fallback-secret'),
+    };
+
     logger = {
       warn: jest.fn(),
     };
@@ -69,6 +80,7 @@ describe('AuthService', () => {
     service = new AuthService(
       usersService as unknown as UsersService,
       jwtService as unknown as JwtService,
+      configService as unknown as ConfigService,
       logger as unknown as Logger,
     );
   });
@@ -103,6 +115,7 @@ describe('AuthService', () => {
     expect(response).toEqual({
       user: { id: user.id, email: user.email, role: user.role },
       accessToken: 'signed-token',
+      refreshToken: 'signed-token',
     });
   });
 

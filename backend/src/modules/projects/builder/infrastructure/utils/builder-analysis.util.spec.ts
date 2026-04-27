@@ -28,13 +28,16 @@ describe('builder-analysis.util (dockus)', () => {
       'utf8',
     );
 
-    const candidates = await detectEntrypointCandidates([
-      {
-        relativePath: 'src/main.py',
-        absolutePath: mainPath,
-        sizeBytes: 80,
-      },
-    ]);
+    const candidates = await detectEntrypointCandidates(
+      [
+        {
+          relativePath: 'src/main.py',
+          absolutePath: mainPath,
+          sizeBytes: 80,
+        },
+      ],
+      new Map([['src/main.py', 'if __name__ == "__main__":\n']])
+    );
 
     expect(candidates).toEqual(['src/main.py']);
   });
@@ -47,13 +50,21 @@ describe('builder-analysis.util (dockus)', () => {
       'utf8',
     );
 
-    const findings = await scanAbsolutePathsInFiles([
-      {
-        relativePath: 'app.py',
-        absolutePath: sourcePath,
-        sizeBytes: 120,
-      },
-    ]);
+    const findings = await scanAbsolutePathsInFiles(
+      [
+        {
+          relativePath: 'app.py',
+          absolutePath: sourcePath,
+          sizeBytes: 120,
+        },
+      ],
+      new Map([
+        [
+          'app.py',
+          'X="/home/alumno/proyecto/data.csv"\nY="C:\\\\Users\\\\alumno\\\\Desktop\\\\x"\n',
+        ],
+      ]),
+    );
 
     expect(findings.length).toBeGreaterThanOrEqual(2);
     expect(
