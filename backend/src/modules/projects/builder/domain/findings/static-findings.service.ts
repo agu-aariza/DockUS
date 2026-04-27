@@ -8,8 +8,10 @@ import {
 import { FindingSeverity, RuntimeFile, StaticFinding } from '../builder.types';
 import {
   AbsolutePathFinding,
+  readTextContentMap,
   readTextFileSafe,
   scanAbsolutePathsInFiles,
+  toPosixPath,
 } from '../../infrastructure/utils/builder-analysis.util';
 
 interface StaticFindingResult {
@@ -22,7 +24,12 @@ export class StaticFindingsService {
   async analyze(runtimeFiles: RuntimeFile[]): Promise<StaticFindingResult> {
     const findings: StaticFinding[] = [];
     const portabilityRisks = new Set<string>();
-    const absolutePathFindings = await scanAbsolutePathsInFiles(runtimeFiles);
+    const textContentMap = await readTextContentMap(runtimeFiles);
+
+    const absolutePathFindings = await scanAbsolutePathsInFiles(
+      runtimeFiles,
+      textContentMap,
+    );
 
     this.pushAbsolutePathFindings(
       findings,
@@ -31,7 +38,7 @@ export class StaticFindingsService {
     );
 
     for (const file of runtimeFiles) {
-      const content = await readTextFileSafe(file.absolutePath);
+      const content = textContentMap.get(toPosixPath(file.relativePath));
       if (!content) {
         continue;
       }

@@ -124,8 +124,9 @@ export async function readTextFileSafe(absolutePath: string): Promise<string> {
 
 export async function detectEntrypointCandidates(
   pythonFiles: RuntimeFile[],
-  textContentMap: Map<string, string>,
+  textContentMap?: Map<string, string>,
 ): Promise<string[]> {
+  const map = textContentMap ?? (await readTextContentMap(pythonFiles));
   const preferredCandidates = new Set([
     'main.py',
     'app.py',
@@ -149,7 +150,7 @@ export async function detectEntrypointCandidates(
   }
 
   for (const file of pythonFiles) {
-    const content = textContentMap.get(toPosixPath(file.relativePath));
+    const content = map.get(toPosixPath(file.relativePath));
     if (content && /if\s+__name__\s*==\s*["']__main__["']\s*:/.test(content)) {
       candidates.add(file.relativePath);
     }
@@ -476,8 +477,9 @@ export function detectTestsPresent(files: RuntimeFile[]): boolean {
 
 export async function scanAbsolutePathsInFiles(
   runtimeFiles: RuntimeFile[],
-  textContentMap: Map<string, string>,
+  textContentMap?: Map<string, string>,
 ): Promise<AbsolutePathFinding[]> {
+  const map = textContentMap ?? (await readTextContentMap(runtimeFiles));
   const findings: AbsolutePathFinding[] = [];
 
   for (const file of runtimeFiles) {
@@ -485,7 +487,7 @@ export async function scanAbsolutePathsInFiles(
       continue;
     }
 
-    const content = textContentMap.get(toPosixPath(file.relativePath));
+    const content = map.get(toPosixPath(file.relativePath));
     if (!content) {
       continue;
     }
@@ -521,7 +523,7 @@ export function toSha256Hex(value: Buffer | string): string {
   return createHash('sha256').update(value).digest('hex');
 }
 
-async function readTextContentMap(
+export async function readTextContentMap(
   runtimeFiles: RuntimeFile[],
 ): Promise<Map<string, string>> {
   const contentMap = new Map<string, string>();
