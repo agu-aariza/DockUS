@@ -20,6 +20,12 @@ import { buildTypeOrmConfig } from './database/typeorm.config';
 import { buildPinoHttpConfig } from './observability/logger.config';
 import { buildBullConfig } from './queue/bull.config';
 import { throttlerConfig } from './security/throttler.config';
+import { AdminSeedService } from './seed/admin-seed.service';
+import { DemoSeedService } from './seed/demo-seed.service';
+import { User } from '../../modules/users/entities/user.entity';
+import { Project } from '../../modules/projects/entities/project.entity';
+import { ProjectAssignment } from '../../modules/projects/assignments/entities/project-assignment.entity';
+import { Delivery } from '../../modules/projects/deliveries/entities/delivery.entity';
 
 @Module({
   imports: [
@@ -47,6 +53,8 @@ import { throttlerConfig } from './security/throttler.config';
         buildTypeOrmConfig(configService),
     }),
 
+    TypeOrmModule.forFeature([User, Project, ProjectAssignment, Delivery]),
+
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -54,7 +62,7 @@ import { throttlerConfig } from './security/throttler.config';
         buildBullConfig(configService),
     }),
   ],
-  providers: [RedisClientService],
+  providers: [RedisClientService, AdminSeedService, DemoSeedService],
   exports: [RedisClientService],
 })
 export class InfrastructureModule {}

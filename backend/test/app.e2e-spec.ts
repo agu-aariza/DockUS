@@ -13,13 +13,20 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AppModule } from './../src/app.module';
 import { applyAppBootstrap } from './../src/bootstrap';
 import {
   BuildRun,
   BuildRunStatus,
 } from './../src/modules/projects/builder/domain/entities/build-run.entity';
+import { ProjectAssignment } from './../src/modules/projects/assignments/entities/project-assignment.entity';
+import { Delivery } from './../src/modules/projects/deliveries/entities/delivery.entity';
+import {
+  Project,
+  ProjectClusterStatus,
+  ProjectStatus,
+} from './../src/modules/projects/entities/project.entity';
 import { User, UserRole } from './../src/modules/users/entities/user.entity';
 import { UsersService } from './../src/modules/users/users.service';
 
@@ -73,10 +80,25 @@ interface ProfileApiResponse {
 
 interface ProjectApiResponse {
   id: string;
+  opensAt?: string | null;
+  closesAt?: string | null;
 }
 
 interface DeliveryApiResponse {
   id: string;
+  isLate: boolean;
+  grade: number | null;
+}
+
+interface ProjectAssignmentApiResponse {
+  id: string;
+}
+
+interface BulkAssignApiResponse {
+  assignments: ProjectAssignmentApiResponse[];
+  summary: {
+    assignedCount: number;
+  };
 }
 
 interface EnqueueBuildRunApiResponse {
@@ -104,8 +126,14 @@ describe('DockUS API (e2e)', () => {
   let app: INestApplication<App>;
   let usersRepository: Repository<User>;
   let buildRunsRepository: Repository<BuildRun>;
+  let projectsRepository: Repository<Project>;
+  let assignmentsRepository: Repository<ProjectAssignment>;
+  let deliveriesRepository: Repository<Delivery>;
   let usersService: UsersService;
   const createdUserIds: string[] = [];
+  const createdProjectIds: string[] = [];
+  const createdAssignmentIds: string[] = [];
+  const createdDeliveryIds: string[] = [];
 
   let studentIdentity: AuthApiResponse;
   let teacherIdentity: AuthApiResponse;
@@ -158,9 +186,15 @@ describe('DockUS API (e2e)', () => {
       .accessToken;
   };
 
-  const createProjectAndDelivery = async (): Promise<{
+  const createProjectAndDelivery = async (options?: {
+    opensAt?: string;
+    closesAt?: string;
+    runtimeReady?: boolean;
+  }): Promise<{
     projectId: string;
+    assignmentId: string;
     deliveryId: string;
+    delivery: DeliveryApiResponse;
   }> => {
     const projectResponse = await request(app.getHttpServer())
       .post('/api/projects')
@@ -168,26 +202,54 @@ describe('DockUS API (e2e)', () => {
       .send({
         title: `Proyecto E2E ${Date.now()}`,
         contextAcademico: 'Builder async tests',
+        opensAt: options?.opensAt,
+        closesAt: options?.closesAt,
       })
       .expect(201);
 
     const projectPayload = projectResponse.body as ProjectApiResponse;
+    createdProjectIds.push(projectPayload.id);
+
+    if (options?.runtimeReady) {
+      await projectsRepository.update(projectPayload.id, {
+        status: ProjectStatus.ACTIVE,
+        runtimeClusterStatus: ProjectClusterStatus.READY,
+        runtimeClusterName: `dockus-project-${projectPayload.id.slice(0, 12)}`,
+        runtimeProvisionedAt: new Date(),
+        runtimeLastError: null,
+      });
+    }
+
+    const bulkAssignResponse = await request(app.getHttpServer())
+      .post(`/api/projects/${projectPayload.id}/assignments/bulk`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        studentIds: [studentIdentity.user.id],
+      })
+      .expect(201);
+
+    const bulkAssignPayload = bulkAssignResponse.body as BulkAssignApiResponse;
+    const assignmentId = bulkAssignPayload.assignments[0]?.id;
+    expect(assignmentId).toEqual(expect.any(String));
+    createdAssignmentIds.push(assignmentId);
 
     const deliveryResponse = await request(app.getHttpServer())
       .post('/api/deliveries')
-      .set('Authorization', `Bearer ${teacherToken}`)
+      .set('Authorization', `Bearer ${studentToken}`)
       .send({
-        projectId: projectPayload.id,
-        version: Date.now(),
+        assignmentId,
         notes: 'Entrega para pruebas e2e del builder async',
       })
       .expect(201);
 
     const deliveryPayload = deliveryResponse.body as DeliveryApiResponse;
+    createdDeliveryIds.push(deliveryPayload.id);
 
     return {
       projectId: projectPayload.id,
+      assignmentId,
       deliveryId: deliveryPayload.id,
+      delivery: deliveryPayload,
     };
   };
 
@@ -208,11 +270,38 @@ describe('DockUS API (e2e)', () => {
     buildRunsRepository = app.get<Repository<BuildRun>>(
       getRepositoryToken(BuildRun),
     );
+    projectsRepository = app.get<Repository<Project>>(
+      getRepositoryToken(Project),
+    );
+    assignmentsRepository = app.get<Repository<ProjectAssignment>>(
+      getRepositoryToken(ProjectAssignment),
+    );
+    deliveriesRepository = app.get<Repository<Delivery>>(
+      getRepositoryToken(Delivery),
+    );
     usersService = app.get(UsersService);
     await prepareRbacIdentities();
   });
 
   afterAll(async () => {
+    if (buildRunsRepository && createdDeliveryIds.length > 0) {
+      await buildRunsRepository.delete({
+        deliveryId: In(createdDeliveryIds),
+      });
+    }
+
+    if (deliveriesRepository && createdDeliveryIds.length > 0) {
+      await deliveriesRepository.delete(createdDeliveryIds);
+    }
+
+    if (assignmentsRepository && createdAssignmentIds.length > 0) {
+      await assignmentsRepository.delete(createdAssignmentIds);
+    }
+
+    if (projectsRepository && createdProjectIds.length > 0) {
+      await projectsRepository.delete(createdProjectIds);
+    }
+
     if (usersRepository && createdUserIds.length > 0) {
       await usersRepository.delete(createdUserIds);
     }
@@ -261,6 +350,15 @@ describe('DockUS API (e2e)', () => {
 
     expect(readiness.status).toBe(allDependenciesUp ? 'ok' : 'error');
     expect(response.status).toBe(allDependenciesUp ? 200 : 503);
+  });
+
+  it('/api/metrics (GET) expone métricas Prometheus', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/metrics')
+      .expect(200);
+
+    expect(response.headers['content-type']).toContain('text/plain');
+    expect(response.text).toContain('dockus_builder_runs_queued_total');
   });
 
   it('/api/auth/register (POST) crea un usuario y emite token', async () => {
@@ -316,7 +414,9 @@ describe('DockUS API (e2e)', () => {
   });
 
   it('/api/builder/deliveries/:id/run (POST) devuelve 202 al encolar ejecución', async () => {
-    const { deliveryId } = await createProjectAndDelivery();
+    const { deliveryId } = await createProjectAndDelivery({
+      runtimeReady: true,
+    });
 
     const response = await request(app.getHttpServer())
       .post(`/api/builder/deliveries/${deliveryId}/run`)
@@ -330,7 +430,9 @@ describe('DockUS API (e2e)', () => {
   });
 
   it('/api/builder/runs/:id (GET) devuelve estado válido del run', async () => {
-    const { deliveryId } = await createProjectAndDelivery();
+    const { deliveryId } = await createProjectAndDelivery({
+      runtimeReady: true,
+    });
     const enqueueResponse = await request(app.getHttpServer())
       .post(`/api/builder/deliveries/${deliveryId}/run`)
       .set('Authorization', `Bearer ${teacherToken}`)
@@ -355,7 +457,9 @@ describe('DockUS API (e2e)', () => {
   });
 
   it('/api/builder/deliveries/:id/runs (GET) devuelve historial paginado', async () => {
-    const { deliveryId } = await createProjectAndDelivery();
+    const { deliveryId } = await createProjectAndDelivery({
+      runtimeReady: true,
+    });
     const enqueueResponse = await request(app.getHttpServer())
       .post(`/api/builder/deliveries/${deliveryId}/run`)
       .set('Authorization', `Bearer ${teacherToken}`)
@@ -377,7 +481,9 @@ describe('DockUS API (e2e)', () => {
   });
 
   it('/api/builder/deliveries/:id/run (POST) devuelve 409 si ya existe run activo', async () => {
-    const { deliveryId } = await createProjectAndDelivery();
+    const { deliveryId } = await createProjectAndDelivery({
+      runtimeReady: true,
+    });
 
     await buildRunsRepository.save({
       deliveryId,
@@ -397,5 +503,54 @@ describe('DockUS API (e2e)', () => {
       .post('/api/builder/deliveries/550e8400-e29b-41d4-a716-446655440000/run')
       .set('Authorization', `Bearer ${teacherToken}`)
       .expect(404);
+  });
+
+  it('/api/deliveries (POST) marca la entrega como tardía cuando el cierre ya venció', async () => {
+    const closesAt = new Date(Date.now() - 60_000).toISOString();
+    const { delivery } = await createProjectAndDelivery({ closesAt });
+
+    expect(delivery.isLate).toBe(true);
+    expect(delivery.grade).toBeNull();
+  });
+
+  it('/api/deliveries/:id/grading (PATCH) permite registrar nota y observaciones', async () => {
+    const { deliveryId } = await createProjectAndDelivery();
+
+    const response = await request(app.getHttpServer())
+      .patch(`/api/deliveries/${deliveryId}/grading`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        grade: 8.5,
+        graderNotes: 'Buena entrega, faltó cerrar un caso borde.',
+      })
+      .expect(200);
+
+    const payload = response.body as DeliveryApiResponse & {
+      graderNotes: string | null;
+    };
+    expect(payload.grade).toBe(8.5);
+    expect(payload.graderNotes).toContain('caso borde');
+  });
+
+  it('/api/projects/:id/progress-summary/export (GET) devuelve un CSV con el progreso', async () => {
+    const { projectId, deliveryId } = await createProjectAndDelivery();
+
+    await request(app.getHttpServer())
+      .patch(`/api/deliveries/${deliveryId}/grading`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        grade: 9,
+        graderNotes: 'Excelente trabajo.',
+      })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/projects/${projectId}/progress-summary/export`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .expect(200);
+
+    expect(response.headers['content-type']).toContain('text/csv');
+    expect(response.text).toContain('studentId,studentName,studentEmail');
+    expect(response.text).toContain(studentIdentity.user.email);
   });
 });

@@ -19,8 +19,8 @@ on:
       - '.github/workflows/backend-ci.yml'
 
 jobs:
-  frontend-build:
-    name: Frontend Build
+  frontend-verify:
+    name: Frontend Verify
     runs-on: ubuntu-latest
 
     defaults:
@@ -41,11 +41,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Typecheck frontend
+        run: npm run typecheck
+
       - name: Build frontend
         run: npm run build
 
   backend-verify:
-    name: Backend Build and Test
+    name: Backend Verify
     runs-on: ubuntu-latest
 
     env:
@@ -57,8 +60,10 @@ jobs:
       DB_USERNAME: dockus
       DB_PASSWORD: dockus_secure_pass
       DB_NAME: dockus_test
-      JWT_SECRET: ci_test_jwt_secret
+      JWT_SECRET: ci_test_jwt_secret_that_is_long_enough_12345
       JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: ci_refresh_secret_that_is_long_enough_12345
+      JWT_REFRESH_EXPIRES_IN: 7d
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
 
@@ -80,8 +85,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Typecheck backend
+        run: npm run typecheck
+
       - name: Build backend
         run: npm run build
 
-      - name: Run backend tests
+      - name: Run backend unit tests
         run: npm test -- --runInBand
+
+      - name: Run backend e2e tests
+        run: npm run test:e2e -- --runInBand

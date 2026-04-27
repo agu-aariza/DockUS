@@ -227,6 +227,26 @@ Sólo está habilitado cuando `NODE_ENV !== production`.
 
 Si se usa `docker compose` desde la raíz del repositorio, el contenedor backend instala lo necesario para el stack local del builder.
 
+### GPU para Ollama
+
+Si quieres que el builder consuma Ollama acelerado por GPU, utiliza el override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+```
+
+Ese override:
+
+- expone GPUs NVIDIA al contenedor `ollama`;
+- permite que Ollama use VRAM en lugar de ejecutar sólo en CPU;
+- no cambia el contrato entre backend y Ollama, únicamente la capacidad de cómputo del contenedor.
+
+Requisitos del host:
+
+- Linux con GPU NVIDIA compatible;
+- drivers NVIDIA instalados;
+- NVIDIA Container Toolkit configurado para Docker.
+
 ## Configuración
 
 ### Fuente canónica
@@ -344,13 +364,13 @@ npm run build
 npm run start:prod
 ```
 
-El binario compilado arranca desde `build/main`.
+El binario compilado arranca desde `dist/main`.
 
 ## Scripts disponibles
 
 | Script | Propósito |
 | --- | --- |
-| `npm run build` | Compilar el backend con Nest a `backend/build`. |
+| `npm run build` | Compilar el backend con Nest a `backend/dist`. |
 | `npm run start` | Arrancar Nest en modo estándar. |
 | `npm run start:dev` | Arranque con watch. |
 | `npm run start:debug` | Arranque con watch y debug. |
@@ -360,6 +380,13 @@ El binario compilado arranca desde `build/main`.
 | `npm test -- --runInBand` | Ejecutar tests unitarios/integración ligera. |
 | `npm run test:cov` | Ejecutar cobertura. |
 | `npm run test:e2e` | Ejecutar pruebas e2e. |
+
+Si arrastras artefactos de una configuración anterior y aparece un `EACCES` sobre `dist`, para los contenedores y limpia las carpetas generadas antes de volver a compilar:
+
+```bash
+docker compose down
+rm -rf backend/dist backend/compiled-output backend/compiled backend/build
+```
 
 ## Tests y build
 
@@ -390,6 +417,8 @@ Aspectos relevantes del servicio `backend` en compose:
 - monta el socket Docker del host;
 - comparte el código fuente de `./backend`;
 - apunta a PostgreSQL, Redis, MinIO y Ollama internos del stack.
+
+Si además arrancas con [`../docker-compose.gpu.yml`](../docker-compose.gpu.yml), el servicio `ollama` podrá usar GPU y VRAM del host para inferencia local.
 
 ## Notas de mantenimiento
 

@@ -138,6 +138,22 @@ docker compose up --build
 
 La primera subida puede tardar más porque `ollama-bootstrap` descarga el modelo base y crea los modelos derivados para planificación y evaluación.
 
+### Arranque con GPU para Ollama
+
+Si tu host tiene GPU NVIDIA y quieres que DockUS ejecute Ollama usando VRAM, arranca Compose con el override GPU:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+```
+
+Requisitos adicionales para este modo:
+
+- drivers NVIDIA funcionales en el host;
+- `nvidia-smi` operativo en el host;
+- NVIDIA Container Toolkit instalado para Docker.
+
+El archivo [`docker-compose.gpu.yml`](./docker-compose.gpu.yml) expone la GPU al servicio `ollama` mediante reservas de dispositivo de Docker Compose. El resto de servicios no cambian.
+
 ## Ejecución manual por separado
 
 ### Backend
@@ -166,7 +182,16 @@ cd backend && npm test -- --runInBand
 cd frontend && npm run build
 ```
 
-El backend compila a `backend/build`. Los tests del backend usan un wrapper que fija temporales y caché en `/tmp` en Linux para evitar problemas por rutas del host.
+El backend compila a `backend/dist`. Los tests del backend usan un wrapper que fija temporales y caché en `/tmp` en Linux para evitar problemas por rutas del host.
+
+Si vienes de una configuración antigua y al arrancar fuera de Docker ves errores tipo `EACCES` sobre `backend/dist`, detén los contenedores y limpia los artefactos generados legacy antes de recompilar:
+
+```bash
+docker compose down
+rm -rf backend/dist backend/compiled-output backend/compiled backend/build
+```
+
+Esas carpetas contienen solo salida generada y se regeneran automáticamente.
 
 ## CI
 
@@ -200,5 +225,6 @@ DockUS/
 - El backend aplica prefijo global `/api`.
 - Swagger se expone fuera de producción.
 - El builder actual está optimizado para proyectos Python.
+- La aceleración GPU de Ollama está soportada a través de [`docker-compose.gpu.yml`](./docker-compose.gpu.yml) y está pensada para hosts Linux con NVIDIA.
 - El reporte final se obtiene desde el detalle del run; no existe un endpoint separado de informe.
 - La infraestructura descrita en el repositorio es la realmente soportada hoy; cualquier evolución hacia runtime por proyecto, clúster dedicado o streaming SSE completo debe considerarse trabajo futuro hasta que el código lo implemente.

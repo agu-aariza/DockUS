@@ -27,7 +27,13 @@ export class AuthResponseDto {
 
   @ApiProperty({
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-    description: 'Token JWT para autenticación.',
+    description: 'Access token JWT de corta duración para autenticación.',
   })
   accessToken: string;
+
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'Refresh token JWT de larga duración para renovar la sesión.',
+  })
+  refreshToken: string;
 }

@@ -31,6 +31,24 @@ const DEFAULT_BOOTSTRAP_OPTIONS: Required<BootstrapOptions> = {
   enableShutdownHooks: true,
 };
 
+function resolveFrontendOrigins(
+  frontendUrl: string | undefined,
+  nodeEnv: string | undefined,
+): string[] {
+  if (frontendUrl?.trim()) {
+    return frontendUrl
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+  }
+
+  if (nodeEnv === 'production') {
+    return [];
+  }
+
+  return ['http://localhost:5173', 'http://127.0.0.1:5173'];
+}
+
 /**
  * Aplica la configuración HTTP compartida por la aplicación.
  */
@@ -43,6 +61,9 @@ export function applyAppBootstrap(
     ...DEFAULT_BOOTSTRAP_OPTIONS,
     ...options,
   };
+  const nodeEnv = configService.get<string>('NODE_ENV');
+  const frontendUrl = configService.get<string>('FRONTEND_URL');
+  const allowedOrigins = resolveFrontendOrigins(frontendUrl, nodeEnv);
 
   app.setGlobalPrefix('api');
   app.useLogger(app.get(Logger));
@@ -54,10 +75,27 @@ export function applyAppBootstrap(
     }),
   );
   app.useGlobalGuards(app.get(ThrottlerGuard));
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          connectSrc: [
+            "'self'",
+            ...allowedOrigins,
+            ...allowedOrigins.map((origin) =>
+              origin.startsWith('http')
+                ? origin.replace(/^http/, 'ws')
+                : origin,
+            ),
+          ],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
+        },
+      },
+    }),
+  );
 
-  const nodeEnv = configService.get<string>('NODE_ENV');
-  const frontendUrl = configService.get<string>('FRONTEND_URL');
   if (nodeEnv === 'production' && !frontendUrl) {
     throw new Error(
       'FRONTEND_URL is required in production for CORS configuration.',
@@ -65,7 +103,13 @@ export function applyAppBootstrap(
   }
 
   app.enableCors({
-    origin: frontendUrl || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`Origin ${origin} no permitida por CORS.`), false);
+    },
     credentials: true,
   });
 

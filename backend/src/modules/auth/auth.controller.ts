@@ -37,6 +37,7 @@ import type {
   AuthenticatedUser,
 } from './interfaces/authenticated-user.interface';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Identity Access Management (IAM)')
@@ -46,11 +47,11 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   /**
-   * Registra una cuenta y devuelve la sesión inicial.
+   * Registra una cuenta pública y devuelve sesión inicial.
    */
   @ApiOperation({
     summary: 'Registrar una cuenta',
-    description: 'Crea un usuario y devuelve un JWT para la sesión inicial.',
+    description: 'Crea un usuario y devuelve una sesión inicial autenticada.',
   })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({
@@ -70,7 +71,7 @@ export class AuthController {
     status: 500,
     description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('register')
   async register(@Body() dto: RegisterDto): Promise<AuthResponse> {
     return this.authService.register(dto);
@@ -102,7 +103,7 @@ export class AuthController {
     description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
   @HttpCode(200)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login')
   async login(@Body() dto: LoginDto): Promise<AuthResponse> {
     return this.authService.login(dto);
@@ -128,5 +129,34 @@ export class AuthController {
   @Get('profile')
   getProfile(@Req() req: AuthenticatedRequest): AuthenticatedUser {
     return req.user;
+  }
+
+  /**
+   * Renueva los tokens de sesión usando un refresh token válido.
+   */
+  @ApiOperation({
+    summary: 'Renovar tokens de sesión',
+    description:
+      'Valida un refresh token y emite un nuevo par accessToken + refreshToken.',
+  })
+  @ApiBody({ type: RefreshTokenDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Tokens renovados exitosamente.',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Refresh token inválido o expirado.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: INTERNAL_SERVER_ERROR_DESCRIPTION,
+  })
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Post('refresh')
+  async refresh(@Body() dto: RefreshTokenDto): Promise<AuthResponse> {
+    return this.authService.refresh(dto.refreshToken);
   }
 }

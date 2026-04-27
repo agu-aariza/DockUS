@@ -37,7 +37,6 @@ const USER_SORT_COLUMNS: Record<UserSortField, string> = {
   status: 'user.status',
 };
 
-
 export interface PaginatedUsersResponse {
   data: Omit<User, 'passwordHash'>[];
   meta: PaginationMeta;
