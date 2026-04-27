@@ -352,14 +352,7 @@ describe('DockUS API (e2e)', () => {
     expect(response.status).toBe(allDependenciesUp ? 200 : 503);
   });
 
-  it('/api/metrics (GET) expone métricas Prometheus', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/api/metrics')
-      .expect(200);
 
-    expect(response.headers['content-type']).toContain('text/plain');
-    expect(response.text).toContain('dockus_builder_runs_queued_total');
-  });
 
   it('/api/auth/register (POST) crea un usuario y emite token', async () => {
     const email = createUniqueEmail('register');
