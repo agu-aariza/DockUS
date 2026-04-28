@@ -7,32 +7,30 @@ import {
   ServiceExecutionResult,
   TestExecutionResult,
 } from './execution.types';
+import { DockerExecutionService } from './docker-execution.service';
+import { DockerWorkloadExecutionService } from './docker-workload-execution.service';
 import { ExecutionEnvironmentService } from './execution-environment.service';
-import { KubernetesRuntimeExecutionService } from './kubernetes-runtime-execution.service';
 
 @Injectable()
 export class ExecutionAdapterService {
   constructor(
     private readonly executionEnvironmentService: ExecutionEnvironmentService,
-    private readonly kubernetesRuntimeExecutionService: KubernetesRuntimeExecutionService,
+    private readonly dockerExecutionService: DockerExecutionService,
+    private readonly dockerWorkloadExecutionService: DockerWorkloadExecutionService,
   ) {}
 
   collectExecutionContext(
     baseImage: string,
-    clusterName: string,
+    workspaceNetworkName: string,
   ): Promise<ExecutionContext> {
     return this.executionEnvironmentService.collectExecutionContext(
       baseImage,
-      clusterName,
+      workspaceNetworkName,
     );
   }
 
   assertDockerAvailable(): Promise<void> {
     return this.executionEnvironmentService.assertDockerAvailable();
-  }
-
-  assertKubernetesTooling(): Promise<void> {
-    return this.executionEnvironmentService.assertKubernetesTooling();
   }
 
   dockerBuild(
@@ -50,113 +48,112 @@ export class ExecutionAdapterService {
     );
   }
 
-  loadImageInKind(imageTag: string, clusterName: string): Promise<void> {
-    return this.executionEnvironmentService.loadImageInKind(
-      imageTag,
-      clusterName,
-    );
-  }
-
   removeDockerImage(imageTag: string): Promise<boolean> {
     return this.executionEnvironmentService.removeDockerImage(imageTag);
   }
 
-  createNamespace(clusterName: string, namespace: string): Promise<void> {
-    return this.kubernetesRuntimeExecutionService.createNamespace(
-      clusterName,
-      namespace,
+  createExecutionNetwork(input: {
+    networkName: string;
+    workspaceNetworkName: string;
+    projectId: string;
+    runId: string;
+    deliveryId: string;
+  }): Promise<void> {
+    return this.dockerExecutionService.createNetwork(input.networkName, {
+      labels: {
+        'dockus.managed': 'true',
+        'dockus.scope': 'run',
+        'dockus.projectId': input.projectId,
+        'dockus.runId': input.runId,
+        'dockus.deliveryId': input.deliveryId,
+      },
+    });
+  }
+
+  collectContainerLogs(containerId: string): Promise<string> {
+    return this.dockerWorkloadExecutionService.collectContainerLogs(
+      containerId,
     );
   }
 
   runBatchJob(params: {
-    clusterName: string;
-    namespace: string;
-    jobName: string;
+    projectId: string;
+    workspaceNetworkName: string;
+    executionNetworkName: string;
+    containerName: string;
     imageTag: string;
     command: string[];
     runId: string;
     deliveryId: string;
   }): Promise<BatchExecutionResult> {
-    return this.kubernetesRuntimeExecutionService.runBatchJob(params);
+    return this.dockerWorkloadExecutionService.runBatchJob(params);
   }
 
   runServiceDeployment(params: {
-    clusterName: string;
-    namespace: string;
-    deploymentName: string;
-    serviceName: string;
+    projectId: string;
+    workspaceNetworkName: string;
+    executionNetworkName: string;
+    containerName: string;
+    networkAlias: string;
     imageTag: string;
     port: number;
     runId: string;
     deliveryId: string;
   }): Promise<ServiceExecutionResult> {
-    return this.kubernetesRuntimeExecutionService.runServiceDeployment(params);
+    return this.dockerWorkloadExecutionService.runServiceDeployment(params);
   }
 
   runTests(params: {
-    clusterName: string;
-    namespace: string;
+    projectId: string;
+    workspaceNetworkName: string;
+    executionNetworkName: string;
     imageTag: string;
     commands?: string[][];
     runId: string;
     deliveryId: string;
   }): Promise<TestExecutionResult> {
-    return this.kubernetesRuntimeExecutionService.runTests(params);
+    return this.dockerWorkloadExecutionService.runTests(params);
   }
 
   runHealthcheck(params: {
-    clusterName: string;
-    namespace: string;
+    projectId: string;
+    workspaceNetworkName: string;
+    executionNetworkName: string;
     imageTag: string;
     command: string[];
     runId: string;
     deliveryId: string;
   }): Promise<HealthcheckExecutionResult> {
-    return this.kubernetesRuntimeExecutionService.runHealthcheck(params);
+    return this.dockerWorkloadExecutionService.runHealthcheck(params);
   }
 
-  cleanupNamespace(
-    clusterName: string,
-    namespace: string,
+  cleanupExecutionNetwork(
+    workspaceNetworkName: string,
+    executionNetworkName: string,
   ): Promise<{
     status: StageStatus;
     reasonCode: string;
     orphanedResources: string[];
   }> {
-    return this.kubernetesRuntimeExecutionService.cleanupNamespace(
-      clusterName,
-      namespace,
+    return this.dockerWorkloadExecutionService.cleanupExecutionNetwork(
+      workspaceNetworkName,
+      executionNetworkName,
     );
   }
 
-  collectPodLogs(
-    clusterName: string,
-    namespace: string,
-    podName: string,
+  collectContainerInspect(containerId: string): Promise<string> {
+    return this.dockerWorkloadExecutionService.collectContainerInspect(
+      containerId,
+    );
+  }
+
+  collectRuntimeEvents(
+    workspaceNetworkName: string,
+    executionNetworkName: string,
   ): Promise<string> {
-    return this.kubernetesRuntimeExecutionService.collectPodLogs(
-      clusterName,
-      namespace,
-      podName,
-    );
-  }
-
-  collectPodDescribe(
-    clusterName: string,
-    namespace: string,
-    podName: string,
-  ): Promise<string> {
-    return this.kubernetesRuntimeExecutionService.collectPodDescribe(
-      clusterName,
-      namespace,
-      podName,
-    );
-  }
-
-  collectEvents(clusterName: string, namespace: string): Promise<string> {
-    return this.kubernetesRuntimeExecutionService.collectEvents(
-      clusterName,
-      namespace,
+    return this.dockerWorkloadExecutionService.collectRuntimeEvents(
+      workspaceNetworkName,
+      executionNetworkName,
     );
   }
 }

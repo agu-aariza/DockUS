@@ -18,19 +18,19 @@ import { BuildRun } from '../builder/domain/entities/build-run.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
 import {
   Project,
-  ProjectClusterStatus,
+  ProjectRuntimeEnvironmentStatus,
   ProjectStatus,
 } from '../entities/project.entity';
 import {
-  DEFAULT_PROJECT_RUNTIME_KIND_PREFIX,
+  DEFAULT_PROJECT_RUNTIME_WORKSPACE_NETWORK_PREFIX,
   PROJECT_RUNTIME_JOB_NAME,
   PROJECT_RUNTIME_QUEUE_NAME,
 } from './project-runtime.constants';
-import { ProjectRuntimeClusterService } from './project-runtime-cluster.service';
+import { ProjectRuntimeNetworkService } from './project-runtime-network.service';
 import {
   ProjectRuntimeActiveRunSummary,
   ProjectRuntimeJobData,
-  ProjectRuntimeNamespaceSummary,
+  ProjectRuntimeNetworkSummary,
   ProjectRuntimeStatusResponse,
 } from './project-runtime.types';
 
@@ -46,7 +46,8 @@ const ACTIVE_RUN_STATUSES: BuildRunStatus[] = [
 @Injectable()
 export class ProjectRuntimeService implements OnModuleInit {
   private readonly logger = new Logger(ProjectRuntimeService.name);
-  private readonly namespacePrefix: string;
+  private readonly workspaceNetworkPrefix: string;
+  private readonly executionNetworkPrefix: string;
 
   constructor(
     @InjectRepository(Project)
@@ -55,12 +56,17 @@ export class ProjectRuntimeService implements OnModuleInit {
     private readonly buildRunsRepository: Repository<BuildRun>,
     @InjectQueue(PROJECT_RUNTIME_QUEUE_NAME)
     private readonly runtimeQueue: Queue,
-    private readonly projectRuntimeClusterService: ProjectRuntimeClusterService,
+    private readonly projectRuntimeNetworkService: ProjectRuntimeNetworkService,
     private readonly configService: ConfigService,
   ) {
-    this.namespacePrefix =
+    this.workspaceNetworkPrefix =
       this.configService.get<string>(
-        'BUILDER_K8S_NAMESPACE_PREFIX',
+        'BUILDER_WORKSPACE_NETWORK_PREFIX',
+        DEFAULT_PROJECT_RUNTIME_WORKSPACE_NETWORK_PREFIX,
+      ) ?? DEFAULT_PROJECT_RUNTIME_WORKSPACE_NETWORK_PREFIX;
+    this.executionNetworkPrefix =
+      this.configService.get<string>(
+        'BUILDER_EXECUTION_NETWORK_PREFIX',
         'dockus-run',
       ) ?? 'dockus-run';
   }
@@ -75,7 +81,7 @@ export class ProjectRuntimeService implements OnModuleInit {
     }
 
     const managedProject = await this.ensureRuntimeMetadata(project, {
-      runtimeClusterStatus: ProjectClusterStatus.PROVISIONING,
+      runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.PROVISIONING,
       runtimeLastError: null,
     });
     await this.enqueueJob(managedProject.id, 'provision');
@@ -89,14 +95,15 @@ export class ProjectRuntimeService implements OnModuleInit {
     if (targetStatus === ProjectStatus.ACTIVE) {
       if (
         project.status === ProjectStatus.ACTIVE &&
-        project.runtimeClusterStatus === ProjectClusterStatus.READY &&
-        project.runtimeClusterName
+        project.runtimeEnvironmentStatus ===
+          ProjectRuntimeEnvironmentStatus.READY &&
+        project.runtimeNetworkName
       ) {
         return this.projectsRepository.save(project);
       }
       const saved = await this.ensureRuntimeMetadata(project, {
         status: ProjectStatus.ACTIVE,
-        runtimeClusterStatus: ProjectClusterStatus.PROVISIONING,
+        runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.PROVISIONING,
         runtimeLastError: null,
       });
       await this.enqueueJob(saved.id, 'provision');
@@ -105,19 +112,20 @@ export class ProjectRuntimeService implements OnModuleInit {
 
     await this.assertNoActiveRuns(project.id);
     const desiredStatus =
-      project.runtimeClusterName &&
-      project.runtimeClusterStatus !== ProjectClusterStatus.ABSENT
-        ? ProjectClusterStatus.DELETING
-        : ProjectClusterStatus.ABSENT;
+      project.runtimeNetworkName &&
+      project.runtimeEnvironmentStatus !==
+        ProjectRuntimeEnvironmentStatus.ABSENT
+        ? ProjectRuntimeEnvironmentStatus.DELETING
+        : ProjectRuntimeEnvironmentStatus.ABSENT;
 
     project.status = targetStatus;
-    project.runtimeClusterStatus = desiredStatus;
+    project.runtimeEnvironmentStatus = desiredStatus;
     project.runtimeLastError = null;
-    if (desiredStatus === ProjectClusterStatus.ABSENT) {
+    if (desiredStatus === ProjectRuntimeEnvironmentStatus.ABSENT) {
       project.runtimeProvisionedAt = null;
     }
     const saved = await this.projectsRepository.save(project);
-    if (desiredStatus === ProjectClusterStatus.DELETING) {
+    if (desiredStatus === ProjectRuntimeEnvironmentStatus.DELETING) {
       await this.enqueueJob(saved.id, 'delete');
     }
     return saved;
@@ -129,30 +137,30 @@ export class ProjectRuntimeService implements OnModuleInit {
   ): Promise<ProjectRuntimeStatusResponse> {
     const project = await this.findManagedProjectOrThrow(projectId, actor);
     const activeRuns = await this.listActiveRuns(project.id);
-    let namespaces: ProjectRuntimeNamespaceSummary[] = [];
+    let networks: ProjectRuntimeNetworkSummary[] = [];
     if (
-      project.runtimeClusterName &&
-      project.runtimeClusterStatus === ProjectClusterStatus.READY
+      project.runtimeNetworkName &&
+      project.runtimeEnvironmentStatus === ProjectRuntimeEnvironmentStatus.READY
     ) {
       try {
-        namespaces =
-          await this.projectRuntimeClusterService.listNamespacesAndPods(
-            project.runtimeClusterName,
-            this.namespacePrefix,
+        networks =
+          await this.projectRuntimeNetworkService.listManagedNetworksAndContainers(
+            project.runtimeNetworkName,
+            this.executionNetworkPrefix,
           );
       } catch {
-        namespaces = [];
+        networks = [];
       }
     }
 
     return {
       projectId: project.id,
-      clusterName: project.runtimeClusterName,
-      status: project.runtimeClusterStatus,
+      workspaceNetworkName: project.runtimeNetworkName,
+      status: project.runtimeEnvironmentStatus,
       provisionedAt: project.runtimeProvisionedAt?.toISOString() ?? null,
       lastError: project.runtimeLastError,
       activeRuns,
-      namespaces,
+      networks,
     };
   }
 
@@ -167,16 +175,18 @@ export class ProjectRuntimeService implements OnModuleInit {
       );
     }
     if (
-      project.runtimeClusterStatus !== ProjectClusterStatus.ERROR &&
-      project.runtimeClusterStatus !== ProjectClusterStatus.ABSENT
+      project.runtimeEnvironmentStatus !==
+        ProjectRuntimeEnvironmentStatus.ERROR &&
+      project.runtimeEnvironmentStatus !==
+        ProjectRuntimeEnvironmentStatus.ABSENT
     ) {
       throw new ConflictException(
-        `El runtime del proyecto está en ${project.runtimeClusterStatus} y no admite reconcile manual.`,
+        `El runtime del proyecto está en ${project.runtimeEnvironmentStatus} y no admite reconcile manual.`,
       );
     }
 
     const saved = await this.ensureRuntimeMetadata(project, {
-      runtimeClusterStatus: ProjectClusterStatus.PROVISIONING,
+      runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.PROVISIONING,
       runtimeLastError: null,
     });
     await this.enqueueJob(saved.id, 'reconcile', true);
@@ -208,13 +218,15 @@ export class ProjectRuntimeService implements OnModuleInit {
   }
 
   createRuntimeTarget(project: Project, runId: string) {
-    const clusterName = this.assertProjectRuntimeReady(project);
+    const workspaceNetworkName = this.assertProjectRuntimeReady(project);
     return {
       projectId: project.id,
-      clusterName,
-      namespace: `${this.namespacePrefix}-${runId.slice(0, 8).toLowerCase()}`,
-      primaryPodName: null,
-      helperPodNames: [] as string[],
+      workspaceNetworkName,
+      executionNetworkName: `${this.executionNetworkPrefix}-${runId
+        .slice(0, 8)
+        .toLowerCase()}`,
+      primaryContainerId: null,
+      helperContainerIds: [] as string[],
     };
   }
 
@@ -223,14 +235,14 @@ export class ProjectRuntimeService implements OnModuleInit {
       throw new ConflictException('La ejecución requiere un proyecto ACTIVE.');
     }
     if (
-      project.runtimeClusterStatus !== ProjectClusterStatus.READY ||
-      !project.runtimeClusterName
+      project.runtimeEnvironmentStatus !== ProjectRuntimeEnvironmentStatus.READY ||
+      !project.runtimeNetworkName
     ) {
       throw new ConflictException(
-        `El runtime del proyecto no está listo (${project.runtimeClusterStatus}).`,
+        `El runtime del proyecto no está listo (${project.runtimeEnvironmentStatus}).`,
       );
     }
-    return project.runtimeClusterName;
+    return project.runtimeNetworkName;
   }
 
   private async reconcileActiveProjectsOnStartup(): Promise<void> {
@@ -241,11 +253,13 @@ export class ProjectRuntimeService implements OnModuleInit {
     });
 
     for (const project of projects) {
-      if (project.runtimeClusterStatus === ProjectClusterStatus.READY) {
+      if (
+        project.runtimeEnvironmentStatus === ProjectRuntimeEnvironmentStatus.READY
+      ) {
         continue;
       }
       const saved = await this.ensureRuntimeMetadata(project, {
-        runtimeClusterStatus: ProjectClusterStatus.PROVISIONING,
+        runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.PROVISIONING,
         runtimeLastError: null,
       });
       await this.enqueueJob(saved.id, 'reconcile', true);
@@ -260,34 +274,38 @@ export class ProjectRuntimeService implements OnModuleInit {
         );
         return;
       }
-      const runtimeClusterName =
-        project.runtimeClusterName ??
-        this.projectRuntimeClusterService.deriveClusterName(project.id);
+      const runtimeNetworkName =
+        project.runtimeNetworkName ??
+        this.projectRuntimeNetworkService.deriveWorkspaceNetworkName(project.id);
 
       this.logger.log(
-        `Iniciando creación/verificación de cluster: ${runtimeClusterName}`,
+        `Iniciando creación/verificación de red workspace: ${runtimeNetworkName}`,
       );
 
-      if (project.runtimeClusterName !== runtimeClusterName) {
-        project.runtimeClusterName = runtimeClusterName;
-        project.runtimeClusterStatus = ProjectClusterStatus.PROVISIONING;
+      if (project.runtimeNetworkName !== runtimeNetworkName) {
+        project.runtimeNetworkName = runtimeNetworkName;
+        project.runtimeEnvironmentStatus =
+          ProjectRuntimeEnvironmentStatus.PROVISIONING;
         project.runtimeLastError = null;
         await this.projectsRepository.save(project);
       }
 
-      await this.projectRuntimeClusterService.createCluster(runtimeClusterName);
+      await this.projectRuntimeNetworkService.ensureWorkspaceNetwork(
+        runtimeNetworkName,
+        project.id,
+      );
 
-      this.logger.log(`Cluster ${runtimeClusterName} está READY.`);
+      this.logger.log(`Red workspace ${runtimeNetworkName} está READY.`);
 
-      project.runtimeClusterStatus = ProjectClusterStatus.READY;
+      project.runtimeEnvironmentStatus = ProjectRuntimeEnvironmentStatus.READY;
       project.runtimeProvisionedAt = new Date();
       project.runtimeLastError = null;
       await this.projectsRepository.save(project);
     } catch (error) {
       this.logger.error(
-        `Error en provisión de cluster para proyecto ${project.id}: ${this.toErrorMessage(error)}`,
+        `Error en provisión de red workspace para proyecto ${project.id}: ${this.toErrorMessage(error)}`,
       );
-      project.runtimeClusterStatus = ProjectClusterStatus.ERROR;
+      project.runtimeEnvironmentStatus = ProjectRuntimeEnvironmentStatus.ERROR;
       project.runtimeLastError = this.toErrorMessage(error);
       await this.projectsRepository.save(project);
     }
@@ -298,17 +316,17 @@ export class ProjectRuntimeService implements OnModuleInit {
       if (project.status === ProjectStatus.ACTIVE) {
         return;
       }
-      if (project.runtimeClusterName) {
-        await this.projectRuntimeClusterService.deleteCluster(
-          project.runtimeClusterName,
+      if (project.runtimeNetworkName) {
+        await this.projectRuntimeNetworkService.removeWorkspaceNetwork(
+          project.runtimeNetworkName,
         );
       }
-      project.runtimeClusterStatus = ProjectClusterStatus.ABSENT;
+      project.runtimeEnvironmentStatus = ProjectRuntimeEnvironmentStatus.ABSENT;
       project.runtimeProvisionedAt = null;
       project.runtimeLastError = null;
       await this.projectsRepository.save(project);
     } catch (error) {
-      project.runtimeClusterStatus = ProjectClusterStatus.ERROR;
+      project.runtimeEnvironmentStatus = ProjectRuntimeEnvironmentStatus.ERROR;
       project.runtimeLastError = this.toErrorMessage(error);
       await this.projectsRepository.save(project);
     }
@@ -318,9 +336,9 @@ export class ProjectRuntimeService implements OnModuleInit {
     project: Project,
     overrides: Partial<Project>,
   ): Promise<Project> {
-    project.runtimeClusterName =
-      project.runtimeClusterName ??
-      this.projectRuntimeClusterService.deriveClusterName(project.id);
+    project.runtimeNetworkName =
+      project.runtimeNetworkName ??
+      this.projectRuntimeNetworkService.deriveWorkspaceNetworkName(project.id);
     Object.assign(project, overrides);
     return this.projectsRepository.save(project);
   }
@@ -353,16 +371,16 @@ export class ProjectRuntimeService implements OnModuleInit {
       deliveryId: run.deliveryId,
       status: run.status,
       activeStage: run.activeStage,
-      namespace:
-        typeof run.runtimeTarget?.namespace === 'string'
-          ? run.runtimeTarget.namespace
+      executionNetworkName:
+        typeof run.runtimeTarget?.executionNetworkName === 'string'
+          ? run.runtimeTarget.executionNetworkName
           : null,
-      primaryPodName:
-        typeof run.runtimeTarget?.primaryPodName === 'string'
-          ? run.runtimeTarget.primaryPodName
+      primaryContainerId:
+        typeof run.runtimeTarget?.primaryContainerId === 'string'
+          ? run.runtimeTarget.primaryContainerId
           : null,
-      helperPodNames: Array.isArray(run.runtimeTarget?.helperPodNames)
-        ? run.runtimeTarget.helperPodNames.filter(
+      helperContainerIds: Array.isArray(run.runtimeTarget?.helperContainerIds)
+        ? run.runtimeTarget.helperContainerIds.filter(
             (value): value is string =>
               typeof value === 'string' && value.length > 0,
           )
@@ -409,7 +427,7 @@ export class ProjectRuntimeService implements OnModuleInit {
     );
   }
 
-  async enqueueClusterDeletion(projectId: string): Promise<void> {
+  async enqueueRuntimeDeletion(projectId: string): Promise<void> {
     await this.enqueueJob(projectId, 'delete', true);
   }
 

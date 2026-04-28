@@ -13,8 +13,11 @@ export class BuilderCleanupStageService {
   ) {}
 
   async run(
-    input: Pick<BuilderRuntimeStageInput, 'run' | 'state' | 'clusterName'> & {
-      namespace: string | null;
+    input: Pick<
+      BuilderRuntimeStageInput,
+      'run' | 'state' | 'workspaceNetworkName'
+    > & {
+      executionNetworkName: string | null;
     },
   ): Promise<void> {
     await this.builderRunSupportService.updateRunStatus(
@@ -42,10 +45,10 @@ export class BuilderCleanupStageService {
     let cleanupStatus = StageStatus.PASS;
     let cleanupReason = 'CLEANUP_OK';
     let orphanedResources: string[] = [];
-    if (input.namespace) {
-      const cleanup = await this.executionAdapterService.cleanupNamespace(
-        input.clusterName,
-        input.namespace,
+    if (input.executionNetworkName) {
+      const cleanup = await this.executionAdapterService.cleanupExecutionNetwork(
+        input.workspaceNetworkName,
+        input.executionNetworkName,
       );
       cleanupStatus = cleanup.status;
       cleanupReason = cleanup.reasonCode;
@@ -67,10 +70,10 @@ export class BuilderCleanupStageService {
       BuildRunStatus.CLEANING,
       cleanupStageResult,
     );
-    input.state.currentAttemptDiagnostics.namespace = null;
+    input.state.currentAttemptDiagnostics.executionNetworkName = null;
     await this.builderRunSupportService.updateRuntimeTarget(input.run.id, {
-      primaryPodName: null,
-      helperPodNames: [],
+      primaryContainerId: null,
+      helperContainerIds: [],
     });
 
     if (orphanedResources.length > 0) {

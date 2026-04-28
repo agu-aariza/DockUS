@@ -13,12 +13,12 @@ import { BuildRun } from '../../domain/entities/build-run.entity';
 export interface BuilderAttemptDiagnostics {
   buildLogText: string | null;
   buildLogTail: string[];
-  podLogs: string | null;
-  podLogTail: string[];
-  podDescribe: string | null;
-  kubernetesEvents: string | null;
+  containerLogs: string | null;
+  containerLogTail: string[];
+  containerInspect: string | null;
+  runtimeEvents: string | null;
   imageTag: string | null;
-  namespace: string | null;
+  executionNetworkName: string | null;
 }
 
 export interface BuilderRuntimeState {
@@ -36,7 +36,7 @@ export interface BuilderRuntimeState {
 export interface BuilderRuntimeStageInput {
   run: BuildRun;
   deliveryId: string;
-  clusterName: string;
+  workspaceNetworkName: string;
   recipe: LlmPlanRecipe;
   runtimeMode: BuilderExecutionMode;
   state: BuilderRuntimeState;

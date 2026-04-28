@@ -12,7 +12,7 @@ export interface CommandExecutionResult {
 export interface BatchExecutionResult {
   status: StageStatus;
   reasonCode: string;
-  podName: string | null;
+  containerId: string | null;
   logs: string;
   checks: Array<{
     id: string;
@@ -25,7 +25,7 @@ export interface BatchExecutionResult {
 export interface ServiceExecutionResult {
   status: StageStatus;
   reasonCode: string;
-  podName: string | null;
+  containerId: string | null;
   checks: Array<{
     id: string;
     status: StageStatus;
@@ -40,12 +40,12 @@ export interface TestExecutionResult {
   status: StageStatus;
   details: string;
   logs: string;
-  podName?: string | null;
+  containerId?: string | null;
 }
 
 export interface HealthcheckExecutionResult {
   status: StageStatus;
   details: string;
   logs: string;
-  podName?: string | null;
+  containerId?: string | null;
 }

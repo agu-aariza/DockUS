@@ -77,9 +77,9 @@ export class BuilderRepairLlmService {
     failureStage: BuildStage;
     failureReasonCode: string;
     buildLogText: string | null;
-    podLogs: string | null;
-    podDescribe: string | null;
-    kubernetesEvents: string | null;
+    containerLogs: string | null;
+    containerInspect: string | null;
+    runtimeEvents: string | null;
     priorRepairAttempts: number;
   }): Promise<BuilderLlmPhaseResult | null> {
     if (!this.enabled) {
@@ -104,9 +104,9 @@ export class BuilderRepairLlmService {
     failureStage: BuildStage;
     failureReasonCode: string;
     buildLogText: string | null;
-    podLogs: string | null;
-    podDescribe: string | null;
-    kubernetesEvents: string | null;
+    containerLogs: string | null;
+    containerInspect: string | null;
+    runtimeEvents: string | null;
     priorRepairAttempts: number;
   }): Promise<{ systemPrompt: string; userPrompt: string }> {
     const snippets = await this.collectSnippets(input.runtimeFiles);
@@ -118,9 +118,9 @@ export class BuilderRepairLlmService {
           reasonCode: input.failureReasonCode,
           priorRepairAttempts: input.priorRepairAttempts,
           buildLogText: input.buildLogText?.slice(-6000) ?? null,
-          podLogs: input.podLogs?.slice(-6000) ?? null,
-          podDescribe: input.podDescribe?.slice(-6000) ?? null,
-          kubernetesEvents: input.kubernetesEvents?.slice(-6000) ?? null,
+          containerLogs: input.containerLogs?.slice(-6000) ?? null,
+          containerInspect: input.containerInspect?.slice(-6000) ?? null,
+          runtimeEvents: input.runtimeEvents?.slice(-6000) ?? null,
         },
         staticFindings: input.staticFindings.slice(0, 20),
         staticReviewIssues: input.staticReviewIssues.slice(0, 30),

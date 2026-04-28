@@ -8,10 +8,10 @@ import {
 import { Delivery } from '../deliveries/entities/delivery.entity';
 import {
   Project,
-  ProjectClusterStatus,
+  ProjectRuntimeEnvironmentStatus,
   ProjectStatus,
 } from '../entities/project.entity';
-import { ProjectRuntimeClusterService } from './project-runtime-cluster.service';
+import { ProjectRuntimeNetworkService } from './project-runtime-network.service';
 import { ProjectRuntimeService } from './project-runtime.service';
 
 describe('ProjectRuntimeService', () => {
@@ -39,13 +39,13 @@ describe('ProjectRuntimeService', () => {
     add: jest.fn(),
   };
 
-  const clusterService = {
-    deriveClusterName: jest.fn(
-      (projectId: string) => `dockus-project-${projectId.slice(0, 12)}`,
+  const networkService = {
+    deriveWorkspaceNetworkName: jest.fn(
+      (projectId: string) => `dockus-workspace-${projectId.slice(0, 12)}`,
     ),
-    createCluster: jest.fn(),
-    deleteCluster: jest.fn(),
-    listNamespacesAndPods: jest.fn(),
+    ensureWorkspaceNetwork: jest.fn(),
+    removeWorkspaceNetwork: jest.fn(),
+    listManagedNetworksAndContainers: jest.fn(),
   };
 
   beforeEach(() => {
@@ -64,11 +64,14 @@ describe('ProjectRuntimeService', () => {
       projectsRepository as unknown as Repository<Project>,
       buildRunsRepository as unknown as Repository<BuildRun>,
       runtimeQueue as never,
-      clusterService as unknown as ProjectRuntimeClusterService,
+      networkService as unknown as ProjectRuntimeNetworkService,
       {
         get: jest.fn((key: string, fallback?: unknown) => {
-          if (key === 'BUILDER_K8S_NAMESPACE_PREFIX') {
+          if (key === 'BUILDER_EXECUTION_NETWORK_PREFIX') {
             return 'dockus-run';
+          }
+          if (key === 'BUILDER_WORKSPACE_NETWORK_PREFIX') {
+            return 'dockus-workspace';
           }
           return fallback;
         }),
@@ -82,8 +85,8 @@ describe('ProjectRuntimeService', () => {
       title: 'Runtime Demo',
       status: ProjectStatus.DRAFT,
       creatorId: 'teacher-1',
-      runtimeClusterName: null,
-      runtimeClusterStatus: ProjectClusterStatus.ABSENT,
+      runtimeNetworkName: null,
+      runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.ABSENT,
       runtimeLastError: 'old error',
     } as Project;
 
@@ -92,13 +95,16 @@ describe('ProjectRuntimeService', () => {
       ProjectStatus.ACTIVE,
     );
 
-    expect(clusterService.deriveClusterName).toHaveBeenCalledWith(project.id);
+    expect(networkService.deriveWorkspaceNetworkName).toHaveBeenCalledWith(
+      project.id,
+    );
     expect(projectsRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: project.id,
         status: ProjectStatus.ACTIVE,
-        runtimeClusterStatus: ProjectClusterStatus.PROVISIONING,
-        runtimeClusterName: 'dockus-project-550e8400-e29',
+        runtimeEnvironmentStatus:
+          ProjectRuntimeEnvironmentStatus.PROVISIONING,
+        runtimeNetworkName: 'dockus-workspace-550e8400-e29',
         runtimeLastError: null,
       }),
     );
@@ -123,9 +129,9 @@ describe('ProjectRuntimeService', () => {
         status: BuildRunStatus.BUILDING,
         activeStage: null,
         runtimeTarget: {
-          namespace: 'dockus-run-1234',
-          primaryPodName: null,
-          helperPodNames: [],
+          executionNetworkName: 'dockus-run-1234',
+          primaryContainerId: null,
+          helperContainerIds: [],
         },
         createdAt: new Date('2026-04-24T10:00:00.000Z'),
       },
@@ -136,8 +142,8 @@ describe('ProjectRuntimeService', () => {
       title: 'Runtime Demo',
       status: ProjectStatus.ACTIVE,
       creatorId: 'teacher-1',
-      runtimeClusterName: 'dockus-project-550e8400-e29',
-      runtimeClusterStatus: ProjectClusterStatus.READY,
+      runtimeNetworkName: 'dockus-workspace-550e8400-e29',
+      runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.READY,
     } as Project;
 
     await expect(
@@ -151,8 +157,8 @@ describe('ProjectRuntimeService', () => {
       title: 'Runtime Demo',
       status: ProjectStatus.ACTIVE,
       creatorId: 'teacher-1',
-      runtimeClusterName: 'dockus-project-550e8400-e29',
-      runtimeClusterStatus: ProjectClusterStatus.PROVISIONING,
+      runtimeNetworkName: 'dockus-workspace-550e8400-e29',
+      runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.PROVISIONING,
       runtimeProvisionedAt: null,
       runtimeLastError: null,
     } as Project;
@@ -163,13 +169,14 @@ describe('ProjectRuntimeService', () => {
       action: 'provision',
     });
 
-    expect(clusterService.createCluster).toHaveBeenCalledWith(
-      'dockus-project-550e8400-e29',
+    expect(networkService.ensureWorkspaceNetwork).toHaveBeenCalledWith(
+      'dockus-workspace-550e8400-e29',
+      project.id,
     );
     expect(projectsRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: project.id,
-        runtimeClusterStatus: ProjectClusterStatus.READY,
+        runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.READY,
         runtimeLastError: null,
       }),
     );

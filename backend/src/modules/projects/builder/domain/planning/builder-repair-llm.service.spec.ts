@@ -89,9 +89,9 @@ describe('BuilderRepairLlmService', () => {
       failureStage: 'BUILD' as never,
       failureReasonCode: 'DOCKER_BUILD_FAILED',
       buildLogText: 'pg_config executable not found',
-      podLogs: null,
-      podDescribe: null,
-      kubernetesEvents: null,
+      containerLogs: null,
+      containerInspect: null,
+      runtimeEvents: null,
       priorRepairAttempts: 0,
     });
 

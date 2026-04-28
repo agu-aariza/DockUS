@@ -24,7 +24,7 @@ import { ProjectAssignment } from './../src/modules/projects/assignments/entitie
 import { Delivery } from './../src/modules/projects/deliveries/entities/delivery.entity';
 import {
   Project,
-  ProjectClusterStatus,
+  ProjectRuntimeEnvironmentStatus,
   ProjectStatus,
 } from './../src/modules/projects/entities/project.entity';
 import { User, UserRole } from './../src/modules/users/entities/user.entity';
@@ -213,8 +213,8 @@ describe('DockUS API (e2e)', () => {
     if (options?.runtimeReady) {
       await projectsRepository.update(projectPayload.id, {
         status: ProjectStatus.ACTIVE,
-        runtimeClusterStatus: ProjectClusterStatus.READY,
-        runtimeClusterName: `dockus-project-${projectPayload.id.slice(0, 12)}`,
+        runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.READY,
+        runtimeNetworkName: `dockus-workspace-${projectPayload.id.slice(0, 12)}`,
         runtimeProvisionedAt: new Date(),
         runtimeLastError: null,
       });

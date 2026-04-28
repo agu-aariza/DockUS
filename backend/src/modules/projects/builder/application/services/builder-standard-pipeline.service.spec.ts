@@ -80,10 +80,10 @@ describe('BuilderStandardPipelineService', () => {
       warnings: [],
       runtimeTarget: {
         projectId: 'project-1',
-        clusterName: 'dockus-project-project1',
-        namespace: 'dockus-run-run1',
-        primaryPodName: null,
-        helperPodNames: [],
+        workspaceNetworkName: 'dockus-workspace-project1',
+        executionNetworkName: 'dockus-run-run1',
+        primaryContainerId: null,
+        helperContainerIds: [],
       },
     } as BuildRun;
     const delivery = {
@@ -110,9 +110,8 @@ describe('BuilderStandardPipelineService', () => {
         pythonBaseImage: 'python:3.11.9-slim-bookworm',
         pythonBaseImageDigest: null,
         dockerVersion: '27',
-        kindVersion: '0.24.0',
-        kubectlVersion: '1.31.0',
-        clusterName: 'dockus-builder',
+        runtimeBackend: 'docker-cli',
+        sandboxRuntime: 'runc',
         limits: {
           batchTimeoutSeconds: 60,
           serviceReadyTimeoutSeconds: 90,
@@ -186,11 +185,11 @@ describe('BuilderStandardPipelineService', () => {
 
         const shouldFailDeploy =
           scenario === 'deploy_fail_then_recover' && buildAttempt === 1;
-        state.currentAttemptDiagnostics.namespace = `ns-${buildAttempt}`;
+        state.currentAttemptDiagnostics.executionNetworkName = `net-${buildAttempt}`;
         if (shouldFailDeploy) {
-          state.currentAttemptDiagnostics.podLogs =
+          state.currentAttemptDiagnostics.containerLogs =
             'ModuleNotFoundError: No module named psycopg2';
-          state.currentAttemptDiagnostics.podLogTail = [
+          state.currentAttemptDiagnostics.containerLogTail = [
             'ModuleNotFoundError: No module named psycopg2',
           ];
         }
@@ -211,15 +210,17 @@ describe('BuilderStandardPipelineService', () => {
             shouldFailDeploy ? 'STABILITY_SKIPPED' : 'STABILITY_OK',
           ),
         );
-        return `ns-${buildAttempt}`;
+        return `net-${buildAttempt}`;
       }),
     };
     const builderValidationStageService = {
-      runTests: jest.fn().mockImplementation(async ({ namespace, state }) => {
+      runTests: jest
+        .fn()
+        .mockImplementation(async ({ executionNetworkName, state }) => {
         const status =
-          scenario === 'tests_fail' && namespace
+          scenario === 'tests_fail' && executionNetworkName
             ? StageStatus.FAIL
-            : namespace
+            : executionNetworkName
               ? StageStatus.PASS
               : StageStatus.SKIP;
         state.stageResults.push(
@@ -234,11 +235,11 @@ describe('BuilderStandardPipelineService', () => {
           ),
         );
       }),
-      collectKubernetesEvents: jest
+      collectRuntimeEvents: jest
         .fn()
-        .mockImplementation(async ({ state, namespace }) => {
-          if (namespace) {
-            state.currentAttemptDiagnostics.kubernetesEvents =
+        .mockImplementation(async ({ state, executionNetworkName }) => {
+          if (executionNetworkName) {
+            state.currentAttemptDiagnostics.runtimeEvents =
               'Back-off restarting failed container';
           }
         }),

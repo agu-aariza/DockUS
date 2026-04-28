@@ -1,7 +1,8 @@
 export const PROJECT_RUNTIME_QUEUE_NAME = 'project-runtime';
 export const PROJECT_RUNTIME_JOB_NAME = 'project-runtime-sync';
 
-export const DEFAULT_PROJECT_RUNTIME_KIND_PREFIX = 'dockus-project';
+export const DEFAULT_PROJECT_RUNTIME_WORKSPACE_NETWORK_PREFIX =
+  'dockus-workspace';
 export const DEFAULT_PROJECT_RUNTIME_PROVISION_TIMEOUT_MS = 600000;
 export const DEFAULT_PROJECT_RUNTIME_DELETE_TIMEOUT_MS = 240000;
 export const DEFAULT_PROJECT_RUNTIME_INSPECT_TIMEOUT_MS = 30000;

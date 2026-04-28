@@ -16,7 +16,7 @@ import { rm } from 'fs/promises';
 import * as path from 'path';
 import {
   DEFAULT_BUILDER_CLEANUP_IMAGES,
-  DEFAULT_K8S_NAMESPACE_PREFIX,
+  DEFAULT_EXECUTION_NETWORK_PREFIX,
   DEFAULT_SELF_HEAL_MAX_ATTEMPTS,
 } from '../../domain/builder.constants';
 import { BuildRunArtifactType } from '../../domain/entities/build-run-artifact.entity';
@@ -83,7 +83,7 @@ interface RepairDecision {
 
 @Injectable()
 export class BuilderStandardPipelineService {
-  private readonly namespacePrefix: string;
+  private readonly executionNetworkPrefix: string;
   private readonly basePythonImage: string;
   private readonly cleanupImages: boolean;
   private readonly selfHealMaxAttempts: number;
@@ -113,11 +113,11 @@ export class BuilderStandardPipelineService {
         DEFAULT_BUILDER_CLEANUP_IMAGES,
       ),
     );
-    this.namespacePrefix =
+    this.executionNetworkPrefix =
       this.configService.get<string>(
-        'BUILDER_K8S_NAMESPACE_PREFIX',
-        DEFAULT_K8S_NAMESPACE_PREFIX,
-      ) ?? DEFAULT_K8S_NAMESPACE_PREFIX;
+        'BUILDER_EXECUTION_NETWORK_PREFIX',
+        DEFAULT_EXECUTION_NETWORK_PREFIX,
+      ) ?? DEFAULT_EXECUTION_NETWORK_PREFIX;
     this.basePythonImage =
       this.configService.get<string>(
         'BUILDER_BASE_PYTHON_IMAGE',
@@ -163,14 +163,14 @@ export class BuilderStandardPipelineService {
     };
 
     try {
-      const clusterName =
-        typeof run.runtimeTarget?.clusterName === 'string' &&
-        run.runtimeTarget.clusterName.trim()
-          ? run.runtimeTarget.clusterName
+      const workspaceNetworkName =
+        typeof run.runtimeTarget?.workspaceNetworkName === 'string' &&
+        run.runtimeTarget.workspaceNetworkName.trim()
+          ? run.runtimeTarget.workspaceNetworkName
           : null;
-      if (!clusterName) {
+      if (!workspaceNetworkName) {
         throw new ServiceUnavailableException(
-          'El run no dispone de un cluster de runtime asociado.',
+          'El run no dispone de una red workspace de runtime asociada.',
         );
       }
       const workspace = await this.builderWorkspaceService.prepareWorkspace(
@@ -192,7 +192,7 @@ export class BuilderStandardPipelineService {
       const executionContext =
         await this.executionAdapterService.collectExecutionContext(
           this.basePythonImage,
-          clusterName,
+          workspaceNetworkName,
         );
 
       if (preflightSummary.compatibility === 'UNSUPPORTED') {
@@ -273,14 +273,14 @@ export class BuilderStandardPipelineService {
         });
         lastImageTag = imageTag;
 
-        const namespace = await this.builderDeployStageService.run({
+        const executionNetworkName = await this.builderDeployStageService.run({
           run,
           deliveryId: delivery.id,
-          clusterName,
+          workspaceNetworkName,
           recipe: currentAssessment.recipe,
           runtimeMode,
           imageTag,
-          namespacePrefix: this.namespacePrefix,
+          executionNetworkPrefix: this.executionNetworkPrefix,
           state,
         });
 
@@ -288,13 +288,13 @@ export class BuilderStandardPipelineService {
           run,
           attemptNumber,
           delivery,
-          clusterName,
+          workspaceNetworkName,
           projectRootDir: workspace.projectRootDir,
           runtimeFiles: workspace.runtimeFiles,
           currentAssessment,
           staticFindings: analysis.staticFindings,
           staticReviewIssues: analysis.staticReviewIssues,
-          namespace,
+          executionNetworkName,
           imageTag,
           state,
         });
@@ -322,8 +322,8 @@ export class BuilderStandardPipelineService {
           );
           await this.cleanupAttemptResources(
             run,
-            clusterName,
-            namespace,
+            workspaceNetworkName,
+            executionNetworkName,
             imageTag,
             state,
           );
@@ -339,23 +339,23 @@ export class BuilderStandardPipelineService {
         await this.builderValidationStageService.runTests({
           run,
           deliveryId: delivery.id,
-          clusterName,
+          workspaceNetworkName,
           recipe: currentAssessment.recipe,
           runtimeMode,
-          namespace: runtimeReady ? namespace : null,
+          executionNetworkName: runtimeReady ? executionNetworkName : null,
           imageTag: runtimeReady ? imageTag : null,
           state,
         });
-        await this.builderValidationStageService.collectKubernetesEvents({
+        await this.builderValidationStageService.collectRuntimeEvents({
           run,
-          clusterName,
-          namespace,
+          workspaceNetworkName,
+          executionNetworkName,
           state,
         });
         await this.builderCleanupStageService.run({
           run,
-          clusterName,
-          namespace,
+          workspaceNetworkName,
+          executionNetworkName,
           state,
         });
         lastImageTag = imageTag;
@@ -452,12 +452,12 @@ export class BuilderStandardPipelineService {
     return {
       buildLogText: null,
       buildLogTail: [],
-      podLogs: null,
-      podLogTail: [],
-      podDescribe: null,
-      kubernetesEvents: null,
+      containerLogs: null,
+      containerLogTail: [],
+      containerInspect: null,
+      runtimeEvents: null,
       imageTag: null,
-      namespace: null,
+      executionNetworkName: null,
     };
   }
 
@@ -691,13 +691,13 @@ export class BuilderStandardPipelineService {
     run: BuildRun;
     attemptNumber: number;
     delivery: Delivery;
-    clusterName: string;
+    workspaceNetworkName: string;
     projectRootDir: string;
     runtimeFiles: RuntimeFile[];
     currentAssessment: BuilderPipelineOutcome['llmAssessment'];
     staticFindings: BuilderPipelineOutcome['staticFindings'];
     staticReviewIssues: StaticReviewIssue[];
-    namespace: string | null;
+    executionNetworkName: string | null;
     imageTag: string | null;
     state: BuilderRuntimeState;
   }): Promise<RepairDecision> {
@@ -722,21 +722,20 @@ export class BuilderStandardPipelineService {
       triggerReasonCode = latestBuild.reasonCode;
       triggerSummary = 'El build de la imagen Docker falló.';
     } else if (latestDeploy?.status === StageStatus.FAIL) {
-      await this.builderValidationStageService.collectKubernetesEvents({
+      await this.builderValidationStageService.collectRuntimeEvents({
         run: input.run,
-        clusterName: input.clusterName,
-        namespace: input.namespace,
+        workspaceNetworkName: input.workspaceNetworkName,
+        executionNetworkName: input.executionNetworkName,
         state: input.state,
       });
       const hasRuntimeEvidence =
-        Boolean(input.state.currentAttemptDiagnostics.podLogs) ||
-        Boolean(input.state.currentAttemptDiagnostics.podDescribe) ||
-        Boolean(input.state.currentAttemptDiagnostics.kubernetesEvents);
+        Boolean(input.state.currentAttemptDiagnostics.containerLogs) ||
+        Boolean(input.state.currentAttemptDiagnostics.containerInspect) ||
+        Boolean(input.state.currentAttemptDiagnostics.runtimeEvents);
       if (hasRuntimeEvidence) {
         triggerStage = BuildStage.DEPLOY;
         triggerReasonCode = latestDeploy.reasonCode;
-        triggerSummary =
-          'El contenedor no arrancó correctamente en Kubernetes.';
+        triggerSummary = 'El contenedor no arrancó correctamente en Docker.';
       }
     }
 
@@ -758,10 +757,10 @@ export class BuilderStandardPipelineService {
             failureStage: triggerStage,
             failureReasonCode: triggerReasonCode,
             buildLogText: input.state.currentAttemptDiagnostics.buildLogText,
-            podLogs: input.state.currentAttemptDiagnostics.podLogs,
-            podDescribe: input.state.currentAttemptDiagnostics.podDescribe,
-            kubernetesEvents:
-              input.state.currentAttemptDiagnostics.kubernetesEvents,
+            containerLogs: input.state.currentAttemptDiagnostics.containerLogs,
+            containerInspect:
+              input.state.currentAttemptDiagnostics.containerInspect,
+            runtimeEvents: input.state.currentAttemptDiagnostics.runtimeEvents,
             priorRepairAttempts: input.state.selfHealingTrace.length,
           });
           if (!result) {
@@ -836,13 +835,13 @@ export class BuilderStandardPipelineService {
       outcome: input.outcome,
       diagnostics: {
         buildLogTail: input.state.currentAttemptDiagnostics.buildLogTail,
-        podLogTail: input.state.currentAttemptDiagnostics.podLogTail,
+        containerLogTail: input.state.currentAttemptDiagnostics.containerLogTail,
         errorHints: this.builderRunSupportService.buildSelfHealingHints({
           buildLogText: input.state.currentAttemptDiagnostics.buildLogText,
-          podLogs: input.state.currentAttemptDiagnostics.podLogs,
-          podDescribe: input.state.currentAttemptDiagnostics.podDescribe,
-          kubernetesEvents:
-            input.state.currentAttemptDiagnostics.kubernetesEvents,
+          containerLogs: input.state.currentAttemptDiagnostics.containerLogs,
+          containerInspect:
+            input.state.currentAttemptDiagnostics.containerInspect,
+          runtimeEvents: input.state.currentAttemptDiagnostics.runtimeEvents,
         }),
       },
     };
@@ -850,16 +849,16 @@ export class BuilderStandardPipelineService {
 
   private async cleanupAttemptResources(
     run: BuildRun,
-    clusterName: string,
-    namespace: string | null,
+    workspaceNetworkName: string,
+    executionNetworkName: string | null,
     imageTag: string | null,
     state: BuilderRuntimeState,
   ): Promise<void> {
-    if (namespace) {
+    if (executionNetworkName) {
       await this.builderCleanupStageService.run({
         run,
-        clusterName,
-        namespace,
+        workspaceNetworkName,
+        executionNetworkName,
         state,
       });
     }

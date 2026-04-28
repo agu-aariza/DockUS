@@ -33,7 +33,7 @@ export enum ProjectStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
-export enum ProjectClusterStatus {
+export enum ProjectRuntimeEnvironmentStatus {
   ABSENT = 'ABSENT',
   PROVISIONING = 'PROVISIONING',
   READY = 'READY',
@@ -63,15 +63,21 @@ export class Project {
   @Column({ type: 'enum', enum: ProjectStatus, default: ProjectStatus.DRAFT })
   status: ProjectStatus;
 
-  @Column({ type: 'varchar', length: 128, nullable: true })
-  runtimeClusterName: string | null;
+  @Column({
+    name: 'runtimeClusterName',
+    type: 'varchar',
+    length: 128,
+    nullable: true,
+  })
+  runtimeNetworkName: string | null;
 
   @Column({
+    name: 'runtimeClusterStatus',
     type: 'enum',
-    enum: ProjectClusterStatus,
-    default: ProjectClusterStatus.ABSENT,
+    enum: ProjectRuntimeEnvironmentStatus,
+    default: ProjectRuntimeEnvironmentStatus.ABSENT,
   })
-  runtimeClusterStatus: ProjectClusterStatus;
+  runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus;
 
   @Column({ type: 'timestamp', nullable: true })
   runtimeProvisionedAt: Date | null;

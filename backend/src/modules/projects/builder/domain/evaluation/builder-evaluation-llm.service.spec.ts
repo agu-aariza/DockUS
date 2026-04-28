@@ -79,9 +79,8 @@ describe('BuilderEvaluationLlmService', () => {
         pythonBaseImage: 'python:3.11.9-slim-bookworm',
         pythonBaseImageDigest: null,
         dockerVersion: 'Docker version 27',
-        kindVersion: 'kind v0.24.0',
-        kubectlVersion: 'kubectl v1.31.0',
-        clusterName: 'dockus-builder',
+        runtimeBackend: 'docker-cli',
+        sandboxRuntime: 'runc',
         limits: {
           batchTimeoutSeconds: 60,
           serviceReadyTimeoutSeconds: 90,

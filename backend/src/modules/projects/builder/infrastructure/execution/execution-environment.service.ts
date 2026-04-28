@@ -6,11 +6,11 @@ import {
   DEFAULT_STABILITY_WINDOW_SECONDS,
   DEFAULT_BATCH_TIMEOUT_SECONDS,
   DEFAULT_SERVICE_READY_TIMEOUT_SECONDS,
+  DEFAULT_DOCKER_RUNTIME,
 } from '../../domain/builder.constants';
 import { ExecutionContext } from '../../domain/builder.types';
 import { buildLogTail, runCommand } from '../utils/command-runner.util';
 import { CommandExecutionResult } from './execution.types';
-import { KubectlExecutionService } from './kubectl-execution.service';
 
 @Injectable()
 export class ExecutionEnvironmentService {
@@ -18,11 +18,9 @@ export class ExecutionEnvironmentService {
   private readonly batchTimeoutSeconds: number;
   private readonly serviceReadyTimeoutSeconds: number;
   private readonly stabilityWindowSeconds: number;
+  private readonly sandboxRuntime: string;
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly kubectlExecutionService: KubectlExecutionService,
-  ) {
+  constructor(private readonly configService: ConfigService) {
     this.dockerBuildTimeoutMs = this.configService.get<number>(
       'BUILDER_DOCKER_BUILD_TIMEOUT_MS',
       DEFAULT_DOCKER_BUILD_TIMEOUT_MS,
@@ -39,29 +37,26 @@ export class ExecutionEnvironmentService {
       'BUILDER_STABILITY_WINDOW_SECONDS',
       DEFAULT_STABILITY_WINDOW_SECONDS,
     );
+    this.sandboxRuntime =
+      this.configService.get<string>(
+        'BUILDER_DOCKER_RUNTIME',
+        DEFAULT_DOCKER_RUNTIME,
+      ) ?? DEFAULT_DOCKER_RUNTIME;
   }
 
   async collectExecutionContext(
     baseImage: string,
-    clusterName: string,
+    _workspaceNetworkName: string,
   ): Promise<ExecutionContext> {
     const dockerVersion = await this.tryVersion('docker', ['--version']);
-    const kindVersion = await this.kubectlExecutionService.tryVersion('kind', [
-      '--version',
-    ]);
-    const kubectlVersion = await this.kubectlExecutionService.tryVersion(
-      'kubectl',
-      ['version', '--client', '--short'],
-    );
     const pythonBaseImageDigest = await this.tryImageDigest(baseImage);
 
     return {
       pythonBaseImage: baseImage,
       pythonBaseImageDigest,
       dockerVersion,
-      kindVersion,
-      kubectlVersion,
-      clusterName,
+      runtimeBackend: 'docker-cli',
+      sandboxRuntime: this.sandboxRuntime,
       limits: {
         batchTimeoutSeconds: this.batchTimeoutSeconds,
         serviceReadyTimeoutSeconds: this.serviceReadyTimeoutSeconds,
@@ -83,16 +78,6 @@ export class ExecutionEnvironmentService {
         `Docker daemon no disponible: ${result.stderr.trim() || 'sin detalle.'}`,
       );
     }
-  }
-
-  async assertKubernetesTooling(): Promise<void> {
-    await this.kubectlExecutionService.assertCommandAvailable('kind', [
-      '--version',
-    ]);
-    await this.kubectlExecutionService.assertCommandAvailable('kubectl', [
-      'version',
-      '--client',
-    ]);
   }
 
   async dockerBuild(
@@ -121,21 +106,6 @@ export class ExecutionEnvironmentService {
       stderr: result.stderr,
       timedOut: result.timedOut,
     };
-  }
-
-  async loadImageInKind(imageTag: string, clusterName: string): Promise<void> {
-    const result = await runCommand(
-      'kind',
-      ['load', 'docker-image', imageTag, '--name', clusterName],
-      {
-        timeoutMs: this.kubectlExecutionService.getTimeoutMs(),
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0) {
-      throw new ServiceUnavailableException(
-        `No se pudo cargar imagen en kind: ${result.stderr.trim() || result.stdout.trim() || 'sin detalle.'}`,
-      );
-    }
   }
 
   async removeDockerImage(imageTag: string): Promise<boolean> {
@@ -167,7 +137,7 @@ export class ExecutionEnvironmentService {
   ): Promise<string | null> {
     try {
       const result = await runCommand(command, args, {
-        timeoutMs: this.kubectlExecutionService.getTimeoutMs(),
+        timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
       });
       if (result.exitCode !== 0 || result.timedOut) {
         return null;

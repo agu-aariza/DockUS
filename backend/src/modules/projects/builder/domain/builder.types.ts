@@ -291,10 +291,10 @@ export interface BuilderTechnicalFeedback {
 
 export interface BuildRunRuntimeTarget {
   projectId: string;
-  clusterName: string;
-  namespace: string;
-  primaryPodName: string | null;
-  helperPodNames: string[];
+  workspaceNetworkName: string;
+  executionNetworkName: string;
+  primaryContainerId: string | null;
+  helperContainerIds: string[];
 }
 
 export interface BuilderSelfHealingAttempt {
@@ -307,7 +307,7 @@ export interface BuilderSelfHealingAttempt {
   outcome: 'repaired' | 'unchanged' | 'llm_failed' | 'not_applicable';
   diagnostics: {
     buildLogTail: string[];
-    podLogTail: string[];
+    containerLogTail: string[];
     errorHints: string[];
   };
 }
@@ -376,9 +376,8 @@ export interface ExecutionContext {
   pythonBaseImage: string;
   pythonBaseImageDigest: string | null;
   dockerVersion: string | null;
-  kindVersion: string | null;
-  kubectlVersion: string | null;
-  clusterName: string;
+  runtimeBackend: 'docker-cli';
+  sandboxRuntime: string | null;
   limits: {
     batchTimeoutSeconds: number;
     serviceReadyTimeoutSeconds: number;

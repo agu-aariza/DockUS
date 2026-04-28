@@ -11,6 +11,7 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
@@ -45,6 +46,7 @@ import { Delivery } from '../../modules/projects/deliveries/entities/delivery.en
     }),
 
     ThrottlerModule.forRoot(throttlerConfig),
+    ScheduleModule.forRoot(),
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

@@ -17,7 +17,7 @@ export class BuilderValidationStageService {
 
   async runTests(
     input: BuilderRuntimeStageInput & {
-      namespace: string | null;
+      executionNetworkName: string | null;
       imageTag: string | null;
     },
   ): Promise<void> {
@@ -42,21 +42,26 @@ export class BuilderValidationStageService {
       BuildStage.TESTS,
     );
 
-    if (input.namespace && input.imageTag && input.recipe.test.length > 0) {
+    if (
+      input.executionNetworkName &&
+      input.imageTag &&
+      input.recipe.test.length > 0
+    ) {
       try {
         const testsResult = await this.executionAdapterService.runTests({
-          clusterName: input.clusterName,
-          namespace: input.namespace,
+          projectId: input.run.runtimeTarget?.projectId ?? '',
+          workspaceNetworkName: input.workspaceNetworkName,
+          executionNetworkName: input.executionNetworkName,
           imageTag: input.imageTag,
           commands: input.recipe.test,
           runId: input.run.id,
           deliveryId: input.deliveryId,
         });
         input.state.observedEvidence.runtime.testSummary = testsResult.details;
-        if (testsResult.podName) {
-          await this.builderRunSupportService.appendRuntimeHelperPod(
+        if (testsResult.containerId) {
+          await this.builderRunSupportService.appendRuntimeHelperContainer(
             input.run.id,
-            testsResult.podName,
+            testsResult.containerId,
           );
         }
         if (testsResult.logs) {
@@ -65,7 +70,7 @@ export class BuilderValidationStageService {
             source: 'tests',
             stream: 'combined',
             text: testsResult.logs,
-            podName: testsResult.podName ?? null,
+            containerId: testsResult.containerId ?? null,
             stage: BuildStage.TESTS,
           });
         }
@@ -143,26 +148,29 @@ export class BuilderValidationStageService {
     );
   }
 
-  async collectKubernetesEvents(
-    input: Pick<BuilderRuntimeStageInput, 'run' | 'state' | 'clusterName'> & {
-      namespace: string | null;
+  async collectRuntimeEvents(
+    input: Pick<
+      BuilderRuntimeStageInput,
+      'run' | 'state' | 'workspaceNetworkName'
+    > & {
+      executionNetworkName: string | null;
     },
   ): Promise<void> {
-    if (!input.namespace) {
+    if (!input.executionNetworkName) {
       return;
     }
 
     try {
-      const k8sEvents = await this.executionAdapterService.collectEvents(
-        input.clusterName,
-        input.namespace,
+      const runtimeEvents = await this.executionAdapterService.collectRuntimeEvents(
+        input.workspaceNetworkName,
+        input.executionNetworkName,
       );
-      if (k8sEvents) {
-        input.state.currentAttemptDiagnostics.kubernetesEvents = k8sEvents;
+      if (runtimeEvents) {
+        input.state.currentAttemptDiagnostics.runtimeEvents = runtimeEvents;
         const eventsArtifact = await this.evidenceService.persistTextArtifact(
           input.run.id,
-          BuildRunArtifactType.K8S_EVENTS,
-          k8sEvents,
+          BuildRunArtifactType.RUNTIME_EVENTS,
+          runtimeEvents,
         );
         await this.builderRunSupportService.recordArtifact(
           input.run.id,
@@ -174,7 +182,7 @@ export class BuilderValidationStageService {
       await this.builderRunSupportService.recordWarning(
         input.run.id,
         input.state.warnings,
-        `No se pudieron recopilar eventos de Kubernetes: ${this.builderRunSupportService.toErrorMessage(error)}`,
+        `No se pudieron recopilar eventos de runtime Docker: ${this.builderRunSupportService.toErrorMessage(error)}`,
       );
     }
   }

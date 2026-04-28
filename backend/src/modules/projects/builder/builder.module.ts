@@ -45,13 +45,11 @@ import { BuilderRepairLlmService } from './domain/planning/builder-repair-llm.se
 import { BuilderReportService } from './domain/reporting/builder-report.service';
 import { DockerfileTemplateService } from './domain/templates/dockerfile-template.service';
 import { EvidenceService } from './infrastructure/evidence/evidence.service';
+import { DockerExecutionService } from './infrastructure/execution/docker-execution.service';
+import { DockerGarbageCollectorService } from './infrastructure/execution/docker-garbage-collector.service';
+import { DockerWorkloadExecutionService } from './infrastructure/execution/docker-workload-execution.service';
 import { ExecutionAdapterService } from './infrastructure/execution/execution-adapter.service';
 import { ExecutionEnvironmentService } from './infrastructure/execution/execution-environment.service';
-import { KubectlExecutionService } from './infrastructure/execution/kubectl-execution.service';
-import { KubernetesManifestService } from './infrastructure/execution/kubernetes-manifest.service';
-import { KubernetesObservabilityService } from './infrastructure/execution/kubernetes-observability.service';
-import { KubernetesRuntimeExecutionService } from './infrastructure/execution/kubernetes-runtime-execution.service';
-import { KubernetesWorkloadExecutionService } from './infrastructure/execution/kubernetes-workload-execution.service';
 import { BuilderController } from './presentation/builder.controller';
 import { BuilderProcessor } from './presentation/builder.processor';
 
@@ -96,14 +94,12 @@ import { BuilderProcessor } from './presentation/builder.processor';
     BuilderRunEventsService,
     DockerfileTemplateService,
     ExecutionEnvironmentService,
-    KubectlExecutionService,
-    KubernetesManifestService,
-    KubernetesObservabilityService,
-    KubernetesRuntimeExecutionService,
-    KubernetesWorkloadExecutionService,
+    DockerExecutionService,
+    DockerWorkloadExecutionService,
     ExecutionAdapterService,
     EvidenceService,
     BuilderReportService,
+    DockerGarbageCollectorService,
   ],
   exports: [BuilderService],
 })

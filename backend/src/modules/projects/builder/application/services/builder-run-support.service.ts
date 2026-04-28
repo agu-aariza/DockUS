@@ -159,7 +159,7 @@ export class BuilderRunSupportService {
     source: 'build' | 'runtime' | 'tests' | 'probes' | 'cleanup';
     stream: 'stdout' | 'stderr' | 'combined';
     text: string;
-    podName?: string | null;
+    containerId?: string | null;
     containerName?: string | null;
     stage?: BuildStage | null;
   }): Promise<void> {
@@ -180,7 +180,7 @@ export class BuilderRunSupportService {
         payload: {
           source: input.source,
           stream: input.stream,
-          podName: input.podName ?? null,
+          containerId: input.containerId ?? null,
           containerName: input.containerName ?? null,
           text: chunk,
         },
@@ -404,15 +404,15 @@ export class BuilderRunSupportService {
 
   buildSelfHealingHints(input: {
     buildLogText?: string | null;
-    podLogs?: string | null;
-    podDescribe?: string | null;
-    kubernetesEvents?: string | null;
+    containerLogs?: string | null;
+    containerInspect?: string | null;
+    runtimeEvents?: string | null;
   }): string[] {
     const corpus = [
       input.buildLogText ?? '',
-      input.podLogs ?? '',
-      input.podDescribe ?? '',
-      input.kubernetesEvents ?? '',
+      input.containerLogs ?? '',
+      input.containerInspect ?? '',
+      input.runtimeEvents ?? '',
     ].join('\n');
     const hints = new Set<string>();
 
@@ -486,20 +486,20 @@ export class BuilderRunSupportService {
         typeof run.runtimeTarget?.projectId === 'string'
           ? run.runtimeTarget.projectId
           : '',
-      clusterName:
-        typeof run.runtimeTarget?.clusterName === 'string'
-          ? run.runtimeTarget.clusterName
+      workspaceNetworkName:
+        typeof run.runtimeTarget?.workspaceNetworkName === 'string'
+          ? run.runtimeTarget.workspaceNetworkName
           : '',
-      namespace:
-        typeof run.runtimeTarget?.namespace === 'string'
-          ? run.runtimeTarget.namespace
+      executionNetworkName:
+        typeof run.runtimeTarget?.executionNetworkName === 'string'
+          ? run.runtimeTarget.executionNetworkName
           : '',
-      primaryPodName:
-        typeof run.runtimeTarget?.primaryPodName === 'string'
-          ? run.runtimeTarget.primaryPodName
+      primaryContainerId:
+        typeof run.runtimeTarget?.primaryContainerId === 'string'
+          ? run.runtimeTarget.primaryContainerId
           : null,
-      helperPodNames: Array.isArray(run.runtimeTarget?.helperPodNames)
-        ? run.runtimeTarget.helperPodNames.filter(
+      helperContainerIds: Array.isArray(run.runtimeTarget?.helperContainerIds)
+        ? run.runtimeTarget.helperContainerIds.filter(
             (value): value is string =>
               typeof value === 'string' && value.length > 0,
           )
@@ -512,11 +512,11 @@ export class BuilderRunSupportService {
     return runtimeTarget;
   }
 
-  async appendRuntimeHelperPod(
+  async appendRuntimeHelperContainer(
     runId: string,
-    podName: string | null | undefined,
+    containerId: string | null | undefined,
   ): Promise<BuildRunRuntimeTarget | null> {
-    if (!podName) {
+    if (!containerId) {
       return null;
     }
 
@@ -529,8 +529,11 @@ export class BuilderRunSupportService {
 
     run.runtimeTarget = {
       ...run.runtimeTarget,
-      helperPodNames: [
-        ...new Set([...(run.runtimeTarget.helperPodNames ?? []), podName]),
+      helperContainerIds: [
+        ...new Set([
+          ...(run.runtimeTarget.helperContainerIds ?? []),
+          containerId,
+        ]),
       ],
     };
     await this.buildRunsRepository.save(run);

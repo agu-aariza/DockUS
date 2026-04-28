@@ -18,7 +18,7 @@ export class BuilderDeployStageService {
   async run(
     input: BuilderRuntimeStageInput & {
       imageTag: string | null;
-      namespacePrefix: string;
+      executionNetworkPrefix: string;
     },
   ): Promise<string | null> {
     if (
@@ -90,23 +90,22 @@ export class BuilderDeployStageService {
       },
     });
 
-    let namespace: string | null = null;
+    let executionNetworkName: string | null = null;
     try {
-      await this.executionAdapterService.assertKubernetesTooling();
-      await this.executionAdapterService.loadImageInKind(
-        input.imageTag,
-        input.clusterName,
-      );
-      namespace = `${input.namespacePrefix}-${input.run.id
+      executionNetworkName = `${input.executionNetworkPrefix}-${input.run.id
         .slice(0, 8)
         .toLowerCase()}`;
-      await this.executionAdapterService.createNamespace(
-        input.clusterName,
-        namespace,
-      );
-      input.state.currentAttemptDiagnostics.namespace = namespace;
+      await this.executionAdapterService.createExecutionNetwork({
+        networkName: executionNetworkName,
+        workspaceNetworkName: input.workspaceNetworkName,
+        projectId: input.run.runtimeTarget?.projectId ?? '',
+        runId: input.run.id,
+        deliveryId: input.deliveryId,
+      });
+      input.state.currentAttemptDiagnostics.executionNetworkName =
+        executionNetworkName;
       await this.builderRunSupportService.updateRuntimeTarget(input.run.id, {
-        namespace,
+        executionNetworkName,
       });
 
       const deployStarted = this.builderRunSupportService.beginStage(
@@ -121,21 +120,21 @@ export class BuilderDeployStageService {
       if (input.runtimeMode === 'batch') {
         await this.runBatchDeployment(
           { ...input, imageTag },
-          namespace,
+          executionNetworkName,
           deployStarted.startedAt,
         );
-        return namespace;
+        return executionNetworkName;
       }
 
       await this.runServiceDeployment(
         { ...input, imageTag },
-        namespace,
+        executionNetworkName,
         deployStarted.startedAt,
       );
-      return namespace;
+      return executionNetworkName;
     } catch (error) {
       const errorMessage = this.builderRunSupportService.toErrorMessage(error);
-      input.state.currentAttemptDiagnostics.podDescribe ??= errorMessage;
+      input.state.currentAttemptDiagnostics.containerInspect ??= errorMessage;
       await this.builderRunSupportService.recordWarning(
         input.run.id,
         input.state.warnings,
@@ -183,22 +182,23 @@ export class BuilderDeployStageService {
         BuildRunStatus.DEPLOYING,
         stabilityStageResult,
       );
-      return namespace;
+      return executionNetworkName;
     }
   }
 
   private async runBatchDeployment(
     input: BuilderRuntimeStageInput & {
       imageTag: string;
-      namespacePrefix: string;
+      executionNetworkPrefix: string;
     },
-    namespace: string,
+    executionNetworkName: string,
     startedAt: Date,
   ): Promise<void> {
     const batchResult = await this.executionAdapterService.runBatchJob({
-      clusterName: input.clusterName,
-      namespace,
-      jobName: `run-${input.run.id.slice(0, 8)}`,
+      projectId: input.run.runtimeTarget?.projectId ?? '',
+      workspaceNetworkName: input.workspaceNetworkName,
+      executionNetworkName,
+      containerName: `run-${input.run.id.slice(0, 8)}`,
       imageTag: input.imageTag,
       command: input.recipe.run!,
       runId: input.run.id,
@@ -215,25 +215,25 @@ export class BuilderDeployStageService {
 
     if (batchResult.logs) {
       await this.builderRunSupportService.updateRuntimeTarget(input.run.id, {
-        primaryPodName: batchResult.podName,
+        primaryContainerId: batchResult.containerId,
       });
       await this.builderRunSupportService.emitLogChunk({
         buildRunId: input.run.id,
         source: 'runtime',
         stream: 'combined',
         text: batchResult.logs,
-        podName: batchResult.podName,
+        containerId: batchResult.containerId,
         stage: BuildStage.DEPLOY,
       });
-      input.state.currentAttemptDiagnostics.podLogs = batchResult.logs;
-      input.state.currentAttemptDiagnostics.podLogTail = batchResult.logs
+      input.state.currentAttemptDiagnostics.containerLogs = batchResult.logs;
+      input.state.currentAttemptDiagnostics.containerLogTail = batchResult.logs
         .split(/\r?\n/u)
         .map((line) => line.trimEnd())
         .filter(Boolean)
         .slice(-80);
       const batchLogsArtifact = await this.evidenceService.persistTextArtifact(
         input.run.id,
-        BuildRunArtifactType.K8S_POD_LOG,
+        BuildRunArtifactType.CONTAINER_LOG,
         batchResult.logs,
       );
       await this.builderRunSupportService.recordArtifact(
@@ -282,17 +282,18 @@ export class BuilderDeployStageService {
   private async runServiceDeployment(
     input: BuilderRuntimeStageInput & {
       imageTag: string;
-      namespacePrefix: string;
+      executionNetworkPrefix: string;
     },
-    namespace: string,
+    executionNetworkName: string,
     startedAt: Date,
   ): Promise<void> {
     const serviceResult =
       await this.executionAdapterService.runServiceDeployment({
-        clusterName: input.clusterName,
-        namespace,
-        deploymentName: `app-${input.run.id.slice(0, 8)}`,
-        serviceName: `svc-${input.run.id.slice(0, 8)}`,
+        projectId: input.run.runtimeTarget?.projectId ?? '',
+        workspaceNetworkName: input.workspaceNetworkName,
+        executionNetworkName,
+        containerName: `app-${input.run.id.slice(0, 8)}`,
+        networkAlias: `svc-${input.run.id.slice(0, 8)}`,
         imageTag: input.imageTag,
         port: input.recipe.servicePort ?? 8000,
         runId: input.run.id,
@@ -301,7 +302,7 @@ export class BuilderDeployStageService {
     const deployStatus =
       this.builderRunSupportService.stageStatusForCheckPrefix(
         serviceResult.checks,
-        'POD_READY_',
+        'CONTAINER_READY_',
       );
     let probesStatus = this.builderRunSupportService.stageStatusForCheckPrefix(
       serviceResult.checks,
@@ -315,8 +316,8 @@ export class BuilderDeployStageService {
 
     input.state.observedEvidence.runtime.deploySummary =
       deployStatus === StageStatus.PASS
-        ? 'El deployment quedó listo en Kubernetes.'
-        : 'El deployment no llegó a estado listo.';
+        ? 'El contenedor de servicio quedó listo en Docker.'
+        : 'El contenedor de servicio no llegó a estado listo.';
     input.state.observedEvidence.runtime.probeSummary =
       probesStatus === StageStatus.PASS
         ? 'La comprobación TCP del servicio fue satisfactoria.'
@@ -326,57 +327,55 @@ export class BuilderDeployStageService {
         ? 'La ventana de estabilidad no detectó reinicios.'
         : 'Se detectó inestabilidad o reinicios.';
 
-    if (serviceResult.podName) {
+    if (serviceResult.containerId) {
       await this.builderRunSupportService.updateRuntimeTarget(input.run.id, {
-        primaryPodName: serviceResult.podName,
+        primaryContainerId: serviceResult.containerId,
       });
-      const podDescribe = await this.executionAdapterService.collectPodDescribe(
-        input.clusterName,
-        namespace,
-        serviceResult.podName,
-      );
-      input.state.currentAttemptDiagnostics.podDescribe = podDescribe;
-      const podDescribeArtifact =
+      const containerInspect =
+        await this.executionAdapterService.collectContainerInspect(
+          serviceResult.containerId,
+        );
+      input.state.currentAttemptDiagnostics.containerInspect = containerInspect;
+      const containerInspectArtifact =
         await this.evidenceService.persistTextArtifact(
           input.run.id,
-          BuildRunArtifactType.K8S_POD_DESCRIBE,
-          podDescribe,
+          BuildRunArtifactType.CONTAINER_INSPECT,
+          containerInspect,
         );
       await this.builderRunSupportService.recordArtifact(
         input.run.id,
         input.state.evidenceArtifacts,
-        podDescribeArtifact,
+        containerInspectArtifact,
       );
 
-      const podLogs = await this.executionAdapterService.collectPodLogs(
-        input.clusterName,
-        namespace,
-        serviceResult.podName,
+      const containerLogs = await this.executionAdapterService.collectContainerLogs(
+        serviceResult.containerId,
       );
-      if (podLogs) {
+      if (containerLogs) {
         await this.builderRunSupportService.emitLogChunk({
           buildRunId: input.run.id,
           source: 'runtime',
           stream: 'combined',
-          text: podLogs,
-          podName: serviceResult.podName,
+          text: containerLogs,
+          containerId: serviceResult.containerId,
           stage: BuildStage.DEPLOY,
         });
-        input.state.currentAttemptDiagnostics.podLogs = podLogs;
-        input.state.currentAttemptDiagnostics.podLogTail = podLogs
+        input.state.currentAttemptDiagnostics.containerLogs = containerLogs;
+        input.state.currentAttemptDiagnostics.containerLogTail = containerLogs
           .split(/\r?\n/u)
           .map((line) => line.trimEnd())
           .filter(Boolean)
           .slice(-80);
-        const podLogsArtifact = await this.evidenceService.persistTextArtifact(
+        const containerLogsArtifact =
+          await this.evidenceService.persistTextArtifact(
           input.run.id,
-          BuildRunArtifactType.K8S_POD_LOG,
-          podLogs,
+          BuildRunArtifactType.CONTAINER_LOG,
+          containerLogs,
         );
         await this.builderRunSupportService.recordArtifact(
           input.run.id,
           input.state.evidenceArtifacts,
-          podLogsArtifact,
+          containerLogsArtifact,
         );
       }
     }
@@ -385,8 +384,9 @@ export class BuilderDeployStageService {
       try {
         const healthcheckResult =
           await this.executionAdapterService.runHealthcheck({
-            clusterName: input.clusterName,
-            namespace,
+            projectId: input.run.runtimeTarget?.projectId ?? '',
+            workspaceNetworkName: input.workspaceNetworkName,
+            executionNetworkName,
             imageTag: input.imageTag,
             command: input.recipe.healthcheck,
             runId: input.run.id,
@@ -394,10 +394,10 @@ export class BuilderDeployStageService {
           });
         input.state.observedEvidence.runtime.healthcheckSummary =
           healthcheckResult.details;
-        if (healthcheckResult.podName) {
-          await this.builderRunSupportService.appendRuntimeHelperPod(
+        if (healthcheckResult.containerId) {
+          await this.builderRunSupportService.appendRuntimeHelperContainer(
             input.run.id,
-            healthcheckResult.podName,
+            healthcheckResult.containerId,
           );
         }
         if (healthcheckResult.logs) {
@@ -406,7 +406,7 @@ export class BuilderDeployStageService {
             source: 'probes',
             stream: 'combined',
             text: healthcheckResult.logs,
-            podName: healthcheckResult.podName ?? null,
+            containerId: healthcheckResult.containerId ?? null,
             stage: BuildStage.PROBES,
           });
         }
@@ -414,7 +414,7 @@ export class BuilderDeployStageService {
           const healthcheckArtifact =
             await this.evidenceService.persistTextArtifact(
               input.run.id,
-              BuildRunArtifactType.K8S_POD_LOG,
+              BuildRunArtifactType.CONTAINER_LOG,
               healthcheckResult.logs,
             );
           await this.builderRunSupportService.recordArtifact(

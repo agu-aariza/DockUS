@@ -14,27 +14,21 @@ export const DEFAULT_MAX_EXTRACTED_FILES = 1500;
 export const DEFAULT_MAX_EXTRACTED_BYTES = 100 * 1024 * 1024;
 export const DEFAULT_LOG_TAIL_LINES = 120;
 
-export const DEFAULT_KIND_CLUSTER_NAME = 'dockus-builder';
-export const DEFAULT_KUBECTL_TIMEOUT_MS = 90000;
 export const DEFAULT_BATCH_TIMEOUT_SECONDS = 60;
 export const DEFAULT_SERVICE_READY_TIMEOUT_SECONDS = 90;
 export const DEFAULT_STABILITY_WINDOW_SECONDS = 30;
-export const DEFAULT_K8S_NAMESPACE_PREFIX = 'dockus-run';
+export const DEFAULT_WORKSPACE_NETWORK_PREFIX = 'dockus-workspace';
+export const DEFAULT_EXECUTION_NETWORK_PREFIX = 'dockus-run';
+export const DEFAULT_DOCKER_RUNTIME = 'runc';
 
-export const DEFAULT_BATCH_CPU_REQUEST = '100m';
-export const DEFAULT_BATCH_MEMORY_REQUEST = '128Mi';
-export const DEFAULT_BATCH_CPU_LIMIT = '500m';
-export const DEFAULT_BATCH_MEMORY_LIMIT = '512Mi';
+export const DEFAULT_BATCH_CPU_LIMIT = '0.5';
+export const DEFAULT_BATCH_MEMORY_LIMIT = '512m';
 
-export const DEFAULT_SERVICE_CPU_REQUEST = '150m';
-export const DEFAULT_SERVICE_MEMORY_REQUEST = '192Mi';
-export const DEFAULT_SERVICE_CPU_LIMIT = '700m';
-export const DEFAULT_SERVICE_MEMORY_LIMIT = '768Mi';
+export const DEFAULT_SERVICE_CPU_LIMIT = '0.7';
+export const DEFAULT_SERVICE_MEMORY_LIMIT = '768m';
 
-export const DEFAULT_TEST_CPU_REQUEST = '100m';
-export const DEFAULT_TEST_MEMORY_REQUEST = '128Mi';
-export const DEFAULT_TEST_CPU_LIMIT = '300m';
-export const DEFAULT_TEST_MEMORY_LIMIT = '384Mi';
+export const DEFAULT_TEST_CPU_LIMIT = '0.3';
+export const DEFAULT_TEST_MEMORY_LIMIT = '384m';
 
 export const CLASSIFIER_VERSION = 'dockus-stable.0';
 

@@ -5,8 +5,8 @@ import { BuildRun } from '../builder/domain/entities/build-run.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
 import { Project } from '../entities/project.entity';
 import { PROJECT_RUNTIME_QUEUE_NAME } from './project-runtime.constants';
-import { ProjectRuntimeClusterService } from './project-runtime-cluster.service';
 import { ProjectRuntimeController } from './project-runtime.controller';
+import { ProjectRuntimeNetworkService } from './project-runtime-network.service';
 import { ProjectRuntimeProcessor } from './project-runtime.processor';
 import { ProjectRuntimeService } from './project-runtime.service';
 
@@ -19,7 +19,7 @@ import { ProjectRuntimeService } from './project-runtime.service';
   ],
   controllers: [ProjectRuntimeController],
   providers: [
-    ProjectRuntimeClusterService,
+    ProjectRuntimeNetworkService,
     ProjectRuntimeService,
     ProjectRuntimeProcessor,
   ],
