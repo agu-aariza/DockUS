@@ -95,7 +95,8 @@ export const envValidationSchema = Joi.object({
     .integer()
     .min(10000)
     .default(300000),
-  BUILDER_KUBECTL_TIMEOUT_MS: Joi.number().integer().min(5000).default(90000),
+  DOCKER_HOST: Joi.string().optional(),
+  BUILDER_DOCKER_RUNTIME: Joi.string().default('runc'),
   BUILDER_CLEANUP_IMAGES: Joi.boolean().default(true),
   BUILDER_IMAGE_TTL_MS: Joi.number().integer().min(60000).default(1800000),
   BUILDER_STALE_RUN_THRESHOLD_MS: Joi.number()
@@ -106,8 +107,8 @@ export const envValidationSchema = Joi.object({
   BUILDER_BASE_PYTHON_IMAGE: Joi.string().default(
     'python:3.11.9-slim-bookworm',
   ),
-  BUILDER_K8S_NAMESPACE_PREFIX: Joi.string().default('dockus-run'),
-  PROJECT_RUNTIME_KIND_PREFIX: Joi.string().default('dockus-project'),
+  BUILDER_WORKSPACE_NETWORK_PREFIX: Joi.string().default('dockus-workspace'),
+  BUILDER_EXECUTION_NETWORK_PREFIX: Joi.string().default('dockus-run'),
   PROJECT_RUNTIME_PROVISION_TIMEOUT_MS: Joi.number()
     .integer()
     .min(10000)
@@ -132,16 +133,10 @@ export const envValidationSchema = Joi.object({
     .min(1024)
     .default(104857600),
   BUILDER_PROMPT_MAX_CHARS: Joi.number().integer().min(1000).default(180000),
-  BUILDER_BATCH_CPU_REQUEST: Joi.string().default('100m'),
-  BUILDER_BATCH_MEMORY_REQUEST: Joi.string().default('128Mi'),
-  BUILDER_BATCH_CPU_LIMIT: Joi.string().default('500m'),
-  BUILDER_BATCH_MEMORY_LIMIT: Joi.string().default('512Mi'),
-  BUILDER_SERVICE_CPU_REQUEST: Joi.string().default('150m'),
-  BUILDER_SERVICE_MEMORY_REQUEST: Joi.string().default('192Mi'),
-  BUILDER_SERVICE_CPU_LIMIT: Joi.string().default('700m'),
-  BUILDER_SERVICE_MEMORY_LIMIT: Joi.string().default('768Mi'),
-  BUILDER_TEST_CPU_REQUEST: Joi.string().default('100m'),
-  BUILDER_TEST_MEMORY_REQUEST: Joi.string().default('128Mi'),
-  BUILDER_TEST_CPU_LIMIT: Joi.string().default('300m'),
-  BUILDER_TEST_MEMORY_LIMIT: Joi.string().default('384Mi'),
+  BUILDER_BATCH_CPU_LIMIT: Joi.string().default('0.5'),
+  BUILDER_BATCH_MEMORY_LIMIT: Joi.string().default('512m'),
+  BUILDER_SERVICE_CPU_LIMIT: Joi.string().default('0.7'),
+  BUILDER_SERVICE_MEMORY_LIMIT: Joi.string().default('768m'),
+  BUILDER_TEST_CPU_LIMIT: Joi.string().default('0.3'),
+  BUILDER_TEST_MEMORY_LIMIT: Joi.string().default('384m'),
 });
