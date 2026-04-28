@@ -10,8 +10,8 @@ import { useState, useEffect } from "react";
 import { BuilderLiveRunPane } from "../builder/components/BuilderLiveRunPane";
 import { BuilderRunsTable } from "../builder/components/BuilderRunsTable";
 import type {
-  ProjectClusterStatus,
-  ProjectRuntimeNamespaceSummary,
+  ProjectRuntimeEnvironmentStatus,
+  ProjectRuntimeNetworkSummary,
   SessionRecord,
 } from "../shared/types";
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
@@ -25,7 +25,7 @@ interface TeacherRuntimePanelProps {
 type RuntimeTab = "control" | "infraestructura" | "seguimiento";
 type RuntimeTrackingTab = "historial" | "ejecucion";
 
-const CLUSTER_STATUS_STYLES: Record<ProjectClusterStatus, string> = {
+const CLUSTER_STATUS_STYLES: Record<ProjectRuntimeEnvironmentStatus, string> = {
   ABSENT: "border-slate-200 bg-slate-100 text-slate-700",
   PROVISIONING: "border-sky-200 bg-sky-50 text-sky-700",
   READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -57,49 +57,49 @@ function MetricCard({
   );
 }
 
-function NamespaceCard({
-  namespace,
+function NetworkCard({
+  network,
 }: {
-  namespace: ProjectRuntimeNamespaceSummary;
+  network: ProjectRuntimeNetworkSummary;
 }): JSX.Element {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold tracking-tight text-slate-950">
-            {namespace.name}
+            {network.name}
           </div>
           <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
-            {namespace.phase}
+            {network.scope}
           </div>
         </div>
         <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
-          {namespace.pods.length} pod{namespace.pods.length === 1 ? "" : "s"}
+          {network.containers.length} contenedor{network.containers.length === 1 ? "" : "es"}
         </span>
       </div>
 
       <div className="mt-4 space-y-3">
-        {namespace.pods.length === 0 ? (
+        {network.containers.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
-            No hay pods vivos en este namespace.
+            No hay contenedores vivos en esta red.
           </div>
         ) : (
-          namespace.pods.map((pod) => (
+          network.containers.map((container) => (
             <div
-              key={pod.name}
+              key={container.id}
               className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium text-slate-900">
-                    {pod.name}
+                    {container.name}
                   </div>
                   <div className="mt-1 text-xs text-slate-500">
-                    {pod.phase} · {pod.readyContainers}/{pod.totalContainers} contenedores listos
+                    {container.status} · id {container.id.slice(0, 12)}
                   </div>
                 </div>
                 <span className="rounded-full bg-white px-2 py-1 text-[11px] text-slate-600">
-                  restart {pod.restartCount}
+                  restart {container.restartCount}
                 </span>
               </div>
             </div>
@@ -182,7 +182,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
   const clusterStatus = rc.runtimeStatus?.status ?? "ABSENT";
   const clusterStyle = CLUSTER_STATUS_STYLES[clusterStatus];
   const runs = rc.runsResponse?.data ?? [];
-  const activeNamespaces = rc.runtimeStatus?.namespaces ?? [];
+  const activeNetworks = rc.runtimeStatus?.networks ?? [];
   const activeRuns = rc.runtimeStatus?.activeRuns ?? [];
 
   return (
@@ -192,11 +192,11 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
           <div className="max-w-3xl">
             <p className="eyebrow">Runtime por proyecto</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Ejecuta entregas dentro del clúster del proyecto y sigue el run sin salir de la interfaz.
+              Ejecuta entregas dentro del runtime Docker del proyecto y sigue el run sin salir de la interfaz.
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               Esta vista está pensada para trabajo docente real: selección del proyecto,
-              reconciliación del clúster, seguimiento de pods y consola live sobre el mismo run.
+              reconciliación de redes, seguimiento de contenedores y consola live sobre el mismo run.
             </p>
           </div>
 
@@ -223,14 +223,14 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Estado del clúster"
+          label="Estado del runtime"
           value={clusterStatus}
-          helper={rc.runtimeStatus?.clusterName ?? "Sin clúster asociado"}
+          helper={rc.runtimeStatus?.workspaceNetworkName ?? "Sin red workspace asociada"}
         />
         <MetricCard
-          label="Namespaces vivos"
-          value={activeNamespaces.length}
-          helper="Aislados por run"
+          label="Redes activas"
+          value={activeNetworks.length}
+          helper="Workspace + runs efímeros"
         />
         <MetricCard
           label="Runs activos"
@@ -349,8 +349,8 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                 </div>
                 <div className="mt-2 text-sm text-slate-700">
                   <div>
-                    <span className="font-medium text-slate-950">Cluster:</span>{" "}
-                    {rc.runtimeStatus?.clusterName ?? "n/a"}
+                    <span className="font-medium text-slate-950">Red workspace:</span>{" "}
+                    {rc.runtimeStatus?.workspaceNetworkName ?? "n/a"}
                   </div>
                   <div className="mt-1">
                     <span className="font-medium text-slate-950">Alumno:</span>{" "}
@@ -391,7 +391,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                 ) : (
                   <RiRefreshLine />
                 )}
-                Preparar/Reintentar clúster
+                Preparar/Reintentar runtime
               </button>
               <button
                 className="btn-secondary"
@@ -409,7 +409,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
 
             {clusterStatus !== "READY" ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                El clúster del proyecto no está listo. Puedes reconciliarlo desde aquí antes de lanzar la ejecución.
+                El runtime Docker del proyecto no está listo. Puedes reconciliarlo desde aquí antes de lanzar la ejecución.
               </div>
             ) : null}
 
@@ -427,15 +427,15 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
           <div className="panel-header">
             <div>
               <h3 className="text-lg font-semibold tracking-tight text-slate-950">
-                Estado del clúster
+                Estado del runtime
               </h3>
               <p className="section-copy">
-                Namespaces temporales, pods activos y runs vivos del proyecto.
+                Redes temporales, contenedores activos y runs vivos del proyecto.
               </p>
             </div>
             <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
               <RiServerLine />
-              {rc.runtimeStatus?.clusterName ?? "sin cluster"}
+              {rc.runtimeStatus?.workspaceNetworkName ?? "sin red"}
             </div>
           </div>
 
@@ -465,7 +465,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                           {run.buildRunId.slice(0, 8)} · {run.status}
                         </div>
                         <div className="mt-1 text-xs text-slate-500">
-                          namespace {run.namespace ?? "n/a"} · pod {run.primaryPodName ?? "resolviendo"}
+                          red {run.executionNetworkName ?? "n/a"} · contenedor {run.primaryContainerId ?? "resolviendo"}
                         </div>
                       </div>
                       <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
@@ -478,13 +478,13 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
             </div>
 
             <div className="space-y-3">
-              {activeNamespaces.length === 0 ? (
+              {activeNetworks.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                  Sin namespaces vivos para este proyecto.
+                  Sin redes vivas para este proyecto.
                 </div>
               ) : (
-                activeNamespaces.map((namespace) => (
-                  <NamespaceCard key={namespace.name} namespace={namespace} />
+                activeNetworks.map((network) => (
+                  <NetworkCard key={network.name} network={network} />
                 ))
               )}
             </div>

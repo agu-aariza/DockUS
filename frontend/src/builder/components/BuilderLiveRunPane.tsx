@@ -84,16 +84,16 @@ export function BuilderLiveRunPane({
               </div>
               <div className="mt-2 text-sm leading-6 text-slate-700">
                 <div>
-                  <span className="font-medium text-slate-950">Cluster:</span>{" "}
-                  {selectedRun.runtimeTarget?.clusterName ?? "n/d"}
+                  <span className="font-medium text-slate-950">Red workspace:</span>{" "}
+                  {selectedRun.runtimeTarget?.workspaceNetworkName ?? "n/d"}
                 </div>
                 <div>
-                  <span className="font-medium text-slate-950">Namespace:</span>{" "}
-                  {selectedRun.runtimeTarget?.namespace ?? "n/d"}
+                  <span className="font-medium text-slate-950">Red de ejecución:</span>{" "}
+                  {selectedRun.runtimeTarget?.executionNetworkName ?? "n/d"}
                 </div>
                 <div>
-                  <span className="font-medium text-slate-950">Pod principal:</span>{" "}
-                  {selectedRun.runtimeTarget?.primaryPodName ?? "resolviendo"}
+                  <span className="font-medium text-slate-950">Contenedor principal:</span>{" "}
+                  {selectedRun.runtimeTarget?.primaryContainerId ?? "resolviendo"}
                 </div>
               </div>
             </div>

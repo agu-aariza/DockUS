@@ -1,34 +1,34 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BuildRunStatus } from '../../builder/domain/entities/build-run.entity';
-import { ProjectClusterStatus } from '../../entities/project.entity';
+import { ProjectRuntimeEnvironmentStatus } from '../../entities/project.entity';
 import { ProjectRuntimeStatusResponse } from '../project-runtime.types';
 
-class ProjectRuntimePodSummaryDto {
+class ProjectRuntimeContainerSummaryDto {
+  @ApiProperty()
+  id!: string;
+
   @ApiProperty()
   name!: string;
 
   @ApiProperty()
-  phase!: string;
+  state!: string;
 
   @ApiProperty()
-  readyContainers!: number;
-
-  @ApiProperty()
-  totalContainers!: number;
+  status!: string;
 
   @ApiProperty()
   restartCount!: number;
 }
 
-class ProjectRuntimeNamespaceSummaryDto {
+class ProjectRuntimeNetworkSummaryDto {
   @ApiProperty()
   name!: string;
 
-  @ApiProperty({ enum: ['Active', 'Terminating', 'Unknown'] })
-  phase!: string;
+  @ApiProperty({ enum: ['workspace', 'run', 'unknown'] })
+  scope!: string;
 
-  @ApiProperty({ type: [ProjectRuntimePodSummaryDto] })
-  pods!: ProjectRuntimePodSummaryDto[];
+  @ApiProperty({ type: [ProjectRuntimeContainerSummaryDto] })
+  containers!: ProjectRuntimeContainerSummaryDto[];
 }
 
 class ProjectRuntimeActiveRunSummaryDto {
@@ -45,13 +45,13 @@ class ProjectRuntimeActiveRunSummaryDto {
   activeStage!: string | null;
 
   @ApiPropertyOptional()
-  namespace!: string | null;
+  executionNetworkName!: string | null;
 
   @ApiPropertyOptional()
-  primaryPodName!: string | null;
+  primaryContainerId!: string | null;
 
   @ApiProperty({ type: [String] })
-  helperPodNames!: string[];
+  helperContainerIds!: string[];
 
   @ApiProperty({ format: 'date-time' })
   createdAt!: string;
@@ -62,10 +62,10 @@ export class ProjectRuntimeStatusResponseDto {
   projectId!: string;
 
   @ApiPropertyOptional()
-  clusterName!: string | null;
+  workspaceNetworkName!: string | null;
 
-  @ApiProperty({ enum: ProjectClusterStatus })
-  status!: ProjectClusterStatus;
+  @ApiProperty({ enum: ProjectRuntimeEnvironmentStatus })
+  status!: ProjectRuntimeEnvironmentStatus;
 
   @ApiPropertyOptional({ format: 'date-time' })
   provisionedAt!: string | null;
@@ -76,8 +76,8 @@ export class ProjectRuntimeStatusResponseDto {
   @ApiProperty({ type: [ProjectRuntimeActiveRunSummaryDto] })
   activeRuns!: ProjectRuntimeActiveRunSummaryDto[];
 
-  @ApiProperty({ type: [ProjectRuntimeNamespaceSummaryDto] })
-  namespaces!: ProjectRuntimeNamespaceSummaryDto[];
+  @ApiProperty({ type: [ProjectRuntimeNetworkSummaryDto] })
+  networks!: ProjectRuntimeNetworkSummaryDto[];
 }
 
 export function toProjectRuntimeStatusResponseDto(

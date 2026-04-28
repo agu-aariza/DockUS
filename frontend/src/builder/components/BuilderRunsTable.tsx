@@ -74,8 +74,8 @@ export function BuilderRunsTable({
                       : "sin preflight"}
                   </div>
                   <div>Perfil: {run.preflightSummary?.executionProfile ?? "n/d"}</div>
-                  <div>Namespace: {run.runtimeTarget?.namespace ?? "sin namespace"}</div>
-                  <div>Pod: {run.runtimeTarget?.primaryPodName ?? "resolviéndose"}</div>
+                  <div>Red: {run.runtimeTarget?.executionNetworkName ?? "sin red"}</div>
+                  <div>Contenedor: {run.runtimeTarget?.primaryContainerId ?? "resolviéndose"}</div>
                   <div>Fecha: {formatDate(run.createdAt)}</div>
                 </div>
               </button>
@@ -129,9 +129,9 @@ export function BuilderRunsTable({
                     {run.activeStage ?? "n/d"}
                   </td>
                   <td className="px-3 py-4 text-sm text-slate-600">
-                    <div>{run.runtimeTarget?.namespace ?? "sin namespace"}</div>
+                    <div>{run.runtimeTarget?.executionNetworkName ?? "sin red"}</div>
                     <div className="mt-1 text-xs text-slate-500">
-                      {run.runtimeTarget?.primaryPodName ?? "pod resolviéndose"}
+                      {run.runtimeTarget?.primaryContainerId ?? "contenedor resolviéndose"}
                     </div>
                   </td>
                   <td className="px-3 py-4 text-sm text-slate-600">

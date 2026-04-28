@@ -1,19 +1,19 @@
 import { BuildStage } from '../builder/domain/builder.types';
 import { BuildRunStatus } from '../builder/domain/entities/build-run.entity';
-import { ProjectClusterStatus } from '../entities/project.entity';
+import { ProjectRuntimeEnvironmentStatus } from '../entities/project.entity';
 
-export interface ProjectRuntimePodSummary {
+export interface ProjectRuntimeContainerSummary {
+  id: string;
   name: string;
-  phase: string;
-  readyContainers: number;
-  totalContainers: number;
+  state: string;
+  status: string;
   restartCount: number;
 }
 
-export interface ProjectRuntimeNamespaceSummary {
+export interface ProjectRuntimeNetworkSummary {
   name: string;
-  phase: 'Active' | 'Terminating' | 'Unknown';
-  pods: ProjectRuntimePodSummary[];
+  scope: 'workspace' | 'run' | 'unknown';
+  containers: ProjectRuntimeContainerSummary[];
 }
 
 export interface ProjectRuntimeActiveRunSummary {
@@ -21,20 +21,20 @@ export interface ProjectRuntimeActiveRunSummary {
   deliveryId: string;
   status: BuildRunStatus;
   activeStage: BuildStage | null;
-  namespace: string | null;
-  primaryPodName: string | null;
-  helperPodNames: string[];
+  executionNetworkName: string | null;
+  primaryContainerId: string | null;
+  helperContainerIds: string[];
   createdAt: string;
 }
 
 export interface ProjectRuntimeStatusResponse {
   projectId: string;
-  clusterName: string | null;
-  status: ProjectClusterStatus;
+  workspaceNetworkName: string | null;
+  status: ProjectRuntimeEnvironmentStatus;
   provisionedAt: string | null;
   lastError: string | null;
   activeRuns: ProjectRuntimeActiveRunSummary[];
-  namespaces: ProjectRuntimeNamespaceSummary[];
+  networks: ProjectRuntimeNetworkSummary[];
 }
 
 export interface ProjectRuntimeJobData {
