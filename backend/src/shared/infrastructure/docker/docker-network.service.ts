@@ -50,14 +50,10 @@ export class DockerNetworkService {
     networkName: string,
     options: { timeoutMs: number; maxBufferedChars?: number },
   ): Promise<boolean> {
-    const result = await runCommand(
-      'docker',
-      ['network', 'rm', networkName],
-      {
-        timeoutMs: options.timeoutMs,
-        maxBufferedChars: options.maxBufferedChars ?? 50000,
-      },
-    );
+    const result = await runCommand('docker', ['network', 'rm', networkName], {
+      timeoutMs: options.timeoutMs,
+      maxBufferedChars: options.maxBufferedChars ?? 50000,
+    });
     return !result.timedOut && result.exitCode === 0;
   }
 
@@ -73,9 +69,7 @@ export class DockerNetworkService {
         maxBufferedChars: options.maxBufferedChars ?? 500000,
       },
     );
-    if (
-      isMissingDockerResource(result, /No such network|not found/iu)
-    ) {
+    if (isMissingDockerResource(result, /No such network|not found/iu)) {
       return null;
     }
     if (result.timedOut || result.exitCode !== 0) {

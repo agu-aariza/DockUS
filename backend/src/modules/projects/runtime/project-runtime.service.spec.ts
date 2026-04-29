@@ -5,7 +5,6 @@ import {
   BuildRun,
   BuildRunStatus,
 } from '../builder/domain/entities/build-run.entity';
-import { Delivery } from '../deliveries/entities/delivery.entity';
 import {
   Project,
   ProjectRuntimeEnvironmentStatus,
@@ -56,8 +55,8 @@ describe('ProjectRuntimeService', () => {
     activeRunsQueryBuilder.orderBy.mockReturnThis();
     activeRunsQueryBuilder.getMany.mockResolvedValue([]);
     projectsRepository.find.mockResolvedValue([]);
-    projectsRepository.save.mockImplementation(
-      async (project: Project) => project,
+    projectsRepository.save.mockImplementation((project: Project) =>
+      Promise.resolve(project),
     );
 
     service = new ProjectRuntimeService(
@@ -102,8 +101,7 @@ describe('ProjectRuntimeService', () => {
       expect.objectContaining({
         id: project.id,
         status: ProjectStatus.ACTIVE,
-        runtimeEnvironmentStatus:
-          ProjectRuntimeEnvironmentStatus.PROVISIONING,
+        runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.PROVISIONING,
         runtimeNetworkName: 'dockus-workspace-550e8400-e29',
         runtimeLastError: null,
       }),

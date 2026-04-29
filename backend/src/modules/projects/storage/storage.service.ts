@@ -61,7 +61,11 @@ export class StorageService {
     file: UploadedStorageFile | undefined,
     actor: AuthenticatedUser,
   ): Promise<StorageObjectResponse> {
-    return this.storageUploadService.uploadProjectTestSuite(projectId, file, actor);
+    return this.storageUploadService.uploadProjectTestSuite(
+      projectId,
+      file,
+      actor,
+    );
   }
 
   async findProjectTestSuite(
@@ -113,10 +117,8 @@ export class StorageService {
       actor,
       'No tiene permisos para eliminar objetos.',
     );
-    const storageObject = await this.storageAccessService.findStorageObjectWithAccess(
-      id,
-      actor,
-    );
+    const storageObject =
+      await this.storageAccessService.findStorageObjectWithAccess(id, actor);
     await this.storageRepository.softRemove(storageObject);
     return {
       message: 'Objeto de storage marcado como eliminado correctamente.',
@@ -131,11 +133,12 @@ export class StorageService {
       actor,
       'Solo ADMIN puede purgar objetos fisicamente.',
     );
-    const storageObject = await this.storageAccessService.findStorageObjectWithAccess(
-      id,
-      actor,
-      true,
-    );
+    const storageObject =
+      await this.storageAccessService.findStorageObjectWithAccess(
+        id,
+        actor,
+        true,
+      );
 
     await this.minioStorageService.deleteObject(
       storageObject.bucket,
@@ -154,11 +157,12 @@ export class StorageService {
       actor,
       'Solo ADMIN puede restaurar objetos eliminados logicamente.',
     );
-    const storageObject = await this.storageAccessService.findStorageObjectWithAccess(
-      id,
-      actor,
-      true,
-    );
+    const storageObject =
+      await this.storageAccessService.findStorageObjectWithAccess(
+        id,
+        actor,
+        true,
+      );
 
     if (!storageObject.deletedAt) {
       throw new ConflictException('El objeto ya se encuentra activo.');
@@ -175,10 +179,8 @@ export class StorageService {
     }
 
     await this.storageRepository.recover(storageObject);
-    const restored = await this.storageAccessService.findStorageObjectWithAccess(
-      id,
-      actor,
-    );
+    const restored =
+      await this.storageAccessService.findStorageObjectWithAccess(id, actor);
     return toStorageObjectResponse(restored);
   }
 

@@ -3,7 +3,6 @@ import { Repository } from 'typeorm';
 import {
   buildActor,
   buildDelivery,
-  buildProject,
   buildStorageObject,
 } from '../../../test-support/domain-builders';
 import { UserRole } from '../../users/entities/user.entity';

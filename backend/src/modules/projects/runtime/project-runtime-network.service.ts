@@ -131,13 +131,12 @@ export class ProjectRuntimeNetworkService {
 
     const summaries: ProjectRuntimeNetworkSummary[] = [];
     for (const networkName of relevantNames) {
-      const inspect =
-        await this.dockerNetworkService.inspectNetwork<{
-          Containers?: Record<string, unknown>;
-        }>(networkName, {
-          timeoutMs: this.inspectTimeoutMs,
-          maxBufferedChars: 500000,
-        });
+      const inspect = await this.dockerNetworkService.inspectNetwork<{
+        Containers?: Record<string, unknown>;
+      }>(networkName, {
+        timeoutMs: this.inspectTimeoutMs,
+        maxBufferedChars: 500000,
+      });
       const containers = await Promise.all(
         Object.keys(inspect?.Containers ?? {}).map((containerId) =>
           this.toContainerSummary(containerId),
@@ -152,9 +151,8 @@ export class ProjectRuntimeNetworkService {
               ? 'run'
               : 'unknown',
         containers: containers.filter(
-          (
-            container,
-          ): container is ProjectRuntimeContainerSummary => container !== null,
+          (container): container is ProjectRuntimeContainerSummary =>
+            container !== null,
         ),
       });
     }
@@ -192,9 +190,7 @@ export class ProjectRuntimeNetworkService {
       state: container.State?.Status ?? 'unknown',
       status: container.State?.Status ?? 'unknown',
       restartCount:
-        typeof container.RestartCount === 'number'
-          ? container.RestartCount
-          : 0,
+        typeof container.RestartCount === 'number' ? container.RestartCount : 0,
     };
   }
 }

@@ -4,10 +4,7 @@ import type { DockerBuildImageOptions } from './docker.types';
 
 @Injectable()
 export class DockerImageService {
-  async buildImage(
-    imageTag: string,
-    options: DockerBuildImageOptions,
-  ) {
+  async buildImage(imageTag: string, options: DockerBuildImageOptions) {
     return runCommand('docker', ['build', '-t', imageTag, '.'], {
       cwd: options.cwd,
       timeoutMs: options.timeoutMs,

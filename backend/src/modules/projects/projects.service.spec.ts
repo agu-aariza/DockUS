@@ -18,6 +18,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectGradebookService } from './project-gradebook.service';
+import { ProjectLifecycleService } from './project-lifecycle.service';
 import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectsService } from './projects.service';
 import { ProjectRuntimeService } from './runtime/project-runtime.service';
@@ -52,13 +53,21 @@ describe('ProjectsService', () => {
   };
 
   const projectRuntimeService = {
-    syncCreatedProject: jest.fn(async (project: Project) => project),
+    syncCreatedProject: jest.fn((project: Project) => Promise.resolve(project)),
     transitionProjectStatus: jest.fn(
-      async (project: Project, status: ProjectStatus) => ({
-        ...project,
-        status,
-      }),
+      (project: Project, status: ProjectStatus) =>
+        Promise.resolve({
+          ...project,
+          status,
+        }),
     ),
+  };
+
+  const projectLifecycleService = {
+    create: jest.fn(),
+    updateStatus: jest.fn(),
+    remove: jest.fn(),
+    restore: jest.fn(),
   };
 
   const projectGradebookService = {
@@ -86,8 +95,9 @@ describe('ProjectsService', () => {
     service = new ProjectsService(
       projectsRepository as unknown as Repository<Project>,
       deliveriesRepository as unknown as Repository<Delivery>,
+      projectLifecycleService as unknown as ProjectLifecycleService,
       projectRuntimeService as unknown as ProjectRuntimeService,
-      projectAccessService,
+      projectAccessService as unknown as ProjectAccessService,
       projectGradebookService as unknown as ProjectGradebookService,
       projectOperationalIssuesService as unknown as ProjectOperationalIssuesService,
     );
@@ -105,25 +115,11 @@ describe('ProjectsService', () => {
       status: ProjectStatus.DRAFT,
     });
 
-    projectsRepository.create.mockReturnValue(savedProject);
-    projectsRepository.save.mockResolvedValue(savedProject);
+    projectLifecycleService.create.mockResolvedValue(savedProject);
 
     const result = await service.create(dto, creatorId);
 
-    expect(projectsRepository.create).toHaveBeenCalledWith({
-      title: 'Proyecto Final',
-      contextAcademico: 'MPSP - Grupo A',
-      status: ProjectStatus.DRAFT,
-      creatorId,
-      maxDeliveriesPerStudent: 1,
-      expectedType: null,
-      rubricInstructions: null,
-      opensAt: null,
-      closesAt: null,
-    });
-    expect(projectRuntimeService.syncCreatedProject).toHaveBeenCalledWith(
-      savedProject,
-    );
+    expect(projectLifecycleService.create).toHaveBeenCalledWith(dto, creatorId);
     expect(result.creatorId).toBe(creatorId);
   });
 
@@ -189,8 +185,7 @@ describe('ProjectsService', () => {
     const actor = buildActor(UserRole.ADMIN);
     const project = buildProject();
     const updated = buildProject({ status: ProjectStatus.ARCHIVED });
-    projectsRepository.findOne.mockResolvedValue(project);
-    projectRuntimeService.transitionProjectStatus.mockResolvedValue(updated);
+    projectLifecycleService.updateStatus.mockResolvedValue(updated);
 
     const result = await service.updateStatus(
       project.id,
@@ -198,21 +193,23 @@ describe('ProjectsService', () => {
       actor,
     );
 
-    expect(projectRuntimeService.transitionProjectStatus).toHaveBeenCalledWith(
-      project,
+    expect(projectLifecycleService.updateStatus).toHaveBeenCalledWith(
+      project.id,
       ProjectStatus.ARCHIVED,
+      actor,
     );
     expect(result.status).toBe(ProjectStatus.ARCHIVED);
   });
 
   it('debe aplicar soft delete al eliminar proyecto', async () => {
     const project = buildProject();
-    projectsRepository.findOne.mockResolvedValue(project);
-    projectsRepository.softRemove.mockResolvedValue(project);
+    projectLifecycleService.remove.mockResolvedValue({
+      message: 'Proyecto marcado como eliminado correctamente.',
+    });
 
     const result = await service.remove(project.id);
 
-    expect(projectsRepository.softRemove).toHaveBeenCalledWith(project);
+    expect(projectLifecycleService.remove).toHaveBeenCalledWith(project.id);
     expect(result).toEqual({
       message: 'Proyecto marcado como eliminado correctamente.',
     });
@@ -226,21 +223,13 @@ describe('ProjectsService', () => {
       deletedAt: undefined as unknown as Date,
     });
 
-    projectsRepository.findOne
-      .mockResolvedValueOnce(deletedProject)
-      .mockResolvedValueOnce(restoredProject);
-    projectsRepository.recover.mockResolvedValue(restoredProject);
+    projectLifecycleService.restore.mockResolvedValue(restoredProject);
 
     const result = await service.restore(deletedProject.id);
 
-    expect(projectsRepository.findOne).toHaveBeenNthCalledWith(1, {
-      where: { id: deletedProject.id },
-      withDeleted: true,
-    });
-    expect(projectsRepository.recover).toHaveBeenCalledWith(deletedProject);
-    expect(projectsRepository.findOne).toHaveBeenNthCalledWith(2, {
-      where: { id: deletedProject.id },
-    });
+    expect(projectLifecycleService.restore).toHaveBeenCalledWith(
+      deletedProject.id,
+    );
     expect(result.id).toBe(restoredProject.id);
   });
 
@@ -248,7 +237,7 @@ describe('ProjectsService', () => {
     const activeProject = buildProject({
       deletedAt: undefined as unknown as Date,
     });
-    projectsRepository.findOne.mockResolvedValue(activeProject);
+    projectLifecycleService.restore.mockRejectedValue(new ConflictException());
 
     await expect(service.restore(activeProject.id)).rejects.toBeInstanceOf(
       ConflictException,
@@ -263,6 +252,8 @@ describe('ProjectsService', () => {
           limit: 20,
           createdFrom: '2026-04-10T00:00:00.000Z',
           createdTo: '2026-04-01T00:00:00.000Z',
+          sortBy: 'createdAt',
+          sortOrder: 'DESC',
         },
         buildActor(UserRole.ADMIN),
       ),

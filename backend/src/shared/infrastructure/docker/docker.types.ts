@@ -6,8 +6,7 @@ export interface DockerLabelledTimeoutOptions {
   labels?: Record<string, string>;
 }
 
-export interface DockerCreateNetworkOptions
-  extends DockerLabelledTimeoutOptions {
+export interface DockerCreateNetworkOptions extends DockerLabelledTimeoutOptions {
   internal?: boolean;
 }
 
@@ -17,8 +16,7 @@ export interface DockerListOptions {
   labels?: Record<string, string>;
 }
 
-export interface DockerContainerRunOptions
-  extends DockerLabelledTimeoutOptions {
+export interface DockerContainerRunOptions extends DockerLabelledTimeoutOptions {
   containerName: string;
   imageTag: string;
   command: string[];

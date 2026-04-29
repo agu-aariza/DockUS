@@ -26,7 +26,9 @@ export class DockerContainerService {
     return containerId;
   }
 
-  async runDaemonContainer(options: DockerContainerRunOptions): Promise<string> {
+  async runDaemonContainer(
+    options: DockerContainerRunOptions,
+  ): Promise<string> {
     return this.runContainer(options);
   }
 
@@ -83,9 +85,7 @@ export class DockerContainerService {
         maxBufferedChars: options.maxBufferedChars ?? 500000,
       },
     );
-    if (
-      isMissingDockerResource(result, /No such container|not found/iu)
-    ) {
+    if (isMissingDockerResource(result, /No such container|not found/iu)) {
       return null;
     }
     if (result.timedOut || result.exitCode !== 0) {
@@ -103,7 +103,12 @@ export class DockerContainerService {
   ): Promise<boolean> {
     const result = await runCommand(
       'docker',
-      ['container', 'rm', ...(options.force === false ? [] : ['-f']), containerId],
+      [
+        'container',
+        'rm',
+        ...(options.force === false ? [] : ['-f']),
+        containerId,
+      ],
       {
         timeoutMs: options.timeoutMs,
         maxBufferedChars: options.maxBufferedChars ?? 50000,

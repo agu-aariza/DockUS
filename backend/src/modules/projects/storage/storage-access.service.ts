@@ -8,7 +8,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
-import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
 import {
   Delivery,
   DeliveryStatus,
@@ -99,10 +98,7 @@ export class StorageAccessService {
     return project;
   }
 
-  assertCanAccessDelivery(
-    delivery: Delivery,
-    actor: AuthenticatedUser,
-  ): void {
+  assertCanAccessDelivery(delivery: Delivery, actor: AuthenticatedUser): void {
     if (actor.role === UserRole.ADMIN) {
       return;
     }

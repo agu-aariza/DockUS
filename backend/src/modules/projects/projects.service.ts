@@ -8,16 +8,10 @@
  * @module ProjectsService
  */
 
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
 import {
   ListProjectsQueryDto,
@@ -31,9 +25,7 @@ import { ProjectLifecycleService } from './project-lifecycle.service';
 import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectRuntimeService } from './runtime/project-runtime.service';
-import {
-  buildPaginationMeta,
-} from '../../shared/utils/pagination.util';
+import { buildPaginationMeta } from '../../shared/utils/pagination.util';
 import { Delivery } from './deliveries/entities/delivery.entity';
 import {
   PaginatedProjectsResponse,

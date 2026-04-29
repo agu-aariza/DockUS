@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
@@ -11,10 +8,17 @@ import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
 import { throwIfUniqueViolation } from '../../../shared/database/unique-violation.util';
 import { UserRole } from '../../users/entities/user.entity';
-import { Delivery, DeliveryStatus } from '../deliveries/entities/delivery.entity';
+import {
+  Delivery,
+  DeliveryStatus,
+} from '../deliveries/entities/delivery.entity';
 import { StorageAccessService } from './storage-access.service';
 import { CreateStorageObjectDto } from './dto/create-storage-object.dto';
-import { StorageAssetRole, StorageObject, StorageScopeType } from './entities/storage-object.entity';
+import {
+  StorageAssetRole,
+  StorageObject,
+  StorageScopeType,
+} from './entities/storage-object.entity';
 import { UploadedStorageFile } from './interfaces/uploaded-storage-file.interface';
 import { StorageObjectResponse } from './storage.types';
 import { toStorageObjectResponse } from './storage-response.util';
@@ -128,7 +132,8 @@ export class StorageUploadService {
       throw new BadRequestException('No se recibio archivo de suite docente.');
     }
 
-    const project = await this.storageAccessService.findProjectOrThrow(projectId);
+    const project =
+      await this.storageAccessService.findProjectOrThrow(projectId);
     this.storageAccessService.assertCanManageProject(project, actor);
     this.assertFileSize(file.size);
     this.assertAllowedExtension(

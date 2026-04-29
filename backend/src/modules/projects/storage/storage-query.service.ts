@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
@@ -7,8 +11,15 @@ import { ProjectAssignment } from '../assignments/entities/project-assignment.en
 import { Delivery } from '../deliveries/entities/delivery.entity';
 import { Project } from '../entities/project.entity';
 import { StorageAccessService } from './storage-access.service';
-import { ListStorageObjectsQueryDto, StorageSortField } from './dto/list-storage-objects-query.dto';
-import { StorageAssetRole, StorageObject, StorageScopeType } from './entities/storage-object.entity';
+import {
+  ListStorageObjectsQueryDto,
+  StorageSortField,
+} from './dto/list-storage-objects-query.dto';
+import {
+  StorageAssetRole,
+  StorageObject,
+  StorageScopeType,
+} from './entities/storage-object.entity';
 import {
   CreateDownloadUrlResponse,
   PaginatedStorageResponse,
@@ -122,10 +133,8 @@ export class StorageQueryService {
     id: string,
     actor: AuthenticatedUser,
   ): Promise<StorageObjectResponse> {
-    const storageObject = await this.storageAccessService.findStorageObjectWithAccess(
-      id,
-      actor,
-    );
+    const storageObject =
+      await this.storageAccessService.findStorageObjectWithAccess(id, actor);
     return toStorageObjectResponse(storageObject);
   }
 
@@ -133,10 +142,8 @@ export class StorageQueryService {
     id: string,
     actor: AuthenticatedUser,
   ): Promise<CreateDownloadUrlResponse> {
-    const storageObject = await this.storageAccessService.findStorageObjectWithAccess(
-      id,
-      actor,
-    );
+    const storageObject =
+      await this.storageAccessService.findStorageObjectWithAccess(id, actor);
     const downloadUrl = await this.minioStorageService.createDownloadSignedUrl(
       storageObject.bucket,
       storageObject.objectKey,
@@ -154,7 +161,10 @@ export class StorageQueryService {
     projectId: string,
     actor: AuthenticatedUser,
   ): Promise<StorageObjectResponse> {
-    const storageObject = await this.findProjectTestSuiteEntity(projectId, actor);
+    const storageObject = await this.findProjectTestSuiteEntity(
+      projectId,
+      actor,
+    );
     return toStorageObjectResponse(storageObject);
   }
 
@@ -174,7 +184,8 @@ export class StorageQueryService {
     projectId: string,
     actor: AuthenticatedUser,
   ): Promise<StorageObject> {
-    const project = await this.storageAccessService.findProjectOrThrow(projectId);
+    const project =
+      await this.storageAccessService.findProjectOrThrow(projectId);
     this.storageAccessService.assertCanManageProject(project, actor);
     const storageObject = await this.findProjectTestSuiteStorage(projectId);
     if (!storageObject) {

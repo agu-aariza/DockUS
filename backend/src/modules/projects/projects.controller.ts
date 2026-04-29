@@ -15,7 +15,6 @@ import {
   Get,
   HttpCode,
   NotFoundException,
-  Optional,
   Param,
   ParseEnumPipe,
   ParseUUIDPipe,
