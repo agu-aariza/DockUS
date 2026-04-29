@@ -7,8 +7,8 @@ import type {
   UserRole,
   UserStatus,
 } from '../../shared/types';
+import { useManagementPermissions } from '../../shared/session/useManagementPermissions';
 import { getErrorMessage } from '../../shared/utils/errors';
-import { hasRole } from '../../shared/utils/permissions';
 
 export function useUserManagement(session: SessionRecord | null) {
   const [query, setQuery] = useState({ page: '1', limit: '20', role: '', status: '', search: '' });
@@ -33,8 +33,8 @@ export function useUserManagement(session: SessionRecord | null) {
   const [result, setResult] = useState<unknown>(null);
   const [message, setMessage] = useState('');
 
-  const canList = hasRole(session, ['ADMIN', 'TEACHER']);
-  const canAdmin = hasRole(session, ['ADMIN']);
+  const { canAdmin, hasAnyRole } = useManagementPermissions(session);
+  const canList = hasAnyRole(['ADMIN', 'TEACHER']);
 
   const handleList = async () => {
     if (!canList) return;

@@ -6,8 +6,8 @@ import type {
   SessionRecord,
   StorageObjectEntity,
 } from '../../shared/types';
+import { useManagementPermissions } from '../../shared/session/useManagementPermissions';
 import { getErrorMessage } from '../../shared/utils/errors';
-import { hasRole } from '../../shared/utils/permissions';
 import { computeSha256Hex } from '../../shared/utils/hash';
 
 export type DangerAction = 'DELETE' | 'PURGE';
@@ -46,10 +46,9 @@ export function useStorageManagement(session: SessionRecord | null) {
   const [message, setMessage] = useState('');
   const [hashLoading, setHashLoading] = useState(false);
 
-  const canRead = Boolean(session);
-  const canUpload = Boolean(session);
-  const canSoftDelete = hasRole(session, ['ADMIN', 'TEACHER']);
-  const canAdmin = hasRole(session, ['ADMIN']);
+  const { canRead, canUpload, canTeacherOrAdmin, canAdmin } =
+    useManagementPermissions(session);
+  const canSoftDelete = canTeacherOrAdmin;
 
   const handleList = async () => {
     if (!canRead) return;

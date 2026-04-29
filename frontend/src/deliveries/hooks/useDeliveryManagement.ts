@@ -17,7 +17,7 @@ import type {
   SessionRecord,
 } from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
-import { hasRole } from "../../shared/utils/permissions";
+import { useManagementPermissions } from "../../shared/session/useManagementPermissions";
 
 export type NoticeTone = "info" | "warning";
 export interface NoticeState {
@@ -61,9 +61,7 @@ export function useDeliveryManagement(session: SessionRecord | null) {
   const [reportDelivery, setReportDelivery] = useState<DeliveryEntity | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
 
-  const canRead = Boolean(session);
-  const canWrite = hasRole(session, ["ADMIN", "TEACHER"]);
-  const canAdmin = hasRole(session, ["ADMIN"]);
+  const { canRead, canWrite, canAdmin } = useManagementPermissions(session);
 
   const selectedDelivery = deliveries?.data.find(d => d.id === selectedDeliveryId) ?? null;
 
