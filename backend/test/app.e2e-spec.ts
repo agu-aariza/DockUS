@@ -218,6 +218,10 @@ describe('DockUS API (e2e)', () => {
         runtimeProvisionedAt: new Date(),
         runtimeLastError: null,
       });
+    } else {
+      await projectsRepository.update(projectPayload.id, {
+        status: ProjectStatus.ACTIVE,
+      });
     }
 
     const bulkAssignResponse = await request(app.getHttpServer())
