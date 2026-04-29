@@ -1,15 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import {
-  ConflictException,
-  Injectable,
-  ServiceUnavailableException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import {
-  BuildRun,
   BuildRunStatus,
 } from '../../domain/entities/build-run.entity';
-import { BuilderRunEventsService } from '../../domain/events/builder-run-events.service';
 import {
   BuildStage,
   BuilderExecutionMode,
@@ -22,16 +14,14 @@ import {
   StageResult,
   StageStatus,
 } from '../../domain/builder.types';
-import { ExecutionAdapterService } from '../../infrastructure/execution/execution-adapter.service';
-import { toPosixPath } from '../../infrastructure/utils/builder-analysis.util';
+import { BuilderRunStateService } from './builder-run-state.service';
+import { BuilderRunTelemetryService } from './builder-run-telemetry.service';
 
 @Injectable()
 export class BuilderRunSupportService {
   constructor(
-    @InjectRepository(BuildRun)
-    private readonly buildRunsRepository: Repository<BuildRun>,
-    private readonly builderRunEventsService: BuilderRunEventsService,
-    private readonly executionAdapterService: ExecutionAdapterService,
+    private readonly builderRunStateService: BuilderRunStateService,
+    private readonly builderRunTelemetryService: BuilderRunTelemetryService,
   ) {}
 
   async updateRunStatus(
@@ -39,20 +29,7 @@ export class BuilderRunSupportService {
     status: BuildRunStatus,
     startedAt?: Date,
   ): Promise<void> {
-    const run = await this.buildRunsRepository.findOne({
-      where: { id: runId },
-    });
-    if (!run) {
-      return;
-    }
-    if (run.status === BuildRunStatus.CANCELLED) {
-      throw new ConflictException('Run cancelado durante procesamiento.');
-    }
-    run.status = status;
-    if (startedAt && !run.startedAt) {
-      run.startedAt = startedAt;
-    }
-    await this.buildRunsRepository.save(run);
+    return this.builderRunStateService.updateRunStatus(runId, status, startedAt);
   }
 
   async emitEvent(input: {
@@ -76,7 +53,7 @@ export class BuilderRunSupportService {
     message: string;
     payload?: Record<string, unknown> | null;
   }): Promise<void> {
-    await this.builderRunEventsService.emit(input);
+    return this.builderRunTelemetryService.emitEvent(input);
   }
 
   async emitStageStarted(
@@ -84,14 +61,11 @@ export class BuilderRunSupportService {
     runStatus: BuildRunStatus,
     stage: BuildStage,
   ): Promise<void> {
-    await this.emitEvent({
-      buildRunId: runId,
-      eventType: 'STAGE_STARTED',
+    return this.builderRunTelemetryService.emitStageStarted(
+      runId,
       runStatus,
       stage,
-      activeStage: stage,
-      message: `Inicio de etapa ${stage}.`,
-    });
+    );
   }
 
   async emitStageFinished(
@@ -100,21 +74,12 @@ export class BuilderRunSupportService {
     stageResult: StageResult,
     payload?: Record<string, unknown>,
   ): Promise<void> {
-    await this.emitEvent({
-      buildRunId: runId,
-      eventType: 'STAGE_FINISHED',
+    return this.builderRunTelemetryService.emitStageFinished(
+      runId,
       runStatus,
-      stage: stageResult.stage,
-      activeStage: null,
-      message: `Etapa ${stageResult.stage} finalizada con ${stageResult.status}.`,
-      payload: {
-        status: stageResult.status,
-        reasonCode: stageResult.reasonCode,
-        durationMs: stageResult.durationMs,
-        evidenceRefs: stageResult.evidenceRefs,
-        ...(payload ?? {}),
-      },
-    });
+      stageResult,
+      payload,
+    );
   }
 
   async recordWarning(
@@ -122,15 +87,11 @@ export class BuilderRunSupportService {
     warnings: string[],
     warning: string,
   ): Promise<void> {
-    warnings.push(warning);
-    await this.emitEvent({
-      buildRunId: runId,
-      eventType: 'WARNING_ADDED',
-      runStatus: null,
-      stage: null,
-      message: warning,
-      payload: { warning },
-    });
+    return this.builderRunTelemetryService.recordWarning(
+      runId,
+      warnings,
+      warning,
+    );
   }
 
   async recordArtifact(
@@ -139,19 +100,12 @@ export class BuilderRunSupportService {
     artifact: EvidenceArtifactPublic,
     payload?: Record<string, unknown>,
   ): Promise<void> {
-    artifacts.push(artifact);
-    await this.emitEvent({
-      buildRunId: runId,
-      eventType: 'ARTIFACT_ADDED',
-      runStatus: null,
-      stage: null,
-      message: `Artefacto ${artifact.type} persistido.`,
-      payload: {
-        artifactId: artifact.id,
-        artifactType: artifact.type,
-        ...(payload ?? {}),
-      },
-    });
+    return this.builderRunTelemetryService.recordArtifact(
+      runId,
+      artifacts,
+      artifact,
+      payload,
+    );
   }
 
   async emitLogChunk(input: {
@@ -163,39 +117,11 @@ export class BuilderRunSupportService {
     containerName?: string | null;
     stage?: BuildStage | null;
   }): Promise<void> {
-    const normalized = input.text.replace(/\r\n/gu, '\n');
-    const maxChars = 4096;
-    for (let index = 0; index < normalized.length; index += maxChars) {
-      const chunk = normalized.slice(index, index + maxChars);
-      if (!chunk) {
-        continue;
-      }
-      await this.emitEvent({
-        buildRunId: input.buildRunId,
-        eventType: 'LOG_CHUNK',
-        runStatus: null,
-        stage: input.stage ?? null,
-        activeStage: input.stage ?? null,
-        message: 'Chunk de logs recibido.',
-        payload: {
-          source: input.source,
-          stream: input.stream,
-          containerId: input.containerId ?? null,
-          containerName: input.containerName ?? null,
-          text: chunk,
-        },
-      });
-    }
+    return this.builderRunTelemetryService.emitLogChunk(input);
   }
 
-  beginStage(stage: BuildStage): {
-    stage: BuildStage;
-    startedAt: Date;
-  } {
-    return {
-      stage,
-      startedAt: new Date(),
-    };
+  beginStage(stage: BuildStage): { stage: BuildStage; startedAt: Date } {
+    return this.builderRunTelemetryService.beginStage(stage);
   }
 
   finishStage(input: {
@@ -205,29 +131,11 @@ export class BuilderRunSupportService {
     reasonCode: string;
     evidenceRefs?: string[];
   }): StageResult {
-    const finishedAt = new Date();
-    return {
-      stage: input.stage,
-      status: input.status,
-      startedAt: input.startedAt.toISOString(),
-      finishedAt: finishedAt.toISOString(),
-      durationMs: finishedAt.getTime() - input.startedAt.getTime(),
-      reasonCode: input.reasonCode,
-      evidenceRefs: input.evidenceRefs ?? [],
-    };
+    return this.builderRunTelemetryService.finishStage(input);
   }
 
   toSkippedStage(stage: BuildStage, reasonCode: string): StageResult {
-    const now = new Date();
-    return {
-      stage,
-      status: StageStatus.SKIP,
-      startedAt: now.toISOString(),
-      finishedAt: now.toISOString(),
-      durationMs: 0,
-      reasonCode,
-      evidenceRefs: [],
-    };
+    return this.builderRunTelemetryService.toSkippedStage(stage, reasonCode);
   }
 
   toManualStage(
@@ -235,16 +143,11 @@ export class BuilderRunSupportService {
     status: StageStatus,
     reasonCode: string,
   ): StageResult {
-    const now = new Date();
-    return {
+    return this.builderRunTelemetryService.toManualStage(
       stage,
       status,
-      startedAt: now.toISOString(),
-      finishedAt: now.toISOString(),
-      durationMs: 0,
       reasonCode,
-      evidenceRefs: [],
-    };
+    );
   }
 
   async runLlmPhaseWithRetry<T>(
@@ -252,20 +155,10 @@ export class BuilderRunSupportService {
     warnings: string[],
     operation: () => Promise<T>,
   ): Promise<T> {
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
-      try {
-        return await operation();
-      } catch (error) {
-        lastError = error;
-        warnings.push(
-          `Fallo en fase LLM ${phase} intento ${attempt}/2: ${this.toErrorMessage(error)}`,
-        );
-      }
-    }
-
-    throw new ServiceUnavailableException(
-      `La fase LLM ${phase} falló tras 2 intentos: ${this.toErrorMessage(lastError)}`,
+    return this.builderRunTelemetryService.runLlmPhaseWithRetry(
+      phase,
+      warnings,
+      operation,
     );
   }
 
@@ -275,131 +168,37 @@ export class BuilderRunSupportService {
     model: string;
     preflightSummary?: BuilderPreflightSummary | null;
   }): Record<string, unknown> {
-    const fileList = input.runtimeFiles.map((file) =>
-      toPosixPath(file.relativePath),
-    );
-    const manifests = {
-      requirements: fileList.filter((file) =>
-        /(^|\/)requirements[^/]*\.txt$/u.test(file),
-      ),
-      pyprojectToml: fileList.filter((file) => file.endsWith('pyproject.toml')),
-      setupPy: fileList.filter((file) => file.endsWith('setup.py')),
-      setupCfg: fileList.filter((file) => file.endsWith('setup.cfg')),
-      managePy: fileList.filter((file) => file.endsWith('manage.py')),
-      dockusManifest: fileList.filter((file) =>
-        /(^|\/)dockus\.ya?ml$/u.test(file),
-      ),
-    };
-
-    return {
-      language: 'python',
-      dependencyManager:
-        input.preflightSummary?.dependencyManager ??
-        input.assessment.recipe.dependencyManager ??
-        'unknown',
-      executionProfile:
-        input.preflightSummary?.executionProfile ??
-        input.assessment.recipe.executionProfile ??
-        'unknown',
-      workingDirectory:
-        input.preflightSummary?.workingDirectory ??
-        input.assessment.recipe.workingDirectory ??
-        '.',
-      manifestSource:
-        input.preflightSummary?.manifestSource ??
-        input.assessment.recipe.manifestSource ??
-        'AUTO',
-      manifests,
-      pythonFiles: fileList.filter((file) => file.endsWith('.py')).length,
-      resolvedCommands: input.preflightSummary
-        ? {
-            install: input.preflightSummary.resolvedCommands.install,
-            run: input.preflightSummary.resolvedCommands.run,
-            test: input.preflightSummary.resolvedCommands.test,
-            healthcheck: input.preflightSummary.resolvedCommands.healthcheck,
-          }
-        : null,
-      planner: {
-        source:
-          input.preflightSummary?.compatibility === 'SUPPORTED_AUTO'
-            ? 'preflight-auto'
-            : input.preflightSummary?.compatibility ===
-                'SUPPORTED_WITH_MANIFEST'
-              ? 'dockus-manifest'
-              : 'llm-assisted',
-        model: input.model,
-        structuralType: input.assessment.structuralType,
-        evaluativeState: input.assessment.evaluativeState,
-        confidence: input.assessment.confidence,
-      },
-    };
+    return this.builderRunTelemetryService.buildStackResult(input);
   }
 
   resolveExecutionMode(
     assessment: BuilderPipelineOutcome['llmAssessment'],
   ): BuilderExecutionMode {
-    if (!assessment.recipe.run) {
-      return 'analysis_only';
-    }
-
-    if (assessment.capabilities.C3.status === 'yes') {
-      return 'service';
-    }
-
-    return 'batch';
+    return this.builderRunTelemetryService.resolveExecutionMode(assessment);
   }
 
   stageStatusForCheckPrefix(
     checks: Array<{ id: string; status: StageStatus }>,
     prefix: string,
   ): StageStatus {
-    const matching = checks.filter((check) => check.id.startsWith(prefix));
-    if (matching.length === 0) {
-      return StageStatus.SKIP;
-    }
-    return matching.every((check) => check.status === StageStatus.PASS)
-      ? StageStatus.PASS
-      : StageStatus.FAIL;
+    return this.builderRunTelemetryService.stageStatusForCheckPrefix(
+      checks,
+      prefix,
+    );
   }
 
   latestStageResult(
     stageResults: StageResult[],
     stage: BuildStage,
   ): StageResult | null {
-    for (let index = stageResults.length - 1; index >= 0; index -= 1) {
-      const candidate = stageResults[index];
-      if (candidate.stage === stage) {
-        return candidate;
-      }
-    }
-    return null;
+    return this.builderRunTelemetryService.latestStageResult(
+      stageResults,
+      stage,
+    );
   }
 
   diffRecipes(previous: LlmPlanRecipe, next: LlmPlanRecipe): string[] {
-    const diff: string[] = [];
-
-    if (JSON.stringify(previous.install) !== JSON.stringify(next.install)) {
-      diff.push('install');
-    }
-    if (
-      JSON.stringify(previous.systemPackages) !==
-      JSON.stringify(next.systemPackages)
-    ) {
-      diff.push('systemPackages');
-    }
-    if (JSON.stringify(previous.run) !== JSON.stringify(next.run)) {
-      diff.push('run');
-    }
-    if (
-      JSON.stringify(previous.healthcheck) !== JSON.stringify(next.healthcheck)
-    ) {
-      diff.push('healthcheck');
-    }
-    if (previous.servicePort !== next.servicePort) {
-      diff.push('servicePort');
-    }
-
-    return diff;
+    return this.builderRunTelemetryService.diffRecipes(previous, next);
   }
 
   buildSelfHealingHints(input: {
@@ -408,224 +207,57 @@ export class BuilderRunSupportService {
     containerInspect?: string | null;
     runtimeEvents?: string | null;
   }): string[] {
-    const corpus = [
-      input.buildLogText ?? '',
-      input.containerLogs ?? '',
-      input.containerInspect ?? '',
-      input.runtimeEvents ?? '',
-    ].join('\n');
-    const hints = new Set<string>();
-
-    const lower = corpus.toLowerCase();
-    if (
-      lower.includes('no module named psycopg2') ||
-      lower.includes("can't find libpq") ||
-      lower.includes('pg_config executable not found')
-    ) {
-      hints.add(
-        'Puede faltar psycopg2-binary o el paquete de sistema libpq-dev.',
-      );
-    }
-    if (lower.includes('mysqlclient') && lower.includes('pkg-config')) {
-      hints.add(
-        'Puede faltar pkg-config y librerías de desarrollo de MySQL/MariaDB.',
-      );
-    }
-    if (lower.includes('modulenotfounderror')) {
-      hints.add('El runtime parece fallar por una dependencia Python ausente.');
-    }
-    if (
-      lower.includes('fatal error:') ||
-      lower.includes('failed building wheel')
-    ) {
-      hints.add(
-        'La compilación parece requerir toolchain o headers del sistema adicionales.',
-      );
-    }
-    if (lower.includes('error loading shared libraries')) {
-      hints.add(
-        'El contenedor parece necesitar una librería compartida del sistema.',
-      );
-    }
-
-    return [...hints];
+    return this.builderRunTelemetryService.buildSelfHealingHints(input);
   }
 
   toTimings(stageResults: StageResult[]): Record<string, number> {
-    const timings: Record<string, number> = {};
-    for (const stageResult of stageResults) {
-      timings[stageResult.stage.toLowerCase()] = stageResult.durationMs;
-    }
-    timings.total = stageResults.reduce(
-      (sum, stageResult) => sum + stageResult.durationMs,
-      0,
-    );
-    return timings;
+    return this.builderRunTelemetryService.toTimings(stageResults);
   }
 
   createImageTag(deliveryId: string): string {
-    const normalizedDeliveryId = deliveryId
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '');
-    return `dockus-delivery-${normalizedDeliveryId}:run-${Date.now()}`;
+    return this.builderRunTelemetryService.createImageTag(deliveryId);
   }
 
   async updateRuntimeTarget(
     runId: string,
     patch: Partial<BuildRunRuntimeTarget>,
   ): Promise<BuildRunRuntimeTarget | null> {
-    const run = await this.buildRunsRepository.findOne({
-      where: { id: runId },
-    });
-    if (!run) {
-      return null;
-    }
-
-    const runtimeTarget = {
-      projectId:
-        typeof run.runtimeTarget?.projectId === 'string'
-          ? run.runtimeTarget.projectId
-          : '',
-      workspaceNetworkName:
-        typeof run.runtimeTarget?.workspaceNetworkName === 'string'
-          ? run.runtimeTarget.workspaceNetworkName
-          : '',
-      executionNetworkName:
-        typeof run.runtimeTarget?.executionNetworkName === 'string'
-          ? run.runtimeTarget.executionNetworkName
-          : '',
-      primaryContainerId:
-        typeof run.runtimeTarget?.primaryContainerId === 'string'
-          ? run.runtimeTarget.primaryContainerId
-          : null,
-      helperContainerIds: Array.isArray(run.runtimeTarget?.helperContainerIds)
-        ? run.runtimeTarget.helperContainerIds.filter(
-            (value): value is string =>
-              typeof value === 'string' && value.length > 0,
-          )
-        : [],
-      ...patch,
-    } satisfies BuildRunRuntimeTarget;
-
-    run.runtimeTarget = runtimeTarget;
-    await this.buildRunsRepository.save(run);
-    return runtimeTarget;
+    return this.builderRunStateService.updateRuntimeTarget(runId, patch);
   }
 
   async appendRuntimeHelperContainer(
     runId: string,
     containerId: string | null | undefined,
   ): Promise<BuildRunRuntimeTarget | null> {
-    if (!containerId) {
-      return null;
-    }
-
-    const run = await this.buildRunsRepository.findOne({
-      where: { id: runId },
-    });
-    if (!run || !run.runtimeTarget) {
-      return null;
-    }
-
-    run.runtimeTarget = {
-      ...run.runtimeTarget,
-      helperContainerIds: [
-        ...new Set([
-          ...(run.runtimeTarget.helperContainerIds ?? []),
-          containerId,
-        ]),
-      ],
-    };
-    await this.buildRunsRepository.save(run);
-    return run.runtimeTarget;
+    return this.builderRunStateService.appendRuntimeHelperContainer(
+      runId,
+      containerId,
+    );
   }
 
   async cleanupImage(imageTag: string, warnings: string[]): Promise<void> {
-    try {
-      const removed =
-        await this.executionAdapterService.removeDockerImage(imageTag);
-      if (!removed) {
-        warnings.push(`No se pudo limpiar imagen ${imageTag}.`);
-      }
-    } catch (error) {
-      warnings.push(
-        `No se pudo limpiar la imagen ${imageTag}: ${this.toErrorMessage(error)}`,
-      );
-    }
+    return this.builderRunStateService.cleanupImage(imageTag, warnings);
   }
 
   isTerminalStatus(status: BuildRunStatus): boolean {
-    return (
-      status === BuildRunStatus.SUCCESS ||
-      status === BuildRunStatus.FAILED ||
-      status === BuildRunStatus.CANCELLED
-    );
+    return this.builderRunStateService.isTerminalStatus(status);
   }
 
   async markRunAsFailed(
     buildRunId: string,
     errorMessage: string,
   ): Promise<void> {
-    const run = await this.buildRunsRepository.findOne({
-      where: { id: buildRunId },
-    });
-    if (!run) {
-      return;
-    }
-
-    run.status = BuildRunStatus.FAILED;
-    run.activeStage = null;
-    run.finishedAt = new Date();
-    run.failureReason = errorMessage;
-    run.buildLogs = {
-      ...(typeof run.buildLogs === 'object' && run.buildLogs
-        ? run.buildLogs
-        : {}),
-      error: errorMessage,
-    };
-    await this.buildRunsRepository.save(run);
-    await this.emitEvent({
-      buildRunId: run.id,
-      eventType: 'RUN_FAILED',
-      runStatus: BuildRunStatus.FAILED,
-      stage: null,
-      activeStage: null,
-      message: errorMessage,
-      payload: { error: errorMessage },
-    });
+    return this.builderRunStateService.markRunAsFailed(
+      buildRunId,
+      errorMessage,
+    );
   }
 
   async markRunAsCancelled(buildRunId: string, reason: string): Promise<void> {
-    const run = await this.buildRunsRepository.findOne({
-      where: { id: buildRunId },
-    });
-    if (!run) {
-      return;
-    }
-
-    run.status = BuildRunStatus.CANCELLED;
-    run.activeStage = null;
-    run.finishedAt = new Date();
-    run.failureReason = reason;
-    run.warnings = [...(run.warnings ?? []), reason];
-    await this.buildRunsRepository.save(run);
-    await this.emitEvent({
-      buildRunId: run.id,
-      eventType: 'RUN_CANCELLED',
-      runStatus: BuildRunStatus.CANCELLED,
-      stage: null,
-      activeStage: null,
-      message: reason,
-    });
+    return this.builderRunStateService.markRunAsCancelled(buildRunId, reason);
   }
 
   toErrorMessage(error: unknown): string {
-    if (error instanceof ConflictException) {
-      return error.message;
-    }
-    if (error instanceof Error) {
-      return error.message;
-    }
-    return 'Error no tipado en ejecución de builder.';
+    return this.builderRunTelemetryService.toErrorMessage(error);
   }
 }

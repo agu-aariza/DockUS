@@ -1,7 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
+import { BuilderPreflightService } from './builder-preflight.service';
+import { BuilderRunStateService } from './builder-run-state.service';
 import { BuilderStandardPipelineService } from './builder-standard-pipeline.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
+import { BuilderRunTelemetryService } from './builder-run-telemetry.service';
 import { BuilderRunEventsService } from '../../domain/events/builder-run-events.service';
 import { ExecutionAdapterService } from '../../infrastructure/execution/execution-adapter.service';
 import { BuilderReportService } from '../../domain/reporting/builder-report.service';
@@ -119,10 +122,18 @@ describe('BuilderStandardPipelineService', () => {
         },
       }),
     } as unknown as ExecutionAdapterService;
-    const builderRunSupportService = new BuilderRunSupportService(
+    const builderRunTelemetryService = new BuilderRunTelemetryService(events);
+    const builderRunStateService = new BuilderRunStateService(
       repository,
-      events,
       executionAdapter,
+      builderRunTelemetryService,
+    );
+    const builderRunSupportService = new BuilderRunSupportService(
+      builderRunStateService,
+      builderRunTelemetryService,
+    );
+    const builderPreflightService = new BuilderPreflightService(
+      builderRunSupportService,
     );
 
     let buildAttempt = 0;
@@ -345,6 +356,7 @@ describe('BuilderStandardPipelineService', () => {
         }),
       } as never,
       builderRunSupportService,
+      builderPreflightService,
       builderBuildStageService as never,
       builderDeployStageService as never,
       builderValidationStageService as never,
@@ -390,7 +402,7 @@ describe('BuilderStandardPipelineService', () => {
     );
   });
 
-  it('reintenta si falla el arranque del pod y hay evidencia útil', async () => {
+  it('reintenta si falla el arranque del contenedor y hay evidencia útil', async () => {
     const ctx = createService('deploy_fail_then_recover');
 
     const outcome = await ctx.service.execute(ctx.run, ctx.delivery);

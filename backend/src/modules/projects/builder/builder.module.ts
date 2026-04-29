@@ -11,6 +11,7 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DockerInfrastructureModule } from '../../../shared/infrastructure/docker/docker-infrastructure.module';
 import { InfrastructureModule } from '../../../shared/infrastructure/infrastructure.module';
 import { StorageInfrastructureModule } from '../../../shared/infrastructure/storage/storage-infrastructure.module';
 import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
@@ -23,10 +24,13 @@ import { BuilderBuildStageService } from './application/services/builder-build-s
 import { BuilderCleanupStageService } from './application/services/builder-cleanup-stage.service';
 import { BuilderAccessService } from './application/services/builder-access.service';
 import { BuilderDeployStageService } from './application/services/builder-deploy-stage.service';
+import { BuilderPreflightService } from './application/services/builder-preflight.service';
 
 import { BuilderRunCommandsService } from './application/services/builder-run-commands.service';
 import { BuilderRunQueriesService } from './application/services/builder-run-queries.service';
+import { BuilderRunStateService } from './application/services/builder-run-state.service';
 import { BuilderRunSupportService } from './application/services/builder-run-support.service';
+import { BuilderRunTelemetryService } from './application/services/builder-run-telemetry.service';
 import { BuilderStandardPipelineService } from './application/services/builder-standard-pipeline.service';
 import { BuilderValidationStageService } from './application/services/builder-validation-stage.service';
 import { BuilderWorkspaceService } from './application/services/builder-workspace.service';
@@ -58,6 +62,7 @@ import { BuilderProcessor } from './presentation/builder.processor';
     BullModule.registerQueue({
       name: BUILDER_RUNS_QUEUE_NAME,
     }),
+    DockerInfrastructureModule,
     InfrastructureModule,
     ProjectRuntimeModule,
     TypeOrmModule.forFeature([
@@ -78,7 +83,10 @@ import { BuilderProcessor } from './presentation/builder.processor';
     BuilderWorkspaceService,
     BuilderRunQueriesService,
     BuilderRunCommandsService,
+    BuilderRunStateService,
+    BuilderRunTelemetryService,
     BuilderRunSupportService,
+    BuilderPreflightService,
     BuilderBuildStageService,
     BuilderDeployStageService,
     BuilderValidationStageService,

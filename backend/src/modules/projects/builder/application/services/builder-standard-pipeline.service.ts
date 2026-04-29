@@ -52,6 +52,7 @@ import { ExecutionAdapterService } from '../../infrastructure/execution/executio
 import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
 import { BuilderBuildStageService } from './builder-build-stage.service';
 import { BuilderCleanupStageService } from './builder-cleanup-stage.service';
+import { BuilderPreflightService } from './builder-preflight.service';
 import { BuilderDeployStageService } from './builder-deploy-stage.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
 import { BuilderValidationStageService } from './builder-validation-stage.service';
@@ -60,11 +61,6 @@ import {
   BuilderRuntimeState,
 } from './builder-runtime.types';
 import { BuilderWorkspaceService } from './builder-workspace.service';
-import {
-  buildAssessmentFromPreflightSummary,
-  detectBuilderPreflightSummary,
-  isDirectlyRunnablePreflight,
-} from '../../infrastructure/utils/builder-analysis.util';
 
 interface BuilderInternalState extends BuilderRuntimeState {
   assignmentContext: AssignmentContext;
@@ -101,6 +97,7 @@ export class BuilderStandardPipelineService {
     private readonly builderReportService: BuilderReportService,
     private readonly builderWorkspaceService: BuilderWorkspaceService,
     private readonly builderRunSupportService: BuilderRunSupportService,
+    private readonly builderPreflightService: BuilderPreflightService,
     private readonly builderBuildStageService: BuilderBuildStageService,
     private readonly builderDeployStageService: BuilderDeployStageService,
     private readonly builderValidationStageService: BuilderValidationStageService,
@@ -184,10 +181,14 @@ export class BuilderStandardPipelineService {
           warning,
         );
       }
-      const preflightSummary = await detectBuilderPreflightSummary(
+      const preflightSummary = await this.builderPreflightService.detect(
         workspace.runtimeFiles,
       );
-      await this.recordPreflightWarnings(run.id, warnings, preflightSummary);
+      await this.builderPreflightService.recordWarnings(
+        run.id,
+        warnings,
+        preflightSummary,
+      );
 
       const executionContext =
         await this.executionAdapterService.collectExecutionContext(
@@ -212,14 +213,10 @@ export class BuilderStandardPipelineService {
         workspace.runtimeFiles,
         state,
       );
-      const planResult = isDirectlyRunnablePreflight(preflightSummary)
-        ? {
-            model:
-              preflightSummary.compatibility === 'SUPPORTED_WITH_MANIFEST'
-                ? 'dockus-manifest'
-                : 'preflight-auto',
-            assessment: buildAssessmentFromPreflightSummary(preflightSummary),
-          }
+      const planResult = this.builderPreflightService.isFastPath(
+        preflightSummary,
+      )
+        ? this.builderPreflightService.buildFastPathPlan(preflightSummary)
         : await this.runPlanningPhase(
             workspace.projectRootDir,
             workspace.runtimeFiles,

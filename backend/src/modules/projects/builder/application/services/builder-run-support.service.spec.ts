@@ -2,23 +2,30 @@ import { Repository } from 'typeorm';
 import { BuildRun } from '../../domain/entities/build-run.entity';
 import { BuilderRunEventsService } from '../../domain/events/builder-run-events.service';
 import { ExecutionAdapterService } from '../../infrastructure/execution/execution-adapter.service';
+import { BuilderRunStateService } from './builder-run-state.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
+import { BuilderRunTelemetryService } from './builder-run-telemetry.service';
 
 describe('BuilderRunSupportService', () => {
   let service: BuilderRunSupportService;
 
   beforeEach(() => {
-    service = new BuilderRunSupportService(
+    const builderRunTelemetryService = new BuilderRunTelemetryService({
+      emit: jest.fn(),
+    } as unknown as BuilderRunEventsService);
+    const builderRunStateService = new BuilderRunStateService(
       {
         findOne: jest.fn(),
         save: jest.fn(),
       } as unknown as Repository<BuildRun>,
       {
-        emit: jest.fn(),
-      } as unknown as BuilderRunEventsService,
-      {
         removeDockerImage: jest.fn(),
       } as unknown as ExecutionAdapterService,
+      builderRunTelemetryService,
+    );
+    service = new BuilderRunSupportService(
+      builderRunStateService,
+      builderRunTelemetryService,
     );
   });
 
