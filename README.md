@@ -1,6 +1,6 @@
 # DockUS
 
-DockUS es una plataforma académica para gestionar proyectos, asignaciones, entregas y evaluación automática desde una consola orientada a profesorado. El repositorio contiene un backend en NestJS, un frontend en React/Vite y una infraestructura local basada en PostgreSQL, Redis, MinIO, Ollama y un clúster `kind` compartido para la ejecución del builder.
+DockUS es una plataforma académica para gestionar proyectos, asignaciones, entregas y evaluación automática desde una consola orientada a profesorado. El repositorio contiene un backend en NestJS, un frontend en React/Vite y una infraestructura local basada en PostgreSQL, Redis, MinIO, Ollama y ejecución aislada del builder sobre Docker.
 
 La iteración actual está enfocada en un flujo `teacher-first`: preparar el proyecto, asignar alumnado, recibir entregas, lanzar runs del builder y leer un informe técnico estructurado sin salir de la aplicación.
 
@@ -27,14 +27,14 @@ graph TD
     RQ["Redis + BullMQ"]
     S3["MinIO"]
     LLM["Ollama"]
-    K8S["kind + kubectl"]
+    RT["Docker runtime"]
 
     UI -->|HTTP / JWT| API
     API --> DB
     API --> RQ
     API --> S3
     API --> LLM
-    API --> K8S
+    API --> RT
     RQ -->|jobs builder| API
 ```
 
@@ -64,18 +64,17 @@ graph TD
 3. Sube la suite docente de tests al proyecto.
 4. El alumnado crea una entrega y sube su código.
 5. Profesor o alumno lanza un `BuildRun` sobre la entrega.
-6. El builder analiza, construye, despliega, valida y limpia.
+6. El builder analiza, construye, ejecuta, valida y limpia.
 7. El informe final queda embebido en el detalle del run.
 
 ## Builder: comportamiento real hoy
 
-El builder no crea un clúster por proyecto. En el estado actual:
+El builder no crea clústeres ni namespaces. En el estado actual:
 
-- usa un clúster `kind` compartido configurable mediante `BUILDER_KIND_CLUSTER_NAME`,
-- crea un `namespace` efímero por run,
-- carga la imagen Docker en ese clúster local,
-- despliega `Job` o `Deployment` según la receta del planner,
-- ejecuta probes, ventana de estabilidad y tests docentes,
+- usa una `workspace network` persistente por proyecto,
+- crea una `execution network` efímera por run,
+- ejecuta contenedores batch, de servicio, healthchecks y tests sobre Docker,
+- aplica limpieza inmediata al final del run y recolección de residuos etiquetados,
 - persiste evidencias y reporte al final del run.
 
 Además:
@@ -95,8 +94,6 @@ Además:
 ### Requisitos adicionales para usar el builder fuera de Docker Compose
 
 - Docker daemon accesible desde el proceso backend
-- `kubectl`
-- `kind`
 - `python3`
 - `pip`
 - `ruff`

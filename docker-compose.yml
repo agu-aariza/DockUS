@@ -132,6 +132,7 @@ services:
       BUILDER_OLLAMA_BASE_URL: http://ollama:11434
       BUILDER_OLLAMA_TIMEOUT_MS: 600000
       DOCKER_HOST: unix:///var/run/docker.sock
+      BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runc}
     depends_on:
       postgres:
         condition: service_healthy
@@ -179,6 +180,7 @@ services:
       REDIS_HOST: redis
       MINIO_ENDPOINT: minio
       DOCKER_HOST: unix:///var/run/docker.sock
+      BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runsc}
     depends_on:
       postgres:
         condition: service_healthy
