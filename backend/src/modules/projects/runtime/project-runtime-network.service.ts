@@ -108,12 +108,14 @@ export class ProjectRuntimeNetworkService {
   }
 
   async listManagedNetworksAndContainers(
+    projectId: string,
     workspaceNetworkName: string,
     executionNetworkPrefix: string,
   ): Promise<ProjectRuntimeNetworkSummary[]> {
     const listedNetworks = await this.dockerNetworkService.listNetworks<{
       Name?: string;
     }>({
+      labels: { 'dockus.projectId': projectId },
       timeoutMs: this.inspectTimeoutMs,
       maxBufferedChars: 500000,
     });

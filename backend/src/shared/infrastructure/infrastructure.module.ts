@@ -28,6 +28,8 @@ import { Project } from '../../modules/projects/entities/project.entity';
 import { ProjectAssignment } from '../../modules/projects/assignments/entities/project-assignment.entity';
 import { Delivery } from '../../modules/projects/deliveries/entities/delivery.entity';
 
+import { DockerInfrastructureModule } from './docker/docker-infrastructure.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -63,8 +65,10 @@ import { Delivery } from '../../modules/projects/deliveries/entities/delivery.en
       useFactory: (configService: ConfigService) =>
         buildBullConfig(configService),
     }),
+
+    DockerInfrastructureModule,
   ],
   providers: [RedisClientService, AdminSeedService, DemoSeedService],
-  exports: [RedisClientService],
+  exports: [RedisClientService, DockerInfrastructureModule],
 })
 export class InfrastructureModule {}

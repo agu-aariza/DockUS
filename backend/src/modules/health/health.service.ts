@@ -11,7 +11,9 @@
 import { Injectable } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
 import { DataSource } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { RedisClientService } from '../../shared/infrastructure/cache/redis-client.service';
+import { DockerHostService } from '../../shared/infrastructure/docker/docker-host.service';
 
 type DependencyStatus = 'up' | 'down';
 type ReadinessStatus = 'ok' | 'error';
@@ -19,6 +21,7 @@ type ReadinessStatus = 'ok' | 'error';
 interface DependencyHealth {
   status: DependencyStatus;
   latencyMs: number;
+  info?: string;
 }
 
 export interface LivenessReport {
@@ -32,6 +35,7 @@ export interface ReadinessReport {
   checks: {
     database: DependencyHealth;
     redis: DependencyHealth;
+    docker: DependencyHealth;
   };
 }
 
@@ -40,6 +44,8 @@ export class HealthService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly redisClient: RedisClientService,
+    private readonly dockerHost: DockerHostService,
+    private readonly configService: ConfigService,
     private readonly logger: Logger,
   ) {}
 
@@ -57,18 +63,21 @@ export class HealthService {
    * Comprueba si las dependencias críticas están listas para recibir tráfico.
    */
   async getReadiness(): Promise<ReadinessReport> {
-    const [database, redis] = await Promise.all([
+    const [database, redis, docker] = await Promise.all([
       this.checkDatabase(),
       this.checkRedis(),
+      this.checkDocker(),
     ]);
 
     const status: ReadinessStatus =
-      database.status === 'up' && redis.status === 'up' ? 'ok' : 'error';
+      database.status === 'up' && redis.status === 'up' && docker.status === 'up'
+        ? 'ok'
+        : 'error';
 
     return {
       status,
       timestamp: new Date().toISOString(),
-      checks: { database, redis },
+      checks: { database, redis, docker },
     };
   }
 
@@ -112,6 +121,31 @@ export class HealthService {
       };
     } catch (error) {
       this.logDependencyError('Redis', error);
+      return {
+        status: 'down',
+        latencyMs: Date.now() - startedAt,
+      };
+    }
+  }
+
+  /**
+   * Comprueba conectividad con el daemon de Docker.
+   */
+  private async checkDocker(): Promise<DependencyHealth> {
+    const startedAt = Date.now();
+
+    try {
+      const info = await this.dockerHost.inspectDockerHost({
+        timeoutMs: 5000,
+      });
+
+      return {
+        status: 'up',
+        latencyMs: Date.now() - startedAt,
+        info: `Docker version ${info.ServerVersion ?? 'unknown'}`,
+      };
+    } catch (error) {
+      this.logDependencyError('Docker', error);
       return {
         status: 'down',
         latencyMs: Date.now() - startedAt,

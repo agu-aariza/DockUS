@@ -42,7 +42,7 @@ export const envValidationSchema = Joi.object({
   SEED_ADMIN_PASSWORD: Joi.string().optional(),
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().default(6379),
-  REDIS_PASSWORD: Joi.string().optional(),
+  REDIS_PASSWORD: Joi.string().allow('').optional(),
   MINIO_ENDPOINT: Joi.string().default('localhost'),
   MINIO_API_PORT: Joi.number().default(9000),
   MINIO_ROOT_USER: Joi.string().default('dockus_admin'),
@@ -95,7 +95,11 @@ export const envValidationSchema = Joi.object({
     .integer()
     .min(10000)
     .default(300000),
-  DOCKER_HOST: Joi.string().optional(),
+  DOCKER_HOST: Joi.string().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
   BUILDER_DOCKER_RUNTIME: Joi.string().default('runc'),
   BUILDER_CLEANUP_IMAGES: Joi.boolean().default(true),
   BUILDER_IMAGE_TTL_MS: Joi.number().integer().min(60000).default(1800000),

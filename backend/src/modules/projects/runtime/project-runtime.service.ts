@@ -145,6 +145,7 @@ export class ProjectRuntimeService implements OnModuleInit {
       try {
         networks =
           await this.projectRuntimeNetworkService.listManagedNetworksAndContainers(
+            project.id,
             project.runtimeNetworkName,
             this.executionNetworkPrefix,
           );
