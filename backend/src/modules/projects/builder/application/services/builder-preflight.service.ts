@@ -25,9 +25,7 @@ export class BuilderPreflightService {
     return isDirectlyRunnablePreflight(summary);
   }
 
-  buildFastPathPlan(
-    summary: BuilderPreflightSummary,
-  ): {
+  buildFastPathPlan(summary: BuilderPreflightSummary): {
     model: string;
     assessment: BuilderPipelineOutcome['llmAssessment'];
   } {

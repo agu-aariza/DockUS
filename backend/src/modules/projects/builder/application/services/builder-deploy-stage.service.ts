@@ -348,9 +348,10 @@ export class BuilderDeployStageService {
         containerInspectArtifact,
       );
 
-      const containerLogs = await this.executionAdapterService.collectContainerLogs(
-        serviceResult.containerId,
-      );
+      const containerLogs =
+        await this.executionAdapterService.collectContainerLogs(
+          serviceResult.containerId,
+        );
       if (containerLogs) {
         await this.builderRunSupportService.emitLogChunk({
           buildRunId: input.run.id,
@@ -368,10 +369,10 @@ export class BuilderDeployStageService {
           .slice(-80);
         const containerLogsArtifact =
           await this.evidenceService.persistTextArtifact(
-          input.run.id,
-          BuildRunArtifactType.CONTAINER_LOG,
-          containerLogs,
-        );
+            input.run.id,
+            BuildRunArtifactType.CONTAINER_LOG,
+            containerLogs,
+          );
         await this.builderRunSupportService.recordArtifact(
           input.run.id,
           input.state.evidenceArtifacts,

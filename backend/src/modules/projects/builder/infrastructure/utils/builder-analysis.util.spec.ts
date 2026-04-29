@@ -36,7 +36,7 @@ describe('builder-analysis.util (dockus)', () => {
           sizeBytes: 80,
         },
       ],
-      new Map([['src/main.py', 'if __name__ == "__main__":\n']])
+      new Map([['src/main.py', 'if __name__ == "__main__":\n']]),
     );
 
     expect(candidates).toEqual(['src/main.py']);

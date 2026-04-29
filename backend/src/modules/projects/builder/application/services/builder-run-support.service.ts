@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  BuildRunStatus,
-} from '../../domain/entities/build-run.entity';
+import { BuildRunStatus } from '../../domain/entities/build-run.entity';
 import {
   BuildStage,
   BuilderExecutionMode,
@@ -29,7 +27,11 @@ export class BuilderRunSupportService {
     status: BuildRunStatus,
     startedAt?: Date,
   ): Promise<void> {
-    return this.builderRunStateService.updateRunStatus(runId, status, startedAt);
+    return this.builderRunStateService.updateRunStatus(
+      runId,
+      status,
+      startedAt,
+    );
   }
 
   async emitEvent(input: {

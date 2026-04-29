@@ -27,10 +27,12 @@ describe('DockerGarbageCollectorService', () => {
       removeContainer: jest.fn().mockResolvedValue(true),
     } as unknown as jest.Mocked<DockerContainerService>;
     dockerNetworkService = {
-      listNetworks: jest.fn().mockResolvedValue([
-        { Name: 'dockus-run-123' },
-        { Name: 'dockus-workspace-123' },
-      ]),
+      listNetworks: jest
+        .fn()
+        .mockResolvedValue([
+          { Name: 'dockus-run-123' },
+          { Name: 'dockus-workspace-123' },
+        ]),
       inspectNetwork: jest.fn().mockResolvedValue({ Containers: {} }),
       removeNetwork: jest.fn().mockResolvedValue(true),
     } as unknown as jest.Mocked<DockerNetworkService>;

@@ -352,8 +352,6 @@ describe('DockUS API (e2e)', () => {
     expect(response.status).toBe(allDependenciesUp ? 200 : 503);
   });
 
-
-
   it('/api/auth/register (POST) crea un usuario y emite token', async () => {
     const email = createUniqueEmail('register');
     const registerResponse = await registerIdentity(email);

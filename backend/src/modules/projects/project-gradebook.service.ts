@@ -13,10 +13,7 @@ import {
 } from './deliveries/entities/delivery.entity';
 import { Project } from './entities/project.entity';
 import { ProjectAccessService } from './project-access.service';
-import {
-  ProjectGradebookRow,
-  ProjectProgressSummary,
-} from './projects.types';
+import { ProjectGradebookRow, ProjectProgressSummary } from './projects.types';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 
 @Injectable()
@@ -38,7 +35,11 @@ export class ProjectGradebookService {
     actor: AuthenticatedUser,
     query: ProjectProgressQueryDto = {},
   ): Promise<ProjectProgressSummary> {
-    const gradebook = await this.buildGradebook(projectId, actor, query.groupId);
+    const gradebook = await this.buildGradebook(
+      projectId,
+      actor,
+      query.groupId,
+    );
     const totalAssignments = gradebook.length;
     let deliveredAtLeastOnce = 0;
     let passedAllTests = 0;
@@ -325,7 +326,8 @@ export class ProjectGradebookService {
 
       return {
         studentId: assignment.studentId,
-        studentName: `${assignment.student.firstName} ${assignment.student.lastName}`.trim(),
+        studentName:
+          `${assignment.student.firstName} ${assignment.student.lastName}`.trim(),
         studentEmail: assignment.student.email,
         groupIds: [],
         groupLabels: [],

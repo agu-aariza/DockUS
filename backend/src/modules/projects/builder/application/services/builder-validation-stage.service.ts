@@ -162,10 +162,11 @@ export class BuilderValidationStageService {
     }
 
     try {
-      const runtimeEvents = await this.executionAdapterService.collectRuntimeEvents(
-        input.workspaceNetworkName,
-        input.executionNetworkName,
-      );
+      const runtimeEvents =
+        await this.executionAdapterService.collectRuntimeEvents(
+          input.workspaceNetworkName,
+          input.executionNetworkName,
+        );
       if (runtimeEvents) {
         input.state.currentAttemptDiagnostics.runtimeEvents = runtimeEvents;
         const eventsArtifact = await this.evidenceService.persistTextArtifact(

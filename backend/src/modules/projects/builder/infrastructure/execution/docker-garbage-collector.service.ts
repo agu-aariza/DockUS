@@ -83,15 +83,15 @@ export class DockerGarbageCollectorService {
         continue;
       }
 
-      let inspectPayload: { Containers?: Record<string, unknown> } | null = null;
+      let inspectPayload: { Containers?: Record<string, unknown> } | null =
+        null;
       try {
-        inspectPayload =
-          await this.dockerNetworkService.inspectNetwork<{
-            Containers?: Record<string, unknown>;
-          }>(networkName, {
-            timeoutMs: 15000,
-            maxBufferedChars: 250000,
-          });
+        inspectPayload = await this.dockerNetworkService.inspectNetwork<{
+          Containers?: Record<string, unknown>;
+        }>(networkName, {
+          timeoutMs: 15000,
+          maxBufferedChars: 250000,
+        });
       } catch (error) {
         this.logger.warn(
           `No se pudo inspeccionar la red ${networkName}: ${this.toErrorMessage(error)}`,

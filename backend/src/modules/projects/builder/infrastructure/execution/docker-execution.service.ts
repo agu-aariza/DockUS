@@ -114,13 +114,12 @@ export class DockerExecutionService {
   async inspectContainer(
     containerId: string,
   ): Promise<Record<string, unknown> | null> {
-    return this.dockerContainerService.inspectContainer<Record<string, unknown>>(
-      containerId,
-      {
-        timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
-        maxBufferedChars: 500000,
-      },
-    );
+    return this.dockerContainerService.inspectContainer<
+      Record<string, unknown>
+    >(containerId, {
+      timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
+      maxBufferedChars: 500000,
+    });
   }
 
   async removeContainer(

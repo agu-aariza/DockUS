@@ -33,7 +33,10 @@ export class CourseGroup {
   @JoinColumn({ name: 'createdById' })
   creator: User;
 
-  @OneToMany(() => GroupEnrollment, (enrollment: GroupEnrollment) => enrollment.group)
+  @OneToMany(
+    () => GroupEnrollment,
+    (enrollment: GroupEnrollment) => enrollment.group,
+  )
   enrollments: GroupEnrollment[];
 
   @CreateDateColumn()

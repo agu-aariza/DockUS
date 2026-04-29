@@ -100,12 +100,10 @@ export class DockerWorkloadExecutionService {
         containerId,
         this.batchTimeoutSeconds * 1000,
       );
-      const logs = await this.dockerExecutionService.getContainerLogs(
-        containerId,
-      );
-      const inspect = await this.dockerExecutionService.inspectContainer(
-        containerId,
-      );
+      const logs =
+        await this.dockerExecutionService.getContainerLogs(containerId);
+      const inspect =
+        await this.dockerExecutionService.inspectContainer(containerId);
       const restartCount = this.readNumber(inspect?.RestartCount);
       const completed =
         waitResult.StatusCode === 0 && waitResult.TimedOut !== true;
@@ -118,8 +116,7 @@ export class DockerWorkloadExecutionService {
         },
         {
           id: 'NO_RESTARTS',
-          status:
-            restartCount === 0 ? StageStatus.PASS : StageStatus.FAIL,
+          status: restartCount === 0 ? StageStatus.PASS : StageStatus.FAIL,
           expected: '0 restarts',
           actual: restartCount >= 0 ? `${restartCount}` : 'unknown',
         },
@@ -163,10 +160,12 @@ export class DockerWorkloadExecutionService {
       memory: this.serviceMemoryLimit,
     });
 
-    const inspect = await this.dockerExecutionService.inspectContainer(
-      containerId,
-    );
-    const ready = inspect?.State && this.readString((inspect.State as Record<string, unknown>).Status) === 'running';
+    const inspect =
+      await this.dockerExecutionService.inspectContainer(containerId);
+    const ready =
+      inspect?.State &&
+      this.readString((inspect.State as Record<string, unknown>).Status) ===
+        'running';
     const tcpProbe = await this.runTcpProbe({
       projectId: params.projectId,
       imageTag: params.imageTag,
@@ -298,35 +297,30 @@ export class DockerWorkloadExecutionService {
     reasonCode: string;
     orphanedResources: string[];
   }> {
-    const inspect = await this.dockerExecutionService.inspectNetwork(
-      executionNetworkName,
-    );
+    const inspect =
+      await this.dockerExecutionService.inspectNetwork(executionNetworkName);
     const orphanedResources: string[] = [];
     const containerIds = Object.keys(
-      ((inspect?.Containers as Record<string, unknown> | undefined) ?? {}),
+      (inspect?.Containers as Record<string, unknown> | undefined) ?? {},
     );
 
     for (const containerId of containerIds) {
-      const removed = await this.dockerExecutionService.removeContainer(
-        containerId,
-      );
+      const removed =
+        await this.dockerExecutionService.removeContainer(containerId);
       if (!removed) {
         orphanedResources.push(containerId);
       }
     }
 
-    const networkRemoved = await this.dockerExecutionService.removeNetwork(
-      executionNetworkName,
-    );
+    const networkRemoved =
+      await this.dockerExecutionService.removeNetwork(executionNetworkName);
     if (!networkRemoved) {
       orphanedResources.push(`network:${executionNetworkName}`);
     }
 
     return {
       status:
-        orphanedResources.length === 0
-          ? StageStatus.PASS
-          : StageStatus.FAIL,
+        orphanedResources.length === 0 ? StageStatus.PASS : StageStatus.FAIL,
       reasonCode:
         orphanedResources.length === 0 ? 'CLEANUP_OK' : 'CLEANUP_PARTIAL',
       orphanedResources,
@@ -338,9 +332,8 @@ export class DockerWorkloadExecutionService {
   }
 
   async collectContainerInspect(containerId: string): Promise<string> {
-    const inspect = await this.dockerExecutionService.inspectContainer(
-      containerId,
-    );
+    const inspect =
+      await this.dockerExecutionService.inspectContainer(containerId);
     return JSON.stringify(inspect ?? {}, null, 2);
   }
 
@@ -432,9 +425,8 @@ export class DockerWorkloadExecutionService {
         containerId,
         this.batchTimeoutSeconds * 1000,
       );
-      const logs = await this.dockerExecutionService.getContainerLogs(
-        containerId,
-      );
+      const logs =
+        await this.dockerExecutionService.getContainerLogs(containerId);
       return {
         status:
           waitResult.StatusCode === 0 && waitResult.TimedOut !== true

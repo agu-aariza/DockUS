@@ -46,10 +46,11 @@ export class BuilderCleanupStageService {
     let cleanupReason = 'CLEANUP_OK';
     let orphanedResources: string[] = [];
     if (input.executionNetworkName) {
-      const cleanup = await this.executionAdapterService.cleanupExecutionNetwork(
-        input.workspaceNetworkName,
-        input.executionNetworkName,
-      );
+      const cleanup =
+        await this.executionAdapterService.cleanupExecutionNetwork(
+          input.workspaceNetworkName,
+          input.executionNetworkName,
+        );
       cleanupStatus = cleanup.status;
       cleanupReason = cleanup.reasonCode;
       orphanedResources = cleanup.orphanedResources;

@@ -832,7 +832,8 @@ export class BuilderStandardPipelineService {
       outcome: input.outcome,
       diagnostics: {
         buildLogTail: input.state.currentAttemptDiagnostics.buildLogTail,
-        containerLogTail: input.state.currentAttemptDiagnostics.containerLogTail,
+        containerLogTail:
+          input.state.currentAttemptDiagnostics.containerLogTail,
         errorHints: this.builderRunSupportService.buildSelfHealingHints({
           buildLogText: input.state.currentAttemptDiagnostics.buildLogText,
           containerLogs: input.state.currentAttemptDiagnostics.containerLogs,

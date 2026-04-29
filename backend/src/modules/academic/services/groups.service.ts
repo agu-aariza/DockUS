@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, IsNull } from 'typeorm';
 import { CourseGroup } from '../entities/course-group.entity';
@@ -66,7 +70,9 @@ export class GroupsService {
     dto: BulkEnrollDto,
     enrolledById: string,
   ): Promise<any> {
-    const group = await this.groupsRepository.findOne({ where: { id: groupId } });
+    const group = await this.groupsRepository.findOne({
+      where: { id: groupId },
+    });
     if (!group) throw new NotFoundException('Grupo no encontrado');
 
     const studentIds = dto.studentIds || [];

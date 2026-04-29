@@ -228,24 +228,24 @@ describe('BuilderStandardPipelineService', () => {
       runTests: jest
         .fn()
         .mockImplementation(async ({ executionNetworkName, state }) => {
-        const status =
-          scenario === 'tests_fail' && executionNetworkName
-            ? StageStatus.FAIL
-            : executionNetworkName
-              ? StageStatus.PASS
-              : StageStatus.SKIP;
-        state.stageResults.push(
-          builderRunSupportService.toManualStage(
-            BuildStage.TESTS,
-            status,
-            status === StageStatus.FAIL
-              ? 'TESTS_FAILED'
-              : status === StageStatus.PASS
-                ? 'TESTS_OK'
-                : 'TESTS_SKIPPED_NO_RUNTIME',
-          ),
-        );
-      }),
+          const status =
+            scenario === 'tests_fail' && executionNetworkName
+              ? StageStatus.FAIL
+              : executionNetworkName
+                ? StageStatus.PASS
+                : StageStatus.SKIP;
+          state.stageResults.push(
+            builderRunSupportService.toManualStage(
+              BuildStage.TESTS,
+              status,
+              status === StageStatus.FAIL
+                ? 'TESTS_FAILED'
+                : status === StageStatus.PASS
+                  ? 'TESTS_OK'
+                  : 'TESTS_SKIPPED_NO_RUNTIME',
+            ),
+          );
+        }),
       collectRuntimeEvents: jest
         .fn()
         .mockImplementation(async ({ state, executionNetworkName }) => {

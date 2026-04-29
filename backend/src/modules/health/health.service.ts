@@ -70,7 +70,9 @@ export class HealthService {
     ]);
 
     const status: ReadinessStatus =
-      database.status === 'up' && redis.status === 'up' && docker.status === 'up'
+      database.status === 'up' &&
+      redis.status === 'up' &&
+      docker.status === 'up'
         ? 'ok'
         : 'error';
 
