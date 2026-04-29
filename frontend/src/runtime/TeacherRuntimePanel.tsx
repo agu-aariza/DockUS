@@ -25,7 +25,7 @@ interface TeacherRuntimePanelProps {
 type RuntimeTab = "control" | "infraestructura" | "seguimiento";
 type RuntimeTrackingTab = "historial" | "ejecucion";
 
-const CLUSTER_STATUS_STYLES: Record<ProjectRuntimeEnvironmentStatus, string> = {
+const RUNTIME_STATUS_STYLES: Record<ProjectRuntimeEnvironmentStatus, string> = {
   ABSENT: "border-slate-200 bg-slate-100 text-slate-700",
   PROVISIONING: "border-sky-200 bg-sky-50 text-sky-700",
   READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -179,8 +179,8 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
   const selectedDelivery = rc.deliveryOptions.find(
     (delivery) => delivery.id === rc.selectedDeliveryId,
   );
-  const clusterStatus = rc.runtimeStatus?.status ?? "ABSENT";
-  const clusterStyle = CLUSTER_STATUS_STYLES[clusterStatus];
+  const runtimeStatus = rc.runtimeStatus?.status ?? "ABSENT";
+  const runtimeStyle = RUNTIME_STATUS_STYLES[runtimeStatus];
   const runs = rc.runsResponse?.data ?? [];
   const activeNetworks = rc.runtimeStatus?.networks ?? [];
   const activeRuns = rc.runtimeStatus?.activeRuns ?? [];
@@ -196,7 +196,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               Esta vista está pensada para trabajo docente real: selección del proyecto,
-              reconciliación de redes, seguimiento de contenedores y consola live sobre el mismo run.
+              sincronización de redes, seguimiento de contenedores y consola live sobre el mismo run.
             </p>
           </div>
 
@@ -224,7 +224,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Estado del runtime"
-          value={clusterStatus}
+          value={runtimeStatus}
           helper={rc.runtimeStatus?.workspaceNetworkName ?? "Sin red workspace asociada"}
         />
         <MetricCard
@@ -275,7 +275,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                 Selecciona proyecto, asignación y entrega antes de lanzar el run.
               </p>
             </div>
-            <span className={`status-chip ${clusterStyle}`}>{clusterStatus}</span>
+            <span className={`status-chip ${runtimeStyle}`}>{runtimeStatus}</span>
           </div>
 
           <div className="space-y-5 p-6">
@@ -372,7 +372,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                   setTrackingTab("ejecucion");
                   void rc.handleStartRun();
                 }}
-                disabled={!rc.selectedDeliveryId || clusterStatus !== "READY" || rc.busyAction === "run"}
+                disabled={!rc.selectedDeliveryId || runtimeStatus !== "READY" || rc.busyAction === "run"}
               >
                 {rc.busyAction === "run" ? (
                   <RiLoader4Line className="animate-spin" />
@@ -407,9 +407,9 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
               </button>
             </div>
 
-            {clusterStatus !== "READY" ? (
+            {runtimeStatus !== "READY" ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                El runtime Docker del proyecto no está listo. Puedes reconciliarlo desde aquí antes de lanzar la ejecución.
+                El runtime Docker del proyecto no está listo. Puedes sincronizarlo desde aquí antes de lanzar la ejecución.
               </div>
             ) : null}
 

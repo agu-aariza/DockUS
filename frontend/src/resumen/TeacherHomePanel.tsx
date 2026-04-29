@@ -8,7 +8,7 @@ import type {
   SessionRecord,
   ProjectEntity,
   DeliveryEntity,
-  ProjectOperationalIssuesReconcileResult,
+  ProjectOperationalIssuesReconcileResult as ProjectOperationalIssuesSyncResult,
   ProjectOperationalIssuesSummary,
 } from "../shared/types";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
@@ -32,9 +32,9 @@ export function TeacherHomePanel({ session }: TeacherHomePanelProps): JSX.Elemen
   const [recentEvaluated, setRecentEvaluated] = useState<DeliveryEntity[]>([]);
   const [metrics, setMetrics] = useState({ projects: 0, pending: 0, evaluated: 0, students: 0 });
   const [operationalIssues, setOperationalIssues] = useState<ProjectOperationalIssuesSummary | null>(null);
-  const [reconcilePreview, setReconcilePreview] = useState<ProjectOperationalIssuesReconcileResult | null>(null);
-  const [reconciling, setReconciling] = useState<"dry-run" | "apply" | null>(null);
-  const [confirmReconcileOpen, setConfirmReconcileOpen] = useState(false);
+  const [syncPreview, setSyncPreview] = useState<ProjectOperationalIssuesSyncResult | null>(null);
+  const [syncing, setSyncing] = useState<"dry-run" | "apply" | null>(null);
+  const [confirmSyncOpen, setConfirmSyncOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadDashboard = useCallback(async () => {
@@ -81,51 +81,51 @@ export function TeacherHomePanel({ session }: TeacherHomePanelProps): JSX.Elemen
     navigate("/deliveries");
   };
 
-  const handleDryRunReconcile = async () => {
-    setReconciling("dry-run");
+  const handleValidateResources = async () => {
+    setSyncing("dry-run");
     try {
       const result = await projectsApi.reconcileOperationalIssues({
         mode: "dry-run",
       });
-      setReconcilePreview(result);
+      setSyncPreview(result);
       pushToast({
-        title: "Simulación completada",
-        description: `Se han detectado ${result.actions.length} acción(es) reconciliables.`,
+        title: "Validación completada",
+        description: `Se han detectado ${result.actions.length} acción(es) pendientes.`,
         tone: "info",
       });
     } catch (error) {
       pushToast({
-        title: "No se pudo simular la limpieza",
+        title: "No se pudo validar el estado",
         description: getErrorMessage(error),
         tone: "error",
       });
     } finally {
-      setReconciling(null);
+      setSyncing(null);
     }
   };
 
-  const handleApplyReconcile = async () => {
-    setReconciling("apply");
+  const handleSyncResources = async () => {
+    setSyncing("apply");
     try {
       const result = await projectsApi.reconcileOperationalIssues({
         mode: "apply",
       });
-      setReconcilePreview(result);
+      setSyncPreview(result);
       await loadDashboard();
       pushToast({
-        title: "Reconciliación aplicada",
+        title: "Sincronización aplicada",
         description: `Se aplicaron ${Object.values(result.applied).reduce((sum, value) => sum + value, 0)} acción(es).`,
         tone: "success",
       });
     } catch (error) {
       pushToast({
-        title: "No se pudo aplicar la limpieza",
+        title: "No se pudo sincronizar la infraestructura",
         description: getErrorMessage(error),
         tone: "error",
       });
       throw error;
     } finally {
-      setReconciling(null);
+      setSyncing(null);
     }
   };
 
@@ -260,17 +260,17 @@ export function TeacherHomePanel({ session }: TeacherHomePanelProps): JSX.Elemen
         <div className="mt-4 flex flex-wrap gap-3">
           <button
             className="btn-secondary"
-            onClick={() => void handleDryRunReconcile()}
-            disabled={reconciling !== null}
+            onClick={() => void handleValidateResources()}
+            disabled={syncing !== null}
           >
-            {reconciling === "dry-run" ? "Simulando..." : "Simular limpieza"}
+            {syncing === "dry-run" ? "Validando..." : "Validar recursos"}
           </button>
           <button
             className="btn-danger"
-            onClick={() => setConfirmReconcileOpen(true)}
-            disabled={reconciling !== null}
+            onClick={() => setConfirmSyncOpen(true)}
+            disabled={syncing !== null}
           >
-            Aplicar reconciliación segura
+            Sincronizar infraestructura
           </button>
         </div>
 
@@ -445,19 +445,19 @@ export function TeacherHomePanel({ session }: TeacherHomePanelProps): JSX.Elemen
               </div>
             </div>
 
-            {reconcilePreview ? (
+            {syncPreview ? (
               <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-5">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <h4 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
-                      Último resultado de reconciliación
+                      Resultado de la última sincronización
                     </h4>
                     <p className="mt-2 text-sm text-slate-600">
-                      Modo {reconcilePreview.mode}. Las acciones marcadas como <strong>would_apply</strong> son seguras pero todavía no se han ejecutado.
+                      Modo {syncPreview.mode}. Las acciones marcadas como <strong>would_apply</strong> son seguras pero todavía no se han ejecutado.
                     </p>
                   </div>
                   <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                    {reconcilePreview.actions.length} acción(es)
+                    {syncPreview.actions.length} acción(es)
                   </div>
                 </div>
                 <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -467,7 +467,7 @@ export function TeacherHomePanel({ session }: TeacherHomePanelProps): JSX.Elemen
                         {category}
                       </div>
                       <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-                        {reconcilePreview.applied[category]} / {reconcilePreview.matched[category]}
+                        {syncPreview.applied[category]} / {syncPreview.matched[category]}
                       </div>
                       <div className="mt-2 text-sm text-slate-600">
                         aplicadas / detectadas
@@ -476,7 +476,7 @@ export function TeacherHomePanel({ session }: TeacherHomePanelProps): JSX.Elemen
                   ))}
                 </div>
                 <div className="mt-5 space-y-3">
-                  {reconcilePreview.actions.slice(0, 8).map((action) => (
+                  {syncPreview.actions.slice(0, 8).map((action) => (
                     <article key={`${action.category}-${action.targetId}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
                       <div className="flex items-center justify-between gap-3">
                         <div className="font-semibold text-slate-900">{action.action}</div>
@@ -593,14 +593,14 @@ export function TeacherHomePanel({ session }: TeacherHomePanelProps): JSX.Elemen
       </div>
 
       <DangerConfirmModal
-        open={confirmReconcileOpen}
-        title="Aplicar reconciliación segura"
+        open={confirmSyncOpen}
+        title="Sincronizar infraestructura"
         description="Esta acción marcará asignaciones y entregas huérfanas para sacarlas del flujo operativo y limpiará artefactos de storage sin padre válido."
-        confirmWord="RECONCILIAR"
-        confirmButtonLabel="Aplicar reconciliación"
-        loadingLabel="Aplicando..."
-        onCancel={() => setConfirmReconcileOpen(false)}
-        onConfirm={handleApplyReconcile}
+        confirmWord="SINCRONIZAR"
+        confirmButtonLabel="Aplicar sincronización"
+        loadingLabel="Sincronizando..."
+        onCancel={() => setConfirmSyncOpen(false)}
+        onConfirm={handleSyncResources}
       />
     </div>
   );

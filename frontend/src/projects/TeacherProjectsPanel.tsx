@@ -90,40 +90,7 @@ function ProjectOverview({
 }) {
   return (
     <div className="space-y-6">
-      <section className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <ProjectStatusPill status={project.status} />
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                {project.maxDeliveriesPerStudent} intentos por alumno
-              </span>
-            </div>
-            <h3 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950">
-              {project.title}
-            </h3>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-              {project.contextAcademico || "Define aquí el contexto académico, objetivos y reglas del trabajo para que el panel funcione como ficha operativa del proyecto."}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <button className="btn-primary" onClick={onOpenAssignments}>
-              <RiTeamFill />
-              Gestionar alumnos
-            </button>
-            <button className="btn-secondary" onClick={onOpenMonitoring}>
-              <RiBarChart2Line />
-              Ver métricas
-            </button>
-            <button className="btn-secondary" onClick={onOpenSettings}>
-              <RiSettings4Line />
-              Ajustes
-            </button>
-          </div>
-        </div>
-      </section>
-
+      {/* Las métricas y secciones principales del proyecto */}
       <section className="grid gap-4 lg:grid-cols-4">
         {[
           {
@@ -348,7 +315,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Master
+                Listado
               </p>
               <h3 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
                 Proyectos
@@ -565,20 +532,26 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
               <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                   <div className="min-w-0">
-                    <p className="eyebrow">Detail canvas</p>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <p className="eyebrow">Ficha de proyecto</p>
+                      <ProjectStatusPill status={selectedCanvasProject.status} />
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                        {selectedCanvasProject.maxDeliveriesPerStudent} intentos por alumno
+                      </span>
+                    </div>
                     <h3 className="mt-2 truncate text-3xl font-semibold tracking-tight text-slate-950">
                       {selectedCanvasProject.title}
                     </h3>
                     <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-                      Navega por el proyecto sin salir de contexto: overview, alumnos, métricas y ajustes viven en este mismo lienzo.
+                      {selectedCanvasProject.contextAcademico || "Define aquí el contexto académico, objetivos y reglas del trabajo para que el panel funcione como ficha operativa del proyecto."}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { id: "catalog", label: "Overview", icon: <RiLayoutGridFill /> },
-                      { id: "assignments", label: "Assignments", icon: <RiTeamFill /> },
-                      { id: "monitoring", label: "Monitoring", icon: <RiBarChart2Line /> },
-                      { id: "config", label: "Settings", icon: <RiFileSettingsLine /> },
+                      { id: "catalog", label: "Resumen", icon: <RiLayoutGridFill /> },
+                      { id: "assignments", label: "Alumnos", icon: <RiTeamFill /> },
+                      { id: "monitoring", label: "Seguimiento", icon: <RiBarChart2Line /> },
+                      { id: "config", label: "Ajustes", icon: <RiFileSettingsLine /> },
                     ].map((tab) => (
                       <button
                         key={tab.id}
@@ -675,7 +648,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
               {activeSubTab === "config" ? (
                 <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
                   <div className="border-b border-slate-100 pb-6">
-                    <p className="eyebrow">Settings</p>
+                    <p className="eyebrow">Configuración</p>
                     <h4 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
                       Ajustes de {selectedCanvasProject.title}
                     </h4>
@@ -793,7 +766,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
             <EmptyState
               icon={<RiStackFill className="text-5xl text-slate-300" />}
               title="Selecciona un proyecto o crea uno nuevo"
-              description="El detalle aparece aquí con overview, alumnos, monitoring y settings. Mientras tanto, mantenemos el lienzo limpio para que no tengas mensajes de contexto roto."
+              description="El detalle aparece aquí con el resumen, los alumnos, el seguimiento y los ajustes. Mientras tanto, mantenemos el lienzo limpio para evitar mensajes de contexto roto."
               actionLabel="Crear proyecto"
               onAction={openNewProject}
               className="min-h-[420px] border-slate-200 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.98))]"
