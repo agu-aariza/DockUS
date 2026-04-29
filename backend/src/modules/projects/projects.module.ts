@@ -10,6 +10,7 @@
 
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AcademicModule } from '../academic/academic.module';
 import { ProjectAssignmentsController } from './assignments/project-assignments.controller';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import { ProjectAssignmentsService } from './assignments/project-assignments.service';
@@ -21,6 +22,9 @@ import { Delivery } from './deliveries/entities/delivery.entity';
 import { User } from '../users/entities/user.entity';
 import { Project } from './entities/project.entity';
 import { ProjectsController } from './projects.controller';
+import { ProjectAccessService } from './project-access.service';
+import { ProjectGradebookService } from './project-gradebook.service';
+import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectsService } from './projects.service';
 import { ProjectRuntimeModule } from './runtime/project-runtime.module';
 import { StorageObject } from './storage/entities/storage-object.entity';
@@ -41,13 +45,26 @@ import { StorageInfrastructureModule } from '../../shared/infrastructure/storage
     StorageInfrastructureModule,
     ProjectRuntimeModule,
     BuilderModule,
+    AcademicModule,
   ],
   controllers: [
     ProjectsController,
     DeliveriesController,
     ProjectAssignmentsController,
   ],
-  providers: [ProjectsService, DeliveriesService, ProjectAssignmentsService],
-  exports: [ProjectsService, DeliveriesService, ProjectAssignmentsService],
+  providers: [
+    ProjectsService,
+    ProjectAccessService,
+    ProjectGradebookService,
+    ProjectOperationalIssuesService,
+    DeliveriesService,
+    ProjectAssignmentsService,
+  ],
+  exports: [
+    ProjectsService,
+    ProjectAccessService,
+    DeliveriesService,
+    ProjectAssignmentsService,
+  ],
 })
 export class ProjectsModule {}

@@ -10,8 +10,9 @@ import { In, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { User, UserRole } from '../../users/entities/user.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
-import { ProjectsService } from '../projects.service';
+import { ProjectAccessService } from '../project-access.service';
 import { ProjectAssignment } from './entities/project-assignment.entity';
+import { GroupsService } from '../../academic/services/groups.service';
 
 export interface ProjectAssignmentResponse {
   id: string;
@@ -57,7 +58,8 @@ export class ProjectAssignmentsService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
-    private readonly projectsService: ProjectsService,
+    private readonly projectAccessService: ProjectAccessService,
+    private readonly groupsService: GroupsService,
   ) {}
 
   async createBulk(
@@ -65,10 +67,11 @@ export class ProjectAssignmentsService {
     input: {
       studentIds?: string[];
       studentEmails?: string[];
+      groupIds?: string[];
     },
     actor: AuthenticatedUser,
   ): Promise<BulkAssignResponse> {
-    const project = await this.projectsService.findOwnedProjectOrThrow(
+    const project = await this.projectAccessService.findOwnedProjectOrThrow(
       projectId,
       actor,
     );
@@ -81,13 +84,32 @@ export class ProjectAssignmentsService {
       ),
     ];
 
-    if (requestedIds.length === 0 && requestedEmails.length === 0) {
+    const requestedGroupIds = [
+      ...new Set((input.groupIds ?? []).filter(Boolean)),
+    ];
+
+    if (
+      requestedIds.length === 0 &&
+      requestedEmails.length === 0 &&
+      requestedGroupIds.length === 0
+    ) {
       throw new ConflictException(
-        'Debes indicar al menos un studentId o studentEmail para asignar.',
+        'Debes indicar al menos un studentId, studentEmail o groupId para asignar.',
       );
     }
 
-    const groupStudentIds: string[] = [];
+    const studentToGroups = new Map<string, Set<string>>();
+    for (const groupId of requestedGroupIds) {
+      const enrollments = await this.groupsService.listEnrollments(groupId);
+      enrollments.forEach((e) => {
+        if (!studentToGroups.has(e.studentId)) {
+          studentToGroups.set(e.studentId, new Set());
+        }
+        studentToGroups.get(e.studentId)!.add(groupId);
+      });
+    }
+    const groupStudentIds = Array.from(studentToGroups.keys());
+
     const usersByEmail = requestedEmails.length
       ? await this.usersRepository.find({
           where: requestedEmails.map((email) => ({ email })),
@@ -135,11 +157,9 @@ export class ProjectAssignmentsService {
           projectId: project.id,
           studentId: student.id,
         },
-        relations: {
-          project: true,
-          student: true,
-        },
       });
+
+      const sourceGroups = Array.from(studentToGroups.get(student.id) || []);
 
       if (!existing) {
         await this.assignmentsRepository.save(
@@ -149,7 +169,7 @@ export class ProjectAssignmentsService {
             assignedById: actor.userId,
             assignedAt: new Date(),
             revokedAt: null,
-            sourceGroupIds: [],
+            sourceGroupIds: sourceGroups,
           }),
         );
         assignedCount += 1;
@@ -160,10 +180,22 @@ export class ProjectAssignmentsService {
         existing.assignedById = actor.userId;
         existing.assignedAt = new Date();
         existing.revokedAt = null;
-        existing.sourceGroupIds = [];
+        existing.sourceGroupIds = sourceGroups;
         await this.assignmentsRepository.save(existing);
         reactivatedCount += 1;
         continue;
+      }
+
+      // If already active, we might want to append new source groups
+      let changed = false;
+      for (const gid of sourceGroups) {
+        if (!existing.sourceGroupIds.includes(gid)) {
+          existing.sourceGroupIds.push(gid);
+          changed = true;
+        }
+      }
+      if (changed) {
+        await this.assignmentsRepository.save(existing);
       }
 
       alreadyActiveCount += 1;
@@ -176,7 +208,7 @@ export class ProjectAssignmentsService {
       summary: {
         requestedIds,
         requestedEmails,
-        requestedGroupIds: [],
+        requestedGroupIds,
         resolvedStudentIds: uniqueStudentIds,
         assignedCount,
         reactivatedCount,
@@ -190,7 +222,7 @@ export class ProjectAssignmentsService {
     projectId: string,
     actor: AuthenticatedUser,
   ): Promise<ProjectAssignmentResponse[]> {
-    await this.projectsService.assertCanAccessProject(projectId, actor);
+    await this.projectAccessService.assertCanAccessProject(projectId, actor);
 
     const assignments = await this.assignmentsRepository
       .createQueryBuilder('assignment')

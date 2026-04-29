@@ -9,6 +9,7 @@
  */
 
 import { Module } from '@nestjs/common';
+import { AcademicModule } from './modules/academic/academic.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { ProjectsModule } from './modules/projects/projects.module';
@@ -20,6 +21,7 @@ import { InfrastructureModule } from './shared/infrastructure/infrastructure.mod
     InfrastructureModule,
     UsersModule,
     AuthModule,
+    AcademicModule,
     ProjectsModule,
     HealthModule,
   ],

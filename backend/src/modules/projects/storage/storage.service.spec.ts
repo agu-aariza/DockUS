@@ -27,8 +27,11 @@ import { UserRole } from '../../users/entities/user.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
 import { Project } from '../entities/project.entity';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
+import { StorageAccessService } from './storage-access.service';
 import { StorageObject } from './entities/storage-object.entity';
+import { StorageQueryService } from './storage-query.service';
 import { StorageService } from './storage.service';
+import { StorageUploadService } from './storage-upload.service';
 
 describe('StorageService', () => {
   let service: StorageService;
@@ -62,11 +65,29 @@ describe('StorageService', () => {
     minioStorageService.deleteObject.mockResolvedValue(undefined);
     minioStorageService.objectExists.mockResolvedValue(true);
 
-    service = new StorageService(
+    const storageAccessService = new StorageAccessService(
       storageRepository as unknown as Repository<StorageObject>,
       deliveriesRepository as unknown as Repository<Delivery>,
       projectsRepository as unknown as Repository<Project>,
+    );
+    const storageQueryService = new StorageQueryService(
+      storageRepository as unknown as Repository<StorageObject>,
       minioStorageService as unknown as MinioStorageService,
+      storageAccessService,
+    );
+    const storageUploadService = new StorageUploadService(
+      storageRepository as unknown as Repository<StorageObject>,
+      deliveriesRepository as unknown as Repository<Delivery>,
+      minioStorageService as unknown as MinioStorageService,
+      storageAccessService,
+    );
+
+    service = new StorageService(
+      storageRepository as unknown as Repository<StorageObject>,
+      minioStorageService as unknown as MinioStorageService,
+      storageAccessService,
+      storageQueryService,
+      storageUploadService,
     );
   });
 

@@ -16,6 +16,9 @@ import { ProjectAssignment } from './assignments/entities/project-assignment.ent
 import { Delivery } from './deliveries/entities/delivery.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
+import { ProjectAccessService } from './project-access.service';
+import { ProjectGradebookService } from './project-gradebook.service';
+import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectsService } from './projects.service';
 import { ProjectRuntimeService } from './runtime/project-runtime.service';
 
@@ -58,17 +61,35 @@ describe('ProjectsService', () => {
     ),
   };
 
+  const projectGradebookService = {
+    exportGradebookCsv: jest.fn(),
+    exportProgressSummaryCsv: jest.fn(),
+    getGradebook: jest.fn(),
+    getProgressSummary: jest.fn(),
+  };
+
+  const projectOperationalIssuesService = {
+    getOperationalIssues: jest.fn(),
+    reconcileOperationalIssues: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     queryBuilder.andWhere.mockReturnThis();
     queryBuilder.orderBy.mockReturnThis();
     queryBuilder.skip.mockReturnThis();
     queryBuilder.take.mockReturnThis();
-    service = new ProjectsService(
+    const projectAccessService = new ProjectAccessService(
       projectsRepository as unknown as Repository<Project>,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
+    );
+    service = new ProjectsService(
+      projectsRepository as unknown as Repository<Project>,
       deliveriesRepository as unknown as Repository<Delivery>,
       projectRuntimeService as unknown as ProjectRuntimeService,
+      projectAccessService,
+      projectGradebookService as unknown as ProjectGradebookService,
+      projectOperationalIssuesService as unknown as ProjectOperationalIssuesService,
     );
   });
 

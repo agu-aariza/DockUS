@@ -14,8 +14,11 @@ import { ProjectAssignment } from '../assignments/entities/project-assignment.en
 import { Delivery } from '../deliveries/entities/delivery.entity';
 import { Project } from '../entities/project.entity';
 import { StorageObject } from './entities/storage-object.entity';
+import { StorageAccessService } from './storage-access.service';
 import { StorageController } from './storage.controller';
+import { StorageQueryService } from './storage-query.service';
 import { StorageService } from './storage.service';
+import { StorageUploadService } from './storage-upload.service';
 import { StorageInfrastructureModule } from '../../../shared/infrastructure/storage/storage-infrastructure.module';
 
 @Module({
@@ -29,7 +32,12 @@ import { StorageInfrastructureModule } from '../../../shared/infrastructure/stor
     StorageInfrastructureModule,
   ],
   controllers: [StorageController],
-  providers: [StorageService],
+  providers: [
+    StorageService,
+    StorageAccessService,
+    StorageQueryService,
+    StorageUploadService,
+  ],
   exports: [StorageService],
 })
 export class StorageModule {}
