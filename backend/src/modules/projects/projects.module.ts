@@ -24,6 +24,7 @@ import { Project } from './entities/project.entity';
 import { ProjectsController } from './projects.controller';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectGradebookService } from './project-gradebook.service';
+import { ProjectLifecycleService } from './project-lifecycle.service';
 import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectsService } from './projects.service';
 import { ProjectRuntimeModule } from './runtime/project-runtime.module';
@@ -54,6 +55,7 @@ import { StorageInfrastructureModule } from '../../shared/infrastructure/storage
   ],
   providers: [
     ProjectsService,
+    ProjectLifecycleService,
     ProjectAccessService,
     ProjectGradebookService,
     ProjectOperationalIssuesService,
@@ -62,6 +64,7 @@ import { StorageInfrastructureModule } from '../../shared/infrastructure/storage
   ],
   exports: [
     ProjectsService,
+    ProjectLifecycleService,
     ProjectAccessService,
     DeliveriesService,
     ProjectAssignmentsService,
