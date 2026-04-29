@@ -8,7 +8,7 @@ import { IsNull, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../users/entities/user.entity';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
-import { Project } from './entities/project.entity';
+import { Project, ProjectStatus } from './entities/project.entity';
 
 @Injectable()
 export class ProjectAccessService {
@@ -59,6 +59,12 @@ export class ProjectAccessService {
       );
     }
 
+    if (project.status === ProjectStatus.DRAFT) {
+      throw new ForbiddenException(
+        'El proyecto todavía está en fase de borrador.',
+      );
+    }
+
     return project;
   }
 
@@ -95,6 +101,9 @@ export class ProjectAccessService {
           requestUserId: actor.userId,
         },
       )
+      .andWhere('project.status != :draftStatus', {
+        draftStatus: ProjectStatus.DRAFT,
+      })
       .distinct(true);
   }
 

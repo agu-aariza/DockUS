@@ -10,6 +10,7 @@ import { In, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { User, UserRole } from '../../users/entities/user.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
+import { Project, ProjectStatus } from '../entities/project.entity';
 import { ProjectAccessService } from '../project-access.service';
 import { ProjectAssignment } from './entities/project-assignment.entity';
 import { GroupsService } from '../../academic/services/groups.service';
@@ -251,6 +252,7 @@ export class ProjectAssignmentsService {
       .innerJoinAndSelect('assignment.student', 'student')
       .where('assignment.studentId = :studentId', { studentId: actor.userId })
       .andWhere('assignment.revokedAt IS NULL')
+      .andWhere('project.status != :status', { status: ProjectStatus.DRAFT })
       .orderBy('assignment.assignedAt', 'DESC')
       .getMany();
 

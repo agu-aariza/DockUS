@@ -20,6 +20,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
+import { ProjectStatus } from '../entities/project.entity';
 import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
 import {
   buildPaginationMeta,
@@ -420,6 +421,12 @@ export class DeliveriesService {
     if (assignment.revokedAt) {
       throw new ConflictException(
         'La asignación está revocada y no admite nuevas entregas.',
+      );
+    }
+
+    if (assignment.project.status !== ProjectStatus.ACTIVE) {
+      throw new ConflictException(
+        'El proyecto no está activo para recibir entregas.',
       );
     }
 
