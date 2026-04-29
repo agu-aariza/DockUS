@@ -1,6 +1,7 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DockerInfrastructureModule } from '../../../shared/infrastructure/docker/docker-infrastructure.module';
 import { BuildRun } from '../builder/domain/entities/build-run.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
 import { Project } from '../entities/project.entity';
@@ -15,6 +16,7 @@ import { ProjectRuntimeService } from './project-runtime.service';
     BullModule.registerQueue({
       name: PROJECT_RUNTIME_QUEUE_NAME,
     }),
+    DockerInfrastructureModule,
     TypeOrmModule.forFeature([Project, BuildRun, Delivery]),
   ],
   controllers: [ProjectRuntimeController],

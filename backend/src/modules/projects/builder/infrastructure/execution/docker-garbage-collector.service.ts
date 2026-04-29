@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { runCommand } from '../utils/command-runner.util';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, LessThanOrEqual, Not, Repository } from 'typeorm';
+import { DockerContainerService } from '../../../../../shared/infrastructure/docker/docker-container.service';
+import { DockerImageService } from '../../../../../shared/infrastructure/docker/docker-image.service';
+import { DockerNetworkService } from '../../../../../shared/infrastructure/docker/docker-network.service';
+import { BuildRun } from '../../domain/entities/build-run.entity';
 
 type DockerPsRow = {
   ID?: string;
@@ -14,6 +20,19 @@ type DockerNetworkRow = {
 @Injectable()
 export class DockerGarbageCollectorService {
   private readonly logger = new Logger(DockerGarbageCollectorService.name);
+  private readonly cleanupImages: boolean;
+
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRepository(BuildRun)
+    private readonly buildRunsRepository: Repository<BuildRun>,
+    private readonly dockerContainerService: DockerContainerService,
+    private readonly dockerNetworkService: DockerNetworkService,
+    private readonly dockerImageService: DockerImageService,
+  ) {
+    this.cleanupImages =
+      this.configService.get<boolean>('BUILDER_CLEANUP_IMAGES', true) ?? true;
+  }
 
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async handleManagedResourceCleanup(): Promise<void> {
@@ -23,6 +42,7 @@ export class DockerGarbageCollectorService {
   async pruneManagedResources(): Promise<void> {
     await this.removeStoppedManagedContainers();
     await this.removeEmptyManagedRunNetworks();
+    await this.removeExpiredManagedImages();
   }
 
   private async removeStoppedManagedContainers(): Promise<void> {
@@ -39,17 +59,16 @@ export class DockerGarbageCollectorService {
         continue;
       }
 
-      const result = await runCommand(
-        'docker',
-        ['container', 'rm', '-f', containerId],
+      const removed = await this.dockerContainerService.removeContainer(
+        containerId,
         {
           timeoutMs: 15000,
           maxBufferedChars: 50000,
         },
       );
-      if (result.timedOut || result.exitCode !== 0) {
+      if (!removed) {
         this.logger.warn(
-          `No se pudo eliminar el contenedor gestionado ${containerId}: ${this.normalizeError(result)}`,
+          `No se pudo eliminar el contenedor gestionado ${containerId}.`,
         );
       }
     }
@@ -59,122 +78,118 @@ export class DockerGarbageCollectorService {
     const networks = await this.listManagedNetworks();
     for (const network of networks) {
       const networkName =
-        typeof network.Name === "string" ? network.Name.trim() : '';
+        typeof network.Name === 'string' ? network.Name.trim() : '';
       if (!networkName || !networkName.startsWith('dockus-run-')) {
         continue;
       }
 
-      const inspectResult = await runCommand(
-        'docker',
-        ['network', 'inspect', networkName],
-        {
-          timeoutMs: 15000,
-          maxBufferedChars: 250000,
-        },
-      );
-      if (inspectResult.timedOut || inspectResult.exitCode !== 0) {
+      let inspectPayload: { Containers?: Record<string, unknown> } | null = null;
+      try {
+        inspectPayload =
+          await this.dockerNetworkService.inspectNetwork<{
+            Containers?: Record<string, unknown>;
+          }>(networkName, {
+            timeoutMs: 15000,
+            maxBufferedChars: 250000,
+          });
+      } catch (error) {
         this.logger.warn(
-          `No se pudo inspeccionar la red ${networkName}: ${this.normalizeError(inspectResult)}`,
+          `No se pudo inspeccionar la red ${networkName}: ${this.toErrorMessage(error)}`,
         );
         continue;
       }
 
-      const inspectPayload = JSON.parse(inspectResult.stdout || '[]') as Array<{
-        Containers?: Record<string, unknown>;
-      }>;
       const containerCount = Object.keys(
-        inspectPayload[0]?.Containers ?? {},
+        inspectPayload?.Containers ?? {},
       ).length;
       if (containerCount > 0) {
         continue;
       }
 
-      const removeResult = await runCommand(
-        'docker',
-        ['network', 'rm', networkName],
+      const removed = await this.dockerNetworkService.removeNetwork(
+        networkName,
         {
           timeoutMs: 15000,
           maxBufferedChars: 50000,
         },
       );
-      if (removeResult.timedOut || removeResult.exitCode !== 0) {
+      if (!removed) {
         this.logger.warn(
-          `No se pudo eliminar la red gestionada ${networkName}: ${this.normalizeError(removeResult)}`,
+          `No se pudo eliminar la red gestionada ${networkName}.`,
         );
       }
     }
   }
 
   private async listManagedContainers(): Promise<DockerPsRow[]> {
-    const result = await runCommand(
-      'docker',
-      [
-        'container',
-        'ls',
-        '-a',
-        '--filter',
-        'label=dockus.managed=true',
-        '--format',
-        '{{json .}}',
-      ],
-      {
+    try {
+      return await this.dockerContainerService.listContainers<DockerPsRow>({
+        all: true,
+        labels: { 'dockus.managed': 'true' },
         timeoutMs: 15000,
         maxBufferedChars: 500000,
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0) {
+      });
+    } catch (error) {
       this.logger.warn(
-        `No se pudieron listar contenedores Docker gestionados: ${this.normalizeError(result)}`,
+        `No se pudieron listar contenedores Docker gestionados: ${this.toErrorMessage(error)}`,
       );
       return [];
     }
-
-    return this.parseJsonLines<DockerPsRow>(result.stdout);
   }
 
   private async listManagedNetworks(): Promise<DockerNetworkRow[]> {
-    const result = await runCommand(
-      'docker',
-      [
-        'network',
-        'ls',
-        '--filter',
-        'label=dockus.managed=true',
-        '--format',
-        '{{json .}}',
-      ],
-      {
+    try {
+      return await this.dockerNetworkService.listNetworks<DockerNetworkRow>({
+        labels: { 'dockus.managed': 'true' },
         timeoutMs: 15000,
         maxBufferedChars: 500000,
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0) {
+      });
+    } catch (error) {
       this.logger.warn(
-        `No se pudieron listar redes Docker gestionadas: ${this.normalizeError(result)}`,
+        `No se pudieron listar redes Docker gestionadas: ${this.toErrorMessage(error)}`,
       );
       return [];
     }
-
-    return this.parseJsonLines<DockerNetworkRow>(result.stdout);
   }
 
-  private parseJsonLines<T>(raw: string): T[] {
-    return raw
-      .split(/\r?\n/u)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as T);
-  }
-
-  private normalizeError(result: {
-    exitCode: number;
-    stdout: string;
-    stderr: string;
-    timedOut: boolean;
-  }): string {
-    if (result.timedOut) {
-      return 'timeout';
+  private async removeExpiredManagedImages(): Promise<void> {
+    if (!this.cleanupImages) {
+      return;
     }
-    return result.stderr.trim() || result.stdout.trim() || `exitCode=${result.exitCode}`;
+
+    const expiredRuns = await this.buildRunsRepository.find({
+      where: {
+        imageTag: Not(IsNull()),
+        imageExpiresAt: LessThanOrEqual(new Date()),
+      },
+    });
+
+    for (const run of expiredRuns) {
+      if (!run.imageTag) {
+        continue;
+      }
+
+      const removed = await this.dockerImageService.removeImage(run.imageTag, {
+        timeoutMs: 15000,
+        maxBufferedChars: 50000,
+      });
+      if (!removed) {
+        this.logger.warn(
+          `No se pudo eliminar la imagen gestionada ${run.imageTag}.`,
+        );
+        continue;
+      }
+
+      run.imageTag = null;
+      run.imageExpiresAt = null;
+      await this.buildRunsRepository.save(run);
+    }
+  }
+
+  private toErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return 'sin detalle';
   }
 }

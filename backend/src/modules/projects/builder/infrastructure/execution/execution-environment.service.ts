@@ -1,5 +1,8 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { buildLogTail } from '../../../../../shared/infrastructure/docker/command-runner.util';
+import { DockerHostService } from '../../../../../shared/infrastructure/docker/docker-host.service';
+import { DockerImageService } from '../../../../../shared/infrastructure/docker/docker-image.service';
 import {
   DEFAULT_DOCKER_BUILD_TIMEOUT_MS,
   DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
@@ -9,7 +12,6 @@ import {
   DEFAULT_DOCKER_RUNTIME,
 } from '../../domain/builder.constants';
 import { ExecutionContext } from '../../domain/builder.types';
-import { buildLogTail, runCommand } from '../utils/command-runner.util';
 import { CommandExecutionResult } from './execution.types';
 
 @Injectable()
@@ -19,8 +21,13 @@ export class ExecutionEnvironmentService {
   private readonly serviceReadyTimeoutSeconds: number;
   private readonly stabilityWindowSeconds: number;
   private readonly sandboxRuntime: string;
+  private readonly nodeEnv: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly dockerHostService: DockerHostService,
+    private readonly dockerImageService: DockerImageService,
+  ) {
     this.dockerBuildTimeoutMs = this.configService.get<number>(
       'BUILDER_DOCKER_BUILD_TIMEOUT_MS',
       DEFAULT_DOCKER_BUILD_TIMEOUT_MS,
@@ -42,14 +49,26 @@ export class ExecutionEnvironmentService {
         'BUILDER_DOCKER_RUNTIME',
         DEFAULT_DOCKER_RUNTIME,
       ) ?? DEFAULT_DOCKER_RUNTIME;
+    this.nodeEnv =
+      this.configService.get<string>('NODE_ENV', 'development') ??
+      'development';
   }
 
   async collectExecutionContext(
     baseImage: string,
     _workspaceNetworkName: string,
   ): Promise<ExecutionContext> {
-    const dockerVersion = await this.tryVersion('docker', ['--version']);
-    const pythonBaseImageDigest = await this.tryImageDigest(baseImage);
+    const dockerVersion = await this.dockerHostService.tryVersion(
+      'docker',
+      ['--version'],
+      DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
+    );
+    const pythonBaseImageDigest = await this.dockerImageService.tryImageDigest(
+      baseImage,
+      {
+        timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
+      },
+    );
 
     return {
       pythonBaseImage: baseImage,
@@ -57,6 +76,7 @@ export class ExecutionEnvironmentService {
       dockerVersion,
       runtimeBackend: 'docker-cli',
       sandboxRuntime: this.sandboxRuntime,
+      sandboxNetworkPolicy: 'isolated',
       limits: {
         batchTimeoutSeconds: this.batchTimeoutSeconds,
         serviceReadyTimeoutSeconds: this.serviceReadyTimeoutSeconds,
@@ -66,18 +86,11 @@ export class ExecutionEnvironmentService {
   }
 
   async assertDockerAvailable(): Promise<void> {
-    const result = await runCommand(
-      'docker',
-      ['info', '--format', '{{.ServerVersion}}'],
-      {
-        timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0 || !result.stdout.trim()) {
-      throw new ServiceUnavailableException(
-        `Docker daemon no disponible: ${result.stderr.trim() || 'sin detalle.'}`,
-      );
-    }
+    await this.dockerHostService.assertDockerAvailable({
+      nodeEnv: this.nodeEnv,
+      sandboxRuntime: this.sandboxRuntime,
+      timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
+    });
   }
 
   async dockerBuild(
@@ -89,7 +102,7 @@ export class ExecutionEnvironmentService {
     },
   ): Promise<CommandExecutionResult> {
     const startedAt = Date.now();
-    const result = await runCommand('docker', ['build', '-t', imageTag, '.'], {
+    const result = await this.dockerImageService.buildImage(imageTag, {
       cwd: projectRootDir,
       timeoutMs: this.dockerBuildTimeoutMs,
       maxBufferedChars: 1_500_000,
@@ -109,46 +122,8 @@ export class ExecutionEnvironmentService {
   }
 
   async removeDockerImage(imageTag: string): Promise<boolean> {
-    const result = await runCommand('docker', ['image', 'rm', imageTag], {
+    return this.dockerImageService.removeImage(imageTag, {
       timeoutMs: 30000,
     });
-    return !result.timedOut && result.exitCode === 0;
-  }
-
-  private async tryImageDigest(imageRef: string): Promise<string | null> {
-    const result = await runCommand(
-      'docker',
-      ['image', 'inspect', imageRef, '--format', '{{index .RepoDigests 0}}'],
-      {
-        timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0) {
-      return null;
-    }
-
-    const digest = result.stdout.trim();
-    return digest || null;
-  }
-
-  private async tryVersion(
-    command: string,
-    args: string[],
-  ): Promise<string | null> {
-    try {
-      const result = await runCommand(command, args, {
-        timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
-      });
-      if (result.exitCode !== 0 || result.timedOut) {
-        return null;
-      }
-      return (
-        result.stdout.trim().slice(0, 120) ||
-        result.stderr.trim().slice(0, 120) ||
-        null
-      );
-    } catch {
-      return null;
-    }
   }
 }

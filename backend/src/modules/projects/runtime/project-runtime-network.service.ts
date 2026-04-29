@@ -1,6 +1,8 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { runCommand } from '../builder/infrastructure/utils/command-runner.util';
+import { DockerContainerService } from '../../../shared/infrastructure/docker/docker-container.service';
+import { DockerHostService } from '../../../shared/infrastructure/docker/docker-host.service';
+import { DockerNetworkService } from '../../../shared/infrastructure/docker/docker-network.service';
 import {
   DEFAULT_PROJECT_RUNTIME_DELETE_TIMEOUT_MS,
   DEFAULT_PROJECT_RUNTIME_INSPECT_TIMEOUT_MS,
@@ -27,8 +29,15 @@ export class ProjectRuntimeNetworkService {
   private readonly provisionTimeoutMs: number;
   private readonly deleteTimeoutMs: number;
   private readonly inspectTimeoutMs: number;
+  private readonly sandboxRuntime: string;
+  private readonly nodeEnv: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly dockerHostService: DockerHostService,
+    private readonly dockerNetworkService: DockerNetworkService,
+    private readonly dockerContainerService: DockerContainerService,
+  ) {
     this.workspaceNetworkPrefix =
       this.configService.get<string>(
         'BUILDER_WORKSPACE_NETWORK_PREFIX',
@@ -46,6 +55,12 @@ export class ProjectRuntimeNetworkService {
       'PROJECT_RUNTIME_INSPECT_TIMEOUT_MS',
       DEFAULT_PROJECT_RUNTIME_INSPECT_TIMEOUT_MS,
     );
+    this.sandboxRuntime =
+      this.configService.get<string>('BUILDER_DOCKER_RUNTIME', 'runc') ??
+      'runc';
+    this.nodeEnv =
+      this.configService.get<string>('NODE_ENV', 'development') ??
+      'development';
   }
 
   deriveWorkspaceNetworkName(projectId: string): string {
@@ -59,50 +74,35 @@ export class ProjectRuntimeNetworkService {
     projectId?: string,
   ): Promise<void> {
     await this.assertDockerAvailable();
-    if (await this.networkExists(networkName)) {
-      return;
-    }
-
-    const result = await runCommand(
-      'docker',
-      [
-        'network',
-        'create',
-        '--label',
-        'dockus.managed=true',
-        '--label',
-        'dockus.scope=workspace',
-        ...(projectId ? ['--label', `dockus.projectId=${projectId}`] : []),
-        networkName,
-      ],
-      {
-        timeoutMs: this.provisionTimeoutMs,
-        maxBufferedChars: 50000,
+    await this.dockerNetworkService.createNetwork(networkName, {
+      internal: true,
+      labels: {
+        'dockus.managed': 'true',
+        'dockus.scope': 'workspace',
+        ...(projectId ? { 'dockus.projectId': projectId } : {}),
       },
-    );
-    if (result.timedOut || result.exitCode !== 0) {
-      throw new ServiceUnavailableException(
-        `No se pudo crear la red workspace ${networkName}: ${this.normalizeError(result)}`,
-      );
-    }
+      timeoutMs: this.provisionTimeoutMs,
+      maxBufferedChars: 50000,
+    });
   }
 
   async removeWorkspaceNetwork(networkName: string): Promise<void> {
-    if (!(await this.networkExists(networkName))) {
+    if (
+      !(await this.dockerNetworkService.networkExists(networkName, {
+        timeoutMs: this.inspectTimeoutMs,
+        maxBufferedChars: 250000,
+      }))
+    ) {
       return;
     }
 
-    const result = await runCommand(
-      'docker',
-      ['network', 'rm', networkName],
-      {
-        timeoutMs: this.deleteTimeoutMs,
-        maxBufferedChars: 50000,
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0) {
+    const removed = await this.dockerNetworkService.removeNetwork(networkName, {
+      timeoutMs: this.deleteTimeoutMs,
+      maxBufferedChars: 50000,
+    });
+    if (!removed) {
       throw new ServiceUnavailableException(
-        `No se pudo eliminar la red workspace ${networkName}: ${this.normalizeError(result)}`,
+        `No se pudo eliminar la red workspace ${networkName}.`,
       );
     }
   }
@@ -111,7 +111,12 @@ export class ProjectRuntimeNetworkService {
     workspaceNetworkName: string,
     executionNetworkPrefix: string,
   ): Promise<ProjectRuntimeNetworkSummary[]> {
-    const listedNetworks = await this.listNetworks();
+    const listedNetworks = await this.dockerNetworkService.listNetworks<{
+      Name?: string;
+    }>({
+      timeoutMs: this.inspectTimeoutMs,
+      maxBufferedChars: 500000,
+    });
     const relevantNames = listedNetworks
       .map((network) => network.Name)
       .filter(
@@ -124,9 +129,15 @@ export class ProjectRuntimeNetworkService {
 
     const summaries: ProjectRuntimeNetworkSummary[] = [];
     for (const networkName of relevantNames) {
-      const inspect = await this.inspectNetwork(networkName);
+      const inspect =
+        await this.dockerNetworkService.inspectNetwork<{
+          Containers?: Record<string, unknown>;
+        }>(networkName, {
+          timeoutMs: this.inspectTimeoutMs,
+          maxBufferedChars: 500000,
+        });
       const containers = await Promise.all(
-        Object.keys(inspect.Containers ?? {}).map((containerId) =>
+        Object.keys(inspect?.Containers ?? {}).map((containerId) =>
           this.toContainerSummary(containerId),
         ),
       );
@@ -150,112 +161,25 @@ export class ProjectRuntimeNetworkService {
   }
 
   private async assertDockerAvailable(): Promise<void> {
-    const result = await runCommand(
-      'docker',
-      ['info', '--format', '{{.ServerVersion}}'],
-      {
-        timeoutMs: this.inspectTimeoutMs,
-        maxBufferedChars: 50000,
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0 || !result.stdout.trim()) {
-      throw new ServiceUnavailableException(
-        `Docker daemon no disponible: ${this.normalizeError(result)}`,
-      );
-    }
-  }
-
-  private async networkExists(networkName: string): Promise<boolean> {
-    const result = await runCommand(
-      'docker',
-      ['network', 'inspect', networkName],
-      {
-        timeoutMs: this.inspectTimeoutMs,
-        maxBufferedChars: 250000,
-      },
-    );
-    if (!result.timedOut && result.exitCode === 0) {
-      return true;
-    }
-    if (
-      /No such network/u.test(result.stderr) ||
-      /No such network/u.test(result.stdout)
-    ) {
-      return false;
-    }
-    if (result.timedOut) {
-      throw new ServiceUnavailableException(
-        `Timeout inspeccionando la red ${networkName}.`,
-      );
-    }
-    if (result.exitCode !== 0) {
-      throw new ServiceUnavailableException(
-        `No se pudo inspeccionar la red ${networkName}: ${this.normalizeError(result)}`,
-      );
-    }
-    return false;
-  }
-
-  private async listNetworks(): Promise<Array<{ Name?: string }>> {
-    const result = await runCommand(
-      'docker',
-      ['network', 'ls', '--format', '{{json .}}'],
-      {
-        timeoutMs: this.inspectTimeoutMs,
-        maxBufferedChars: 500000,
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0) {
-      throw new ServiceUnavailableException(
-        `No se pudieron listar redes Docker: ${this.normalizeError(result)}`,
-      );
-    }
-    return result.stdout
-      .split(/\r?\n/u)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as { Name?: string });
-  }
-
-  private async inspectNetwork(networkName: string): Promise<{
-    Containers?: Record<string, unknown>;
-  }> {
-    const result = await runCommand(
-      'docker',
-      ['network', 'inspect', networkName],
-      {
-        timeoutMs: this.inspectTimeoutMs,
-        maxBufferedChars: 500000,
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0) {
-      throw new ServiceUnavailableException(
-        `No se pudo inspeccionar la red ${networkName}: ${this.normalizeError(result)}`,
-      );
-    }
-    const payload = JSON.parse(result.stdout || '[]') as Array<{
-      Containers?: Record<string, unknown>;
-    }>;
-    return payload[0] ?? {};
+    await this.dockerHostService.assertDockerAvailable({
+      nodeEnv: this.nodeEnv,
+      sandboxRuntime: this.sandboxRuntime,
+      timeoutMs: this.inspectTimeoutMs,
+      maxBufferedChars: 50000,
+    });
   }
 
   private async toContainerSummary(
     containerId: string,
   ): Promise<ProjectRuntimeContainerSummary | null> {
-    const result = await runCommand(
-      'docker',
-      ['container', 'inspect', containerId],
-      {
-        timeoutMs: this.inspectTimeoutMs,
-        maxBufferedChars: 250000,
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0) {
-      return null;
-    }
-
-    const payload = JSON.parse(result.stdout || '[]') as DockerContainerInspect[];
-    const container = payload[0];
+    const container =
+      await this.dockerContainerService.inspectContainer<DockerContainerInspect>(
+        containerId,
+        {
+          timeoutMs: this.inspectTimeoutMs,
+          maxBufferedChars: 250000,
+        },
+      );
     if (!container?.Id) {
       return null;
     }
@@ -270,16 +194,5 @@ export class ProjectRuntimeNetworkService {
           ? container.RestartCount
           : 0,
     };
-  }
-
-  private normalizeError(result: {
-    stdout: string;
-    stderr: string;
-    timedOut: boolean;
-  }): string {
-    if (result.timedOut) {
-      return 'timeout';
-    }
-    return (result.stderr || result.stdout).trim() || 'sin detalle';
   }
 }
