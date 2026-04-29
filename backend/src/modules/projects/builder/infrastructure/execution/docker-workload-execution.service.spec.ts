@@ -60,6 +60,11 @@ describe('DockerWorkloadExecutionService', () => {
         expect.objectContaining({ id: 'NO_RESTARTS', status: 'PASS' }),
       ]),
     );
+    expect(dockerExecutionService.runContainer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        networkMode: 'none',
+      }),
+    );
   });
 
   it('omite tests cuando no hay comandos sugeridos', async () => {
@@ -76,5 +81,32 @@ describe('DockerWorkloadExecutionService', () => {
     expect(result.detected).toBe(false);
     expect(result.status).toBe(StageStatus.SKIP);
     expect(result.containerId).toBeNull();
+  });
+
+  it('usa la red privada del run para tests cuando se le indica', async () => {
+    dockerExecutionService.runContainer.mockResolvedValue('helper-123');
+    dockerExecutionService.waitContainer.mockResolvedValue({
+      StatusCode: 0,
+    });
+    dockerExecutionService.getContainerLogs.mockResolvedValue('pytest ok');
+    dockerExecutionService.removeContainer.mockResolvedValue(true);
+
+    const result = await service.runTests({
+      projectId: 'project-1',
+      workspaceNetworkName: 'dockus-workspace-1',
+      executionNetworkName: 'dockus-run-1',
+      imageTag: 'dockus:test',
+      commands: [['pytest', '-q']],
+      useExecutionNetwork: true,
+      runId: 'run-1',
+      deliveryId: 'delivery-1',
+    });
+
+    expect(result.status).toBe(StageStatus.PASS);
+    expect(dockerExecutionService.runContainer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        networkName: 'dockus-run-1',
+      }),
+    );
   });
 });

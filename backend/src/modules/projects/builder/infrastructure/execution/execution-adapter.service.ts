@@ -60,6 +60,7 @@ export class ExecutionAdapterService {
     deliveryId: string;
   }): Promise<void> {
     return this.dockerExecutionService.createNetwork(input.networkName, {
+      internal: true,
       labels: {
         'dockus.managed': 'true',
         'dockus.scope': 'run',
@@ -109,6 +110,7 @@ export class ExecutionAdapterService {
     executionNetworkName: string;
     imageTag: string;
     commands?: string[][];
+    useExecutionNetwork?: boolean;
     runId: string;
     deliveryId: string;
   }): Promise<TestExecutionResult> {
@@ -121,6 +123,7 @@ export class ExecutionAdapterService {
     executionNetworkName: string;
     imageTag: string;
     command: string[];
+    useExecutionNetwork?: boolean;
     runId: string;
     deliveryId: string;
   }): Promise<HealthcheckExecutionResult> {

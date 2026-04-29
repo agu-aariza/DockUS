@@ -54,6 +54,7 @@ export class BuilderValidationStageService {
           executionNetworkName: input.executionNetworkName,
           imageTag: input.imageTag,
           commands: input.recipe.test,
+          useExecutionNetwork: input.runtimeMode === 'service',
           runId: input.run.id,
           deliveryId: input.deliveryId,
         });

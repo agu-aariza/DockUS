@@ -64,7 +64,6 @@ export class Project {
   status: ProjectStatus;
 
   @Column({
-    name: 'runtimeClusterName',
     type: 'varchar',
     length: 128,
     nullable: true,
@@ -72,7 +71,6 @@ export class Project {
   runtimeNetworkName: string | null;
 
   @Column({
-    name: 'runtimeClusterStatus',
     type: 'enum',
     enum: ProjectRuntimeEnvironmentStatus,
     default: ProjectRuntimeEnvironmentStatus.ABSENT,

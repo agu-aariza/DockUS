@@ -89,7 +89,7 @@ export class DockerWorkloadExecutionService {
       containerName: params.containerName,
       imageTag: params.imageTag,
       command: params.command,
-      networkName: params.executionNetworkName,
+      networkMode: 'none',
       labels,
       cpus: this.batchCpuLimit,
       memory: this.batchMemoryLimit,
@@ -213,6 +213,7 @@ export class DockerWorkloadExecutionService {
     executionNetworkName: string;
     imageTag: string;
     commands?: string[][];
+    useExecutionNetwork?: boolean;
     runId: string;
     deliveryId: string;
   }): Promise<TestExecutionResult> {
@@ -233,6 +234,7 @@ export class DockerWorkloadExecutionService {
         ...params,
         command,
         role: 'test',
+        useExecutionNetwork: params.useExecutionNetwork === true,
         containerName: `tests-${index}-${Date.now().toString().slice(-6)}`,
       });
       attemptedLogs.push([`$ ${command.join(' ')}`, result.logs].join('\n'));
@@ -265,6 +267,7 @@ export class DockerWorkloadExecutionService {
     executionNetworkName: string;
     imageTag: string;
     command: string[];
+    useExecutionNetwork?: boolean;
     runId: string;
     deliveryId: string;
   }): Promise<HealthcheckExecutionResult> {
@@ -272,6 +275,7 @@ export class DockerWorkloadExecutionService {
       ...params,
       command: params.command,
       role: 'healthcheck',
+      useExecutionNetwork: params.useExecutionNetwork === true,
       containerName: `healthcheck-${Date.now().toString().slice(-6)}`,
     });
 
@@ -388,6 +392,7 @@ export class DockerWorkloadExecutionService {
       runId: params.runId,
       deliveryId: params.deliveryId,
       role: 'healthcheck',
+      useExecutionNetwork: true,
       containerName: `probe-${Date.now().toString().slice(-6)}`,
     });
     return result.status === StageStatus.PASS;
@@ -402,6 +407,7 @@ export class DockerWorkloadExecutionService {
     runId: string;
     deliveryId: string;
     role: 'test' | 'healthcheck';
+    useExecutionNetwork: boolean;
     containerName: string;
   }): Promise<{
     status: StageStatus;
@@ -413,7 +419,9 @@ export class DockerWorkloadExecutionService {
       containerName: params.containerName,
       imageTag: params.imageTag,
       command: params.command,
-      networkName: params.executionNetworkName,
+      ...(params.useExecutionNetwork
+        ? { networkName: params.executionNetworkName }
+        : { networkMode: 'none' as const }),
       labels,
       cpus: this.testCpuLimit,
       memory: this.testMemoryLimit,

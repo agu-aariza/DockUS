@@ -5,19 +5,15 @@ export const DEFAULT_DOCKER_BUILD_TIMEOUT_MS = 300000;
 export const DEFAULT_DOCKER_CHECK_TIMEOUT_MS = 15000;
 export const DEFAULT_BUILDER_CLEANUP_IMAGES = true;
 export const DEFAULT_SELF_HEAL_MAX_ATTEMPTS = 3;
-export const DEFAULT_STATIC_REVIEW_TIMEOUT_MS = 30000;
 export const DEFAULT_IMAGE_TTL_MS = 1800000;
 export const DEFAULT_STALE_RUN_THRESHOLD_MS = 600000;
-export const DEFAULT_PYTHON_VERSION = '3.11';
 export const DEFAULT_BASE_PYTHON_IMAGE = 'python:3.11.9-slim-bookworm';
 export const DEFAULT_MAX_EXTRACTED_FILES = 1500;
 export const DEFAULT_MAX_EXTRACTED_BYTES = 100 * 1024 * 1024;
-export const DEFAULT_LOG_TAIL_LINES = 120;
 
 export const DEFAULT_BATCH_TIMEOUT_SECONDS = 60;
 export const DEFAULT_SERVICE_READY_TIMEOUT_SECONDS = 90;
 export const DEFAULT_STABILITY_WINDOW_SECONDS = 30;
-export const DEFAULT_WORKSPACE_NETWORK_PREFIX = 'dockus-workspace';
 export const DEFAULT_EXECUTION_NETWORK_PREFIX = 'dockus-run';
 export const DEFAULT_DOCKER_RUNTIME = 'runc';
 
@@ -29,8 +25,6 @@ export const DEFAULT_SERVICE_MEMORY_LIMIT = '768m';
 
 export const DEFAULT_TEST_CPU_LIMIT = '0.3';
 export const DEFAULT_TEST_MEMORY_LIMIT = '384m';
-
-export const CLASSIFIER_VERSION = 'dockus-stable.0';
 
 export const TEXT_SCAN_EXTENSIONS = new Set([
   '.py',

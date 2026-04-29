@@ -389,6 +389,7 @@ export class BuilderDeployStageService {
             executionNetworkName,
             imageTag: input.imageTag,
             command: input.recipe.healthcheck,
+            useExecutionNetwork: true,
             runId: input.run.id,
             deliveryId: input.deliveryId,
           });

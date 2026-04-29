@@ -378,6 +378,7 @@ export interface ExecutionContext {
   dockerVersion: string | null;
   runtimeBackend: 'docker-cli';
   sandboxRuntime: string | null;
+  sandboxNetworkPolicy: 'isolated';
   limits: {
     batchTimeoutSeconds: number;
     serviceReadyTimeoutSeconds: number;

@@ -90,7 +90,7 @@ describe('BuilderReportService', () => {
           outcome: 'repaired',
           diagnostics: {
             buildLogTail: ['pg_config executable not found'],
-            podLogTail: [],
+            containerLogTail: [],
             errorHints: ['Puede faltar libpq-dev.'],
           },
         },
