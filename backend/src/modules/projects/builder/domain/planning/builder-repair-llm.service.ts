@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { readFileSync } from 'fs';
-import * as path from 'path';
 import {
   BuilderLlmAssessment,
   BuilderLlmPhaseResult,
@@ -16,6 +14,10 @@ import {
   toPosixPath,
 } from '../../infrastructure/utils/builder-analysis.util';
 import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
+import {
+  PromptId,
+  PromptRegistryService,
+} from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 
 @Injectable()
 export class BuilderRepairLlmService {
@@ -28,7 +30,10 @@ export class BuilderRepairLlmService {
   private readonly maxInputChars: number;
   private readonly systemPrompt: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly promptRegistry: PromptRegistryService,
+  ) {
     this.enabled = toBoolean(
       this.configService.get<string | boolean>(
         'BUILDER_LLM_ASSIST_ENABLED',
@@ -57,11 +62,7 @@ export class BuilderRepairLlmService {
         'BUILDER_LLM_ASSIST_MAX_INPUT_CHARS',
         15000,
       );
-    const promptPath = path.resolve(
-      __dirname,
-      '../../../../../../scripts/repair-system-prompt.txt',
-    );
-    this.systemPrompt = readFileSync(promptPath, 'utf8');
+    this.systemPrompt = this.promptRegistry.getPrompt(PromptId.REPAIR);
   }
 
   isEnabled(): boolean {

@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { readFileSync } from 'fs';
-import * as path from 'path';
 import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
 import {
   BuilderLlmAssessment,
@@ -13,6 +11,10 @@ import {
   AssignmentContext,
 } from '../builder.types';
 import { parseBuilderLlmAssessment } from '../llm/builder-llm-assessment.parser';
+import {
+  PromptId,
+  PromptRegistryService,
+} from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 
 @Injectable()
 export class BuilderEvaluationLlmService {
@@ -25,7 +27,10 @@ export class BuilderEvaluationLlmService {
   private readonly maxInputChars: number;
   private readonly systemPrompt: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly promptRegistry: PromptRegistryService,
+  ) {
     this.enabled = toBoolean(
       this.configService.get<string | boolean>(
         'BUILDER_LLM_ASSIST_ENABLED',
@@ -55,11 +60,7 @@ export class BuilderEvaluationLlmService {
         15000,
       ),
     );
-    const promptPath = path.resolve(
-      __dirname,
-      '../../../../../../scripts/eval-system-prompt.txt',
-    );
-    this.systemPrompt = readFileSync(promptPath, 'utf-8');
+    this.systemPrompt = this.promptRegistry.getPrompt(PromptId.EVAL);
   }
 
   isEnabled(): boolean {

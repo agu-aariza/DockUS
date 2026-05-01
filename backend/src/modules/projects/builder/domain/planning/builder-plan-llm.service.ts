@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { readFileSync } from 'fs';
-import * as path from 'path';
 import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
 import {
   BuilderLlmAssessment,
@@ -17,6 +15,11 @@ import {
   toPosixPath,
 } from '../../infrastructure/utils/builder-analysis.util';
 import { runCommand } from '../../infrastructure/utils/command-runner.util';
+import {
+  PromptId,
+  PromptRegistryService,
+} from '../../../../../shared/infrastructure/ai/prompt-registry.service';
+import * as path from 'path';
 
 const SNIPPET_PRIORITY_NAMES = new Set([
   '__main__.py',
@@ -34,6 +37,7 @@ const SNIPPET_PRIORITY_NAMES = new Set([
   'setup.py',
   'tox.ini',
   'wsgi.py',
+  'score.py',
 ]);
 
 @Injectable()
@@ -47,7 +51,10 @@ export class BuilderPlanLlmService {
   private readonly maxInputChars: number;
   private readonly systemPrompt: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly promptRegistry: PromptRegistryService,
+  ) {
     this.enabled = toBoolean(
       this.configService.get<string | boolean>(
         'BUILDER_LLM_ASSIST_ENABLED',
@@ -77,11 +84,7 @@ export class BuilderPlanLlmService {
         15000,
       ),
     );
-    const promptPath = path.resolve(
-      __dirname,
-      '../../../../../../scripts/plan-system-prompt.txt',
-    );
-    this.systemPrompt = readFileSync(promptPath, 'utf-8');
+    this.systemPrompt = this.promptRegistry.getPrompt(PromptId.PLAN);
   }
 
   isEnabled(): boolean {

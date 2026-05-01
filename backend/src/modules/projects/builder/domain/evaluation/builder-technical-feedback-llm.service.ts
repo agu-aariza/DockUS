@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { readFileSync } from 'fs';
-import * as path from 'path';
 import {
   BuilderTechnicalFeedback,
   RuntimeFile,
@@ -18,6 +16,10 @@ import {
   toPosixPath,
 } from '../../infrastructure/utils/builder-analysis.util';
 import { toBoolean } from '../../../../../shared/utils/to-boolean.util';
+import {
+  PromptId,
+  PromptRegistryService,
+} from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 
 @Injectable()
 export class BuilderTechnicalFeedbackLlmService {
@@ -30,7 +32,10 @@ export class BuilderTechnicalFeedbackLlmService {
   private readonly maxInputChars: number;
   private readonly systemPrompt: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly promptRegistry: PromptRegistryService,
+  ) {
     this.enabled = toBoolean(
       this.configService.get<string | boolean>(
         'BUILDER_LLM_ASSIST_ENABLED',
@@ -59,11 +64,9 @@ export class BuilderTechnicalFeedbackLlmService {
         'BUILDER_LLM_ASSIST_MAX_INPUT_CHARS',
         15000,
       );
-    const promptPath = path.resolve(
-      __dirname,
-      '../../../../../../scripts/technical-feedback-system-prompt.txt',
+    this.systemPrompt = this.promptRegistry.getPrompt(
+      PromptId.TECHNICAL_FEEDBACK,
     );
-    this.systemPrompt = readFileSync(promptPath, 'utf8');
   }
 
   isEnabled(): boolean {

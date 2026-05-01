@@ -1,22 +1,12 @@
 /**
  * @fileoverview Bootstrap de modelos Ollama para DockUS Builder.
  *
- * Crea modelos derivados con system prompts especializados:
+ * Lee los prompts desde un JSON centralizado y crea modelos derivados:
  * - dockus-builder-plan  → planificación de ejecución
  * - dockus-builder-eval  → evaluación final
  *
- * Los prompts de repair y technical-feedback se inyectan en runtime
- * directamente por sus servicios, no necesitan modelo derivado.
- *
  * Uso:
  *   node scripts/ollama-bootstrap.mjs
- *
- * Variables de entorno:
- *   OLLAMA_HOST         (default: http://ollama:11434)
- *   MODEL_NAME          (default: qwen2.5-coder:7b)
- *   PLAN_MODEL_NAME     (default: dockus-builder-plan)
- *   EVAL_MODEL_NAME     (default: dockus-builder-eval)
- *   OLLAMA_NUM_CTX      (default: 16384)
  */
 
 import { readFile } from 'node:fs/promises';
@@ -31,8 +21,14 @@ const BASE_MODEL = process.env.MODEL_NAME || 'qwen2.5-coder:7b';
 const PLAN_MODEL = process.env.PLAN_MODEL_NAME || 'dockus-builder-plan';
 const EVAL_MODEL = process.env.EVAL_MODEL_NAME || 'dockus-builder-eval';
 const NUM_CTX = Number.parseInt(process.env.OLLAMA_NUM_CTX || '16384', 10);
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 5000;
+
+// Ruta al JSON centralizado de prompts
+const PROMPTS_JSON_PATH = path.resolve(
+  __dirname,
+  '../src/shared/infrastructure/ai/prompts.json',
+);
 
 async function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -94,8 +90,7 @@ async function ensureBaseModel() {
   });
 }
 
-async function createDerivedModel(modelName, systemPromptPath) {
-  const systemPrompt = await readFile(systemPromptPath, 'utf8');
+async function createDerivedModel(modelName, systemPrompt) {
   await withRetry(modelName, async () => {
     console.log(`Creating derived model ${modelName} from ${BASE_MODEL}...`);
     await postJson('/api/create', {
@@ -114,26 +109,32 @@ async function createDerivedModel(modelName, systemPromptPath) {
 }
 
 async function main() {
-  console.log(`DockUS Ollama Bootstrap`);
+  console.log(`DockUS Ollama Bootstrap (JSON-powered)`);
   console.log(`  Host:       ${OLLAMA_HOST}`);
   console.log(`  Base model: ${BASE_MODEL}`);
-  console.log(`  Context:    ${NUM_CTX} tokens`);
   console.log();
 
-  const planPromptPath = path.resolve(__dirname, 'plan-system-prompt.txt');
-  const evalPromptPath = path.resolve(__dirname, 'eval-system-prompt.txt');
+  let prompts = {};
+  try {
+    const rawPrompts = await readFile(PROMPTS_JSON_PATH, 'utf8');
+    prompts = JSON.parse(rawPrompts);
+    console.log(`✓ Loaded prompts from ${PROMPTS_JSON_PATH}`);
+  } catch (error) {
+    console.error(`✗ Failed to read prompts.json: ${error.message}`);
+    process.exit(1);
+  }
 
   await ensureBaseModel();
-  await createDerivedModel(PLAN_MODEL, planPromptPath);
-  await createDerivedModel(EVAL_MODEL, evalPromptPath);
+
+  if (prompts.plan) {
+    await createDerivedModel(PLAN_MODEL, prompts.plan);
+  }
+  if (prompts.eval) {
+    await createDerivedModel(EVAL_MODEL, prompts.eval);
+  }
 
   console.log();
-  console.log('✓ Ollama bootstrap complete. Models ready:');
-  console.log(`  - ${PLAN_MODEL} (planning)`);
-  console.log(`  - ${EVAL_MODEL} (evaluation)`);
-  console.log();
-  console.log('Note: repair and technical-feedback prompts are injected at');
-  console.log('runtime by their respective services, no derived model needed.');
+  console.log('✓ Ollama bootstrap complete.');
 }
 
 main().catch((error) => {

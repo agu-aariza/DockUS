@@ -29,6 +29,7 @@ import { ProjectAssignment } from '../../modules/projects/assignments/entities/p
 import { Delivery } from '../../modules/projects/deliveries/entities/delivery.entity';
 
 import { DockerInfrastructureModule } from './docker/docker-infrastructure.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -67,8 +68,9 @@ import { DockerInfrastructureModule } from './docker/docker-infrastructure.modul
     }),
 
     DockerInfrastructureModule,
+    AiModule,
   ],
   providers: [RedisClientService, AdminSeedService, DemoSeedService],
-  exports: [RedisClientService, DockerInfrastructureModule],
+  exports: [RedisClientService, DockerInfrastructureModule, AiModule],
 })
-export class InfrastructureModule {}
+export class InfrastructureModule { }
