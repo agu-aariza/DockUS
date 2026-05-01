@@ -38,7 +38,14 @@ export class ProjectAccessService {
     }
 
     if (actor.role === UserRole.TEACHER) {
-      if (project.creatorId !== actor.userId) {
+      const isAssigned = await this.projectsRepository
+        .createQueryBuilder('project')
+        .innerJoin('project.teachers', 'teacher')
+        .where('project.id = :projectId', { projectId })
+        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
+        .getExists();
+
+      if (!isAssigned) {
         throw new ForbiddenException(
           'No tiene permisos sobre el proyecto solicitado.',
         );
@@ -73,7 +80,7 @@ export class ProjectAccessService {
     actor: AuthenticatedUser,
   ): Promise<Project> {
     const project = await this.findProjectOrThrow(id);
-    this.assertCanManageProject(project, actor);
+    await this.assertCanManageProject(project, actor);
     return project;
   }
 
@@ -86,9 +93,11 @@ export class ProjectAccessService {
     }
 
     if (actor.role === UserRole.TEACHER) {
-      queryBuilder.andWhere('project.creatorId = :requestUserId', {
-        requestUserId: actor.userId,
-      });
+      queryBuilder
+        .innerJoin('project.teachers', 'scopedTeacher')
+        .andWhere('scopedTeacher.id = :requestUserId', {
+          requestUserId: actor.userId,
+        });
       return;
     }
 
@@ -117,13 +126,25 @@ export class ProjectAccessService {
     );
   }
 
-  assertCanManageProject(project: Project, actor: AuthenticatedUser): void {
+  async assertCanManageProject(
+    project: Project,
+    actor: AuthenticatedUser,
+  ): Promise<void> {
     if (actor.role === UserRole.ADMIN) {
       return;
     }
 
-    if (actor.role === UserRole.TEACHER && project.creatorId === actor.userId) {
-      return;
+    if (actor.role === UserRole.TEACHER) {
+      const isAssigned = await this.projectsRepository
+        .createQueryBuilder('project')
+        .innerJoin('project.teachers', 'teacher')
+        .where('project.id = :projectId', { projectId: project.id })
+        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
+        .getExists();
+
+      if (isAssigned) {
+        return;
+      }
     }
 
     throw new ForbiddenException(

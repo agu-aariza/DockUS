@@ -39,7 +39,7 @@ export class DemoSeedService implements OnApplicationBootstrap {
     private readonly deliveriesRepository: Repository<Delivery>,
     private readonly configService: ConfigService,
     private readonly logger: Logger,
-  ) {}
+  ) { }
 
   async onApplicationBootstrap(): Promise<void> {
     if (!isEnabled(this.configService.get<string>('SEED_DEMO_DATA'))) {

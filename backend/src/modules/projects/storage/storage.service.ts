@@ -189,4 +189,18 @@ export class StorageService {
   ): Promise<StorageObject | null> {
     return this.storageQueryService.findProjectTestSuiteStorage(projectId);
   }
+
+  async previewProjectTestSuite(
+    projectId: string,
+    actor: AuthenticatedUser,
+  ): Promise<Array<{ path: string; content: string }>> {
+    return this.storageQueryService.previewTestSuite(projectId, actor);
+  }
+
+  async previewDelivery(
+    deliveryId: string,
+    actor: AuthenticatedUser,
+  ): Promise<Array<{ path: string; content: string }>> {
+    return this.storageQueryService.previewDelivery(deliveryId, actor);
+  }
 }

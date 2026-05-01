@@ -78,6 +78,7 @@ export class ProjectsService {
 
     const queryBuilder = this.projectsRepository
       .createQueryBuilder('project')
+      .leftJoinAndSelect('project.teachers', 'teacher')
       .where('project.id = :id', { id });
 
     this.projectAccessService.applyActorScope(queryBuilder, actor);
@@ -122,6 +123,8 @@ export class ProjectsService {
         creatorId: query.creatorId,
       });
     }
+
+    queryBuilder.leftJoinAndSelect('project.teachers', 'teachersList');
 
     if (search) {
       queryBuilder.andWhere(
@@ -229,6 +232,22 @@ export class ProjectsService {
 
   async restore(id: string): Promise<Project> {
     return this.projectLifecycleService.restore(id);
+  }
+
+  async addTeacher(
+    id: string,
+    teacherId: string,
+    actor: AuthenticatedUser,
+  ): Promise<Project> {
+    return this.projectLifecycleService.addTeacher(id, teacherId, actor);
+  }
+
+  async removeTeacher(
+    id: string,
+    teacherId: string,
+    actor: AuthenticatedUser,
+  ): Promise<Project> {
+    return this.projectLifecycleService.removeTeacher(id, teacherId, actor);
   }
 
   async findOwnedProjectOrThrow(

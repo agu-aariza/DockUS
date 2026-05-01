@@ -134,7 +134,7 @@ export class StorageUploadService {
 
     const project =
       await this.storageAccessService.findProjectOrThrow(projectId);
-    this.storageAccessService.assertCanManageProject(project, actor);
+    await this.storageAccessService.assertCanManageProject(project, actor);
     this.assertFileSize(file.size);
     this.assertAllowedExtension(
       file.originalname ?? 'teacher-tests.zip',

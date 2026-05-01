@@ -36,6 +36,7 @@ import {
   ListDeliveriesQueryDto,
 } from './dto/list-deliveries-query.dto';
 import { Delivery, DeliveryStatus } from './entities/delivery.entity';
+import { StorageService } from '../storage/storage.service';
 
 const DELIVERY_SORT_COLUMNS: Record<DeliverySortField, string> = {
   createdAt: 'delivery.createdAt',
@@ -80,7 +81,19 @@ export class DeliveriesService {
     private readonly deliveriesRepository: Repository<Delivery>,
     @InjectRepository(ProjectAssignment)
     private readonly assignmentsRepository: Repository<ProjectAssignment>,
+    private readonly storageService: StorageService,
   ) {}
+
+  async preview(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<Array<{ path: string; content: string }>> {
+    const delivery = await this.findEntityById(id, actor);
+    if (!delivery) {
+      throw new NotFoundException('Entrega no encontrada para previsualizar.');
+    }
+    return this.storageService.previewDelivery(id, actor);
+  }
 
   async findById(
     id: string,
@@ -500,10 +513,9 @@ export class DeliveriesService {
     const assignment = delivery.assignment;
     const project = assignment?.project ?? null;
     const student = assignment?.student ?? null;
-    const studentName =
-      `${student?.firstName ?? ''} ${student?.lastName ?? ''}`.trim() ||
-      student?.email ||
-      'Alumno no disponible';
+    const studentName = student
+      ? `${student.lastName ?? ""}, ${student.firstName ?? ""}`.trim()
+      : "Alumno no disponible";
     const maxDeliveriesPerStudent =
       project?.maxDeliveriesPerStudent ?? deliveryCount;
 

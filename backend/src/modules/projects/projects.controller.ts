@@ -303,7 +303,6 @@ export class ProjectsController {
   @ApiOperation({
     summary: 'Consultar suite docente activa',
   })
-  @ApiParam(PROJECT_ID_PARAM)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Get(':id/test-suite')
   async findTestSuite(
@@ -311,6 +310,18 @@ export class ProjectsController {
     @Req() request: AuthenticatedRequest,
   ): Promise<StorageObjectResponse> {
     return this.storageService.findProjectTestSuite(id, request.user);
+  }
+
+  @ApiOperation({
+    summary: 'Previsualizar contenido de la suite docente (solo ZIP)',
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get(':id/test-suite/preview')
+  async previewTestSuite(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<Array<{ path: string; content: string }>> {
+    return this.storageService.previewProjectTestSuite(id, request.user);
   }
 
   @ApiOperation({
@@ -328,6 +339,39 @@ export class ProjectsController {
       request.user,
     );
     return result;
+  }
+
+  @ApiOperation({
+    summary: 'Asignar profesor al proyecto',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @ApiParam({ name: 'teacherId', description: 'UUID del profesor a asignar.' })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Post(':id/teachers/:teacherId')
+  async addTeacher(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('teacherId', ParseUUIDPipe) teacherId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<Project> {
+    return this.projectsService.addTeacher(id, teacherId, request.user);
+  }
+
+  @ApiOperation({
+    summary: 'Desasignar profesor del proyecto',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @ApiParam({
+    name: 'teacherId',
+    description: 'UUID del profesor a desasignar.',
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Delete(':id/teachers/:teacherId')
+  async removeTeacher(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('teacherId', ParseUUIDPipe) teacherId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<Project> {
+    return this.projectsService.removeTeacher(id, teacherId, request.user);
   }
 
   /**

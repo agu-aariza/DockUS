@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
+import { parseZipEntries } from '../builder/infrastructure/utils/archive-extractor.util';
 import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
 import { Project } from '../entities/project.entity';
@@ -42,7 +43,7 @@ export class StorageQueryService {
     private readonly storageRepository: Repository<StorageObject>,
     private readonly minioStorageService: MinioStorageService,
     private readonly storageAccessService: StorageAccessService,
-  ) {}
+  ) { }
 
   async findAll(
     query: ListStorageObjectsQueryDto,
@@ -186,7 +187,7 @@ export class StorageQueryService {
   ): Promise<StorageObject> {
     const project =
       await this.storageAccessService.findProjectOrThrow(projectId);
-    this.storageAccessService.assertCanManageProject(project, actor);
+    await this.storageAccessService.assertCanManageProject(project, actor);
     const storageObject = await this.findProjectTestSuiteStorage(projectId);
     if (!storageObject) {
       throw new NotFoundException(
@@ -195,5 +196,86 @@ export class StorageQueryService {
     }
 
     return storageObject;
+  }
+
+  async findDeliverySourceEntity(
+    deliveryId: string,
+    actor: AuthenticatedUser,
+  ): Promise<StorageObject> {
+    const storageObject = await this.storageRepository.findOne({
+      where: {
+        deliveryId,
+        assetRole: StorageAssetRole.STUDENT_SOURCE,
+      },
+    });
+    if (!storageObject) {
+      throw new NotFoundException(
+        'La entrega no tiene un archivo fuente activo.',
+      );
+    }
+    // Verificamos acceso al objeto
+    await this.storageAccessService.findStorageObjectWithAccess(
+      storageObject.id,
+      actor,
+    );
+    return storageObject;
+  }
+
+  async previewTestSuite(
+    projectId: string,
+    actor: AuthenticatedUser,
+  ): Promise<Array<{ path: string; content: string }>> {
+    const storageObject = await this.findProjectTestSuiteEntity(
+      projectId,
+      actor,
+    );
+
+    const buffer = await this.minioStorageService.getObjectBuffer(
+      storageObject.bucket,
+      storageObject.objectKey,
+    );
+
+    if (storageObject.logicalName.endsWith('.zip')) {
+      const entries = parseZipEntries(buffer);
+      return entries
+        .filter((e) => !e.isDirectory && !e.path.startsWith('__MACOSX/'))
+        .map((e) => ({
+          path: e.path,
+          content: e.content.toString('utf8'),
+        }));
+    }
+
+    throw new BadRequestException(
+      'El preview solo esta disponible para archivos .zip por ahora.',
+    );
+  }
+
+  async previewDelivery(
+    deliveryId: string,
+    actor: AuthenticatedUser,
+  ): Promise<Array<{ path: string; content: string }>> {
+    const storageObject = await this.findDeliverySourceEntity(
+      deliveryId,
+      actor,
+    );
+
+    const buffer = await this.minioStorageService.getObjectBuffer(
+      storageObject.bucket,
+      storageObject.objectKey,
+    );
+
+    if (storageObject.logicalName.endsWith('.zip')) {
+      const entries = parseZipEntries(buffer);
+      return entries
+        .filter((e) => !e.isDirectory && !e.path.startsWith('__MACOSX/'))
+        .map((e) => ({
+          path: e.path,
+          content: e.content.toString('utf8'),
+        }));
+    }
+
+    throw new BadRequestException(
+      'El preview solo esta disponible para archivos .zip por ahora.',
+    );
   }
 }

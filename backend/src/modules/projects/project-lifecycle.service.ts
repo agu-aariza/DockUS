@@ -36,6 +36,7 @@ export class ProjectLifecycleService {
       rubricInstructions: dto.rubricInstructions?.trim() || null,
       opensAt: this.normalizeDateInput(dto.opensAt),
       closesAt: this.normalizeDateInput(dto.closesAt),
+      teachers: [{ id: creatorId } as any],
     });
     this.assertProjectWindow(project.opensAt, project.closesAt);
 
@@ -131,6 +132,64 @@ export class ProjectLifecycleService {
     }
 
     await this.projectsRepository.recover(project);
+
+    return this.projectAccessService.findProjectOrThrow(id);
+  }
+
+  async addTeacher(
+    id: string,
+    teacherId: string,
+    actor: AuthenticatedUser,
+  ): Promise<Project> {
+    const project = await this.projectAccessService.findOwnedProjectOrThrow(
+      id,
+      actor,
+    );
+    const teachers = await this.projectsRepository
+      .createQueryBuilder()
+      .relation(Project, 'teachers')
+      .of(project)
+      .loadMany();
+
+    if (teachers.some((t) => t.id === teacherId)) {
+      return project;
+    }
+
+    await this.projectsRepository
+      .createQueryBuilder()
+      .relation(Project, 'teachers')
+      .of(project)
+      .add(teacherId);
+
+    return this.projectAccessService.findProjectOrThrow(id);
+  }
+
+  async removeTeacher(
+    id: string,
+    teacherId: string,
+    actor: AuthenticatedUser,
+  ): Promise<Project> {
+    const project = await this.projectAccessService.findOwnedProjectOrThrow(
+      id,
+      actor,
+    );
+    const teachers = await this.projectsRepository
+      .createQueryBuilder()
+      .relation(Project, 'teachers')
+      .of(project)
+      .loadMany();
+
+    if (teachers.length <= 1) {
+      throw new BadRequestException(
+        'No se puede eliminar al único profesor asignado al proyecto.',
+      );
+    }
+
+    await this.projectsRepository
+      .createQueryBuilder()
+      .relation(Project, 'teachers')
+      .of(project)
+      .remove(teacherId);
 
     return this.projectAccessService.findProjectOrThrow(id);
   }

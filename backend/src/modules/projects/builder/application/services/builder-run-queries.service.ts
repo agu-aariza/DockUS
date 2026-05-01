@@ -55,7 +55,7 @@ export class BuilderRunQueriesService {
   ): Promise<PaginatedBuildRunsResponse> {
     const delivery =
       await this.builderAccessService.findDeliveryOrThrow(deliveryId);
-    this.builderAccessService.assertCanAccessDelivery(delivery, actor);
+    await this.builderAccessService.assertCanAccessDelivery(delivery, actor);
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;

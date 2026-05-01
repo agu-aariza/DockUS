@@ -162,7 +162,7 @@ interface ParsedZipEntry {
   isDirectory: boolean;
 }
 
-function parseZipEntries(zipBuffer: Buffer): ParsedZipEntry[] {
+export function parseZipEntries(zipBuffer: Buffer): ParsedZipEntry[] {
   const eocdOffset = findZipEndOfCentralDirectoryOffset(zipBuffer);
   if (eocdOffset < 0) {
     throw new Error('Archivo ZIP invalido: no se encontro EOCD.');

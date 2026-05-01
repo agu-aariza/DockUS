@@ -17,6 +17,8 @@ import {
   DeleteDateColumn,
   ManyToOne,
   JoinColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
@@ -103,10 +105,17 @@ export class Project {
   @Column({ type: 'uuid' })
   creatorId: string;
 
-  /** Relacion de trazabilidad con el usuario creador. */
   @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'creatorId' })
   creator: User;
+
+  @ManyToMany(() => User, (user) => user.assignedProjects)
+  @JoinTable({
+    name: 'project_teachers',
+    joinColumn: { name: 'projectId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'teacherId', referencedColumnName: 'id' },
+  })
+  teachers: User[];
 
   /** Timestamp de creacion para trazabilidad. */
   @CreateDateColumn()

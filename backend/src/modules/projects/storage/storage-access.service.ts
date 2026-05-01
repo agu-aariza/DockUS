@@ -45,7 +45,7 @@ export class StorageAccessService {
 
     if (storageObject.deliveryId) {
       const delivery = await this.findDeliveryOrThrow(storageObject.deliveryId);
-      this.assertCanAccessDelivery(delivery, actor);
+      await this.assertCanAccessDelivery(delivery, actor);
       return storageObject;
     }
 
@@ -54,10 +54,14 @@ export class StorageAccessService {
       if (actor.role === UserRole.ADMIN) {
         return storageObject;
       }
-      if (
-        actor.role === UserRole.TEACHER &&
-        project.creatorId === actor.userId
-      ) {
+      const isAssigned = await this.projectsRepository
+        .createQueryBuilder('project')
+        .innerJoin('project.teachers', 'teacher')
+        .where('project.id = :projectId', { projectId: project.id })
+        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
+        .getExists();
+
+      if (isAssigned) {
         return storageObject;
       }
       throw new ForbiddenException(
@@ -98,7 +102,10 @@ export class StorageAccessService {
     return project;
   }
 
-  assertCanAccessDelivery(delivery: Delivery, actor: AuthenticatedUser): void {
+  async assertCanAccessDelivery(
+    delivery: Delivery,
+    actor: AuthenticatedUser,
+  ): Promise<void> {
     if (actor.role === UserRole.ADMIN) {
       return;
     }
@@ -107,11 +114,19 @@ export class StorageAccessService {
       return;
     }
 
-    if (
-      actor.role === UserRole.TEACHER &&
-      delivery.assignment.project.creatorId === actor.userId
-    ) {
-      return;
+    if (actor.role === UserRole.TEACHER) {
+      const isAssigned = await this.projectsRepository
+        .createQueryBuilder('project')
+        .innerJoin('project.teachers', 'teacher')
+        .where('project.id = :projectId', {
+          projectId: delivery.assignment.project.id,
+        })
+        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
+        .getExists();
+
+      if (isAssigned) {
+        return;
+      }
     }
 
     throw new ForbiddenException(
@@ -119,11 +134,11 @@ export class StorageAccessService {
     );
   }
 
-  assertCanUploadStudentSource(
+  async assertCanUploadStudentSource(
     delivery: Delivery,
     actor: AuthenticatedUser,
-  ): void {
-    this.assertCanAccessDelivery(delivery, actor);
+  ): Promise<void> {
+    await this.assertCanAccessDelivery(delivery, actor);
 
     if (
       delivery.status === DeliveryStatus.IN_REVIEW ||
@@ -135,13 +150,25 @@ export class StorageAccessService {
     }
   }
 
-  assertCanManageProject(project: Project, actor: AuthenticatedUser): void {
+  async assertCanManageProject(
+    project: Project,
+    actor: AuthenticatedUser,
+  ): Promise<void> {
     if (actor.role === UserRole.ADMIN) {
       return;
     }
 
-    if (actor.role === UserRole.TEACHER && project.creatorId === actor.userId) {
-      return;
+    if (actor.role === UserRole.TEACHER) {
+      const isAssigned = await this.projectsRepository
+        .createQueryBuilder('project')
+        .innerJoin('project.teachers', 'teacher')
+        .where('project.id = :projectId', { projectId: project.id })
+        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
+        .getExists();
+
+      if (isAssigned) {
+        return;
+      }
     }
 
     throw new ForbiddenException(
@@ -168,12 +195,11 @@ export class StorageAccessService {
       return;
     }
 
-    queryBuilder.andWhere(
-      '(project.creatorId = :requestUserId OR scopeProject.creatorId = :requestUserId)',
-      {
+    queryBuilder
+      .innerJoin('project.teachers', 'teacher')
+      .andWhere('teacher.id = :requestUserId', {
         requestUserId: actor.userId,
-      },
-    );
+      });
   }
 
   assertTeacherOrAdmin(

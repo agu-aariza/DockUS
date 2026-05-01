@@ -263,12 +263,12 @@ export class ProjectGradebookService {
     if (!project) {
       throw new NotFoundException('Proyecto no encontrado.');
     }
-    this.projectAccessService.assertCanManageProject(project, actor);
+    await this.projectAccessService.assertCanManageProject(project, actor);
 
     const assignments = await this.assignmentsRepository.find({
       where: { projectId, revokedAt: IsNull() },
       relations: ['student', 'project'],
-      order: { assignedAt: 'ASC' },
+      order: { student: { lastName: 'ASC', firstName: 'ASC' } },
     });
 
     const assignmentIds = assignments.map((assignment) => assignment.id);
@@ -327,7 +327,7 @@ export class ProjectGradebookService {
       return {
         studentId: assignment.studentId,
         studentName:
-          `${assignment.student.firstName} ${assignment.student.lastName}`.trim(),
+          `${assignment.student.lastName}, ${assignment.student.firstName}`.trim(),
         studentEmail: assignment.student.email,
         groupIds: [],
         groupLabels: [],

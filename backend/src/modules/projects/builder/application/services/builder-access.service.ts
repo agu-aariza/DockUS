@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../../../users/entities/user.entity';
 import { Delivery } from '../../../deliveries/entities/delivery.entity';
+import { Project } from '../../../entities/project.entity';
 import { BuildRun } from '../../domain/entities/build-run.entity';
 
 @Injectable()
@@ -15,6 +16,8 @@ export class BuilderAccessService {
   constructor(
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
+    @InjectRepository(Project)
+    private readonly projectsRepository: Repository<Project>,
   ) {}
 
   async findDeliveryOrThrow(deliveryId: string): Promise<Delivery> {
@@ -40,10 +43,13 @@ export class BuilderAccessService {
     actor: AuthenticatedUser,
   ): Promise<void> {
     const delivery = await this.findDeliveryOrThrow(run.deliveryId);
-    this.assertCanAccessDelivery(delivery, actor);
+    await this.assertCanAccessDelivery(delivery, actor);
   }
 
-  assertCanAccessDelivery(delivery: Delivery, actor: AuthenticatedUser): void {
+  async assertCanAccessDelivery(
+    delivery: Delivery,
+    actor: AuthenticatedUser,
+  ): Promise<void> {
     if (actor.role === UserRole.ADMIN) {
       return;
     }
@@ -57,11 +63,22 @@ export class BuilderAccessService {
       return;
     }
 
-    if (delivery.assignment.project.creatorId !== actor.userId) {
-      throw new ForbiddenException(
-        'No tiene permisos para ejecutar builder sobre una entrega ajena.',
-      );
+    const isAssigned = await this.projectsRepository
+      .createQueryBuilder('project')
+      .innerJoin('project.teachers', 'teacher')
+      .where('project.id = :projectId', {
+        projectId: delivery.assignment.project.id,
+      })
+      .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
+      .getExists();
+
+    if (isAssigned) {
+      return;
     }
+
+    throw new ForbiddenException(
+      'No tiene permisos para ejecutar builder sobre una entrega ajena.',
+    );
   }
 
   async assertCanManageBuildRun(
@@ -69,10 +86,13 @@ export class BuilderAccessService {
     actor: AuthenticatedUser,
   ): Promise<void> {
     const delivery = await this.findDeliveryOrThrow(run.deliveryId);
-    this.assertCanManageDelivery(delivery, actor);
+    await this.assertCanManageDelivery(delivery, actor);
   }
 
-  assertCanManageDelivery(delivery: Delivery, actor: AuthenticatedUser): void {
+  async assertCanManageDelivery(
+    delivery: Delivery,
+    actor: AuthenticatedUser,
+  ): Promise<void> {
     if (actor.role === UserRole.ADMIN) {
       return;
     }
@@ -83,10 +103,21 @@ export class BuilderAccessService {
       );
     }
 
-    if (delivery.assignment.project.creatorId !== actor.userId) {
-      throw new ForbiddenException(
-        'No tiene permisos para operar ejecuciones sobre una entrega ajena.',
-      );
+    const isAssigned = await this.projectsRepository
+      .createQueryBuilder('project')
+      .innerJoin('project.teachers', 'teacher')
+      .where('project.id = :projectId', {
+        projectId: delivery.assignment.project.id,
+      })
+      .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
+      .getExists();
+
+    if (isAssigned) {
+      return;
     }
+
+    throw new ForbiddenException(
+      'No tiene permisos para operar ejecuciones sobre una entrega ajena.',
+    );
   }
 }

@@ -151,6 +151,25 @@ export class DeliveriesController {
   }
 
   @ApiOperation({
+    summary: 'Previsualizar código de entrega',
+    description:
+      'Recupera el listado de archivos y contenido de una entrega .zip.',
+  })
+  @ApiParam(DELIVERY_ID_PARAM)
+  @ApiResponse({
+    status: 200,
+    description: 'Previsualización generada correctamente.',
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Get(':id/preview')
+  async preview(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<Array<{ path: string; content: string }>> {
+    return this.deliveriesService.preview(id, request.user);
+  }
+
+  @ApiOperation({
     summary: 'Actualizar entrega',
     description: 'Actualiza metadatos funcionales de una entrega.',
   })

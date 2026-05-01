@@ -405,7 +405,20 @@ export class ProjectRuntimeService implements OnModuleInit {
       throw new NotFoundException('Proyecto no encontrado.');
     }
 
-    if (actor.role !== UserRole.ADMIN && project.creatorId !== actor.userId) {
+    if (actor.role === UserRole.TEACHER) {
+      const isAssigned = await this.projectsRepository
+        .createQueryBuilder('project')
+        .innerJoin('project.teachers', 'teacher')
+        .where('project.id = :projectId', { projectId: project.id })
+        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
+        .getExists();
+
+      if (!isAssigned) {
+        throw new ForbiddenException(
+          'No tiene permisos para gestionar el runtime de este proyecto.',
+        );
+      }
+    } else if (actor.role !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'No tiene permisos para gestionar el runtime de este proyecto.',
       );
