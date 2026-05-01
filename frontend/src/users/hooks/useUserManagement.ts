@@ -14,7 +14,7 @@ export function useUserManagement(session: SessionRecord | null) {
   const [query, setQuery] = useState({ page: '1', limit: '20', role: '', status: '', search: '' });
   const [listResponse, setListResponse] = useState<PaginatedResponse<UserEntity> | null>(null);
   const [detailId, setDetailId] = useState('');
-  const [createForm, setCreateForm] = useState({ email: '', password: 'Password123!', firstName: '', lastName: '', role: 'STUDENT' as UserRole, status: 'ACTIVE' as UserStatus });
+  const [createForm, setCreateForm] = useState({ email: '', password: '', firstName: '', lastName: '', role: 'STUDENT' as UserRole, status: 'ACTIVE' as UserStatus });
   const [updateForm, setUpdateForm] = useState<{
     id: string;
     email: string;

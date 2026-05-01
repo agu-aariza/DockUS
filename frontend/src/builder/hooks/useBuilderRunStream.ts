@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { apiBaseUrl } from "../../shared/api/http";
-import { builderApi } from "../../shared/api/builderApi";
+import { builderApi } from "../../shared/api/services";
 import type { BuildRunEvent, SessionRecord } from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { mergeEvents } from "../utils";

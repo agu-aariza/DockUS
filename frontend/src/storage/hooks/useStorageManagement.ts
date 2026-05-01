@@ -32,7 +32,6 @@ export function useStorageManagement(session: SessionRecord | null) {
     logicalName: '',
     logicalPath: '',
     contentType: 'application/octet-stream',
-    hash: '',
     includeSizeBytes: false,
   });
   const [file, setFile] = useState<File | null>(null);
@@ -44,7 +43,6 @@ export function useStorageManagement(session: SessionRecord | null) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [result, setResult] = useState<unknown>(null);
   const [message, setMessage] = useState('');
-  const [hashLoading, setHashLoading] = useState(false);
 
   const { canRead, canUpload, canTeacherOrAdmin, canAdmin } =
     useManagementPermissions(session);
@@ -72,8 +70,10 @@ export function useStorageManagement(session: SessionRecord | null) {
     event.preventDefault();
     if (!canUpload || !file) return;
     try {
+      const hash = await computeSha256Hex(file);
       const response = await storageApi.upload({
         ...uploadForm,
+        hash,
         file,
         sizeBytes: uploadForm.includeSizeBytes ? file.size : undefined,
       });
@@ -81,16 +81,6 @@ export function useStorageManagement(session: SessionRecord | null) {
       setMessage('Objeto subido correctamente.');
       await handleList();
     } catch (e) { setMessage(getErrorMessage(e)); }
-  };
-
-  const handleComputeHash = async () => {
-    if (!file) return;
-    setHashLoading(true);
-    try {
-      const hash = await computeSha256Hex(file);
-      setUploadForm(prev => ({ ...prev, hash }));
-    } catch { setMessage('Error al calcular hash.'); }
-    finally { setHashLoading(false); }
   };
 
   const executeDanger = async () => {
@@ -116,9 +106,8 @@ export function useStorageManagement(session: SessionRecord | null) {
     dangerAction, setDangerAction,
     confirmOpen, setConfirmOpen,
     result, setMessage, message,
-    hashLoading,
     canRead, canUpload, canSoftDelete, canAdmin,
-    handleList, handleUpload, handleComputeHash, executeDanger,
+    handleList, handleUpload, executeDanger,
     handleFileChange: (f: File | null) => {
       setFile(f);
       if (f) setUploadForm(p => ({ ...p, logicalName: p.logicalName || f.name, logicalPath: p.logicalPath || `src/${f.name}`, contentType: f.type || 'application/octet-stream' }));

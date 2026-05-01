@@ -132,6 +132,7 @@ export interface ProjectEntity {
   closesAt?: string | null;
   status: ProjectStatus;
   creatorId: string;
+  teachers?: UserEntity[];
   runtimeNetworkName?: string | null;
   runtimeEnvironmentStatus?: ProjectRuntimeEnvironmentStatus;
   runtimeProvisionedAt?: string | null;
@@ -165,6 +166,7 @@ export interface ProjectAssignmentEntity {
   deliveryCount: number;
   remainingDeliveries: number;
   minimumRequirementMet: boolean;
+  courseGroupId: string | null;
   sourceGroupIds: string[];
 }
 
@@ -215,6 +217,7 @@ export interface BulkGroupEnrollResponse {
     reactivatedCount: number;
     alreadyActiveCount: number;
     unresolvedEmails: string[];
+    unresolvedNames: string[];
   };
 }
 

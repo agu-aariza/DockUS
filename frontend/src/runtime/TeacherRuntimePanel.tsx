@@ -2,11 +2,14 @@ import {
   RiArrowRightUpLine,
   RiLoader4Line,
   RiPlayLine,
+  RiPulseFill,
   RiRefreshLine,
   RiServerLine,
+  RiStackFill,
   RiStopLine,
+  RiUser3Fill,
 } from "react-icons/ri";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { BuilderLiveRunPane } from "../builder/components/BuilderLiveRunPane";
 import { BuilderRunsTable } from "../builder/components/BuilderRunsTable";
 import type {
@@ -17,45 +20,30 @@ import type {
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
 import { useRuntimeManagement } from "./hooks/useRuntimeManagement";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
+import { MetricCard } from "../shared/components/MetricCard";
+import { VisualPicker, type VisualPickerOption } from "../shared/components/ui/VisualPicker";
+import { ProjectSelectionHub, type ProjectHubOption } from "../shared/components/ui/ProjectSelectionHub";
+import { PageHeader } from "../shared/components/ui/PageHeader";
+import { Button } from "../shared/components/ui/Button";
+import { Tabs } from "../shared/components/ui/Tabs";
 
 interface TeacherRuntimePanelProps {
   session: SessionRecord | null;
 }
 
-type RuntimeTab = "control" | "infraestructura" | "seguimiento";
-type RuntimeTrackingTab = "historial" | "ejecucion";
-
 const RUNTIME_STATUS_STYLES: Record<ProjectRuntimeEnvironmentStatus, string> = {
-  ABSENT: "border-slate-200 bg-slate-100 text-slate-700",
-  PROVISIONING: "border-sky-200 bg-sky-50 text-sky-700",
-  READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  ABSENT: "border-slate-200 bg-slate-50 text-slate-500",
+  PROVISIONING: "border-brand-blue/20 bg-brand-blue/5 text-brand-blue-dark",
+  READY: "border-brand-gold/20 bg-brand-gold/5 text-brand-gold-dark",
   ERROR: "border-rose-200 bg-rose-50 text-rose-700",
   DELETING: "border-amber-200 bg-amber-50 text-amber-700",
 };
 
-function MetricCard({
-  label,
-  value,
-  helper,
-}: {
-  label: string;
-  value: string | number;
-  helper?: string;
-}): JSX.Element {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-        {label}
-      </div>
-      <div className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-        {value}
-      </div>
-      {helper ? (
-        <div className="mt-2 text-sm text-slate-500">{helper}</div>
-      ) : null}
-    </div>
-  );
+function formatStudentName(name?: string, email?: string) {
+  if (!name || name === "Estudiante" || name.includes("@")) return email || "Sin identificar";
+  return name;
 }
+
 
 function NetworkCard({
   network,
@@ -63,43 +51,52 @@ function NetworkCard({
   network: ProjectRuntimeNetworkSummary;
 }): JSX.Element {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-semibold tracking-tight text-slate-950">
-            {network.name}
+    <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+            <RiServerLine />
           </div>
-          <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
-            {network.scope}
+          <div>
+            <div className="text-sm font-bold tracking-tight text-slate-950 uppercase">
+              {network.name}
+            </div>
+            <div className="ui-label lowercase">
+              Scope: {network.scope}
+            </div>
           </div>
         </div>
-        <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
-          {network.containers.length} contenedor{network.containers.length === 1 ? "" : "es"}
+        <span className="rounded-full bg-brand-blue/10 border border-brand-blue/20 px-3 py-1 text-[11px] font-bold text-brand-blue-dark">
+          {network.containers.length} Contenedores
         </span>
       </div>
 
-      <div className="mt-4 space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {network.containers.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
-            No hay contenedores vivos en esta red.
+          <div className="col-span-full rounded-2xl border border-dashed border-slate-100 bg-slate-50/50 px-3 py-6 text-center text-xs font-medium text-slate-400">
+            Sin contenedores activos en esta red.
           </div>
         ) : (
           network.containers.map((container) => (
             <div
               key={container.id}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3"
+              className="group relative rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:shadow-slate-200/50"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-slate-900">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 truncate">
+                  <div className={`h-2 w-2 rounded-full ${container.state === 'running' ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                  <span className="truncate text-xs font-bold text-slate-900">
                     {container.name}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    {container.status} · id {container.id.slice(0, 12)}
-                  </div>
+                  </span>
                 </div>
-                <span className="rounded-full bg-white px-2 py-1 text-[11px] text-slate-600">
-                  restart {container.restartCount}
+              </div>
+              <div className="ui-label">
+                ID: {container.id.slice(0, 12)}
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className="ui-label text-slate-400">Restarts: {container.restartCount}</span>
+                <span className="rounded-lg bg-white px-2 py-0.5 ui-label text-slate-600 border border-slate-200">
+                  {container.status}
                 </span>
               </div>
             </div>
@@ -110,11 +107,12 @@ function NetworkCard({
   );
 }
 
+type RuntimeTab = "control" | "infra" | "history" | "live";
+
 export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.Element {
   const rc = useRuntimeManagement(session);
   const { selection, setProject, setAssignment, setDelivery, setRun } = useWorkspace();
   const [activeTab, setActiveTab] = useState<RuntimeTab>("control");
-  const [trackingTab, setTrackingTab] = useState<RuntimeTrackingTab>("historial");
 
   useNoticeToasts([rc.message], "Runtime");
 
@@ -170,6 +168,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
       setRun(rc.selectedRunId);
     }
   }, [rc.selectedRunId]);
+
   const selectedProject = rc.projectOptions.find(
     (project) => project.id === rc.selectedProjectId,
   );
@@ -185,352 +184,391 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
   const activeNetworks = rc.runtimeStatus?.networks ?? [];
   const activeRuns = rc.runtimeStatus?.activeRuns ?? [];
 
+  const projectOptions: VisualPickerOption[] = useMemo(() => 
+    rc.projectOptions.map(p => ({
+      id: p.id,
+      label: p.title,
+      description: p.contextAcademico ? (p.contextAcademico.slice(0, 60) + (p.contextAcademico.length > 60 ? '...' : '')) : 'Sin descripción académica',
+      icon: <RiStackFill />,
+      badge: p.status,
+    })), [rc.projectOptions]);
+
+  const assignmentOptions: VisualPickerOption[] = useMemo(() => 
+    rc.assignmentOptions.map(a => ({
+      id: a.id,
+      label: formatStudentName(a.studentName, a.studentEmail),
+      description: a.studentEmail,
+      icon: <RiUser3Fill />,
+      badge: a.deliveryCount > 0 ? `${a.deliveryCount} entregas` : 'Sin entregas',
+    })), [rc.assignmentOptions]);
+
+  const deliveryOptions: VisualPickerOption[] = useMemo(() => 
+    rc.deliveryOptions.map(d => ({
+      id: d.id,
+      label: `Versión ${d.version}`,
+      description: `Creada: ${new Date(d.createdAt).toLocaleDateString()}`,
+      icon: <RiPulseFill />,
+      badge: d.status,
+      badgeTone: d.status === 'SUBMITTED' ? 'success' : d.status === 'EVALUATED' ? 'info' : 'default',
+    })), [rc.deliveryOptions]);
+
+  const hubProjects: ProjectHubOption[] = useMemo(() => 
+    rc.projectOptions.map(p => ({
+      id: p.id,
+      title: p.title,
+      description: p.contextAcademico || "Sin descripción operativa disponible.",
+      studentCount: (p as any).assignmentCount || 0,
+      activeRuns: 0, 
+      status: p.runtimeEnvironmentStatus as any || 'ABSENT',
+      teachers: p.teachers,
+    })), [rc.projectOptions]);
+
+  if (!rc.selectedProjectId) {
+    return (
+      <div className="space-y-8 animate-fade-in">
+        <PageHeader
+          title="Runtime Operativo"
+          subtitle="Selecciona un proyecto para gestionar despliegues, monitorear ejecuciones y calificar entregas técnicas."
+          icon={<RiPulseFill />}
+          badge={rc.projectOptions.length.toString()}
+        />
+        <section className="rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <ProjectSelectionHub
+            projects={hubProjects}
+            onSelect={(id) => rc.setSelectedProjectId(id)}
+            title="Selecciona un proyecto para comenzar"
+            subtitle="Activa un contexto de runtime para preparar infraestructura, lanzar runs y monitorear ejecución en vivo."
+          />
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="eyebrow">Runtime por proyecto</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Ejecuta entregas dentro del runtime Docker del proyecto y sigue el run sin salir de la interfaz.
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              Esta vista está pensada para trabajo docente real: selección del proyecto,
-              sincronización de redes, seguimiento de contenedores y consola live sobre el mismo run.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              className="btn-secondary"
+      <PageHeader 
+        title="Runtime Operativo"
+        subtitle="Orquestación de entornos virtualizados, monitoreo de infraestructura Docker y auditoría de ejecución en tiempo real."
+        icon={<RiPulseFill />}
+        badge={runtimeStatus}
+        actions={
+          <div className="flex items-center gap-3">
+            <Tabs 
+              tabs={[
+                { id: "control", label: "Control", icon: RiPlayLine },
+                { id: "infra", label: "Infra", icon: RiServerLine },
+                { id: "history", label: "Historial", icon: RiArrowRightUpLine },
+                { id: "live", label: "En vivo", icon: RiRefreshLine },
+              ]}
+              activeTab={activeTab}
+              onTabChange={(id) => setActiveTab(id as RuntimeTab)}
+              variant="primary"
+            />
+            <Button
+              variant="secondary"
+              className="!h-11 px-4"
               onClick={() => void rc.refreshRuntimeStatus()}
               disabled={!rc.selectedProjectId}
             >
-              <RiRefreshLine />
-              Actualizar runtime
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={() => void rc.loadRuns()}
-              disabled={!rc.selectedDeliveryId}
-            >
-              <RiArrowRightUpLine />
-              Recargar historial
-            </button>
+              <RiRefreshLine className={rc.busyAction === 'refresh' ? 'animate-spin' : ''} />
+              Sincronizar
+            </Button>
           </div>
-        </div>
-      </header>
+        }
+      />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Estado del runtime"
+          label="Estado del Nodo"
           value={runtimeStatus}
-          helper={rc.runtimeStatus?.workspaceNetworkName ?? "Sin red workspace asociada"}
+          helper={rc.runtimeStatus?.workspaceNetworkName ?? "Sin red asociada"}
+          icon={<RiServerLine />}
+          variant={runtimeStatus === 'READY' ? 'info' : 'warning'}
         />
         <MetricCard
-          label="Redes activas"
+          label="Topologías Activas"
           value={activeNetworks.length}
           helper="Workspace + runs efímeros"
+          icon={<RiServerLine />}
+          variant="info"
         />
         <MetricCard
           label="Runs activos"
           value={activeRuns.length}
-          helper="Dentro del proyecto seleccionado"
+          helper="Procesos en este proyecto"
+          icon={<RiPlayLine />}
+          variant="default"
         />
         <MetricCard
-          label="Secuencia SSE"
+          label="Flujo SSE"
           value={rc.latestSequence}
-          helper={`stream ${rc.streamState}`}
+          helper={rc.streamState === 'streaming' ? 'Conexión activa' : 'Esperando stream'}
+          icon={<RiRefreshLine />}
+          variant={rc.streamState === 'streaming' ? 'info' : 'default'}
         />
-      </div>
-
-      <div className="flex flex-wrap gap-1 border-b border-slate-200">
-        {[
-          { id: "control", label: "Control" },
-          { id: "infraestructura", label: "Infraestructura" },
-          { id: "seguimiento", label: "Seguimiento" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            className={`px-4 py-3 text-sm font-semibold transition ${
-              activeTab === tab.id
-                ? "border-b-2 border-slate-900 text-slate-950"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-            onClick={() => setActiveTab(tab.id as RuntimeTab)}
-          >
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {activeTab === "control" ? (
-        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="panel-header">
-            <div>
-              <h3 className="text-lg font-semibold tracking-tight text-slate-950">
-                Contexto de ejecución
-              </h3>
-              <p className="section-copy">
-                Selecciona proyecto, asignación y entrega antes de lanzar el run.
-              </p>
+        <section className="rounded-[2.5rem] border border-slate-200 bg-white shadow-sm overflow-hidden animate-fade-in">
+          <div className="bg-brand-maroon p-8 text-white">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-gold/20 text-brand-gold-light text-xl">
+                  <RiPlayLine />
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold tracking-tight">Motor de Ejecución</h4>
+                  <p className="text-sm text-slate-400">Selección de contexto y orquestación de nuevos runs técnicos.</p>
+                </div>
+              </div>
+              <span className={`rounded-full border px-4 py-1.5 text-xs font-bold ${runtimeStyle}`}>
+                {runtimeStatus}
+              </span>
             </div>
-            <span className={`status-chip ${runtimeStyle}`}>{runtimeStatus}</span>
           </div>
 
-          <div className="space-y-5 p-6">
-            <div className="grid gap-4 lg:grid-cols-3">
-              <div>
-                <label className="label-text">Proyecto</label>
-                <select
-                  className="input-field"
+          <div className="p-8 space-y-10">
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="space-y-3">
+                <label className="ui-label ml-1">Proyecto de Referencia</label>
+                <VisualPicker
+                  options={projectOptions}
                   value={rc.selectedProjectId}
-                  onChange={(event) => rc.setSelectedProjectId(event.target.value)}
-                >
-                  <option value="">Selecciona un proyecto</option>
-                  {rc.projectOptions.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.title}
-                    </option>
-                  ))}
-                </select>
+                  onSelect={(id, label) => rc.setSelectedProjectId(id)}
+                  placeholder="Selecciona un proyecto..."
+                  searchPlaceholder="Buscar por título o contexto..."
+                />
               </div>
-              <div>
-                <label className="label-text">Asignación</label>
-                <select
-                  className="input-field"
+              <div className="space-y-3">
+                <label className="ui-label ml-1">Alumno Asignado</label>
+                <VisualPicker
+                  options={assignmentOptions}
                   value={rc.selectedAssignmentId}
-                  onChange={(event) => rc.setSelectedAssignmentId(event.target.value)}
-                  disabled={!rc.selectedProjectId}
-                >
-                  <option value="">Selecciona una asignación</option>
-                  {rc.assignmentOptions.map((assignment) => (
-                    <option key={assignment.id} value={assignment.id}>
-                      {assignment.studentEmail}
-                    </option>
-                  ))}
-                </select>
+                  onSelect={(id, label) => rc.setSelectedAssignmentId(id)}
+                  placeholder="Selecciona un alumno..."
+                  searchPlaceholder="Buscar por nombre o email..."
+                  className={!rc.selectedProjectId ? 'opacity-50 grayscale pointer-events-none' : ''}
+                />
               </div>
-              <div>
-                <label className="label-text">Entrega</label>
-                <select
-                  className="input-field"
+              <div className="space-y-3">
+                <label className="ui-label ml-1">Versión de Entrega</label>
+                <VisualPicker
+                  options={deliveryOptions}
                   value={rc.selectedDeliveryId}
-                  onChange={(event) => rc.setSelectedDeliveryId(event.target.value)}
-                  disabled={!rc.selectedAssignmentId}
-                >
-                  <option value="">Selecciona una entrega</option>
-                  {rc.deliveryOptions.map((delivery) => (
-                    <option key={delivery.id} value={delivery.id}>
-                      v{delivery.version} · {delivery.status}
-                    </option>
-                  ))}
-                </select>
+                  onSelect={(id, label) => rc.setSelectedDeliveryId(id)}
+                  placeholder="Selecciona versión..."
+                  searchPlaceholder="Buscar versión o estado..."
+                  className={!rc.selectedAssignmentId ? 'opacity-50 grayscale pointer-events-none' : ''}
+                />
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-                  Proyecto actual
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-3xl border border-slate-100 bg-slate-50/50 p-6">
+                <div className="eyebrow mb-3">Contexto Académico</div>
+                <div className="text-base font-bold tracking-tight text-slate-900 mb-2">
+                  {selectedProject?.title ?? "Sin proyecto seleccionado"}
                 </div>
-                <div className="mt-2 text-base font-semibold tracking-tight text-slate-950">
-                  {selectedProject?.title ?? "Sin selección"}
-                </div>
-                <div className="mt-2 text-sm leading-6 text-slate-600">
+                <p className="text-sm leading-relaxed text-slate-600">
                   {selectedProject?.contextAcademico ??
-                    "Selecciona un proyecto para ver su contexto académico y estado operativo."}
-                </div>
+                    "El contexto académico del proyecto define los objetivos y restricciones de la ejecución."}
+                </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-                  Target del runtime
-                </div>
-                <div className="mt-2 text-sm text-slate-700">
-                  <div>
-                    <span className="font-medium text-slate-950">Red workspace:</span>{" "}
-                    {rc.runtimeStatus?.workspaceNetworkName ?? "n/a"}
+              <div className="rounded-3xl border border-slate-100 bg-slate-50/50 p-6">
+                <div className="eyebrow mb-3">Resumen de Destino</div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-500">Red Docker:</span>
+                    <span className="font-bold text-slate-900">{rc.runtimeStatus?.workspaceNetworkName ?? "n/a"}</span>
                   </div>
-                  <div className="mt-1">
-                    <span className="font-medium text-slate-950">Alumno:</span>{" "}
-                    {selectedAssignment?.studentEmail ?? "n/a"}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-500">Alumno:</span>
+                    <span className="font-bold text-slate-900 truncate max-w-[200px]">
+                      {formatStudentName(selectedAssignment?.studentName, selectedAssignment?.studentEmail)}
+                    </span>
                   </div>
-                  <div className="mt-1">
-                    <span className="font-medium text-slate-950">Entrega:</span>{" "}
-                    {selectedDelivery ? `v${selectedDelivery.version} · ${selectedDelivery.status}` : "n/a"}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-500">Entrega:</span>
+                    <span className="font-bold text-brand-maroon">
+                      {selectedDelivery ? `v${selectedDelivery.version} (${selectedDelivery.status})` : "n/a"}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <button
-                className="btn-primary"
-                onClick={() => {
-                  setActiveTab("seguimiento");
-                  setTrackingTab("ejecucion");
-                  void rc.handleStartRun();
-                }}
-                disabled={!rc.selectedDeliveryId || runtimeStatus !== "READY" || rc.busyAction === "run"}
-              >
-                {rc.busyAction === "run" ? (
-                  <RiLoader4Line className="animate-spin" />
-                ) : (
-                  <RiPlayLine />
-                )}
-                Correr ejecución
-              </button>
-              <button
-                className="btn-secondary"
-                onClick={() => void rc.handleReconcile()}
-                disabled={!rc.selectedProjectId || rc.busyAction === "reconcile"}
-              >
-                {rc.busyAction === "reconcile" ? (
-                  <RiLoader4Line className="animate-spin" />
-                ) : (
-                  <RiRefreshLine />
-                )}
-                Preparar/Reintentar runtime
-              </button>
-              <button
-                className="btn-secondary"
-                onClick={() => void rc.handleCancelRun()}
-                disabled={!rc.selectedRunId || !rc.selectedRun || rc.selectedRun.isTerminal || rc.busyAction === "cancel"}
-              >
-                {rc.busyAction === "cancel" ? (
-                  <RiLoader4Line className="animate-spin" />
-                ) : (
-                  <RiStopLine />
-                )}
-                Cancelar run
-              </button>
+            <div className="flex flex-col items-center justify-between gap-6 pt-8 border-t border-slate-100 sm:flex-row">
+              <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                <Button
+                  className="px-10 flex-1 sm:flex-none"
+                  onClick={() => {
+                    setActiveTab("live");
+                    void rc.handleStartRun();
+                  }}
+                  disabled={!rc.selectedDeliveryId || runtimeStatus !== "READY" || rc.busyAction === "run"}
+                  variant="primary"
+                >
+                  {rc.busyAction === "run" ? (
+                    <RiLoader4Line className="animate-spin text-2xl" />
+                  ) : (
+                    <RiPlayLine className="text-2xl" />
+                  )}
+                  Lanzar Run Técnico
+                </Button>
+                <Button
+                  className="px-8 flex-1 sm:flex-none"
+                  onClick={() => void rc.handleReconcile()}
+                  disabled={!rc.selectedProjectId || rc.busyAction === "reconcile"}
+                  variant="secondary"
+                >
+                  {rc.busyAction === "reconcile" ? (
+                    <RiLoader4Line className="animate-spin text-xl" />
+                  ) : (
+                    <RiRefreshLine className="text-xl" />
+                  )}
+                  Preparar Infraestructura
+                </Button>
+              </div>
+
+              {rc.selectedRunId && !rc.selectedRun?.isTerminal && (
+                <Button
+                  className="px-8 w-full sm:w-auto"
+                  onClick={() => void rc.handleCancelRun()}
+                  disabled={rc.busyAction === "cancel"}
+                  variant="danger"
+                >
+                  {rc.busyAction === "cancel" ? (
+                    <RiLoader4Line className="animate-spin text-xl" />
+                  ) : (
+                    <RiStopLine className="text-xl" />
+                  )}
+                  Abortar Run
+                </Button>
+              )}
             </div>
 
-            {runtimeStatus !== "READY" ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                El runtime Docker del proyecto no está listo. Puedes sincronizarlo desde aquí antes de lanzar la ejecución.
+            {runtimeStatus !== "READY" && rc.selectedProjectId ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3 text-sm text-amber-800">
+                <RiServerLine className="text-lg" />
+                <span>La infraestructura Docker no está lista. Pulsa "Preparar Infraestructura" para aprovisionar las redes.</span>
               </div>
             ) : null}
 
             {rc.streamError ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                SSE degradado. Se sigue actualizando por polling: {rc.streamError}
+              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-800">
+                Error en stream SSE: {rc.streamError}. El sistema ha conmutado a modo de actualización manual (polling).
               </div>
             ) : null}
           </div>
         </section>
       ) : null}
 
-      {activeTab === "infraestructura" ? (
-        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="panel-header">
+      {activeTab === "infra" ? (
+        <section className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between gap-4 px-2">
             <div>
-              <h3 className="text-lg font-semibold tracking-tight text-slate-950">
-                Estado del runtime
-              </h3>
-              <p className="section-copy">
-                Redes temporales, contenedores activos y runs vivos del proyecto.
-              </p>
+              <h3 className="text-xl font-bold tracking-tight text-slate-950">Topología de Infraestructura</h3>
+              <p className="text-sm text-slate-500">Redes y contenedores virtualizados asociados al proyecto activo.</p>
             </div>
-            <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-              <RiServerLine />
-              {rc.runtimeStatus?.workspaceNetworkName ?? "sin red"}
+            <div className="flex h-11 items-center gap-2 rounded-2xl bg-slate-100 px-4 py-1 text-xs font-bold text-slate-600">
+              <RiServerLine className="text-lg" />
+              {rc.runtimeStatus?.workspaceNetworkName ?? "Sin red activa"}
             </div>
           </div>
 
-          <div className="space-y-5 p-6">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-                Runs activos
+          <div className="grid gap-6">
+            {activeNetworks.length === 0 ? (
+              <div className="rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-slate-50/50 py-20 px-6 text-center">
+                <RiServerLine className="mx-auto text-5xl text-slate-300 mb-4" />
+                <h5 className="text-lg font-bold text-slate-900">Sin redes detectadas</h5>
+                <p className="text-sm text-slate-500 max-w-sm mx-auto">No hay topologías Docker activas en este momento para el proyecto.</p>
               </div>
-              {activeRuns.length === 0 ? (
-                <p className="mt-3 text-sm text-slate-500">
-                  No hay runs activos para el proyecto seleccionado.
-                </p>
-              ) : (
-                <div className="mt-3 space-y-3">
-                  {activeRuns.map((run) => (
-                    <button
-                      key={run.buildRunId}
-                      className="flex w-full items-start justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-300"
-                      onClick={() => {
-                        rc.setSelectedRunId(run.buildRunId);
-                        setActiveTab("seguimiento");
-                        setTrackingTab("ejecucion");
-                      }}
-                    >
-                      <div>
-                        <div className="text-sm font-medium text-slate-950">
-                          {run.buildRunId.slice(0, 8)} · {run.status}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          red {run.executionNetworkName ?? "n/a"} · contenedor {run.primaryContainerId ?? "resolviendo"}
-                        </div>
-                      </div>
-                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
-                        {run.activeStage ?? "sin etapa"}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            ) : (
+              activeNetworks.map((network) => (
+                <NetworkCard key={network.name} network={network} />
+              ))
+            )}
+          </div>
 
-            <div className="space-y-3">
-              {activeNetworks.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                  Sin redes vivas para este proyecto.
-                </div>
-              ) : (
-                activeNetworks.map((network) => (
-                  <NetworkCard key={network.name} network={network} />
-                ))
-              )}
+          {activeRuns.length > 0 && (
+            <div className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm">
+              <h4 className="eyebrow mb-6">Runs Activos en Tiempo Real</h4>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {activeRuns.map((run) => (
+                  <button
+                    key={run.buildRunId}
+                    className="flex flex-col items-start p-5 rounded-3xl border border-slate-100 bg-slate-50/50 transition-all hover:bg-white hover:shadow-lg hover:shadow-slate-200/50 text-left"
+                    onClick={() => {
+                      rc.setSelectedRunId(run.buildRunId);
+                      setActiveTab("live");
+                    }}
+                  >
+                    <div className="flex w-full items-center justify-between mb-3">
+                      <span className="text-xs font-bold text-slate-900 font-mono">{run.buildRunId.slice(0, 8)}</span>
+                      <span className="rounded-full bg-brand-gold/10 px-2.5 py-0.5 ui-label text-brand-gold-dark">
+                        {run.status}
+                      </span>
+                    </div>
+                    <div className="eyebrow mb-4">
+                      {run.activeStage || "Preparando etapa..." }
+                    </div>
+                    <div className="mt-auto pt-4 border-t border-slate-100 w-full text-[10px] text-slate-500 flex items-center justify-between">
+                      <span>Red: {run.executionNetworkName?.slice(0, 15) || 'n/a'}</span>
+                      <RiArrowRightUpLine className="text-lg text-slate-300" />
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
+        </section>
+      ) : null}
+
+      {activeTab === "history" ? (
+        <section className="animate-fade-in">
+          <div className="mb-6 px-2">
+            <h3 className="text-xl font-bold tracking-tight text-slate-950">Historial de Ejecuciones</h3>
+            <p className="text-sm text-slate-500">Registros históricos de todos los runs realizados para esta entrega.</p>
+          </div>
+          <div className="rounded-[2.5rem] border border-slate-200 bg-white overflow-hidden shadow-sm">
+            <BuilderRunsTable
+              runs={runs}
+              busyAction={rc.busyAction}
+              selectedRunId={rc.selectedRunId}
+              onSelectRun={(id) => {
+                rc.setSelectedRunId(id);
+                setActiveTab("live");
+              }}
+            />
           </div>
         </section>
       ) : null}
 
-      {activeTab === "seguimiento" ? (
-      <section className="space-y-5">
-        <div className="flex flex-wrap gap-1 border-b border-slate-200">
-          {[
-            { id: "historial", label: "Historial de ejecuciones" },
-            { id: "ejecucion", label: "Ejecución en vivo" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              className={`px-4 py-3 text-sm font-semibold transition ${
-                trackingTab === tab.id
-                  ? "border-b-2 border-slate-900 text-slate-950"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-              onClick={() => setTrackingTab(tab.id as RuntimeTrackingTab)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {trackingTab === "historial" ? (
-          <BuilderRunsTable
-            runs={runs}
-            busyAction={rc.busyAction}
-            selectedRunId={rc.selectedRunId}
-            onSelectRun={rc.setSelectedRunId}
-          />
-        ) : (
-          <BuilderLiveRunPane
-            selectedRun={rc.selectedRun}
-            liveEvents={rc.liveEvents}
-            streamState={rc.streamState}
-            onRefresh={() => void rc.loadRuns()}
-            onCancel={() => void rc.handleCancelRun()}
-            busyAction={rc.busyAction}
-          />
-        )}
-      </section>
+      {activeTab === "live" ? (
+        <section className="animate-fade-in">
+          <div className="mb-6 px-2 flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold tracking-tight text-slate-950">Ejecución en Vivo</h3>
+              <p className="text-sm text-slate-500">Monitorización en tiempo real vía SSE.</p>
+            </div>
+            {rc.selectedRunId && (
+               <div className="text-xs font-bold text-brand-maroon bg-brand-maroon/5 px-3 py-1.5 rounded-xl border border-brand-maroon/10">
+                 Run: {rc.selectedRunId.slice(0, 12)}
+               </div>
+            )}
+          </div>
+          <div className="rounded-[2.5rem] border border-slate-200 bg-white overflow-hidden shadow-sm min-h-[500px]">
+            <BuilderLiveRunPane
+              selectedRun={rc.selectedRun}
+              liveEvents={rc.liveEvents}
+              streamState={rc.streamState}
+              onRefresh={() => void rc.loadRuns()}
+              onCancel={() => void rc.handleCancelRun()}
+              busyAction={rc.busyAction}
+            />
+          </div>
+        </section>
       ) : null}
     </div>
   );

@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { DangerConfirmModal } from "../shared/components/DangerConfirmModal";
+import { CodePreviewModal } from "../shared/components/CodePreviewModal";
 import type {
   ProjectStatus,
   SessionRecord,
@@ -8,31 +9,53 @@ import { ProgressDashboard } from "./ProgressDashboard";
 import { useProjectManagement } from "./hooks/useProjectManagement";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
 import {
+  RiAddLine,
+  RiDeleteBinLine,
   RiArrowRightSLine,
   RiBarChart2Line,
   RiCalendarScheduleLine,
-  RiFileSettingsLine,
-  RiFolderChartLine,
-  RiFolderUploadLine,
+  RiTeamLine,
+  RiRefreshLine,
+  RiSearchLine,
+  RiUserAddLine,
+  RiTeamFill,
+  RiUser3Fill,
+  RiFileLine,
+  RiCloseLine,
+  RiMore2Fill,
+  RiCheckFill,
+  RiSparkling2Line,
+  RiPieChart2Line,
+  RiSettings4Line,
+  RiTestTubeLine,
+  RiDeleteBin6Line,
+  RiGroupLine,
+  RiDraftLine,
+  RiFileCodeLine,
+  RiUserFollowFill,
+  RiInformationFill,
   RiFoldersLine,
   RiLayoutGridFill,
   RiLoader4Line,
-  RiSearchLine,
-  RiSettings4Line,
-  RiSparkling2Line,
-  RiStackFill,
-  RiTeamFill,
-  RiTimeLine,
   RiFolderAddLine,
-  RiDeleteBin6Line,
-  RiRefreshLine,
-  RiTestTubeLine,
+  RiFileDownloadLine,
+  RiEyeLine,
+  RiTimeLine,
+  RiStackFill,
+  RiFolderChartLine,
+  RiFolderUploadLine,
 } from "react-icons/ri";
 import { EmptyState } from "../shared/components/EmptyState";
 import {
   ProjectAssignmentManager,
 } from "./components/ProjectSubPanels";
+import { formatBytes } from "../shared/utils/format";
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
+import { MetricCard } from "../shared/components/MetricCard";
+import { PageHeader } from "../shared/components/ui/PageHeader";
+import { VisualPicker } from "../shared/components/ui/VisualPicker";
+import { Button } from "../shared/components/ui/Button";
+import { Tabs } from "../shared/components/ui/Tabs";
 
 interface TeacherProjectsPanelProps {
   session: SessionRecord | null;
@@ -48,9 +71,9 @@ const STATUS_LABEL: Record<ProjectStatus, string> = {
 };
 
 const STATUS_STYLE: Record<ProjectStatus, string> = {
-  DRAFT: "border-slate-200 bg-slate-100 text-slate-700",
-  ACTIVE: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  ARCHIVED: "border-amber-200 bg-amber-50 text-amber-700",
+  DRAFT: "border-brand-blue/20 bg-brand-blue/5 text-brand-blue",
+  ACTIVE: "border-brand-maroon/20 bg-brand-maroon/5 text-brand-maroon",
+  ARCHIVED: "border-brand-gold/20 bg-brand-gold/5 text-brand-gold-dark",
 };
 
 function formatOptionalDate(value?: string | null): string {
@@ -60,7 +83,7 @@ function formatOptionalDate(value?: string | null): string {
 function ProjectStatusPill({ status }: { status: ProjectStatus }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${STATUS_STYLE[status]}`}
+      className={`inline-flex items-center rounded-full border px-3 py-1 ui-label ${STATUS_STYLE[status]}`}
     >
       {STATUS_LABEL[status]}
     </span>
@@ -91,115 +114,100 @@ function ProjectOverview({
   return (
     <div className="space-y-6">
       {/* Las métricas y secciones principales del proyecto */}
-      <section className="grid gap-4 lg:grid-cols-4">
-        {[
-          {
-            label: "Asignados",
-            value: assignmentCount,
-            helper: "Alumnos activos en el proyecto",
-            icon: <RiTeamFill className="text-lg" />,
-          },
-          {
-            label: "Preparados",
-            value: preparedStudentCount,
-            helper: "Selecciones o emails listos para asignar",
-            icon: <RiSparkling2Line className="text-lg" />,
-          },
-          {
-            label: "Apertura",
-            value: formatOptionalDate(project.opensAt),
-            helper: "Inicio del periodo de entrega",
-            icon: <RiCalendarScheduleLine className="text-lg" />,
-          },
-          {
-            label: "Cierre",
-            value: formatOptionalDate(project.closesAt),
-            helper: "Las entregas tardías quedan marcadas",
-            icon: <RiTimeLine className="text-lg" />,
-          },
-        ].map((metric) => (
-          <article
-            key={metric.label}
-            className="rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <div className="flex items-center justify-between gap-3 text-slate-400">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em]">
-                {metric.label}
-              </span>
-              {metric.icon}
-            </div>
-            <div className="mt-3 text-lg font-semibold tracking-tight text-slate-950">
-              {metric.value}
-            </div>
-            <p className="mt-2 text-sm leading-5 text-slate-500">{metric.helper}</p>
-          </article>
-        ))}
+      <section className="grid gap-5 lg:grid-cols-4">
+        <MetricCard
+          label="Asignados"
+          value={assignmentCount}
+          helper="Alumnos activos"
+          icon={<RiTeamFill />}
+          variant="info"
+        />
+        <MetricCard
+          label="Preparados"
+          value={preparedStudentCount}
+          helper="Listos para asignar"
+          icon={<RiSparkling2Line />}
+          variant="default"
+        />
+        <MetricCard
+          label="Apertura"
+          value={formatOptionalDate(project.opensAt).split(',')[0]}
+          helper="Inicio de entregas"
+          icon={<RiCalendarScheduleLine />}
+          variant="default"
+        />
+        <MetricCard
+          label="Cierre"
+          value={formatOptionalDate(project.closesAt).split(',')[0]}
+          helper="Fin de entregas"
+          icon={<RiTimeLine />}
+          variant="warning"
+        />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h4 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Compatibilidad Python-first
-              </h4>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                El builder está optimizado para proyectos Python. Si defines el tipo esperado, el profesorado y el alumno entienden mejor el contrato técnico.
-              </p>
+        <article className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm lg:col-span-4">
+          <div className="flex flex-col xl:flex-row gap-8">
+            {/* Operational Actions */}
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h4 className="eyebrow">
+                    Operaciones de Gestión
+                  </h4>
+                  <h3 className="mt-2 text-xl font-bold text-slate-900">Control Operativo</h3>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-2xl text-slate-300">
+                  <RiSettings4Line />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <button 
+                  className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-maroon/20 hover:text-brand-maroon hover:shadow-md transition-all" 
+                  onClick={onRefreshAssignments}
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-maroon group-hover/btn:border-brand-maroon/10 shadow-sm">
+                    <RiRefreshLine className="text-lg" />
+                  </div>
+                  <span>Sincronizar asignaciones</span>
+                </button>
+
+                <button 
+                  className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-blue/20 hover:text-brand-blue hover:shadow-md transition-all" 
+                  onClick={onFetchTestSuite}
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-blue group-hover/btn:border-brand-blue/10 shadow-sm">
+                    <RiTestTubeLine className="text-lg" />
+                  </div>
+                  <span>Recuperar suite docente</span>
+                </button>
+
+                <button 
+                  className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-blue/20 hover:text-brand-blue hover:shadow-md transition-all" 
+                  onClick={onOpenMonitoring}
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-blue group-hover/btn:border-brand-blue/10 shadow-sm">
+                    <RiBarChart2Line className="text-lg" />
+                  </div>
+                  <span>Ver seguimiento</span>
+                </button>
+              </div>
             </div>
-            <RiFolderChartLine className="text-2xl text-slate-300" />
-          </div>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {["CLI", "Flask", "FastAPI", "Django simple", "Worker batch", "pyproject.toml"].map((item) => (
-              <span
-                key={item}
-                className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                  project.expectedType?.toLowerCase().includes(item.toLowerCase())
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-slate-50 text-slate-700"
-                }`}
+
+            {/* Right Side: Danger actions */}
+            <div className="xl:w-[240px] shrink-0 xl:border-l xl:border-slate-100 xl:pl-8 flex items-end">
+              <button 
+                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-rose-50 border border-rose-100 text-sm font-bold text-rose-600 hover:bg-rose-600 hover:text-white hover:shadow-lg hover:shadow-rose-500/20 transition-all" 
+                onClick={onDelete}
               >
-                {item}
-              </span>
-            ))}
-          </div>
-          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-            <strong className="text-slate-900">Tipo esperado:</strong>{" "}
-            {project.expectedType || "Aún no definido. Usa Ajustes para describirlo y reducir ambigüedad en las evaluaciones."}
-          </div>
-          <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 text-sm leading-6 text-indigo-900">
-            La suite docente sigue ejecutándose sobre `pytest` cuando existe, así que este panel deja explícito que la plataforma es Python-first y no promete compatibilidad universal.
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-rose-500 shadow-sm group-hover/btn:bg-white/20 group-hover/btn:text-white transition-colors">
+                  <RiDeleteBin6Line className="text-lg" />
+                </div>
+                <span>Eliminar proyecto</span>
+              </button>
+            </div>
           </div>
         </article>
-
-        <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-          <h4 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Acciones rápidas
-          </h4>
-          <div className="mt-5 space-y-3">
-            <button className="btn-secondary w-full justify-start" onClick={onRefreshAssignments}>
-              <RiRefreshLine />
-              Refrescar asignaciones
-            </button>
-            <button className="btn-secondary w-full justify-start" onClick={onFetchTestSuite}>
-              <RiTestTubeLine />
-              Recuperar suite docente
-            </button>
-            <button className="btn-secondary w-full justify-start" onClick={onOpenMonitoring}>
-              <RiBarChart2Line />
-              Abrir gradebook y seguimiento
-            </button>
-            <button className="btn-danger w-full justify-start" onClick={onDelete}>
-              <RiDeleteBin6Line />
-              Eliminar proyecto
-            </button>
-          </div>
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-            <div><strong className="text-slate-900">Ventana de entrega:</strong> {formatOptionalDate(project.opensAt)} → {formatOptionalDate(project.closesAt)}</div>
-            <div className="mt-2"><strong className="text-slate-900">Rúbrica:</strong> {project.rubricInstructions || "Pendiente de definición en ajustes."}</div>
-          </div>
-        </article>
-      </section>
     </div>
   );
 }
@@ -209,16 +217,21 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
   const { selection, setProject, clearWorkspace } = useWorkspace();
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('catalog');
   const [detailMode, setDetailMode] = useState<DetailMode>("selected-project");
+  const [isUploadingSuite, setIsUploadingSuite] = useState(false);
   const [assignmentSearch, setAssignmentSearch] = useState("");
   const [projectSearch, setProjectSearch] = useState("");
   const deferredProjectSearch = useDeferredValue(projectSearch);
+
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewFiles, setPreviewFiles] = useState<Array<{ path: string, content: string }>>([]);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [selectedPreviewFile, setSelectedPreviewFile] = useState<number>(0);
 
   useNoticeToasts(
     [pc.projectNotice, pc.editorNotice, pc.assignmentNotice, pc.suiteNotice],
     "Proyectos",
   );
 
-  // Hydrate from context
   useEffect(() => {
     if (selection.projectId && pc.projects?.data) {
       if (pc.selectedProjectId !== selection.projectId) {
@@ -230,7 +243,6 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
     }
   }, [selection.projectId, pc.projects?.data]);
 
-  // Sync context when local selection changes
   useEffect(() => {
     if (pc.selectedProject && pc.selectedProject.id !== selection.projectId) {
       setProject(pc.selectedProject.id, pc.selectedProject.title);
@@ -289,63 +301,110 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
     setActiveSubTab(nextTab);
   };
 
+  const handleDownloadSuite = async () => {
+    if (!pc.testSuiteResult || typeof pc.testSuiteResult === 'string' || !('id' in pc.testSuiteResult)) return;
+    try {
+      const { storageApi } = await import("../shared/api/services");
+      const { downloadUrl } = await storageApi.createDownloadUrl(pc.testSuiteResult.id);
+
+      // Creamos un link temporal para forzar la descarga con nombre
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', pc.testSuiteResult.logicalName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error al descargar la suite:", error);
+    }
+  };
+
+  const handleOpenPreview = async () => {
+    if (!pc.selectedProjectId) return;
+    setIsLoadingPreview(true);
+    setIsPreviewModalOpen(true);
+    try {
+      const { projectsApi } = await import("../shared/api/services");
+      const data = await projectsApi.previewTestSuite(pc.selectedProjectId);
+      setPreviewFiles(data);
+      if (data.length > 0) setSelectedPreviewFile(0);
+    } catch (error) {
+      console.error("Error al cargar preview:", error);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  const handleFileChange = async (event: any) => {
+    const file = event.target.files?.[0];
+    if (!file || !pc.selectedProjectId) return;
+
+    setIsUploadingSuite(true);
+    try {
+      await pc.handleUploadTestSuite(file);
+    } finally {
+      setIsUploadingSuite(false);
+      if (event.target) event.target.value = "";
+    }
+  };
+
   const selectedCanvasProject =
     detailMode === "new-project" ? null : pc.selectedProject;
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p className="eyebrow">Panel docente</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-            Proyectos con contexto, seguimiento y acciones en un único lienzo.
-          </h2>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-            El catálogo, la asignación, el gradebook y los ajustes viven ahora dentro del proyecto seleccionado para evitar doble navegación y estados muertos.
-          </p>
-        </div>
-        <button className="btn-primary" onClick={openNewProject}>
-          <RiFolderAddLine />
-          Nuevo proyecto
-        </button>
-      </header>
+      <PageHeader 
+        title="Gestión de Proyectos"
+        subtitle="Gestión estratégica de proyectos académicos: orquestación de asignaciones, seguimiento de progreso y auditoría de calidad."
+        icon={<RiFoldersLine />}
+        badge={projects.length.toString()}
+        actions={
+          <Button variant="primary" onClick={openNewProject}>
+            <RiFolderAddLine /> Nuevo Proyecto
+          </Button>
+        }
+      />
 
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
+        <aside className="flex flex-col h-full rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between gap-3 mb-6">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Listado
-              </p>
-              <h3 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
+              <p className="eyebrow !mb-1">Catálogo</p>
+              <h3 className="text-xl font-bold tracking-tight text-slate-950">
                 Proyectos
               </h3>
             </div>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+            <span className="flex h-8 min-w-[2rem] items-center justify-center rounded-full bg-slate-900 px-2 text-[11px] font-bold text-white shadow-lg shadow-slate-900/10">
               {projects.length}
             </span>
           </div>
 
-          <div className="mt-5 space-y-3">
-            <label className="relative block">
-              <RiSearchLine className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="space-y-4">
+            <div className="group relative">
+              <RiSearchLine className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg transition-colors group-focus-within:text-brand-maroon" />
               <input
-                className="input-field pl-10"
-                placeholder="Busca por título, contexto o stack"
+                className="input-field pl-11 h-12 bg-slate-50 border-transparent focus:bg-white focus:border-brand-maroon/30 focus:ring-4 focus:ring-brand-maroon/5 transition-all"
+                placeholder="Buscar proyecto..."
                 value={projectSearch}
                 onChange={(event) => setProjectSearch(event.target.value)}
               />
-            </label>
-            <button className="btn-secondary w-full justify-center" onClick={() => void pc.refreshProjects("Listado de proyectos actualizado.")}>
+            </div>
+            <Button
+              variant="secondary"
+              className="w-full justify-center"
+              onClick={() => void pc.refreshProjects("Catálogo actualizado.")}
+              disabled={pc.loadingProjects}
+            >
               {pc.loadingProjects ? <RiLoader4Line className="animate-spin" /> : <RiRefreshLine />}
-              Refrescar catálogo
-            </button>
+              Actualizar catálogo
+            </Button>
           </div>
 
-          <div className="mt-5 space-y-3">
+          <div className="mt-8 flex-1 overflow-y-auto space-y-3 pr-1 -mr-1 custom-scrollbar">
             {visibleProjects.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                No hay proyectos que coincidan con el filtro actual.
+              <div className="rounded-[2rem] border-2 border-dashed border-slate-100 bg-slate-50/50 px-4 py-12 text-center">
+                <RiFoldersLine className="mx-auto text-3xl text-slate-200 mb-3" />
+                <p className="text-xs font-medium text-slate-400 italic">No se encontraron proyectos</p>
               </div>
             ) : (
               visibleProjects.map((project) => {
@@ -356,44 +415,75 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 return (
                   <button
                     key={project.id}
-                    className={`w-full rounded-[1.6rem] border px-4 py-4 text-left transition ${
-                      isSelected
-                        ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                    }`}
+                    className={`group w-full rounded-[2rem] border p-5 text-left transition-all duration-300 relative overflow-hidden ${isSelected
+                      ? "border-slate-900 bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-[1.02] z-10"
+                      : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50 hover:shadow-md active:scale-95"
+                      }`}
                     onClick={() => openProject(project.id)}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    {isSelected && (
+                      <div className="absolute top-0 right-0 p-1 opacity-20">
+                        <RiFoldersLine className="text-4xl -rotate-12 translate-x-2 -translate-y-2" />
+                      </div>
+                    )}
+
+                    <div className="flex items-start justify-between gap-3 relative">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <RiFoldersLine className={isSelected ? "text-white/80" : "text-slate-400"} />
-                          <span className="line-clamp-2 text-sm font-semibold tracking-tight">
+                        <div className="flex items-center gap-2 mb-2">
+                          <RiFoldersLine className={isSelected ? "text-brand-gold" : "text-slate-300 group-hover:text-slate-400"} />
+                          <span className="line-clamp-1 text-sm font-bold tracking-tight">
                             {project.title}
                           </span>
                         </div>
-                        <div className={`mt-2 text-xs leading-5 ${isSelected ? "text-slate-200" : "text-slate-500"}`}>
-                          {project.expectedType || "Proyecto sin stack definido"}
+                        <div className={`ui-label leading-relaxed line-clamp-1 ${isSelected ? "text-slate-400" : "text-slate-500"}`}>
+                          {project.expectedType || "Sin stack definido"}
                         </div>
                       </div>
-                      <RiArrowRightSLine className={isSelected ? "text-white/60" : "text-slate-300"} />
+                      <RiArrowRightSLine className={`text-lg transition-transform ${isSelected ? "text-white/40 translate-x-1" : "text-slate-200 group-hover:text-slate-400"}`} />
                     </div>
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-                          isSelected
-                            ? "border-white/15 bg-white/10 text-white"
+
+                    <div className="mt-5 flex items-center justify-between relative">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`rounded-full px-3 py-1 ui-label ${isSelected
+                            ? "bg-white/10 text-white/90 border border-white/10"
                             : STATUS_STYLE[project.status]
-                        }`}
-                      >
-                        {STATUS_LABEL[project.status]}
-                      </span>
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-[11px] ${
-                          isSelected ? "bg-white/10 text-white/80" : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {project.maxDeliveriesPerStudent} intentos
-                      </span>
+                            }`}
+                        >
+                          {STATUS_LABEL[project.status]}
+                        </span>
+
+                        {project.teachers && project.teachers.length > 0 && (
+                          <div className="flex -space-x-1.5">
+                            {project.teachers.slice(0, 3).map((teacher) => (
+                              <div
+                                key={teacher.id}
+                                className={`h-5 w-5 rounded-full border-2 flex items-center justify-center text-[7px] font-bold uppercase transition-transform hover:scale-110 hover:z-20 ${isSelected ? 'border-slate-800 bg-slate-700 text-brand-blue-light' : 'border-white bg-brand-blue/5 text-brand-blue'
+                                  }`}
+                                title={`${teacher.firstName} ${teacher.lastName}`}
+                              >
+                                {teacher.firstName[0]}{teacher.lastName[0]}
+                              </div>
+                            ))}
+                            {project.teachers.length > 3 && (
+                              <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center text-[7px] font-bold ${isSelected ? 'border-slate-800 bg-slate-700 text-slate-400' : 'border-white bg-slate-50 text-slate-400'
+                                }`}>
+                                +{project.teachers.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <RiTeamFill className={isSelected ? "text-white/20" : "text-slate-200"} />
+                        <span
+                          className={`ui-label ${isSelected ? "text-slate-500" : "text-slate-400"
+                            }`}
+                        >
+                          {project.maxDeliveriesPerStudent} {project.maxDeliveriesPerStudent === 1 ? 'intento' : 'intentos'}
+                        </span>
+                      </div>
                     </div>
                   </button>
                 );
@@ -407,23 +497,23 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
             <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
               <div className="flex flex-col gap-3 border-b border-slate-100 pb-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="eyebrow">Nuevo proyecto</p>
+                  <p className="eyebrow">Definición de Proyecto</p>
                   <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                    Crea una práctica sin salir del panel
+                    Parametrización de Práctica Académica
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
                     Define el contrato académico, la ventana temporal y el tipo esperado para que el builder y el seguimiento sean coherentes desde el primer momento.
                   </p>
                 </div>
-                <button
-                  className="btn-secondary"
+                <Button
+                  variant="secondary"
                   onClick={() => {
                     setDetailMode("selected-project");
                     setActiveSubTab("catalog");
                   }}
                 >
                   Volver al lienzo
-                </button>
+                </Button>
               </div>
 
               <form className="mt-8 space-y-6" onSubmit={pc.handleCreate}>
@@ -510,63 +600,78 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
-                  <button type="submit" className="btn-primary">
+                  <Button type="submit" variant="primary">
                     <RiFolderAddLine />
                     Crear proyecto
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="btn-secondary"
+                    variant="secondary"
                     onClick={() => {
                       setDetailMode("selected-project");
                       setActiveSubTab("catalog");
                     }}
                   >
                     Cancelar
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
           ) : selectedCanvasProject ? (
             <>
-              <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <p className="eyebrow">Ficha de proyecto</p>
+              <div className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-3 mb-4">
+                      <p className="eyebrow">Perfil del Proyecto Académico</p>
                       <ProjectStatusPill status={selectedCanvasProject.status} />
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                        {selectedCanvasProject.maxDeliveriesPerStudent} intentos por alumno
+                      <span className="rounded-full bg-slate-50 border border-slate-200 px-3 py-1 ui-label text-slate-500">
+                        {selectedCanvasProject.maxDeliveriesPerStudent} Intentos
                       </span>
                     </div>
-                    <h3 className="mt-2 truncate text-3xl font-semibold tracking-tight text-slate-950">
-                      {selectedCanvasProject.title}
-                    </h3>
-                    <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-                      {selectedCanvasProject.contextAcademico || "Define aquí el contexto académico, objetivos y reglas del trabajo para que el panel funcione como ficha operativa del proyecto."}
+                    <div className="flex items-center justify-between gap-4">
+                      <h3 className="truncate text-4xl font-bold tracking-tight text-slate-950">
+                        {selectedCanvasProject.title}
+                      </h3>
+
+                      {selectedCanvasProject.teachers && selectedCanvasProject.teachers.length > 0 && (
+                        <div className="flex flex-col items-center gap-3 shrink-0">
+                          <div className="flex -space-x-3">
+                            {selectedCanvasProject.teachers.map((teacher) => (
+                              <div
+                                key={teacher.id}
+                                className="h-10 w-10 rounded-full border-4 border-white bg-brand-blue/10 flex items-center justify-center text-xs font-bold text-brand-blue uppercase shadow-sm"
+                                title={`${teacher.firstName} ${teacher.lastName}`}
+                              >
+                                {teacher.firstName[0]}{teacher.lastName[0]}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="hidden sm:block text-center">
+                            <p className="ui-label text-slate-400 mb-0.5">Propiedad</p>
+                            <p className="text-xs font-medium text-slate-600">
+                              {selectedCanvasProject.teachers.map(t => t.firstName).join(', ')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-600">
+                      {selectedCanvasProject.contextAcademico || "Sin contexto académico definido."}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { id: "catalog", label: "Resumen", icon: <RiLayoutGridFill /> },
-                      { id: "assignments", label: "Alumnos", icon: <RiTeamFill /> },
-                      { id: "monitoring", label: "Seguimiento", icon: <RiBarChart2Line /> },
-                      { id: "config", label: "Ajustes", icon: <RiFileSettingsLine /> },
-                    ].map((tab) => (
-                      <button
-                        key={tab.id}
-                        className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-                          activeSubTab === tab.id
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        }`}
-                        onClick={() => setActiveSubTab(tab.id as SubTab)}
-                      >
-                        {tab.icon}
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
+
+                  <Tabs 
+                    tabs={[
+                      { id: "catalog", label: "Resumen", icon: RiLayoutGridFill },
+                      { id: "assignments", label: "Alumnos", icon: RiTeamFill },
+                      { id: "monitoring", label: "Seguimiento", icon: RiBarChart2Line },
+                      { id: "config", label: "Ajustes", icon: RiSettings4Line },
+                    ]}
+                    activeTab={activeSubTab}
+                    onTabChange={(id) => setActiveSubTab(id as SubTab)}
+                    variant="primary"
+                  />
                 </div>
               </div>
 
@@ -592,48 +697,32 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                   project={selectedCanvasProject}
                   students={pc.students}
                   groups={pc.groups}
-                  focusedGroup={pc.focusedGroup}
-                  groupEnrollments={pc.groupEnrollments ?? []}
                   assignments={pc.assignmentsResult ?? []}
                   selectedStudentIds={pc.selectedStudentIds}
-                  bulkStudentEmails={pc.bulkStudentEmails}
-                  groupStudentSearch={pc.groupStudentSearch}
-                  selectedGroupIds={pc.selectedGroupIds}
-                  selectedGroupStudentIds={pc.selectedGroupStudentIds}
-                  bulkGroupStudentEmails={pc.bulkGroupStudentEmails}
-                  groupForm={pc.groupForm}
-                  preparedStudentCount={preparedStudentCount}
                   searchTerm={assignmentSearch}
                   loadingGroups={pc.loadingGroups}
+                  focusedGroupId={pc.focusedGroupId}
+                  onFocusedGroupChange={pc.setFocusedGroupId}
                   assignmentBusy={pc.assignmentBusy}
                   onSearchChange={setAssignmentSearch}
-                  onGroupStudentSearchChange={pc.setGroupStudentSearch}
-                  onBulkEmailChange={pc.setBulkStudentEmails}
-                  onBulkGroupEmailChange={pc.setBulkGroupStudentEmails}
                   onImportCsvFile={(file) => void pc.handleBulkEmailImport(file)}
-                  onImportGroupCsvFile={(file) => void pc.handleGroupBulkEmailImport(file)}
                   onSelectionChange={pc.setSelectedStudentIds}
-                  onGroupSelectionChange={pc.setSelectedGroupIds}
-                  onFocusedGroupChange={pc.setFocusedGroupId}
-                  onGroupStudentSelectionChange={pc.setSelectedGroupStudentIds}
-                  onGroupFormChange={(patch) =>
-                    pc.setGroupForm((current) => ({ ...current, ...patch }))
-                  }
-                  onCreateGroup={() => void pc.handleCreateGroup()}
                   onAssignSelected={() => void pc.handleAssignStudents()}
-                  onAssignGroups={() => void pc.handleAssignGroups()}
-                  onEnrollGroupStudents={() => void pc.handleEnrollGroupStudents()}
                   onRefreshGroups={() => void pc.refreshGroups()}
-                  onRefreshGroupEnrollments={() => void pc.refreshGroupEnrollments()}
                   onRefreshAssignments={() => void pc.refreshAssignments()}
-                  onRevokeGroupEnrollment={(enrollmentId) =>
-                    void pc.handleRevokeGroupEnrollment(enrollmentId)
-                  }
                   onRevokeAssignment={(assignmentId, studentId) =>
                     void pc.handleRevokeAssignment(assignmentId, studentId)
                   }
+                  onAssignGroups={(groupIds) => {
+                    pc.setSelectedGroupIds(groupIds);
+                    void pc.handleAssignGroups();
+                  }}
                 />
               ) : null}
+
+
+
+
 
               {activeSubTab === "monitoring" ? (
                 <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
@@ -646,117 +735,317 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
               ) : null}
 
               {activeSubTab === "config" ? (
-                <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-                  <div className="border-b border-slate-100 pb-6">
-                    <p className="eyebrow">Configuración</p>
-                    <h4 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                      Ajustes de {selectedCanvasProject.title}
-                    </h4>
-                  </div>
-                  <form className="mt-8 space-y-6" onSubmit={pc.handleUpdate}>
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                      <div>
-                        <label className="label-text">Título del proyecto</label>
+                <div className="space-y-8 animate-fade-in">
+                  <form className="space-y-8" onSubmit={pc.handleUpdate}>
+                    {/* Tarjeta: Ajustes Generales */}
+                    <div className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm">
+                      <div className="flex items-center gap-4 mb-8">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-maroon/5 text-brand-maroon text-xl">
+                          <RiSettings4Line />
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-bold tracking-tight text-slate-950">Ajustes Generales</h4>
+                          <p className="text-sm text-slate-500">Identidad, estado y contexto técnico del proyecto.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="ui-label">Título del proyecto</label>
+                          <input
+                            className="input-field h-12"
+                            required
+                            value={pc.editForm.title}
+                            onChange={e => pc.setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="ui-label">Estado operativo</label>
+                          <select
+                            className="input-field h-12"
+                            value={pc.editForm.status}
+                            onChange={e => pc.setEditForm(prev => ({ ...prev, status: e.target.value as ProjectStatus }))}
+                          >
+                            <option value="DRAFT">BORRADOR (No visible para alumnos)</option>
+                            <option value="ACTIVE">ACTIVO (Visible y entregable)</option>
+                            <option value="ARCHIVED">ARCHIVADO (Solo lectura)</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2 lg:col-span-2">
+                          <label className="ui-label">Contexto académico y objetivos</label>
+                          <textarea
+                            className="input-field min-h-[120px] py-4"
+                            placeholder="Describe qué deben aprender y entregar los alumnos..."
+                            value={pc.editForm.contextAcademico}
+                            onChange={e => pc.setEditForm(prev => ({ ...prev, contextAcademico: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="ui-label">Tipo de stack esperado</label>
+                          <input
+                            className="input-field h-12"
+                            placeholder="Ej. FastAPI + PostgreSQL"
+                            value={pc.editForm.expectedType}
+                            onChange={e => pc.setEditForm(prev => ({ ...prev, expectedType: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Intentos por alumno</label>
+                          <input
+                            type="number"
+                            min="1"
+                            className="input-field h-12"
+                            value={pc.editForm.maxDeliveriesPerStudent}
+                            onChange={e => pc.setEditForm(prev => ({ ...prev, maxDeliveriesPerStudent: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tarjeta: Ventana Temporal y Rúbrica */}
+                    <div className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm">
+                      <div className="flex items-center gap-4 mb-8">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 text-xl">
+                          <RiCalendarScheduleLine />
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-bold tracking-tight text-slate-950">Plazos y Evaluación</h4>
+                          <p className="text-sm text-slate-500">Define cuándo se entrega y bajo qué criterios se califica.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Apertura de entregas</label>
+                          <input
+                            type="datetime-local"
+                            className="input-field h-12"
+                            value={pc.editForm.opensAt}
+                            onChange={e => pc.setEditForm(prev => ({ ...prev, opensAt: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Cierre de entregas</label>
+                          <input
+                            type="datetime-local"
+                            className="input-field h-12"
+                            value={pc.editForm.closesAt}
+                            onChange={e => pc.setEditForm(prev => ({ ...prev, closesAt: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2 lg:col-span-2">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Instrucciones de la rúbrica</label>
+                          <textarea
+                            className="input-field min-h-[140px] py-4"
+                            placeholder="Criterios de evaluación, penalizaciones, etc."
+                            value={pc.editForm.rubricInstructions}
+                            onChange={e => pc.setEditForm(prev => ({ ...prev, rubricInstructions: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tarjeta: Equipo Docente */}
+                    <div className="rounded-[2.5rem] border border-slate-200 bg-white overflow-hidden shadow-sm">
+                      <div className="bg-white px-8 pt-8">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-blue/5 text-brand-blue">
+                            <RiTeamFill className="text-xl" />
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-bold text-slate-900">Equipo Docente</h4>
+                            <p className="text-xs text-slate-500">Profesores con permisos administrativos.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-8">
+                        <div className="space-y-6">
+                          {/* Add Teacher Selection */}
+                          <div className="flex flex-col md:flex-row gap-4 items-end">
+                            <div className="flex-1 w-full">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">
+                                Añadir Colaborador
+                              </label>
+                              <VisualPicker
+                                options={pc.allTeachers
+                                  .filter(t => !selectedCanvasProject.teachers?.some(st => st.id === t.id))
+                                  .map(teacher => ({
+                                    id: teacher.id,
+                                    label: `${teacher.firstName} ${teacher.lastName}`,
+                                    description: teacher.email,
+                                    icon: <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">
+                                      {teacher.firstName[0]}{teacher.lastName[0]}
+                                    </div>
+                                  }))
+                                }
+                                value={null}
+                                onSelect={(id) => pc.handleAddTeacher(selectedCanvasProject.id, id)}
+                                placeholder="Buscar profesor por nombre o email..."
+                              />
+                            </div>
+                            <div className="px-4 py-3 bg-brand-blue/5 rounded-2xl border border-brand-blue/10 text-brand-blue text-[10px] font-bold uppercase tracking-wider h-[46px] flex items-center shrink-0">
+                              <RiInformationFill className="mr-2 text-brand-blue-light" />
+                              {pc.allTeachers.length - (selectedCanvasProject.teachers?.length || 0)} disponibles
+                            </div>
+                          </div>
+
+                          {/* Teachers Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                            {selectedCanvasProject.teachers?.map((teacher) => (
+                              <div
+                                key={teacher.id}
+                                className="group flex items-center justify-between p-4 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-brand-blue/10 hover:shadow-md transition-all duration-300"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-2xl bg-brand-blue/10 flex items-center justify-center text-xs font-bold text-brand-blue shadow-sm group-hover:scale-110 transition-transform">
+                                    {teacher.firstName[0]}{teacher.lastName[0]}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold text-slate-800">{teacher.firstName} {teacher.lastName}</p>
+                                    <p className="text-[11px] text-slate-400">{teacher.email}</p>
+                                  </div>
+                                </div>
+
+                                {selectedCanvasProject.teachers!.length > 1 && (
+                                  <button
+                                    onClick={() => pc.handleRemoveTeacher(selectedCanvasProject.id, teacher.id)}
+                                    className="p-2 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
+                                    title="Eliminar del equipo"
+                                  >
+                                    <RiCloseLine size={20} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tarjeta: Suite Docente */}
+                    <div className="rounded-[2.5rem] border border-slate-200 bg-white overflow-hidden shadow-sm">
+                      <div className="bg-slate-900 p-8 text-white">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white text-xl">
+                            <RiTestTubeLine />
+                          </div>
+                          <div>
+                            <h4 className="text-xl font-bold tracking-tight">Suite de Evaluación Técnica</h4>
+                            <p className="text-sm text-slate-400">Tests automáticos para validar las entregas.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-8 bg-white">
+                        {pc.testSuiteResult && 'id' in pc.testSuiteResult ? (
+                          <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+                            <div className="flex items-start gap-5">
+                              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm">
+                                <RiCheckFill className="text-4xl" />
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-lg font-bold text-slate-900">{pc.testSuiteResult.logicalName}</p>
+                                <div className="flex items-center gap-3 text-sm text-slate-500">
+                                  <span>{formatBytes(pc.testSuiteResult.sizeBytes)}</span>
+                                  <span className="h-1 w-1 rounded-full bg-slate-300" />
+                                  <span>Subido el {new Date(pc.testSuiteResult.createdAt).toLocaleDateString()}</span>
+                                </div>
+
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-3">
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={handleOpenPreview}
+                              >
+                                <RiEyeLine className="text-xl" />
+                                Ver tests
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={handleDownloadSuite}
+                              >
+                                <RiFileDownloadLine className="text-xl" />
+                                Descargar
+                              </button>
+                              <div className="h-8 w-px bg-slate-100 mx-2 hidden md:block" />
+                              <button
+                                type="button"
+                                className="btn-primary"
+                                disabled={isUploadingSuite}
+                                onClick={() => document.getElementById('suite-upload')?.click()}
+                              >
+                                <RiFolderUploadLine className="text-xl" />
+                                {isUploadingSuite ? "Subiendo..." : "Reemplazar Suite"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-slate-200 bg-slate-50/50 py-16 px-6 text-center">
+                            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white text-slate-300 shadow-sm">
+                              <RiFolderUploadLine className="text-4xl" />
+                            </div>
+                            <h5 className="text-lg font-bold text-slate-950">No hay suite técnica configurada</h5>
+                            <p className="mt-2 mb-8 max-w-sm text-sm text-slate-500">
+                              Para evaluar automáticamente las entregas, sube una suite de tests compatible con <span className="font-bold text-slate-700">pytest</span>.
+                            </p>
+                            <button
+                              type="button"
+                              className="btn-primary px-10"
+                              disabled={isUploadingSuite}
+                              onClick={() => document.getElementById('suite-upload')?.click()}
+                            >
+                              {isUploadingSuite ? (
+                                <RiLoader4Line className="animate-spin text-xl" />
+                              ) : (
+                                <RiFolderUploadLine className="text-xl" />
+                              )}
+                              {isUploadingSuite ? "Subiendo archivo..." : "Subir Suite (.zip)"}
+                            </button>
+                          </div>
+                        )}
+
                         <input
-                          className="input-field"
-                          required
-                          value={pc.editForm.title}
-                          onChange={e => pc.setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                          type="file"
+                          id="suite-upload"
+                          className="hidden"
+                          accept=".zip,.tar.gz"
+                          onChange={handleFileChange}
                         />
                       </div>
-                      <div>
-                        <label className="label-text">Estado</label>
-                        <select
-                          className="input-field"
-                          value={pc.editForm.status}
-                          onChange={e => pc.setEditForm(prev => ({ ...prev, status: e.target.value as ProjectStatus }))}
+                    </div>
+
+                    {/* Acciones de Guardado Final */}
+                    <div className="flex flex-col items-center justify-between gap-6 pt-10 border-t border-slate-100 sm:flex-row">
+                      <div className="text-sm text-slate-500">
+                        Última modificación detectada: <span className="font-bold text-slate-700">Hace unos momentos</span>
+                      </div>
+                      <div className="flex flex-wrap gap-4 w-full sm:w-auto">
+                        <button
+                          type="submit"
+                          className="btn-primary px-10 flex-1 sm:flex-none"
                         >
-                          <option value="DRAFT">DRAFT</option>
-                          <option value="ACTIVE">ACTIVE</option>
-                          <option value="ARCHIVED">ARCHIVED</option>
-                        </select>
+                          <RiCheckFill className="text-2xl" />
+                          Guardar configuración
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-danger px-8 flex-1 sm:flex-none"
+                          onClick={() => {
+                            if (selectedCanvasProject) {
+                              pc.setDeleteId(selectedCanvasProject.id);
+                              pc.setConfirmOpen(true);
+                            }
+                          }}
+                        >
+                          <RiDeleteBin6Line className="text-xl" />
+                          Eliminar
+                        </button>
                       </div>
-                    </div>
-                    <div>
-                      <label className="label-text">Contexto académico</label>
-                      <textarea
-                        className="input-field min-h-[140px]"
-                        value={pc.editForm.contextAcademico}
-                        onChange={e => pc.setEditForm(prev => ({ ...prev, contextAcademico: e.target.value }))}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                      <div>
-                        <label className="label-text">Intentos máximos por alumno</label>
-                        <input
-                          type="number"
-                          min="1"
-                          className="input-field"
-                          value={pc.editForm.maxDeliveriesPerStudent}
-                          onChange={e => pc.setEditForm(prev => ({ ...prev, maxDeliveriesPerStudent: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <label className="label-text">Tipo esperado</label>
-                        <input
-                          className="input-field"
-                          value={pc.editForm.expectedType}
-                          onChange={e => pc.setEditForm(prev => ({ ...prev, expectedType: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                      <div>
-                        <label className="label-text">Abre entregas en</label>
-                        <input
-                          type="datetime-local"
-                          className="input-field"
-                          value={pc.editForm.opensAt}
-                          onChange={e => pc.setEditForm(prev => ({ ...prev, opensAt: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <label className="label-text">Cierra entregas en</label>
-                        <input
-                          type="datetime-local"
-                          className="input-field"
-                          value={pc.editForm.closesAt}
-                          onChange={e => pc.setEditForm(prev => ({ ...prev, closesAt: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="label-text">Instrucciones de rúbrica</label>
-                      <textarea
-                        className="input-field min-h-[160px]"
-                        value={pc.editForm.rubricInstructions}
-                        onChange={e => pc.setEditForm(prev => ({ ...prev, rubricInstructions: e.target.value }))}
-                      />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
-                      <button type="submit" className="btn-primary">
-                        <RiSettings4Line />
-                        Guardar cambios
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => void pc.handleFetchTestSuite()}
-                      >
-                        <RiFolderUploadLine />
-                        Suite docente
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger"
-                        onClick={() => {
-                          pc.setDeleteId(selectedCanvasProject.id);
-                          pc.setConfirmOpen(true);
-                        }}
-                      >
-                        <RiDeleteBin6Line />
-                        Eliminar proyecto
-                      </button>
                     </div>
                   </form>
                 </div>
@@ -775,6 +1064,16 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
         </section>
       </div>
 
+      {/* Modal de Previsualización de Código */}
+      <CodePreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        title="Explorador de Suite"
+        subtitle="Previsualizando contenido del .zip de evaluación"
+        isLoading={isLoadingPreview}
+        files={previewFiles}
+      />
+
       <DangerConfirmModal
         open={pc.confirmOpen}
         title="Confirmar eliminación permanente"
@@ -786,3 +1085,6 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
     </div>
   );
 }
+
+
+

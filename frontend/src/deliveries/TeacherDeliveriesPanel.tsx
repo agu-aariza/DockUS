@@ -1,7 +1,8 @@
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   RiAlertLine,
   RiArrowRightUpLine,
+  RiCodeSSlashLine,
   RiFileChartLine,
   RiFileTextLine,
   RiFolderChartLine,
@@ -13,11 +14,20 @@ import {
   RiSparkling2Line,
   RiStackLine,
   RiTimeLine,
+  RiCheckFill,
+  RiStackFill,
+  RiUser3Fill,
 } from "react-icons/ri";
 import { ReportView } from "../shared/components/ReportView";
 import { EmptyState } from "../shared/components/EmptyState";
+import { CodePreviewModal } from "../shared/components/CodePreviewModal";
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
+import { VisualPicker, type VisualPickerOption } from "../shared/components/ui/VisualPicker";
+import { ProjectSelectionHub, type ProjectHubOption } from "../shared/components/ui/ProjectSelectionHub";
+import { deliveriesApi } from "../shared/api/services";
+import { getErrorMessage } from "../shared/utils/errors";
+import { useToast } from "../shared/toast/ToastContext";
 import type {
   DeliveryEntity,
   DeliveryStatus,
@@ -25,6 +35,10 @@ import type {
   SessionRecord,
 } from "../shared/types";
 import { useDeliveryManagement } from "./hooks/useDeliveryManagement";
+import { MetricCard } from "../shared/components/MetricCard";
+import { PageHeader } from "../shared/components/ui/PageHeader";
+import { Button } from "../shared/components/ui/Button";
+import { Tabs } from "../shared/components/ui/Tabs";
 
 interface TeacherDeliveriesPanelProps {
   session: SessionRecord | null;
@@ -34,9 +48,9 @@ type DetailTab = "overview" | "grading" | "report";
 
 const STATUS_STYLE: Record<DeliveryStatus, string> = {
   DRAFT: "border-slate-200 bg-slate-100 text-slate-700",
-  SUBMITTED: "border-sky-200 bg-sky-50 text-sky-700",
-  IN_REVIEW: "border-amber-200 bg-amber-50 text-amber-700",
-  EVALUATED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  SUBMITTED: "border-brand-blue/20 bg-brand-blue/5 text-brand-blue-dark",
+  IN_REVIEW: "border-brand-gold/20 bg-brand-gold/5 text-brand-gold-dark",
+  EVALUATED: "border-brand-blue/20 bg-brand-blue/5 text-brand-blue",
 };
 
 const STATUS_TEXT: Record<DeliveryStatus, string> = {
@@ -53,7 +67,7 @@ function formatDateTime(value?: string | null): string {
 function DeliveryStatusPill({ status }: { status: DeliveryStatus }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${
+      className={`inline-flex items-center rounded-full border px-3 py-1 ui-label ${
         STATUS_STYLE[status]
       }`}
     >
@@ -75,28 +89,24 @@ function DeliveryListItem({
 }) {
   return (
     <article
-      className={`w-full rounded-[1.6rem] border px-4 py-4 text-left transition ${
+      className={`relative w-full rounded-2xl border p-4 text-left transition-all ${
         active
-          ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+          ? "border-brand-maroon bg-brand-maroon text-white shadow-lg ring-1 ring-brand-maroon"
+          : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-md"
       }`}
     >
       <button type="button" onClick={onSelect} className="w-full text-left">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">
-              v{delivery.version} · {delivery.studentEmail}
+            <div className={`ui-label ${active ? "text-slate-400" : "text-slate-500"}`}>
+              v{delivery.version}
             </div>
-            <div
-              className={`mt-1 truncate text-xs ${
-                active ? "text-slate-200" : "text-slate-500"
-              }`}
-            >
-              {delivery.projectTitle}
+            <div className="mt-0.5 truncate text-sm font-bold tracking-tight">
+              {delivery.studentName}
             </div>
           </div>
           <span
-            className={`rounded-full border px-2 py-1 text-[11px] font-medium ${
+            className={`rounded-full border px-2 py-0.5 ui-label ${
               active
                 ? "border-white/20 bg-white/10 text-white"
                 : STATUS_STYLE[delivery.status]
@@ -105,43 +115,47 @@ function DeliveryListItem({
             {STATUS_TEXT[delivery.status]}
           </span>
         </div>
-      </button>
 
-      <div
-        className={`mt-4 grid gap-2 text-xs ${
-          active ? "text-slate-200" : "text-slate-500"
-        }`}
-      >
-        <div>{delivery.studentName}</div>
-        <div>{formatDateTime(delivery.createdAt)}</div>
-        <div>
-          Nota {delivery.grade !== null ? delivery.grade.toFixed(2) : "pendiente"} ·{" "}
-          {delivery.isLate ? "fuera de plazo" : "en plazo"}
-        </div>
-      </div>
-
-      <div className="mt-4 flex items-center gap-2">
-        <span
-          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] ${
-            active ? "bg-white/10 text-white" : "bg-slate-100 text-slate-600"
+        <div
+          className={`mt-3 space-y-1 ui-label leading-tight ${
+            active ? "text-slate-300" : "text-slate-500"
           }`}
         >
-          <RiSparkling2Line />
-          {delivery.remainingDeliveries} restantes
-        </span>
+          <div className="flex items-center gap-1.5 font-medium">
+            <RiTimeLine className="text-sm opacity-60" />
+            {formatDateTime(delivery.createdAt)}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <RiFileChartLine className="text-sm opacity-60" />
+            <span className={active ? "text-white" : "text-slate-900 font-semibold"}>
+              {delivery.grade !== null ? `Nota: ${delivery.grade.toFixed(2)}` : "Nota pendiente"}
+            </span>
+            <span className="opacity-40">|</span>
+            <span className={delivery.isLate ? "text-rose-500 font-medium" : "text-emerald-500 font-medium"}>
+              {delivery.isLate ? "Retrasada" : "En plazo"}
+            </span>
+          </div>
+        </div>
+      </button>
+
+      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
+        <div className={`flex items-center gap-1 ui-label ${active ? "text-slate-400" : "text-slate-400"}`}>
+          <RiStackLine className="text-xs" />
+          {delivery.remainingDeliveries} disponibles
+        </div>
         <button
           type="button"
-          className={`ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 ui-label transition-all ${
             active
-              ? "bg-white/10 text-white"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              ? "bg-white/10 text-white hover:bg-white/20"
+              : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
           }`}
           onClick={(event) => {
             event.stopPropagation();
             onOpenReport();
           }}
         >
-          <RiFileTextLine />
+          <RiFileTextLine className="text-sm" />
           Informe
         </button>
       </div>
@@ -156,9 +170,9 @@ function AssignmentLabel({ assignment }: { assignment: ProjectAssignmentEntity |
 
   return (
     <>
-      {assignment.studentEmail}
-      <span className="text-slate-400"> · </span>
-      <span>{assignment.projectTitle}</span>
+      <span className="font-semibold text-slate-900">{assignment.studentName}</span>
+      <span className="mx-2 text-slate-300">|</span>
+      <span className="text-slate-500">{assignment.projectTitle}</span>
     </>
   );
 }
@@ -172,6 +186,29 @@ export function TeacherDeliveriesPanel({
   const [detailTab, setDetailTab] = useState<DetailTab>("overview");
   const [deliverySearch, setDeliverySearch] = useState("");
   const deferredDeliverySearch = useDeferredValue(deliverySearch);
+  const { pushToast } = useToast();
+
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewFiles, setPreviewFiles] = useState<Array<{ path: string; content: string }>>([]);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  const handlePreview = async (deliveryId: string) => {
+    setIsLoadingPreview(true);
+    setIsPreviewModalOpen(true);
+    try {
+      const files = await deliveriesApi.preview(deliveryId);
+      setPreviewFiles(files);
+    } catch (error) {
+      pushToast({
+        title: "Error previsualizando",
+        description: getErrorMessage(error),
+        tone: "error",
+      });
+      setIsPreviewModalOpen(false);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
 
   useNoticeToasts(
     [dc.workspaceNotice, dc.editorNotice, dc.reportNotice],
@@ -206,82 +243,111 @@ export function TeacherDeliveriesPanel({
 
   const openDelivery = (deliveryId: string, tab: DetailTab = "overview") => {
     const delivery = deliveries.find(d => d.id === deliveryId);
-    setDelivery(deliveryId, delivery ? `v${delivery.version} - ${delivery.studentEmail}` : undefined);
+    setDelivery(deliveryId, delivery ? `v${delivery.version} - ${delivery.studentName}` : undefined);
     setDetailTab(tab);
   };
 
+  const projectOptions: VisualPickerOption[] = useMemo(() => 
+    dc.projects.map(p => ({
+      id: p.id,
+      label: p.title,
+      description: p.contextAcademico ? (p.contextAcademico.slice(0, 60) + (p.contextAcademico.length > 60 ? '...' : '')) : 'Sin descripción',
+      icon: <RiStackFill />,
+      badge: p.status,
+    })), [dc.projects]);
+
+  const assignmentOptions: VisualPickerOption[] = useMemo(() => 
+    dc.assignments.map(a => ({
+      id: a.id,
+      label: a.studentName,
+      description: a.studentEmail,
+      icon: <RiUser3Fill />,
+      badge: `${a.deliveryCount} entregas`,
+    })), [dc.assignments]);
+
+  const hubProjects: ProjectHubOption[] = useMemo(() => 
+    dc.projects.map(p => ({
+      id: p.id,
+      title: p.title,
+      description: p.contextAcademico || "Sin descripción operativa disponible.",
+      studentCount: (p as any).assignmentCount || 0,
+      activeRuns: 0, 
+      status: p.status === 'ACTIVE' ? 'READY' : 'HALTED',
+      teachers: (p as any).teachers,
+    })), [dc.projects]);
+
+  if (!dc.selectedProjectId) {
+    return (
+      <div className="space-y-8 animate-fade-in">
+        <PageHeader
+          title="Gestión de Entregas"
+          subtitle="Selecciona un proyecto para revisar la cola de entregas, calificar el trabajo de los alumnos y auditar el código."
+          icon={<RiInboxArchiveLine />}
+          badge={dc.projects.length.toString()}
+        />
+        <section className="rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <ProjectSelectionHub
+            projects={hubProjects}
+            onSelect={(id, label) => setProject(id, label)}
+            title="Selecciona un proyecto para comenzar"
+            subtitle="Activa un contexto de trabajo para abrir asignaciones, cargar entregas y revisar informes técnicos."
+          />
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-fade-in">
-      <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p className="eyebrow">Entregas</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-            Cola operativa, calificación y evidencia técnica en un único lienzo.
-          </h2>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-            Esta vista elimina saltos innecesarios: filtras por proyecto, exploras
-            entregas y corriges la versión activa sin perder el contexto docente.
-          </p>
-        </div>
-      </header>
+      <PageHeader 
+        title="Gestión de Entregas"
+        subtitle="Auditoría de entregas, flujo de calificación técnica y evaluación de evidencia académica."
+        icon={<RiInboxArchiveLine />}
+        badge={deliveries.length.toString()}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
         <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Master
+              <p className="eyebrow">
+                Filtros Maestros
               </p>
               <h3 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
-                Cola de entregas
+                Cola Operativa
               </h3>
             </div>
-            <button
-              className="btn-secondary"
+            <Button
+              variant="secondary"
               onClick={() => void dc.refreshDeliveries()}
               disabled={!dc.selectedAssignmentId}
             >
               <RiRefreshLine />
-            </button>
+            </Button>
           </div>
 
-          <div className="mt-5 space-y-4">
+          <div className="mt-5 space-y-5">
             <div>
-              <label className="label-text">Proyecto</label>
-              <select
-                className="input-field"
+              <label className="ui-label ml-1">Proyecto</label>
+              <VisualPicker
+                options={projectOptions}
                 value={dc.selectedProjectId}
-                onChange={(event) => {
-                  const project = dc.projects.find(p => p.id === event.target.value);
-                  setProject(event.target.value, project?.title);
-                }}
-              >
-                <option value="">Selecciona un proyecto</option>
-                {dc.projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.title}
-                  </option>
-                ))}
-              </select>
+                onSelect={(id, label) => setProject(id, label)}
+                placeholder="Selecciona proyecto..."
+                searchPlaceholder="Buscar por título..."
+              />
             </div>
 
             <div>
-              <label className="label-text">Asignación</label>
-              <select
-                className="input-field"
+              <label className="ui-label ml-1">Asignación</label>
+              <VisualPicker
+                options={assignmentOptions}
                 value={dc.selectedAssignmentId}
-                onChange={(event) => {
-                  const assignment = dc.assignments.find(a => a.id === event.target.value);
-                  setAssignment(event.target.value, assignment?.studentEmail);
-                }}
-              >
-                <option value="">Selecciona una asignación</option>
-                {dc.assignments.map((assignment) => (
-                  <option key={assignment.id} value={assignment.id}>
-                    {assignment.studentEmail}
-                  </option>
-                ))}
-              </select>
+                onSelect={(id, label) => setAssignment(id, label)}
+                placeholder="Selecciona alumno..."
+                searchPlaceholder="Buscar por nombre o email..."
+                className={!dc.selectedProjectId ? 'opacity-50 grayscale pointer-events-none' : ''}
+              />
             </div>
 
             <div className="relative">
@@ -295,49 +361,36 @@ export function TeacherDeliveriesPanel({
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-            {[
-              {
-                label: "Visibles",
-                value: visibleDeliveries.length,
-                helper: "Entrega(s) cargadas",
-                icon: <RiStackLine className="text-lg" />,
-              },
-              {
-                label: "En revisión",
-                value: reviewCount,
-                helper: "Trabajo activo",
-                icon: <RiPulseLine className="text-lg" />,
-              },
-              {
-                label: "Evaluadas",
-                value: evaluatedCount,
-                helper: "Con cierre técnico",
-                icon: <RiFileChartLine className="text-lg" />,
-              },
-            ].map((metric) => (
-              <article
-                key={metric.label}
-                className="rounded-[1.6rem] border border-slate-200 bg-slate-50 p-4"
-              >
-                <div className="flex items-center justify-between gap-3 text-slate-400">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em]">
-                    {metric.label}
-                  </span>
-                  {metric.icon}
-                </div>
-                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-                  {metric.value}
-                </div>
-                <p className="mt-1 text-xs text-slate-500">{metric.helper}</p>
-              </article>
-            ))}
+          <div className="mt-6 grid grid-cols-1 gap-4">
+            <MetricCard
+              label="Visibles"
+              value={visibleDeliveries.length}
+              helper="Entregas registradas"
+              variant="default"
+              icon={<RiInboxArchiveLine />}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <MetricCard
+                label="Pendientes"
+                value={submittedCount + reviewCount}
+                helper="Por revisar"
+                variant="warning"
+                icon={<RiPulseLine />}
+              />
+              <MetricCard
+                label="Cerradas"
+                value={evaluatedCount}
+                helper="Calificadas"
+                variant="info"
+                icon={<RiCheckFill />}
+              />
+            </div>
           </div>
 
           <div className="mt-6 border-t border-slate-100 pt-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                <p className="eyebrow">
                   Selección actual
                 </p>
                 <div className="mt-2 text-sm font-medium text-slate-900">
@@ -373,12 +426,12 @@ export function TeacherDeliveriesPanel({
 
         <section className="space-y-6">
           {!selectedDelivery ? (
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-10 shadow-sm">
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-12 shadow-sm">
               <EmptyState
-                icon={<RiInboxArchiveLine className="text-5xl text-slate-300" />}
-                title="Selecciona una entrega para empezar a corregir"
-                description="La parte derecha se convierte en un espacio de revisión real solo cuando eliges una entrega del rail izquierdo."
-                actionLabel={visibleDeliveries[0] ? "Abrir primera entrega" : undefined}
+                icon={<RiInboxArchiveLine className="text-6xl text-slate-200" />}
+                title="Terminal de Auditoría de Entregas"
+                description="Seleccione un registro de la cola operativa para iniciar el proceso de revisión técnica y académica."
+                actionLabel={visibleDeliveries[0] ? "Empezar con la primera entrega" : undefined}
                 onAction={
                   visibleDeliveries[0]
                     ? () => openDelivery(visibleDeliveries[0].id, "overview")
@@ -388,58 +441,69 @@ export function TeacherDeliveriesPanel({
             </div>
           ) : (
             <>
-              <article className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm">
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <article className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+                <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
                   <div className="max-w-3xl">
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
                       <DeliveryStatusPill status={selectedDelivery.status} />
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${
+                        className={`rounded-full px-3 py-1 ui-label ${
                           selectedDelivery.isLate
-                            ? "bg-amber-50 text-amber-700"
-                            : "bg-emerald-50 text-emerald-700"
+                            ? "bg-rose-50 text-rose-700 border border-rose-100"
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-100"
                         }`}
                       >
-                        {selectedDelivery.isLate ? "Fuera de plazo" : "En plazo"}
+                        {selectedDelivery.isLate ? "Entrega Tardía" : "A Tiempo"}
                       </span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                        v{selectedDelivery.version}
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 ui-label text-slate-500">
+                        Versión {selectedDelivery.version}
                       </span>
                     </div>
 
-                    <h3 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950">
+                    <h3 className="mt-6 text-4xl font-bold tracking-tight text-slate-950">
                       {selectedDelivery.studentName}
                     </h3>
-                    <p className="mt-2 text-sm text-slate-500">
-                      {selectedDelivery.studentEmail} · {selectedDelivery.projectTitle}
+                    <p className="mt-2 text-sm font-medium text-slate-500">
+                      {selectedDelivery.projectTitle} · <span className="text-slate-400 font-normal">{selectedDelivery.studentEmail}</span>
                     </p>
-                    <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600">
+                    <p className="mt-6 max-w-2xl text-sm leading-relaxed text-slate-600">
                       {selectedDelivery.notes ||
-                        "Esta entrega no tiene notas manuales asociadas. Usa la pestaña de grading para dejar feedback oficial y la de report para revisar la evidencia técnica del builder."}
+                        "Sin notas adicionales del alumno para esta entrega."}
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      className="btn-primary"
-                      onClick={() => setDetailTab("grading")}
-                    >
-                      <RiFolderChartLine />
-                      Calificar
-                    </button>
-                    <button
-                      className="btn-secondary"
-                      onClick={() => {
-                        setDetailTab("report");
-                        void dc.handleViewReport();
+                  <div className="flex flex-wrap gap-2">
+                    <Tabs 
+                      tabs={[
+                        { id: "overview", label: "Resumen", icon: RiStackLine },
+                        { id: "grading", label: "Calificación", icon: RiFolderChartLine },
+                        { 
+                          id: "report", 
+                          label: "Informe", 
+                          icon: RiFileTextLine,
+                          onClick: () => void dc.handleViewReport()
+                        },
+                      ]}
+                      activeTab={detailTab}
+                      onTabChange={(id) => {
+                        setDetailTab(id as DetailTab);
                       }}
+                      variant="primary"
+                    />
+                    
+                    <div className="mx-2 h-10 w-px bg-slate-200" />
+
+                    <Button
+                      variant="secondary"
+                      onClick={() => handlePreview(selectedDelivery.id)}
                     >
-                      <RiFileTextLine />
-                      Ver informe
-                    </button>
+                      <RiCodeSSlashLine />
+                      Ver código
+                    </Button>
+                    
                     {dc.canWrite ? (
-                      <button
-                        className="btn-secondary"
+                      <Button
+                        variant="secondary"
                         onClick={() =>
                           dc.navigate(
                             `/runtime?projectId=${selectedDelivery.projectId}&assignmentId=${selectedDelivery.assignmentId}&deliveryId=${selectedDelivery.id}&autorun=1`,
@@ -448,86 +512,46 @@ export function TeacherDeliveriesPanel({
                       >
                         <RiArrowRightUpLine />
                         Runtime
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 </div>
               </article>
 
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { id: "overview", label: "Overview", icon: <RiStackLine /> },
-                  { id: "grading", label: "Grading", icon: <RiFolderChartLine /> },
-                  { id: "report", label: "Report", icon: <RiFileTextLine /> },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-                      detailTab === tab.id
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                    onClick={() => setDetailTab(tab.id as DetailTab)}
-                  >
-                    {tab.icon}
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {detailTab === "overview" ? (
+              {detailTab === "overview" && (
                 <div className="space-y-6">
                   <section className="grid gap-4 lg:grid-cols-4">
-                    {[
-                      {
-                        label: "Creada",
-                        value: formatDateTime(selectedDelivery.createdAt),
-                        helper: "Momento de recepción",
-                        icon: <RiTimeLine className="text-lg" />,
-                      },
-                      {
-                        label: "Entregas previas",
-                        value: selectedDelivery.deliveryCount,
-                        helper: "Histórico del alumno en este proyecto",
-                        icon: <RiStackLine className="text-lg" />,
-                      },
-                      {
-                        label: "Restantes",
-                        value: selectedDelivery.remainingDeliveries,
-                        helper: "Intentos aún disponibles",
-                        icon: <RiSparkling2Line className="text-lg" />,
-                      },
-                      {
-                        label: "Nota oficial",
-                        value:
-                          selectedDelivery.grade !== null
-                            ? selectedDelivery.grade.toFixed(2)
-                            : "Pendiente",
-                        helper: "Consolidada por el profesorado",
-                        icon: <RiFileChartLine className="text-lg" />,
-                      },
-                    ].map((metric) => (
-                      <article
-                        key={metric.label}
-                        className="rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-sm"
-                      >
-                        <div className="flex items-center justify-between gap-3 text-slate-400">
-                          <span className="text-xs font-semibold uppercase tracking-[0.16em]">
-                            {metric.label}
-                          </span>
-                          {metric.icon}
-                        </div>
-                        <div className="mt-3 text-lg font-semibold tracking-tight text-slate-950">
-                          {metric.value}
-                        </div>
-                        <p className="mt-2 text-sm leading-5 text-slate-500">{metric.helper}</p>
-                      </article>
-                    ))}
+                    <MetricCard
+                      label="Recepción"
+                      value={formatDateTime(selectedDelivery.createdAt)}
+                      helper="Fecha y hora"
+                      icon={<RiTimeLine />}
+                      variant="default"
+                    />
+                    <MetricCard
+                      label="Histórico"
+                      value={`${selectedDelivery.deliveryCount} entregas`}
+                      helper="Total acumulado"
+                      icon={<RiStackLine />}
+                    />
+                    <MetricCard
+                      label="Disponibles"
+                      value={`${selectedDelivery.remainingDeliveries} intentos`}
+                      helper="Cupo restante"
+                      icon={<RiSparkling2Line />}
+                    />
+                    <MetricCard
+                      label="Nota Oficial"
+                      value={selectedDelivery.grade !== null ? selectedDelivery.grade.toFixed(2) : "Pendiente"}
+                      helper="Escala 0-10"
+                      icon={<RiFileChartLine />}
+                      variant={selectedDelivery.grade !== null ? "default" : "warning"}
+                    />
                   </section>
 
                   <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                     <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                      <h4 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      <h4 className="eyebrow">
                         Contexto de revisión
                       </h4>
                       <div className="mt-5 space-y-4 text-sm leading-6 text-slate-600">
@@ -557,19 +581,21 @@ export function TeacherDeliveriesPanel({
                     </article>
 
                     <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                      <h4 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      <h4 className="eyebrow">
                         Acciones rápidas
                       </h4>
                       <div className="mt-5 space-y-3">
-                        <button
-                          className="btn-secondary w-full justify-start"
+                        <Button
+                          variant="secondary"
+                          className="w-full justify-start"
                           onClick={() => void dc.refreshDeliveries()}
                         >
                           <RiRefreshLine />
                           Refrescar cola actual
-                        </button>
-                        <button
-                          className="btn-secondary w-full justify-start"
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          className="w-full justify-start"
                           onClick={() => {
                             setDetailTab("report");
                             void dc.handleViewReport();
@@ -577,17 +603,19 @@ export function TeacherDeliveriesPanel({
                         >
                           <RiFileTextLine />
                           Cargar último informe
-                        </button>
-                        <button
-                          className="btn-secondary w-full justify-start"
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          className="w-full justify-start"
                           onClick={() => setDetailTab("grading")}
                         >
                           <RiFolderChartLine />
                           Editar nota y feedback
-                        </button>
+                        </Button>
                         {dc.canWrite ? (
-                          <button
-                            className="btn-secondary w-full justify-start"
+                          <Button
+                            variant="secondary"
+                            className="w-full justify-start"
                             onClick={() =>
                               dc.navigate(
                                 `/runtime?projectId=${selectedDelivery.projectId}&assignmentId=${selectedDelivery.assignmentId}&deliveryId=${selectedDelivery.id}&autorun=1`,
@@ -596,7 +624,7 @@ export function TeacherDeliveriesPanel({
                           >
                             <RiPulseLine />
                             Abrir runtime contextual
-                          </button>
+                          </Button>
                         ) : null}
                       </div>
 
@@ -624,12 +652,12 @@ export function TeacherDeliveriesPanel({
                     </article>
                   </section>
                 </div>
-              ) : null}
+              )}
 
-              {detailTab === "grading" ? (
+              {detailTab === "grading" && (
                 <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
                   <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                    <h4 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    <h4 className="eyebrow">
                       Estado actual
                     </h4>
                     <div className="mt-5 space-y-4 text-sm leading-6 text-slate-600">
@@ -666,7 +694,7 @@ export function TeacherDeliveriesPanel({
                       onSubmit={dc.handleGradingUpdate}
                     >
                       <div className="border-b border-slate-100 pb-5">
-                        <p className="eyebrow">Grading</p>
+                        <p className="eyebrow">Calificación</p>
                         <h4 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
                           Consolida la nota oficial
                         </h4>
@@ -677,7 +705,7 @@ export function TeacherDeliveriesPanel({
 
                       <div className="mt-6 grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
                         <div>
-                          <label className="label-text">Nota oficial</label>
+                          <label className="ui-label">Nota oficial</label>
                           <input
                             type="number"
                             min="0"
@@ -694,7 +722,7 @@ export function TeacherDeliveriesPanel({
                           />
                         </div>
                         <div>
-                          <label className="label-text">Observaciones del corrector</label>
+                          <label className="ui-label">Observaciones del corrector</label>
                           <textarea
                             className="input-field min-h-[180px]"
                             value={dc.gradingForm.graderNotes}
@@ -715,9 +743,9 @@ export function TeacherDeliveriesPanel({
                             ? "Aún no existe una nota oficial publicada."
                             : "La entrega ya tenía nota; este guardado la reemplazará."}
                         </div>
-                        <button type="submit" className="btn-primary">
+                        <Button type="submit" variant="primary">
                           Guardar calificación
-                        </button>
+                        </Button>
                       </div>
                     </form>
                   ) : (
@@ -730,27 +758,27 @@ export function TeacherDeliveriesPanel({
                     </div>
                   )}
                 </section>
-              ) : null}
+              )}
 
-              {detailTab === "report" ? (
+              {detailTab === "report" && (
                 <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <h4 className="text-lg font-semibold tracking-tight text-slate-950">
-                        Informe de evaluación
+                        Dictamen de Evaluación Técnica
                       </h4>
                       <p className="mt-2 text-sm leading-6 text-slate-600">
                         Se carga desde el último run disponible de la entrega y convive aquí con el contexto de corrección.
                       </p>
                     </div>
-                    <button
-                      className="btn-secondary"
+                    <Button
+                      variant="secondary"
                       onClick={() => void dc.handleViewReport()}
                       disabled={!dc.selectedDeliveryId || dc.reportLoading}
                     >
                       <RiFileTextLine />
                       {dc.reportLoading ? "Cargando..." : "Recargar informe"}
-                    </button>
+                    </Button>
                   </div>
 
                   <div className="mt-6">
@@ -773,11 +801,19 @@ export function TeacherDeliveriesPanel({
                     )}
                   </div>
                 </section>
-              ) : null}
+              )}
             </>
           )}
         </section>
       </div>
+      <CodePreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        title="Explorador de Entrega"
+        subtitle={`v${selectedDelivery?.version} — ${selectedDelivery?.studentName}`}
+        isLoading={isLoadingPreview}
+        files={previewFiles}
+      />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { type FormEvent, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { builderApi } from "../../shared/api/builderApi";
 import {
   assignmentsApi,
+  builderApi,
   deliveriesApi,
   projectsApi,
 } from "../../shared/api/services";
@@ -198,7 +198,16 @@ export function useDeliveryManagement(session: SessionRecord | null) {
   }, [canRead, canWrite, myAssignments, selectedProjectId]);
 
   useEffect(() => {
-    if (!selectedAssignmentId || !canRead) return;
+    if (!selectedAssignmentId) {
+      setDeliveries(null);
+      setReportRun(null);
+      setReportDelivery(null);
+      lastFetchedAssignmentId.current = null;
+      setCreateForm(prev => ({ ...prev, assignmentId: "" }));
+      return;
+    }
+    
+    if (!canRead) return;
     
     // Prevent redundant fetches if we already have this data
     if (lastFetchedAssignmentId.current === selectedAssignmentId && deliveries) {

@@ -12,6 +12,7 @@ import { EvaluationNotificationBanner } from "./EvaluationNotificationBanner";
 import { StudentDeadlineBanner } from "./StudentDeadlineBanner";
 import { useStudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { useEvaluationNotifications } from "./hooks/useEvaluationNotifications";
+import { Tabs } from "../shared/components/ui/Tabs";
 
 interface StudentWorkspacePanelProps {
   session: SessionRecord | null;
@@ -86,33 +87,24 @@ export function StudentWorkspacePanel({ session }: StudentWorkspacePanelProps): 
             </p>
           </div>
           {hasUnread && (
-            <div className="flex items-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-sm font-medium text-indigo-700 animate-in fade-in">
-              <RiNotification3Fill className="text-indigo-500 animate-pulse" />
+            <div className="flex items-center gap-2 rounded-full bg-brand-maroon/10 px-4 py-2 text-sm font-medium text-brand-maroon animate-in fade-in">
+              <RiNotification3Fill className="text-brand-maroon animate-pulse" />
               {notifications.length} {notifications.length === 1 ? "resultado nuevo" : "resultados nuevos"}
             </div>
           )}
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-1 border-b border-slate-200">
-        {navigation.map((tab) => (
-          <button
-            key={tab.id}
-            className={`px-6 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all relative ${
-              activeTab === tab.id 
-                ? "border-indigo-600 text-indigo-600" 
-                : "border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300"
-            }`}
-            onClick={() => handleTabChange(tab.id as StudentTab)}
-          >
-            {tab.icon}
-            {tab.label}
-            {"badge" in tab && tab.badge && (
-              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-indigo-500 animate-pulse" />
-            )}
-          </button>
-        ))}
-      </div>
+      <Tabs 
+        tabs={navigation.map(t => ({
+          id: t.id,
+          label: t.label,
+          icon: t.icon,
+          badge: t.badge
+        }))}
+        activeTab={activeTab}
+        onTabChange={(id) => handleTabChange(id as StudentTab)}
+      />
 
       {/* Notification banner — shown on all tabs */}
       <EvaluationNotificationBanner

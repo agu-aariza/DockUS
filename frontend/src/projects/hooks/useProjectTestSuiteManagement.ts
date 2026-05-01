@@ -18,29 +18,32 @@ export function useProjectTestSuiteManagement({
     useState<StorageObjectEntity | { message: string } | null>(null);
   const [suiteNotice, setSuiteNotice] = useState<NoticeState | null>(null);
 
-  const handleUploadTestSuite = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!canWrite || !selectedProjectId || !testSuiteFile) return;
+  const handleUploadTestSuite = async (file: File) => {
+    if (!canWrite || !selectedProjectId || !file) return;
     try {
       const response = await projectsApi.uploadTestSuite(
         selectedProjectId,
-        testSuiteFile,
+        file,
       );
       setTestSuiteResult(response);
-      setSuiteNotice({ text: "Suite docente subida.", tone: "info" });
+      setSuiteNotice({ text: "Suite docente subida correctamente.", tone: "info" });
     } catch (error) {
       setSuiteNotice({ text: getErrorMessage(error), tone: "warning" });
     }
   };
 
-  const handleFetchTestSuite = async () => {
+  const handleFetchTestSuite = async (silent = false) => {
     if (!canWrite || !selectedProjectId) return;
     try {
       const response = await projectsApi.getTestSuite(selectedProjectId);
       setTestSuiteResult(response);
-      setSuiteNotice({ text: "Suite docente recuperada.", tone: "info" });
+      if (!silent) {
+        setSuiteNotice({ text: "Suite docente recuperada.", tone: "info" });
+      }
     } catch (error) {
-      setSuiteNotice({ text: getErrorMessage(error), tone: "warning" });
+      if (!silent) {
+        setSuiteNotice({ text: getErrorMessage(error), tone: "warning" });
+      }
     }
   };
 
@@ -49,15 +52,23 @@ export function useProjectTestSuiteManagement({
     try {
       await projectsApi.removeTestSuite(selectedProjectId);
       setTestSuiteResult(null);
-      setSuiteNotice({ text: "Suite docente eliminada.", tone: "info" });
+      setSuiteNotice({ text: "Suite docente eliminada correctamente.", tone: "info" });
     } catch (error) {
       setSuiteNotice({ text: getErrorMessage(error), tone: "warning" });
     }
   };
 
   useEffect(() => {
+    if (selectedProjectId) {
+      handleFetchTestSuite(true);
+    } else {
+      setTestSuiteResult(null);
+    }
+  }, [selectedProjectId]);
+
+  useEffect(() => {
     if (!suiteNotice) return;
-    const timer = setTimeout(() => setSuiteNotice(null), 15_000);
+    const timer = setTimeout(() => setSuiteNotice(null), 10_000);
     return () => clearTimeout(timer);
   }, [suiteNotice]);
 

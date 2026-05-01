@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import {
+  assignmentsApi,
   projectsApi,
   usersApi,
 } from "../../shared/api/services";
@@ -64,6 +65,8 @@ export function useProjectManagement(session: SessionRecord | null) {
   const [debugPayload, setDebugPayload] = useState<unknown>(null);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [allTeachers, setAllTeachers] = useState<UserEntity[]>([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
 
   const { canRead, canWrite, canAdmin } = useManagementPermissions(session);
 
@@ -75,14 +78,6 @@ export function useProjectManagement(session: SessionRecord | null) {
     selectedProjectId,
     setDebugPayload,
   });
-  const testSuiteManagement = useProjectTestSuiteManagement({
-    canWrite,
-    selectedProjectId,
-  });
-  const focusedGroup =
-    assignmentManagement.groups.find(
-      (group) => group.id === assignmentManagement.focusedGroupId,
-    ) ?? null;
 
   const refreshProjects = async (noticeText?: string) => {
     if (!canRead) return;
@@ -108,6 +103,46 @@ export function useProjectManagement(session: SessionRecord | null) {
       setLoadingProjects(false);
     }
   };
+
+  const testSuiteManagement = useProjectTestSuiteManagement({
+    canWrite,
+    selectedProjectId,
+  });
+
+  const handleRestore = async (id: string) => {
+    try {
+      await projectsApi.restore(id);
+      await refreshProjects();
+    } catch (err) {
+      console.error("Error al restaurar proyecto:", err);
+      throw err;
+    }
+  };
+
+  const handleAddTeacher = async (projectId: string, teacherId: string) => {
+    try {
+      await projectsApi.addTeacher(projectId, teacherId);
+      await refreshProjects();
+    } catch (err) {
+      console.error("Error al añadir profesor:", err);
+      throw err;
+    }
+  };
+
+  const handleRemoveTeacher = async (projectId: string, teacherId: string) => {
+    try {
+      await projectsApi.removeTeacher(projectId, teacherId);
+      await refreshProjects();
+    } catch (err) {
+      console.error("Error al eliminar profesor:", err);
+      throw err;
+    }
+  };
+
+  const focusedGroup =
+    assignmentManagement.groups.find(
+      (group) => group.id === assignmentManagement.focusedGroupId,
+    ) ?? null;
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -207,6 +242,16 @@ export function useProjectManagement(session: SessionRecord | null) {
   }, [canWrite]);
 
   useEffect(() => {
+    if (!canWrite) return;
+    setLoadingTeachers(true);
+    usersApi
+      .list({ page: 1, limit: 100, role: "TEACHER" })
+      .then((response) => setAllTeachers(response.data))
+      .catch((error) => console.error("Error al cargar profesores:", error))
+      .finally(() => setLoadingTeachers(false));
+  }, [canWrite]);
+
+  useEffect(() => {
     if (!canWrite || !selectedProject) return;
     setEditForm({
       title: selectedProject.title,
@@ -294,6 +339,11 @@ export function useProjectManagement(session: SessionRecord | null) {
     handleUploadTestSuite: testSuiteManagement.handleUploadTestSuite,
     handleFetchTestSuite: testSuiteManagement.handleFetchTestSuite,
     handleRemoveTestSuite: testSuiteManagement.handleRemoveTestSuite,
+    handleAddTeacher,
+    handleRemoveTeacher,
+    allTeachers,
+    loadingTeachers,
     executeDelete,
+    handleRestore,
   };
 }

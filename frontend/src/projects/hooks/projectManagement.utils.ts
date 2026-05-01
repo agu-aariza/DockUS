@@ -14,14 +14,3 @@ export function normalizeOptionalDateTime(value: string): string | undefined {
   const normalized = value.trim();
   return normalized ? new Date(normalized).toISOString() : undefined;
 }
-
-export function parseStudentEmails(raw: string): string[] {
-  return Array.from(
-    new Set(
-      raw
-        .split(/[\n,;]+/)
-        .map((value) => value.trim().toLowerCase())
-        .filter(Boolean),
-    ),
-  );
-}

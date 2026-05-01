@@ -6,6 +6,7 @@
  */
 
 import { http } from './http';
+import { builderApi } from './builderApi';
 import type {
   AuthResponse,
   BulkGroupEnrollResponse,
@@ -43,6 +44,8 @@ function toParams(input: Record<string, string | number | undefined>): URLSearch
   });
   return params;
 }
+
+export { builderApi };
 
 function normalizeStringArray(values?: string[]): string[] | undefined {
   if (!Array.isArray(values)) {
@@ -243,6 +246,15 @@ export const projectsApi = {
     return data;
   },
 
+  async previewTestSuite(
+    projectId: string,
+  ): Promise<Array<{ path: string; content: string }>> {
+    const { data } = await http.get<Array<{ path: string; content: string }>>(
+      `/projects/${projectId}/test-suite/preview`,
+    );
+    return data;
+  },
+
   async progressSummary(
     projectId: string,
     query?: {
@@ -289,7 +301,7 @@ export const projectsApi = {
     return data;
   },
 
-  async operationalIssues(): Promise<ProjectOperationalIssuesSummary> {
+  async getOperationalIssues(): Promise<ProjectOperationalIssuesSummary> {
     const { data } = await http.get<ProjectOperationalIssuesSummary>(
       "/projects/operational-issues",
     );
@@ -364,6 +376,20 @@ export const projectsApi = {
     );
     return data;
   },
+
+  async addTeacher(projectId: string, teacherId: string): Promise<ProjectEntity> {
+    const { data } = await http.post<ProjectEntity>(
+      `/projects/${projectId}/teachers/${teacherId}`,
+    );
+    return data;
+  },
+
+  async removeTeacher(projectId: string, teacherId: string): Promise<ProjectEntity> {
+    const { data } = await http.delete<ProjectEntity>(
+      `/projects/${projectId}/teachers/${teacherId}`,
+    );
+    return data;
+  },
 };
 
 export const assignmentsApi = {
@@ -434,6 +460,7 @@ export const groupsApi = {
     payload: {
       studentIds?: string[];
       studentEmails?: string[];
+      rawInput?: string;
     },
   ): Promise<BulkGroupEnrollResponse> {
     const sanitizedPayload = {
@@ -452,6 +479,25 @@ export const groupsApi = {
       `/groups/enrollments/${enrollmentId}`,
     );
     return data;
+  },
+
+  async update(
+    id: string,
+    payload: Partial<{
+      name: string;
+      code: string;
+      description: string;
+    }>,
+  ): Promise<CourseGroupEntity> {
+    const { data } = await http.patch<CourseGroupEntity>(
+      `/groups/${id}`,
+      payload,
+    );
+    return data;
+  },
+
+  async remove(id: string): Promise<void> {
+    await http.delete(`/groups/${id}`);
   },
 };
 
@@ -523,6 +569,15 @@ export const deliveriesApi = {
 
   async restore(id: string): Promise<DeliveryEntity> {
     const { data } = await http.patch<DeliveryEntity>(`/deliveries/${id}/restore`);
+    return data;
+  },
+
+  async preview(
+    id: string,
+  ): Promise<Array<{ path: string; content: string }>> {
+    const { data } = await http.get<Array<{ path: string; content: string }>>(
+      `/deliveries/${id}/preview`,
+    );
     return data;
   },
 };

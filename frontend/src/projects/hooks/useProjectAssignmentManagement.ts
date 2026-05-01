@@ -10,7 +10,7 @@ import type {
 } from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import type { NoticeState } from "./projectManagement.types";
-import { normalizeOptionalText, parseStudentEmails } from "./projectManagement.utils";
+import { normalizeOptionalText } from "./projectManagement.utils";
 
 interface UseProjectAssignmentManagementInput {
   canWrite: boolean;
@@ -114,14 +114,20 @@ export function useProjectAssignmentManagement({
 
   const handleAssignStudents = async () => {
     if (!canWrite || !selectedProjectId) return;
-    const studentEmails = parseStudentEmails(bulkStudentEmails);
-    if (selectedStudentIds.length === 0 && studentEmails.length === 0) return;
+    
+    const payload: any = {
+      studentIds: selectedStudentIds.length > 0 ? selectedStudentIds : undefined,
+    };
+
+    if (bulkStudentEmails.trim()) {
+      payload.rawInput = bulkStudentEmails.trim();
+    }
+
+    if (!payload.studentIds && !payload.rawInput) return;
+
     setAssignmentBusy("assign");
     try {
-      const response = await assignmentsApi.bulkAssign(selectedProjectId, {
-        studentIds: selectedStudentIds,
-        studentEmails,
-      });
+      const response = await assignmentsApi.bulkAssign(selectedProjectId, payload);
       setAssignmentsResult(response.assignments);
       setSelectedStudentIds([]);
       setBulkStudentEmails("");
@@ -173,7 +179,7 @@ export function useProjectAssignmentManagement({
         current.trim() ? `${current.trim()}\n${normalized}` : normalized,
       );
       setAssignmentNotice({
-        text: `Se han cargado ${parseStudentEmails(normalized).length} correos desde ${file.name}.`,
+        text: `Se ha cargado el archivo ${file.name}. Puedes revisar la lista antes de procesar.`,
         tone: "info",
       });
     } catch (error) {
@@ -190,7 +196,7 @@ export function useProjectAssignmentManagement({
         current.trim() ? `${current.trim()}\n${normalized}` : normalized,
       );
       setAssignmentNotice({
-        text: `Se han cargado ${parseStudentEmails(normalized).length} correos para el grupo desde ${file.name}.`,
+        text: `Se ha cargado el archivo ${file.name} para el grupo.`,
         tone: "info",
       });
     } catch (error) {
@@ -229,25 +235,31 @@ export function useProjectAssignmentManagement({
 
   const handleEnrollGroupStudents = async () => {
     if (!canWrite || !focusedGroupId) return;
-    const studentEmails = parseStudentEmails(bulkGroupStudentEmails);
-    if (selectedGroupStudentIds.length === 0 && studentEmails.length === 0) return;
+    
+    const payload: any = {
+      studentIds: selectedGroupStudentIds.length > 0 ? selectedGroupStudentIds : undefined,
+    };
+
+    if (bulkGroupStudentEmails.trim()) {
+      payload.rawInput = bulkGroupStudentEmails.trim();
+    }
+
+    if (!payload.studentIds && !payload.rawInput) return;
+
     setAssignmentBusy("group:enroll");
     try {
-      const response = await groupsApi.bulkEnroll(focusedGroupId, {
-        studentIds: selectedGroupStudentIds,
-        studentEmails,
-      });
+      const response = await groupsApi.bulkEnroll(focusedGroupId, payload);
       setGroupEnrollments(response.enrollments);
       setSelectedGroupStudentIds([]);
       setBulkGroupStudentEmails("");
       await refreshGroups({ silent: true });
       const enrolledCount =
         response.summary.enrolledCount + response.summary.reactivatedCount;
-      const unresolvedCount = response.summary.unresolvedEmails.length;
+      const unresolvedCount = (response.summary.unresolvedEmails?.length || 0) + (response.summary.unresolvedNames?.length || 0);
       setAssignmentNotice({
         text:
           unresolvedCount > 0
-            ? `Matrícula completada con incidencias: ${enrolledCount} incorporados y ${unresolvedCount} correos sin resolver.`
+            ? `Matrícula completada con incidencias: ${enrolledCount} incorporados y ${unresolvedCount} registros no procesados.`
             : `Grupo actualizado: ${response.summary.enrolledCount} altas nuevas, ${response.summary.reactivatedCount} reactivadas y ${response.summary.alreadyActiveCount} ya activas.`,
         tone: unresolvedCount > 0 ? "warning" : "info",
       });
