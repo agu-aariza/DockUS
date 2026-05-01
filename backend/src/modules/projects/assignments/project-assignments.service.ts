@@ -32,6 +32,12 @@ export interface ProjectAssignmentResponse {
   deliveryCount: number;
   remainingDeliveries: number;
   minimumRequirementMet: boolean;
+  courseGroupId: string | null;
+  courseGroup: {
+    id: string;
+    name: string;
+    code: string | null;
+  } | null;
 }
 
 export interface BulkAssignSummary {
@@ -77,7 +83,7 @@ export class ProjectAssignmentsService {
       actor,
     );
     const requestedIds = [...new Set((input.studentIds ?? []).filter(Boolean))];
-    const requestedEmails = [
+    let requestedEmails = [
       ...new Set(
         (input.studentEmails ?? [])
           .map((email) => email.trim().toLowerCase())
@@ -88,6 +94,25 @@ export class ProjectAssignmentsService {
     const requestedGroupIds = [
       ...new Set((input.groupIds ?? []).filter(Boolean)),
     ];
+
+    // Parse raw input if provided
+    if ((input as any).rawInput) {
+      const lines = (input as any).rawInput
+        .split(/[\n,;]+/)
+        .map((l: string) => l.trim())
+        .filter(Boolean);
+
+      for (const line of lines) {
+        if (line.includes('@')) {
+          const email = line.toLowerCase();
+          if (!requestedEmails.includes(email)) {
+            requestedEmails.push(email);
+          }
+        }
+        // Project assignments currently don't support searching by name directly in the service,
+        // but we can add it later if needed. For now, we focus on emails.
+      }
+    }
 
     if (
       requestedIds.length === 0 &&
@@ -231,7 +256,8 @@ export class ProjectAssignmentsService {
       .innerJoinAndSelect('assignment.student', 'student')
       .where('assignment.projectId = :projectId', { projectId })
       .andWhere('assignment.revokedAt IS NULL')
-      .orderBy('assignment.assignedAt', 'DESC')
+      .orderBy('student.lastName', 'ASC')
+      .addOrderBy('student.firstName', 'ASC')
       .getMany();
 
     return this.toResponses(assignments);
@@ -333,20 +359,36 @@ export class ProjectAssignmentsService {
       assignments.map((assignment) => assignment.id),
     );
 
+    // Fetch group details for all involved group IDs
+    const allGroupIds = [...new Set(assignments.flatMap(a => a.sourceGroupIds ?? []))];
+    const groupMap = new Map<string, { id: string; name: string; code: string | null }>();
+    
+    if (allGroupIds.length > 0) {
+      const groups = await this.groupsService.list(); // This service list() returns group entities + count
+      groups.forEach(g => {
+        if (allGroupIds.includes(g.id)) {
+          groupMap.set(g.id, { id: g.id, name: g.name, code: g.code });
+        }
+      });
+    }
+
     return assignments.map((assignment) => {
       const deliveryCount = progressByAssignment.get(assignment.id) ?? 0;
       const project = assignment.project ?? null;
       const student = assignment.student ?? null;
       const maxDeliveriesPerStudent =
         project?.maxDeliveriesPerStudent ?? deliveryCount;
-      const studentName =
-        `${student?.firstName ?? ''} ${student?.lastName ?? ''}`.trim() ||
-        student?.email ||
-        'Alumno no disponible';
+      const studentName = student
+        ? `${student.lastName ?? ''}, ${student.firstName ?? ''}`.trim()
+        : 'Alumno no disponible';
       const remainingDeliveries = Math.max(
         0,
         maxDeliveriesPerStudent - deliveryCount,
       );
+
+      // Find the first matching group for labeling purposes if multiple exist
+      const primaryGroupId = assignment.sourceGroupIds?.[0];
+      const courseGroup = primaryGroupId ? groupMap.get(primaryGroupId) : null;
 
       return {
         id: assignment.id,
@@ -354,6 +396,8 @@ export class ProjectAssignmentsService {
         projectTitle: project?.title ?? 'Proyecto no disponible',
         maxDeliveriesPerStudent,
         sourceGroupIds: assignment.sourceGroupIds ?? [],
+        courseGroupId: primaryGroupId ?? null,
+        courseGroup: courseGroup ?? null,
         studentId: assignment.studentId,
         studentEmail: student?.email ?? '',
         studentName,

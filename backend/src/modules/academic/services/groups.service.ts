@@ -46,6 +46,19 @@ export class GroupsService {
     return this.groupsRepository.save(group);
   }
 
+  async update(
+    groupId: string,
+    dto: Partial<CreateGroupDto>,
+  ): Promise<CourseGroup> {
+    const group = await this.groupsRepository.findOne({
+      where: { id: groupId },
+    });
+    if (!group) throw new NotFoundException('Grupo no encontrado');
+
+    Object.assign(group, dto);
+    return this.groupsRepository.save(group);
+  }
+
   async listEnrollments(groupId: string): Promise<any[]> {
     const enrollments = await this.enrollmentsRepository.find({
       where: { groupId },
@@ -58,7 +71,7 @@ export class GroupsService {
       groupId: e.groupId,
       studentId: e.studentId,
       studentEmail: e.student.email,
-      studentName: `${e.student.firstName} ${e.student.lastName}`.trim(),
+      studentName: `${e.student.lastName}, ${e.student.firstName}`.trim(),
       enrolledById: e.enrolledById,
       enrolledAt: e.enrolledAt,
       revokedAt: e.revokedAt,
@@ -76,7 +89,28 @@ export class GroupsService {
     if (!group) throw new NotFoundException('Grupo no encontrado');
 
     const studentIds = dto.studentIds || [];
-    const studentEmails = dto.studentEmails || [];
+    let studentEmails = dto.studentEmails || [];
+    let studentNames = dto.studentNames || [];
+
+    // Parse raw input if provided
+    if (dto.rawInput) {
+      const lines = dto.rawInput
+        .split(/[\n,;]+/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+
+      for (const line of lines) {
+        if (line.includes('@')) {
+          if (!studentEmails.includes(line.toLowerCase())) {
+            studentEmails.push(line.toLowerCase());
+          }
+        } else {
+          if (!studentNames.includes(line)) {
+            studentNames.push(line);
+          }
+        }
+      }
+    }
 
     // Find students by email if provided
     if (studentEmails.length > 0) {
@@ -88,16 +122,57 @@ export class GroupsService {
       });
     }
 
+    // Find students by name/surname if provided
+    for (const name of studentNames) {
+      const cleanName = name.trim();
+      if (!cleanName) continue;
+
+      // Try searching by "LastName, FirstName" or "FirstName LastName"
+      const parts = cleanName.includes(',')
+        ? cleanName.split(',').map((p) => p.trim())
+        : cleanName.split(' ').map((p) => p.trim());
+
+      let students: User[] = [];
+
+      if (cleanName.includes(',')) {
+        // Format: "LastName, FirstName"
+        students = await this.usersRepository.find({
+          where: {
+            lastName: parts[0],
+            firstName: parts[1],
+            role: UserRole.STUDENT,
+          },
+        });
+      } else if (parts.length >= 2) {
+        // Format: "FirstName LastName" (simple)
+        students = await this.usersRepository.find({
+          where: {
+            firstName: parts[0],
+            lastName: parts[1],
+            role: UserRole.STUDENT,
+          },
+        });
+      }
+
+      // If only one match, add it
+      if (students.length === 1) {
+        const s = students[0];
+        if (!studentIds.includes(s.id)) studentIds.push(s.id);
+      }
+    }
+
     const results = {
       enrollments: [],
       summary: {
         requestedIds: dto.studentIds || [],
         requestedEmails: dto.studentEmails || [],
+        requestedNames: dto.studentNames || [],
         resolvedStudentIds: studentIds,
         enrolledCount: 0,
         reactivatedCount: 0,
         alreadyActiveCount: 0,
         unresolvedEmails: [] as string[],
+        unresolvedNames: [] as string[],
       },
     };
 
@@ -110,6 +185,18 @@ export class GroupsService {
     results.summary.unresolvedEmails = studentEmails.filter(
       (email) => !foundEmails.includes(email),
     );
+
+    // Calculate unresolved names (best effort)
+    const foundFullNames = foundStudents.map(
+      (s) => `${s.lastName}, ${s.firstName}`.toLowerCase(),
+    );
+    const foundSimpleNames = foundStudents.map(
+      (s) => `${s.firstName} ${s.lastName}`.toLowerCase(),
+    );
+    results.summary.unresolvedNames = studentNames.filter((name) => {
+      const ln = name.toLowerCase().trim();
+      return !foundFullNames.includes(ln) && !foundSimpleNames.includes(ln);
+    });
 
     for (const studentId of studentIds) {
       const existing = await this.enrollmentsRepository.findOne({
@@ -149,5 +236,17 @@ export class GroupsService {
 
     enrollment.revokedAt = new Date();
     await this.enrollmentsRepository.save(enrollment);
+  }
+
+  async remove(groupId: string): Promise<void> {
+    const group = await this.groupsRepository.findOne({
+      where: { id: groupId },
+    });
+    if (!group) throw new NotFoundException('Grupo no encontrado');
+
+    // Soft delete or hard delete? The repo seems to use hard delete for enrollments in some cases,
+    // but here we'll just delete the group. 
+    // Usually we want to cascade or check if there are active enrollments.
+    await this.groupsRepository.softRemove(group);
   }
 }

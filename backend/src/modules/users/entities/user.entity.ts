@@ -15,7 +15,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  ManyToMany,
 } from 'typeorm';
+import { Project } from '../../projects/entities/project.entity';
 
 /**
  * Jerarquía de permisos basada en RBAC (Role-Based Access Control).
@@ -96,4 +98,7 @@ export class User {
    */
   @DeleteDateColumn()
   deletedAt: Date;
+
+  @ManyToMany(() => Project, (project) => project.teachers)
+  assignedProjects: Project[];
 }

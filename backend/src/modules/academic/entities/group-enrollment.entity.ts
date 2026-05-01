@@ -19,7 +19,7 @@ export class GroupEnrollment {
   @Column({ type: 'uuid' })
   groupId: string;
 
-  @ManyToOne(() => CourseGroup, (group) => group.enrollments)
+  @ManyToOne(() => CourseGroup, (group) => group.enrollments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'groupId' })
   group: CourseGroup;
 

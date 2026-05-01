@@ -10,4 +10,13 @@ export class BulkEnrollDto {
   @IsEmail({}, { each: true })
   @IsOptional()
   studentEmails?: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  studentNames?: string[];
+
+  @IsString()
+  @IsOptional()
+  rawInput?: string;
 }

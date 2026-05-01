@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -42,6 +43,16 @@ export class GroupsController {
     return this.groupsService.create(dto, request.user.userId);
   }
 
+  @Patch(':id')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({ summary: 'Actualizar un grupo' })
+  async update(
+    @Param('id', ParseUUIDPipe) groupId: string,
+    @Body() dto: Partial<CreateGroupDto>,
+  ) {
+    return this.groupsService.update(groupId, dto);
+  }
+
   @Get(':id/enrollments')
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Listar alumnos matriculados en un grupo' })
@@ -66,5 +77,13 @@ export class GroupsController {
   async revokeEnrollment(@Param('id', ParseUUIDPipe) enrollmentId: string) {
     await this.groupsService.revokeEnrollment(enrollmentId);
     return { message: 'Matrícula revocada correctamente' };
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiOperation({ summary: 'Eliminar un grupo' })
+  async remove(@Param('id', ParseUUIDPipe) groupId: string) {
+    await this.groupsService.remove(groupId);
+    return { message: 'Grupo eliminado correctamente' };
   }
 }

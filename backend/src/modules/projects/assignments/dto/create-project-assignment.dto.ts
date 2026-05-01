@@ -5,6 +5,7 @@ import {
   IsArray,
   IsEmail,
   IsOptional,
+  IsString,
   IsUUID,
 } from 'class-validator';
 
@@ -77,4 +78,12 @@ export class CreateProjectAssignmentsBulkDto {
   })
   @IsOptional()
   groupIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Entrada de texto libre para procesar correos electrónicos.',
+    type: String,
+  })
+  @IsString()
+  @IsOptional()
+  rawInput?: string;
 }
