@@ -8,21 +8,37 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#f5f7fa',
-          100: '#ebf0f5',
-          200: '#d1dce7',
-          300: '#a7bcce',
-          400: '#7795b1',
-          500: '#547594',
-          600: '#415d78',
-          700: '#354c62',
-          800: '#2e4052',
-          900: '#2a3746',
-          950: '#1c242f',
+          primary: '#7e191b',     // Rojo principal
+          secondary: '#b38e5d',   // Dorado
+          tertiary: '#2e739a',    // Azul ballena
+          gold: {
+            DEFAULT: '#b38e5d',
+            light: '#d4b483',
+            dark: '#8c6d44',
+          },
+          maroon: {
+            DEFAULT: '#7e191b',
+            light: '#a62d2f',
+            dark: '#5a1213',
+          },
+          blue: {
+            DEFAULT: '#2e739a',
+            light: '#348cb2',
+            dark: '#144e73',
+          },
+          purple: {
+            DEFAULT: '#581c87',
+            light: '#7e22ce',
+            dark: '#3b0764',
+          },
+          cream: {
+            DEFAULT: '#F8F7F2',
+          },
         },
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', '"Noto Sans"', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Outfit', 'Inter', 'sans-serif'],
       },
     },
   },

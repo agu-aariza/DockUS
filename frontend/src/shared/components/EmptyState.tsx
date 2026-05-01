@@ -30,7 +30,7 @@ export function EmptyState({
       {actionLabel && onAction && (
         <button
           onClick={onAction}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-xl hover:bg-indigo-500 transition shadow-sm"
+          className="flex items-center gap-2 px-5 py-2.5 bg-brand-blue text-white font-bold text-sm rounded-xl hover:bg-brand-blue-dark transition shadow-sm"
         >
           <RiAddLine className="text-lg" />
           {actionLabel}

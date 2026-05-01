@@ -8,11 +8,12 @@
   }
 
   body {
-    @apply bg-slate-100 text-slate-900 antialiased;
+    @apply bg-brand-cream text-slate-900 antialiased;
   }
 
   ::selection {
-    @apply bg-sky-100 text-slate-900;
+    background-color: rgb(126 25 27 / 0.10);
+    @apply text-brand-primary;
   }
 
   #root {
@@ -21,25 +22,29 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-color: #b38e5d transparent;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-slate-800 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-primary px-6 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-brand-maroon-dark hover:shadow-[0_10px_25px_-5px_rgba(126,25,27,0.3)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-maroon-light/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-all hover:border-slate-400 hover:bg-slate-50 hover:shadow-sm hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-brand-gold-light bg-white px-6 py-3 text-sm font-bold text-brand-secondary transition-all duration-300 hover:border-brand-secondary hover:bg-brand-cream hover:shadow-[0_8px_20px_-4px_rgba(179,142,93,0.2)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-gold-light/20 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
+  }
+
+  .btn-tertiary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-tertiary px-6 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-brand-blue-dark hover:shadow-[0_10px_25px_-5px_rgba(46,115,154,0.3)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue-light/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-rose-50 px-6 py-3 text-sm font-bold text-rose-600 transition-all duration-300 hover:bg-rose-600 hover:text-white hover:shadow-[0_10px_25px_-5px_rgba(225,29,72,0.25)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-200 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .input-field {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 hover:border-slate-400;
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-primary/10 hover:border-slate-400;
   }
 
   .card {
@@ -55,15 +60,19 @@
   }
 
   .section-heading {
-    @apply text-2xl font-semibold tracking-tight text-slate-950;
+    @apply font-display text-2xl font-bold tracking-tight text-slate-900;
   }
 
   .section-copy {
-    @apply text-sm leading-6 text-slate-600;
+    @apply text-base leading-relaxed text-slate-600;
   }
 
   .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.16em] text-slate-500;
+    @apply text-[10px] font-black uppercase tracking-[0.2em] text-brand-secondary;
+  }
+
+  .ui-label {
+    @apply text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold-dark;
   }
 
   .status-chip {
@@ -87,3 +96,4 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.8);
 }
+

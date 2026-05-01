@@ -9,6 +9,7 @@ import React, { useEffect, useState, Suspense, lazy } from "react";
 import { AuthPanel } from "./auth/AuthPanel";
 import { Sidebar } from "./shared/components/Sidebar";
 import { WorkspaceBar } from "./shared/workspace/WorkspaceBar";
+import { CommandPalette } from "./shared/components/CommandPalette";
 import { useSession } from "./shared/session/SessionContext";
 import { authApi } from "./shared/api/services";
 import type { AuthResponse } from "./shared/types";
@@ -21,6 +22,7 @@ const TeacherHomePanel = lazy(() => import("./resumen/TeacherHomePanel").then(m 
 const TeacherDeliveriesPanel = lazy(() => import("./deliveries/TeacherDeliveriesPanel").then(m => ({ default: m.TeacherDeliveriesPanel })));
 const TeacherProjectsPanel = lazy(() => import("./projects/TeacherProjectsPanel").then(m => ({ default: m.TeacherProjectsPanel })));
 const TeacherRuntimePanel = lazy(() => import("./runtime/TeacherRuntimePanel").then(m => ({ default: m.TeacherRuntimePanel })));
+const TeacherGroupsPanel = lazy(() => import("./groups/pages/TeacherGroupsPanel").then(m => ({ default: m.TeacherGroupsPanel })));
 const StoragePanel = lazy(() => import("./storage/StoragePanel").then(m => ({ default: m.StoragePanel })));
 const UsersPanel = lazy(() => import("./users/UsersPanel").then(m => ({ default: m.UsersPanel })));
 const StudentWorkspacePanel = lazy(() => import("./student/StudentWorkspacePanel").then(m => ({ default: m.StudentWorkspacePanel })));
@@ -28,7 +30,7 @@ const StudentWorkspacePanel = lazy(() => import("./student/StudentWorkspacePanel
 const SuspenseLoader = () => (
   <div className="flex-1 flex items-center justify-center min-h-[400px]">
     <div className="flex flex-col items-center gap-3 text-slate-400">
-      <RiLoader4Line className="text-3xl animate-spin text-indigo-500" />
+      <RiLoader4Line className="text-3xl animate-spin text-brand-blue" />
       <span className="text-sm font-medium">Cargando módulo...</span>
     </div>
   </div>
@@ -105,7 +107,7 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (res: AuthResponse) =
                     key={s.id}
                     className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs transition cursor-pointer ${
                       s.id === activeSessionId
-                        ? "bg-indigo-600/20 border border-indigo-500/30 text-indigo-300"
+                        ? "bg-brand-blue/20 border border-brand-blue/30 text-brand-blue-light"
                         : "bg-slate-800 border border-slate-700 text-slate-300 hover:border-slate-500"
                     }`}
                     onClick={() => handleSwitch(s.id)}
@@ -139,20 +141,20 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (res: AuthResponse) =
               placeholder="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+              className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-brand-blue/40"
             />
             <input
               type="password"
               placeholder="contraseña"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+              className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-brand-blue/40"
             />
             {error && <div className="text-[10px] text-rose-400">{error}</div>}
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="w-full rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-3 py-1.5 text-xs font-bold text-white transition-colors"
+              className="w-full rounded-lg bg-brand-blue hover:bg-brand-blue/80 disabled:opacity-50 px-3 py-1.5 text-xs font-bold text-white transition-colors"
             >
               {loading ? "Entrando..." : "Login rápido"}
             </button>
@@ -259,7 +261,7 @@ export default function App(): JSX.Element {
         </button>
       </div>
 
-      <main className="min-w-0 flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="relative min-w-0 flex-1 flex flex-col h-screen overflow-hidden">
         {/* Mobile Top Bar */}
         <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 xl:hidden shrink-0">
           <div className="flex items-center gap-3">
@@ -285,7 +287,12 @@ export default function App(): JSX.Element {
         </div>
 
         {/* Workspace Context Bar - Only for Teachers/Admins */}
-        {!isStudent && <WorkspaceBar />}
+        {!isStudent && (
+          <>
+            <WorkspaceBar />
+            <CommandPalette />
+          </>
+        )}
 
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -312,6 +319,7 @@ export default function App(): JSX.Element {
                    <>
                      <Route path="/resumen" element={<TeacherHomePanel session={activeSession} />} />
                      <Route path="/users" element={<UsersPanel session={activeSession} />} />
+                     <Route path="/groups" element={<TeacherGroupsPanel session={activeSession} />} />
                      <Route path="/projects" element={<TeacherProjectsPanel session={activeSession} />} />
                      <Route path="/deliveries" element={<TeacherDeliveriesPanel session={activeSession} />} />
                      <Route path="/storage" element={<StoragePanel session={activeSession} />} />

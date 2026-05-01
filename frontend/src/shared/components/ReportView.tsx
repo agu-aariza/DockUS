@@ -413,8 +413,8 @@ export function ReportView({
 
       {/* ─── Recomendaciones LLM ──────────────────────────────── */}
       {report.llmRecommendations && report.llmRecommendations.length > 0 && (
-        <div className="rounded-3xl border border-indigo-200 bg-indigo-50 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-4 text-indigo-800">
+        <div className="rounded-3xl border-brand-blue/20 bg-brand-blue/5 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4 text-brand-blue-dark">
             <RiLightbulbFlashLine className="text-xl" />
             <h3 className="text-sm font-bold uppercase tracking-[0.16em]">
               {mode === "student"
@@ -422,13 +422,13 @@ export function ReportView({
                 : "Recomendaciones"}
             </h3>
           </div>
-          <ul className="space-y-3 text-sm text-indigo-900 leading-relaxed">
+          <ul className="space-y-3 text-sm text-brand-blue-dark leading-relaxed">
             {report.llmRecommendations.map((rec, i) => (
               <li
                 key={i}
-                className="flex gap-3 bg-white/50 p-3 rounded-xl border border-indigo-100"
+                className="flex gap-3 bg-white/50 p-3 rounded-xl border border-brand-blue/10"
               >
-                <span className="text-indigo-400 mt-0.5">•</span>
+                <span className="text-brand-blue/40 mt-0.5">•</span>
                 <span>{rec}</span>
               </li>
             ))}
@@ -517,7 +517,7 @@ export function ReportView({
           open={mode === "teacher"}
         >
           <summary className="cursor-pointer flex items-center gap-2 font-medium text-slate-600 hover:text-slate-900 px-4 py-3 text-sm">
-            <RiInformationLine className="text-slate-400 group-hover:text-indigo-500" />
+            <RiInformationLine className="text-slate-400 group-hover:text-brand-blue" />
             {mode === "student"
               ? "Ver registros técnicos del pipeline (Avanzado)"
               : `Avisos del pipeline (${run.warnings.length})`}
