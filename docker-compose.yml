@@ -80,18 +80,6 @@ services:
     networks:
       - dockus-network
 
-  ollama-gpu:
-    extends: ollama
-    container_name: dockus-ollama-gpu
-    profiles: ["gpu"]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
   ollama-bootstrap:
     image: node:22-alpine
     container_name: dockus-ollama-bootstrap
