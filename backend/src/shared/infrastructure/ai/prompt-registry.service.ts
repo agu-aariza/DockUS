@@ -3,10 +3,8 @@ import { readFileSync, existsSync } from 'fs';
 import * as path from 'path';
 
 export enum PromptId {
-  REPAIR = 'repair',
   PLAN = 'plan',
   EVAL = 'eval',
-  TECHNICAL_FEEDBACK = 'technical-feedback',
 }
 
 @Injectable()
@@ -20,7 +18,7 @@ export class PromptRegistryService {
 
   private loadFromManifest() {
     const manifestPath = path.resolve(__dirname, 'prompts.json');
-    
+
     if (!existsSync(manifestPath)) {
       this.logger.error(`Prompt manifest not found at ${manifestPath}`);
       return;
@@ -33,8 +31,10 @@ export class PromptRegistryService {
       for (const [key, value] of Object.entries(manifest)) {
         this.prompts.set(key as PromptId, value as string);
       }
-      
-      this.logger.log(`Prompt registry initialized with ${this.prompts.size} prompts from JSON.`);
+
+      this.logger.log(
+        `Prompt registry initialized with ${this.prompts.size} prompts from JSON.`,
+      );
     } catch (error) {
       this.logger.error(`Failed to load prompt manifest: ${error.message}`);
     }
