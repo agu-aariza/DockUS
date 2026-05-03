@@ -46,23 +46,9 @@ export class BuildRunResponseDto {
 
   @ApiProperty({
     enum: BuildRunStatus,
-    example: BuildRunStatus.BUILDING,
+    example: BuildRunStatus.RUNNING,
   })
   status!: BuildRunStatus;
-
-  @ApiPropertyOptional({
-    enum: [
-      'ANALYSIS',
-      'BUILD',
-      'DEPLOY',
-      'PROBES',
-      'STABILITY',
-      'TESTS',
-      'CLEANUP',
-    ],
-    example: 'BUILD',
-  })
-  activeStage?: string | null;
 
   @ApiPropertyOptional({
     example: 42,
@@ -75,59 +61,11 @@ export class BuildRunResponseDto {
   isTerminal!: boolean;
 
   @ApiPropertyOptional({
-    description: 'Resultado de detección de stack.',
-    type: Object,
-  })
-  stackResult?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Dockerfile generado por el builder.',
-  })
-  dockerfileContent?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'Resumen de logs y metadatos de build.',
-    type: Object,
-  })
-  buildLogs?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Tiempos de cada etapa del pipeline.',
-    type: Object,
-  })
-  timingsMs?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Hallazgos estáticos detectados.',
-    type: Object,
-  })
-  staticFindings?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Resultado por etapa (PASS/FAIL/SKIP).',
-    type: Object,
-  })
-  stageResults?: unknown;
-
-  @ApiPropertyOptional({
     description:
       'Contrato canónico LLM-only del builder con taxonomía T/C/E y receta observada.',
     type: Object,
   })
   llmAssessment?: unknown;
-
-  @ApiPropertyOptional({
-    description:
-      'Resumen de preflight Python-first con compatibilidad detectada antes del pipeline completo.',
-    type: Object,
-  })
-  preflightSummary?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Artefactos de evidencia asociados al run.',
-    type: Object,
-  })
-  evidenceArtifacts?: unknown;
 
   @ApiPropertyOptional({
     description:
@@ -158,17 +96,6 @@ export class BuildRunResponseDto {
     description: 'Avisos del pipeline.',
   })
   warnings!: string[];
-
-  @ApiPropertyOptional({
-    description: 'Tag de imagen Docker generada.',
-  })
-  imageTag?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'Fecha de expiración de imagen Docker (TTL).',
-    format: 'date-time',
-  })
-  imageExpiresAt?: string | null;
 
   @ApiPropertyOptional({
     description: 'Inicio de ejecución real.',

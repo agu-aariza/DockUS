@@ -23,8 +23,6 @@ import { Delivery } from '../../../deliveries/entities/delivery.entity';
 import { User } from '../../../../users/entities/user.entity';
 import {
   BUILD_RUN_KINDS,
-  BuildStage,
-  BuilderPreflightSummary,
   BuildRunRuntimeTarget,
 } from '../builder.types';
 import type { BuildRunKind } from '../builder.types';
@@ -33,11 +31,7 @@ import { BuildRunEventEntity } from './build-run-event.entity';
 
 export enum BuildRunStatus {
   QUEUED = 'QUEUED',
-  ANALYZING = 'ANALYZING',
-  BUILDING = 'BUILDING',
-  DEPLOYING = 'DEPLOYING',
-  VALIDATING = 'VALIDATING',
-  CLEANING = 'CLEANING',
+  RUNNING = 'RUNNING',
   SUCCESS = 'SUCCESS',
   FAILED = 'FAILED',
   CANCELLED = 'CANCELLED',
@@ -48,7 +42,7 @@ export enum BuildRunStatus {
 @Index('IDX_build_runs_status', ['status'])
 @Index('UQ_build_runs_delivery_active', ['deliveryId'], {
   unique: true,
-  where: `"status" IN ('QUEUED','ANALYZING','BUILDING','DEPLOYING','VALIDATING','CLEANING')`,
+  where: `"status" IN ('QUEUED','RUNNING')`,
 })
 export class BuildRun {
   @PrimaryGeneratedColumn('uuid')
@@ -82,45 +76,17 @@ export class BuildRun {
   })
   status!: BuildRunStatus;
 
-  @Column({
-    type: 'enum',
-    enum: BuildStage,
-    nullable: true,
-  })
-  activeStage!: BuildStage | null;
-
   @Column({ type: 'bigint', nullable: true })
   latestEventSequence!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  stackResult!: unknown;
-
-  @Column({ type: 'text', nullable: true })
-  dockerfileContent!: string | null;
-
-  @Column({ type: 'jsonb', nullable: true })
-  buildLogs!: unknown;
-
-  @Column({ type: 'jsonb', nullable: true })
-  timingsMs!: unknown;
-
-  @Column({ type: 'jsonb', nullable: true })
-  staticFindings!: unknown;
-
-  @Column({ type: 'jsonb', nullable: true })
-  stageResults!: unknown;
-
-  @Column({ type: 'jsonb', nullable: true })
   llmAssessment!: unknown;
 
-  @Column({ type: 'jsonb', nullable: true })
-  preflightSummary!: BuilderPreflightSummary | null;
+  @Column({ type: 'text', nullable: true })
+  llmReasoning!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
   report!: unknown;
-
-  @Column({ type: 'jsonb', nullable: true })
-  evidenceArtifacts!: unknown;
 
   @Column({ type: 'jsonb', nullable: true })
   executionContext!: unknown;
@@ -133,12 +99,6 @@ export class BuildRun {
 
   @Column({ type: 'text', array: true, default: () => "'{}'" })
   warnings!: string[];
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  imageTag!: string | null;
-
-  @Column({ type: 'timestamp', nullable: true })
-  imageExpiresAt!: Date | null;
 
   @Column({ type: 'timestamp', nullable: true })
   startedAt!: Date | null;

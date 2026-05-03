@@ -9,7 +9,6 @@ import type Redis from 'ioredis';
 import { Repository } from 'typeorm';
 import { RedisClientService } from '../../../../../shared/infrastructure/cache/redis-client.service';
 import {
-  BuildStage,
   BuilderRunEvent,
   BuilderRunEventsPage,
   BuildRunEventType,
@@ -21,8 +20,6 @@ interface EmitBuilderRunEventInput {
   buildRunId: string;
   eventType: BuildRunEventType;
   runStatus?: string | null;
-  stage?: BuildStage | null;
-  activeStage?: BuildStage | null;
   message: string;
   payload?: Record<string, unknown> | null;
 }
@@ -68,7 +65,6 @@ export class BuilderRunEventsService
         buildRunId: input.buildRunId,
         eventType: input.eventType,
         runStatus: input.runStatus ?? null,
-        stage: input.stage ?? null,
         message: input.message,
         payload: input.payload ?? null,
       }),
@@ -80,9 +76,6 @@ export class BuilderRunEventsService
     });
     if (run) {
       run.latestEventSequence = saved.sequence;
-      if (input.activeStage !== undefined) {
-        run.activeStage = input.activeStage;
-      }
       await this.buildRunsRepository.save(run);
     }
 
@@ -179,7 +172,6 @@ export class BuilderRunEventsService
       sequence: Number(entity.sequence),
       eventType: entity.eventType,
       runStatus: entity.runStatus,
-      stage: entity.stage,
       message: entity.message,
       payload: entity.payload,
       createdAt: entity.createdAt.toISOString(),

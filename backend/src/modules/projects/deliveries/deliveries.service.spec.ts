@@ -69,6 +69,7 @@ describe('DeliveriesService', () => {
     service = new DeliveriesService(
       deliveriesRepository as unknown as Repository<Delivery>,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
+      {} as any, // storageService mock
     );
   });
 
@@ -147,7 +148,7 @@ describe('DeliveriesService', () => {
       deletedAt: new Date('2026-03-08T00:00:00.000Z'),
     });
     const restored = buildDelivery({
-      deletedAt: null,
+      deletedAt: undefined,
     });
 
     nextBuilders = [

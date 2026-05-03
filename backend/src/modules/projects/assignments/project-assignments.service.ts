@@ -1,9 +1,11 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
   Optional,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -66,8 +68,60 @@ export class ProjectAssignmentsService {
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
     private readonly projectAccessService: ProjectAccessService,
+    @Inject(forwardRef(() => GroupsService))
     private readonly groupsService: GroupsService,
   ) {}
+
+  /**
+   * Synchronizes project assignments for a list of students when they are added to a group.
+   * This ensures that any projects already assigned to the group are automatically
+   * assigned to the new members.
+   */
+  async syncGroupAssignments(
+    groupId: string,
+    studentIds: string[],
+  ): Promise<void> {
+    // 1. Find all project IDs that are currently assigned to this group.
+    // We look for any assignment that has this groupId in its sourceGroupIds.
+    // We use a raw query or query builder to search within the array column.
+    const assignmentsWithGroup = await this.assignmentsRepository
+      .createQueryBuilder('assignment')
+      .select('DISTINCT assignment.projectId', 'projectId')
+      .addSelect('assignment.assignedById', 'assignedById') // We'll use the last assigner as a proxy
+      .where(':groupId = ANY(assignment.sourceGroupIds)', { groupId })
+      .andWhere('assignment.revokedAt IS NULL')
+      .getRawMany<{ projectId: string; assignedById: string }>();
+
+    if (assignmentsWithGroup.length === 0) return;
+
+    // 2. For each project, ensure all new students have an assignment.
+    for (const { projectId, assignedById } of assignmentsWithGroup) {
+      for (const studentId of studentIds) {
+        const existing = await this.assignmentsRepository.findOne({
+          where: { projectId, studentId },
+        });
+
+        if (!existing) {
+          await this.assignmentsRepository.save(
+            this.assignmentsRepository.create({
+              projectId,
+              studentId,
+              assignedById,
+              assignedAt: new Date(),
+              sourceGroupIds: [groupId],
+            }),
+          );
+        } else {
+          // If assignment exists, ensure groupId is in sourceGroupIds
+          if (!existing.sourceGroupIds.includes(groupId)) {
+            existing.sourceGroupIds.push(groupId);
+            existing.revokedAt = null; // Reactivate if it was revoked
+            await this.assignmentsRepository.save(existing);
+          }
+        }
+      }
+    }
+  }
 
   async createBulk(
     projectId: string,
@@ -83,7 +137,7 @@ export class ProjectAssignmentsService {
       actor,
     );
     const requestedIds = [...new Set((input.studentIds ?? []).filter(Boolean))];
-    let requestedEmails = [
+    const requestedEmails = [
       ...new Set(
         (input.studentEmails ?? [])
           .map((email) => email.trim().toLowerCase())
@@ -360,12 +414,17 @@ export class ProjectAssignmentsService {
     );
 
     // Fetch group details for all involved group IDs
-    const allGroupIds = [...new Set(assignments.flatMap(a => a.sourceGroupIds ?? []))];
-    const groupMap = new Map<string, { id: string; name: string; code: string | null }>();
-    
+    const allGroupIds = [
+      ...new Set(assignments.flatMap((a) => a.sourceGroupIds ?? [])),
+    ];
+    const groupMap = new Map<
+      string,
+      { id: string; name: string; code: string | null }
+    >();
+
     if (allGroupIds.length > 0) {
       const groups = await this.groupsService.list(); // This service list() returns group entities + count
-      groups.forEach(g => {
+      groups.forEach((g) => {
         if (allGroupIds.includes(g.id)) {
           groupMap.set(g.id, { id: g.id, name: g.name, code: g.code });
         }
