@@ -1,0 +1,2 @@
+export const DEFAULT_DOCKER_CHECK_TIMEOUT_MS = 15000;
+export const DEFAULT_DOCKER_RUNTIME = 'runc';

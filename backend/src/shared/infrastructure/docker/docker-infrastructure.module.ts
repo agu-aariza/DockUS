@@ -3,6 +3,7 @@ import { DockerContainerService } from './docker-container.service';
 import { DockerHostService } from './docker-host.service';
 import { DockerImageService } from './docker-image.service';
 import { DockerNetworkService } from './docker-network.service';
+import { DockerExecutionService } from './docker-execution.service';
 
 @Module({
   providers: [
@@ -10,12 +11,14 @@ import { DockerNetworkService } from './docker-network.service';
     DockerNetworkService,
     DockerContainerService,
     DockerImageService,
+    DockerExecutionService,
   ],
   exports: [
     DockerHostService,
     DockerNetworkService,
     DockerContainerService,
     DockerImageService,
+    DockerExecutionService,
   ],
 })
 export class DockerInfrastructureModule {}
