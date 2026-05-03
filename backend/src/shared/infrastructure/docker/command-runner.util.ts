@@ -83,10 +83,3 @@ export async function runCommand(
   });
 }
 
-export function buildLogTail(logText: string, maxLines: number): string[] {
-  return logText
-    .split(/\r?\n/)
-    .map((line) => line.trimEnd())
-    .filter((line) => line.length > 0)
-    .slice(-maxLines);
-}

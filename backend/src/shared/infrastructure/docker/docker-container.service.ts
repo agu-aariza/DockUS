@@ -26,6 +26,62 @@ export class DockerContainerService {
     return containerId;
   }
 
+  async runEphemeralContainer(
+    options: DockerContainerRunOptions,
+  ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+    const networkArgs =
+      options.networkMode === 'none'
+        ? ['--network', 'none']
+        : options.networkName
+          ? ['--network', options.networkName]
+          : [];
+
+    const bindArgs = (options.binds ?? []).flatMap((bind) => ['-v', bind]);
+    const workdirArgs = options.workingDir ? ['-w', options.workingDir] : [];
+
+    const args = [
+      'container',
+      'run',
+      '--rm',
+      '--name',
+      options.containerName,
+      ...networkArgs,
+      ...(options.networkAlias
+        ? ['--network-alias', options.networkAlias]
+        : []),
+      '--runtime',
+      options.runtime,
+      '--read-only',
+      '--security-opt',
+      'no-new-privileges',
+      '--cap-drop',
+      'ALL',
+      '--tmpfs',
+      '/tmp',
+      ...buildDockerLabelArgs(options.labels),
+      ...(options.cpus ? ['--cpus', options.cpus] : []),
+      ...(options.memory ? ['--memory', options.memory] : []),
+      ...this.toPortArgs(options.ports),
+      ...bindArgs,
+      ...workdirArgs,
+      options.imageTag,
+      ...options.command,
+    ];
+
+    const result = await runCommand('docker', args, {
+      timeoutMs: options.timeoutMs,
+      maxBufferedChars: options.maxBufferedChars ?? 1_500_000,
+      onStdoutChunk: options.onStdoutChunk,
+      onStderrChunk: options.onStderrChunk,
+    });
+
+    return {
+      exitCode: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    };
+  }
+
   async runDaemonContainer(
     options: DockerContainerRunOptions,
   ): Promise<string> {
@@ -153,6 +209,8 @@ export class DockerContainerService {
         : options.networkName
           ? ['--network', options.networkName]
           : [];
+    const bindArgs = (options.binds ?? []).flatMap((bind) => ['-v', bind]);
+    const workdirArgs = options.workingDir ? ['-w', options.workingDir] : [];
     const args = [
       'container',
       'create',
@@ -175,6 +233,8 @@ export class DockerContainerService {
       ...(options.cpus ? ['--cpus', options.cpus] : []),
       ...(options.memory ? ['--memory', options.memory] : []),
       ...this.toPortArgs(options.ports),
+      ...bindArgs,
+      ...workdirArgs,
       options.imageTag,
       ...options.command,
     ];
