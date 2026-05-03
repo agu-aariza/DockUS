@@ -8,7 +8,7 @@
  * @module ProjectsModule
  */
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AcademicModule } from '../academic/academic.module';
 import { ProjectAssignmentsController } from './assignments/project-assignments.controller';
@@ -46,7 +46,7 @@ import { StorageInfrastructureModule } from '../../shared/infrastructure/storage
     StorageInfrastructureModule,
     ProjectRuntimeModule,
     BuilderModule,
-    AcademicModule,
+    forwardRef(() => AcademicModule),
   ],
   controllers: [
     ProjectsController,
