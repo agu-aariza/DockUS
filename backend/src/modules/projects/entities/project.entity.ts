@@ -37,10 +37,7 @@ export enum ProjectStatus {
 
 export enum ProjectRuntimeEnvironmentStatus {
   ABSENT = 'ABSENT',
-  PROVISIONING = 'PROVISIONING',
   READY = 'READY',
-  ERROR = 'ERROR',
-  DELETING = 'DELETING',
 }
 
 @Entity('projects')

@@ -8,7 +8,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { BUILD_RUN_EVENT_TYPES, BuildStage } from '../builder.types';
+import { BUILD_RUN_EVENT_TYPES } from '../builder.types';
 import type { BuildRunEventType } from '../builder.types';
 import { BuildRun } from './build-run.entity';
 
@@ -39,13 +39,6 @@ export class BuildRunEventEntity {
 
   @Column({ type: 'varchar', length: 32, nullable: true })
   runStatus!: string | null;
-
-  @Column({
-    type: 'enum',
-    enum: BuildStage,
-    nullable: true,
-  })
-  stage!: BuildStage | null;
 
   @Column({ type: 'text' })
   message!: string;

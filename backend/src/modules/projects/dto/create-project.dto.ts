@@ -99,6 +99,15 @@ export class CreateProjectDto {
   @IsDateString({}, { message: 'closesAt debe ser una fecha ISO válida.' })
   @IsOptional()
   closesAt?: string;
+
+  @ApiPropertyOptional({
+    example: ['550e8400-e29b-41d4-a716-446655440000'],
+    description: 'IDs de grupos academicos a los que asignar el proyecto al crearlo.',
+    type: [String],
+  })
+  @IsString({ each: true })
+  @IsOptional()
+  assignedGroupIds?: string[];
 }
 
 /**

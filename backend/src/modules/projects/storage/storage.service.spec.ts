@@ -52,6 +52,12 @@ describe('StorageService', () => {
 
   const projectsRepository = {
     findOne: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue({
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getExists: jest.fn().mockResolvedValue(true),
+    }),
   };
 
   const minioStorageService = createMinioStorageServiceMock();
@@ -264,7 +270,7 @@ describe('StorageService', () => {
       buildStorageObject({ uploaderId: student.userId }),
     );
     storageRepository.save.mockRejectedValue(
-      new QueryFailedError('INSERT INTO storage_objects', [], {
+      Object.assign(new QueryFailedError('INSERT INTO storage_objects', [], new Error()), {
         code: '23505',
       }),
     );
@@ -311,7 +317,7 @@ describe('StorageService', () => {
       deletedAt: new Date('2026-03-10T00:00:00.000Z'),
     });
     const restoredObject = buildStorageObject({
-      deletedAt: null,
+      deletedAt: undefined,
     });
 
     storageRepository.findOne

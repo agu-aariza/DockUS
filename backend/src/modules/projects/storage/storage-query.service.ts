@@ -43,7 +43,7 @@ export class StorageQueryService {
     private readonly storageRepository: Repository<StorageObject>,
     private readonly minioStorageService: MinioStorageService,
     private readonly storageAccessService: StorageAccessService,
-  ) { }
+  ) {}
 
   async findAll(
     query: ListStorageObjectsQueryDto,

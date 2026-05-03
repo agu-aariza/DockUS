@@ -514,8 +514,8 @@ export class DeliveriesService {
     const project = assignment?.project ?? null;
     const student = assignment?.student ?? null;
     const studentName = student
-      ? `${student.lastName ?? ""}, ${student.firstName ?? ""}`.trim()
-      : "Alumno no disponible";
+      ? `${student.lastName ?? ''}, ${student.firstName ?? ''}`.trim()
+      : 'Alumno no disponible';
     const maxDeliveriesPerStudent =
       project?.maxDeliveriesPerStudent ?? deliveryCount;
 
