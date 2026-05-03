@@ -86,6 +86,43 @@ export class ProjectsController {
     private readonly storageService: StorageService,
   ) {}
 
+  @ApiOperation({
+    summary: 'Consultar estado del runtime (efímero)',
+    description: 'Devuelve estado READY si la plataforma está operativa para ejecuciones.',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get(':id/runtime')
+  async getRuntimeStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    await this.projectsService.assertCanAccessProject(id, request.user);
+    return {
+      projectId: id,
+      workspaceNetworkName: null,
+      status: 'READY',
+      provisionedAt: new Date().toISOString(),
+      lastError: null,
+      activeRuns: [], // Se consultan vía /builder/runs
+      networks: [],
+    };
+  }
+
+  @ApiOperation({
+    summary: 'Reconciliar runtime (Legacy - No-op)',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Post(':id/runtime/reconcile')
+  async reconcileRuntime(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    await this.projectsService.assertCanAccessProject(id, request.user);
+    return { message: 'Plataforma efímera activa. Reconcile no requerido.' };
+  }
+
   /**
    * Crea un nuevo proyecto academico.
    */
@@ -107,7 +144,7 @@ export class ProjectsController {
     @Body() createProjectDto: CreateProjectDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<Project> {
-    return this.projectsService.create(createProjectDto, request.user.userId);
+    return this.projectsService.create(createProjectDto, request.user);
   }
 
   /**

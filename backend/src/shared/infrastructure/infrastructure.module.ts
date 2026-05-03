@@ -73,4 +73,4 @@ import { AiModule } from './ai/ai.module';
   providers: [RedisClientService, AdminSeedService, DemoSeedService],
   exports: [RedisClientService, DockerInfrastructureModule, AiModule],
 })
-export class InfrastructureModule { }
+export class InfrastructureModule {}

@@ -5,26 +5,15 @@ import { DockerInfrastructureModule } from '../../../shared/infrastructure/docke
 import { BuildRun } from '../builder/domain/entities/build-run.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
 import { Project } from '../entities/project.entity';
-import { PROJECT_RUNTIME_QUEUE_NAME } from './project-runtime.constants';
-import { ProjectRuntimeController } from './project-runtime.controller';
-import { ProjectRuntimeNetworkService } from './project-runtime-network.service';
-import { ProjectRuntimeProcessor } from './project-runtime.processor';
 import { ProjectRuntimeService } from './project-runtime.service';
 
 @Module({
   imports: [
-    BullModule.registerQueue({
-      name: PROJECT_RUNTIME_QUEUE_NAME,
-    }),
     DockerInfrastructureModule,
     TypeOrmModule.forFeature([Project, BuildRun, Delivery]),
   ],
-  controllers: [ProjectRuntimeController],
-  providers: [
-    ProjectRuntimeNetworkService,
-    ProjectRuntimeService,
-    ProjectRuntimeProcessor,
-  ],
+  controllers: [],
+  providers: [ProjectRuntimeService],
   exports: [ProjectRuntimeService],
 })
 export class ProjectRuntimeModule {}

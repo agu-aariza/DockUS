@@ -31,6 +31,7 @@ describe('ProjectsService', () => {
     orderBy: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
     getManyAndCount: jest.fn(),
   };
 
@@ -105,6 +106,7 @@ describe('ProjectsService', () => {
 
   it('debe crear proyecto asociando creatorId y estado por defecto', async () => {
     const creatorId = 'fbcf36f9-4ec8-4ef2-af0e-ce42887a9d6f';
+    const actor = buildActor(UserRole.TEACHER, creatorId);
     const dto: CreateProjectDto = {
       title: '  Proyecto Final  ',
       contextAcademico: 'MPSP - Grupo A',
@@ -117,9 +119,9 @@ describe('ProjectsService', () => {
 
     projectLifecycleService.create.mockResolvedValue(savedProject);
 
-    const result = await service.create(dto, creatorId);
+    const result = await service.create(dto, actor);
 
-    expect(projectLifecycleService.create).toHaveBeenCalledWith(dto, creatorId);
+    expect(projectLifecycleService.create).toHaveBeenCalledWith(dto, actor);
     expect(result.creatorId).toBe(creatorId);
   });
 

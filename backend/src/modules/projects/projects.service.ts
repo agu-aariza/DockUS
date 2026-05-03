@@ -158,8 +158,11 @@ export class ProjectsService {
     };
   }
 
-  async create(dto: CreateProjectDto, creatorId: string): Promise<Project> {
-    return this.projectLifecycleService.create(dto, creatorId);
+  async create(
+    dto: CreateProjectDto,
+    actor: AuthenticatedUser,
+  ): Promise<Project> {
+    return this.projectLifecycleService.create(dto, actor);
   }
 
   async update(

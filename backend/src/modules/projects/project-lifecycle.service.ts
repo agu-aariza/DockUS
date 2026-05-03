@@ -11,8 +11,9 @@ import { ProjectAssignment } from './assignments/entities/project-assignment.ent
 import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
 import { ProjectAccessService } from './project-access.service';
-import { ProjectRuntimeService } from './runtime/project-runtime.service';
 import { Delivery } from './deliveries/entities/delivery.entity';
+
+import { ProjectAssignmentsService } from './assignments/project-assignments.service';
 
 @Injectable()
 export class ProjectLifecycleService {
@@ -21,27 +22,37 @@ export class ProjectLifecycleService {
     private readonly projectsRepository: Repository<Project>,
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
-    private readonly projectRuntimeService: ProjectRuntimeService,
     private readonly projectAccessService: ProjectAccessService,
+    private readonly projectAssignmentsService: ProjectAssignmentsService,
   ) {}
 
-  async create(dto: CreateProjectDto, creatorId: string): Promise<Project> {
+  async create(dto: CreateProjectDto, actor: AuthenticatedUser): Promise<Project> {
     let project = this.projectsRepository.create({
       title: this.normalizeTitle(dto.title),
       contextAcademico: dto.contextAcademico?.trim() || null,
       status: dto.status ?? ProjectStatus.DRAFT,
-      creatorId,
+      creatorId: actor.userId,
       maxDeliveriesPerStudent: dto.maxDeliveriesPerStudent ?? 1,
       expectedType: dto.expectedType?.trim() || null,
       rubricInstructions: dto.rubricInstructions?.trim() || null,
       opensAt: this.normalizeDateInput(dto.opensAt),
       closesAt: this.normalizeDateInput(dto.closesAt),
-      teachers: [{ id: creatorId } as any],
+      teachers: [{ id: actor.userId } as any],
     });
     this.assertProjectWindow(project.opensAt, project.closesAt);
 
     project = await this.projectsRepository.save(project);
-    return this.projectRuntimeService.syncCreatedProject(project);
+
+    // Si se indicaron grupos a matricular al crear el proyecto
+    if (dto.assignedGroupIds && dto.assignedGroupIds.length > 0) {
+      await this.projectAssignmentsService.createBulk(
+        project.id,
+        { groupIds: dto.assignedGroupIds },
+        actor,
+      );
+    }
+
+    return project;
   }
 
   async update(
@@ -91,10 +102,7 @@ export class ProjectLifecycleService {
     this.assertProjectWindow(project.opensAt, project.closesAt);
 
     if (dto.status !== undefined) {
-      return this.projectRuntimeService.transitionProjectStatus(
-        project,
-        dto.status,
-      );
+      project.status = dto.status;
     }
 
     return this.projectsRepository.save(project);
@@ -109,7 +117,8 @@ export class ProjectLifecycleService {
       id,
       actor,
     );
-    return this.projectRuntimeService.transitionProjectStatus(project, status);
+    project.status = status;
+    return this.projectsRepository.save(project);
   }
 
   async remove(id: string): Promise<{ message: string }> {

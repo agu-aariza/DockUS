@@ -2,6 +2,7 @@ import type { AuthenticatedUser } from '../modules/auth/interfaces/authenticated
 import { UserRole } from '../modules/users/entities/user.entity';
 import {
   Project,
+  ProjectRuntimeEnvironmentStatus,
   ProjectStatus,
 } from '../modules/projects/entities/project.entity';
 import { ProjectAssignment } from '../modules/projects/assignments/entities/project-assignment.entity';
@@ -36,7 +37,16 @@ export function buildProject(overrides: Partial<Project> = {}): Project {
     status: ProjectStatus.ACTIVE,
     creatorId: '22222222-2222-2222-2222-222222222222',
     maxDeliveriesPerStudent: 2,
-    creator: undefined as unknown as Project['creator'],
+    expectedType: 'PYTHON_FASTAPI',
+    rubricInstructions: 'Evaluar calidad de código y tests.',
+    runtimeNetworkName: null,
+    runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.ABSENT,
+    runtimeProvisionedAt: null,
+    runtimeLastError: null,
+    opensAt: null,
+    closesAt: null,
+    creator: null as unknown as Project['creator'],
+    teachers: [] as Project['teachers'],
     createdAt: new Date('2026-03-09T00:00:00.000Z'),
     updatedAt: new Date('2026-03-09T00:00:00.000Z'),
     deletedAt: null as unknown as Project['deletedAt'],
@@ -59,10 +69,11 @@ export function buildAssignment(
       lastName: 'Student',
     } as ProjectAssignment['student'],
     assignedById: '22222222-2222-2222-2222-222222222222',
-    assignedBy: undefined as unknown as ProjectAssignment['assignedBy'],
+    assignedBy: null as unknown as ProjectAssignment['assignedBy'],
     assignedAt: new Date('2026-03-01T00:00:00.000Z'),
     updatedAt: new Date('2026-03-01T00:00:00.000Z'),
     revokedAt: null,
+    sourceGroupIds: [],
     ...overrides,
   };
 }
@@ -77,6 +88,9 @@ export function buildDelivery(overrides: Partial<Delivery> = {}): Delivery {
     version: 1,
     status: DeliveryStatus.DRAFT,
     notes: 'Entrega inicial',
+    isLate: false,
+    grade: null,
+    graderNotes: null,
     createdAt: new Date('2026-03-09T00:00:00.000Z'),
     updatedAt: new Date('2026-03-09T00:00:00.000Z'),
     deletedAt: null as unknown as Delivery['deletedAt'],
