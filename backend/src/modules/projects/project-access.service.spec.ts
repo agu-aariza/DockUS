@@ -10,6 +10,12 @@ describe('ProjectAccessService', () => {
   let service: ProjectAccessService;
   const projectsRepository = {
     findOne: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue({
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getExists: jest.fn().mockResolvedValue(true),
+    }),
   };
   const assignmentsRepository = {
     findOne: jest.fn(),
@@ -21,6 +27,7 @@ describe('ProjectAccessService', () => {
       projectsRepository as unknown as Repository<Project>,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
     );
+    (projectsRepository.createQueryBuilder() as any).getExists.mockResolvedValue(true);
   });
 
   it('permite a un teacher acceder a su propio proyecto', async () => {
@@ -38,6 +45,7 @@ describe('ProjectAccessService', () => {
     projectsRepository.findOne.mockResolvedValue(
       buildProject({ creatorId: 'teacher-2' }),
     );
+    (projectsRepository.createQueryBuilder() as any).getExists.mockResolvedValue(false);
 
     await expect(
       service.assertCanAccessProject('project-1', actor),

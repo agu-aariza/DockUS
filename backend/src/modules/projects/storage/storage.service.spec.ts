@@ -271,7 +271,7 @@ describe('StorageService', () => {
     );
     storageRepository.save.mockRejectedValue(
       Object.assign(new QueryFailedError('INSERT INTO storage_objects', [], new Error()), {
-        code: '23505',
+        driverError: { code: '23505' },
       }),
     );
 

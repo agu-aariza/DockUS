@@ -74,7 +74,7 @@ export class StorageUploadService {
     const delivery = await this.storageAccessService.findDeliveryOrThrow(
       dto.deliveryId,
     );
-    this.storageAccessService.assertCanUploadStudentSource(delivery, actor);
+    await this.storageAccessService.assertCanUploadStudentSource(delivery, actor);
 
     const bucket = this.minioStorageService.getBucketName();
     const objectKey = this.buildDeliveryObjectKey(delivery.id, dto.logicalName);
