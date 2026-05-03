@@ -1,15 +1,18 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   ConflictException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, IsNull } from 'typeorm';
+import { In, Repository, IsNull } from 'typeorm';
 import { CourseGroup } from '../entities/course-group.entity';
 import { GroupEnrollment } from '../entities/group-enrollment.entity';
 import { User, UserRole } from '../../users/entities/user.entity';
 import { CreateGroupDto } from '../dto/create-group.dto';
 import { BulkEnrollDto } from '../dto/bulk-enroll.dto';
+import { ProjectAssignmentsService } from '../../projects/assignments/project-assignments.service';
 
 @Injectable()
 export class GroupsService {
@@ -20,6 +23,8 @@ export class GroupsService {
     private readonly enrollmentsRepository: Repository<GroupEnrollment>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @Inject(forwardRef(() => ProjectAssignmentsService))
+    private readonly projectAssignmentsService: ProjectAssignmentsService,
   ) {}
 
   async list(): Promise<any[]> {
@@ -89,8 +94,8 @@ export class GroupsService {
     if (!group) throw new NotFoundException('Grupo no encontrado');
 
     const studentIds = dto.studentIds || [];
-    let studentEmails = dto.studentEmails || [];
-    let studentNames = dto.studentNames || [];
+    const studentEmails = dto.studentEmails || [];
+    const studentNames = dto.studentNames || [];
 
     // Parse raw input if provided
     if (dto.rawInput) {
@@ -187,11 +192,11 @@ export class GroupsService {
     );
 
     // Calculate unresolved names (best effort)
-    const foundFullNames = foundStudents.map(
-      (s) => `${s.lastName}, ${s.firstName}`.toLowerCase(),
+    const foundFullNames = foundStudents.map((s) =>
+      `${s.lastName}, ${s.firstName}`.toLowerCase(),
     );
-    const foundSimpleNames = foundStudents.map(
-      (s) => `${s.firstName} ${s.lastName}`.toLowerCase(),
+    const foundSimpleNames = foundStudents.map((s) =>
+      `${s.firstName} ${s.lastName}`.toLowerCase(),
     );
     results.summary.unresolvedNames = studentNames.filter((name) => {
       const ln = name.toLowerCase().trim();
@@ -225,6 +230,14 @@ export class GroupsService {
       results.summary.enrolledCount++;
     }
 
+    // Sync project assignments for the newly enrolled students
+    if (studentIds.length > 0) {
+      await this.projectAssignmentsService.syncGroupAssignments(
+        groupId,
+        studentIds,
+      );
+    }
+
     return results;
   }
 
@@ -245,7 +258,7 @@ export class GroupsService {
     if (!group) throw new NotFoundException('Grupo no encontrado');
 
     // Soft delete or hard delete? The repo seems to use hard delete for enrollments in some cases,
-    // but here we'll just delete the group. 
+    // but here we'll just delete the group.
     // Usually we want to cascade or check if there are active enrollments.
     await this.groupsRepository.softRemove(group);
   }

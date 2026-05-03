@@ -19,12 +19,13 @@ import { AuthenticatedRequest } from '../interfaces/authenticated-user.interface
 import { UserRole } from '../../users/entities/user.entity';
 
 /** Clave de metadatos usada por el decorador `@Roles`. */
-export const ROLES_KEY = 'roles';
+const ROLES_KEY = 'roles';
 
 /**
  * Declara los roles permitidos para una ruta o controlador.
  */
 export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
+
 
 @Injectable()
 export class RolesGuard implements CanActivate {
