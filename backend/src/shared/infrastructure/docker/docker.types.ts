@@ -31,7 +31,14 @@ export interface DockerContainerRunOptions extends DockerLabelledTimeoutOptions 
     hostPort?: number;
     protocol?: 'tcp' | 'udp';
   }>;
+  binds?: string[];
+  workingDir?: string;
+  onStdoutChunk?: (chunk: string) => void;
+  onStderrChunk?: (chunk: string) => void;
 }
+
+export type DockerRunOptions = Omit<DockerContainerRunOptions, 'runtime' | 'timeoutMs' | 'maxBufferedChars'>;
+export type DockerCreateNetworkInfo = Omit<DockerCreateNetworkOptions, 'timeoutMs' | 'maxBufferedChars'>;
 
 export interface DockerWaitOptions {
   timeoutMs: number;

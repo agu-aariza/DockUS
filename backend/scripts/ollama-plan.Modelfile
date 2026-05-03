@@ -1,7 +1,7 @@
 FROM qwen2.5-coder:7b
 
 # Contexto amplio para analizar repositorios completos
-PARAMETER num_ctx 16384
+PARAMETER num_ctx 131072
 # Temperatura baja para output JSON determinista
 PARAMETER temperature 0.1
 # Penalizar repeticiones en JSON

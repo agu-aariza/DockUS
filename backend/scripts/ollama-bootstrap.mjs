@@ -1,145 +1,61 @@
-/**
- * @fileoverview Bootstrap de modelos Ollama para DockUS Builder.
- *
- * Lee los prompts desde un JSON centralizado y crea modelos derivados:
- * - dockus-builder-plan  → planificación de ejecución
- * - dockus-builder-eval  → evaluación final
- *
- * Uso:
- *   node scripts/ollama-bootstrap.mjs
- */
+// Using native fetch from Node 22
 
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
+const PLAN_MODEL_NAME = process.env.PLAN_MODEL_NAME || 'dockus-builder-plan';
+const EVAL_MODEL_NAME = process.env.EVAL_MODEL_NAME || 'dockus-builder-eval';
+const PLAN_BASE_MODEL = process.env.PLAN_BASE_MODEL || 'qwen2.5-coder:7b';
+const EVAL_BASE_MODEL = process.env.EVAL_BASE_MODEL || 'deepseek-r1:7b';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://ollama:11434';
-const BASE_MODEL = process.env.MODEL_NAME || 'qwen2.5-coder:7b';
-const PLAN_MODEL = process.env.PLAN_MODEL_NAME || 'dockus-builder-plan';
-const EVAL_MODEL = process.env.EVAL_MODEL_NAME || 'dockus-builder-eval';
-const NUM_CTX = Number.parseInt(process.env.OLLAMA_NUM_CTX || '16384', 10);
-const MAX_RETRIES = 5;
-const RETRY_DELAY_MS = 5000;
-
-// Ruta al JSON centralizado de prompts
-const PROMPTS_JSON_PATH = path.resolve(
-  __dirname,
-  '../src/shared/infrastructure/ai/prompts.json',
-);
-
-async function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function postJson(endpoint, payload) {
-  const url = `${OLLAMA_HOST}${endpoint}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  const raw = await response.text();
-  let parsed = null;
+async function bootstrap() {
+  console.log(`[BOOTSTRAP] Iniciando aprovisionamiento de modelos en ${OLLAMA_HOST}...`);
 
   try {
-    parsed = raw ? JSON.parse(raw) : null;
-  } catch {
-    parsed = null;
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      `Ollama ${endpoint} returned ${response.status}: ${raw.slice(0, 500)}`,
-    );
-  }
-
-  if (parsed && typeof parsed === 'object' && 'error' in parsed && parsed.error) {
-    throw new Error(`Ollama ${endpoint} error: ${String(parsed.error)}`);
-  }
-
-  return parsed;
-}
-
-async function withRetry(label, fn) {
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (attempt < MAX_RETRIES) {
-        console.warn(
-          `[${label}] Attempt ${attempt}/${MAX_RETRIES} failed: ${msg}. Retrying in ${RETRY_DELAY_MS / 1000}s...`,
-        );
-        await sleep(RETRY_DELAY_MS);
-      } else {
-        throw error;
-      }
+    // 1. Pull Base Models
+    for (const model of [PLAN_BASE_MODEL, EVAL_BASE_MODEL]) {
+      console.log(`[BOOTSTRAP] Asegurando modelo base: ${model}...`);
+      const pullRes = await fetch(`${OLLAMA_HOST}/api/pull`, {
+        method: 'POST',
+        body: JSON.stringify({ name: model, stream: false }),
+      });
+      if (!pullRes.ok) throw new Error(`Falló pull de ${model}`);
+      console.log(`[BOOTSTRAP] Modelo base ${model} listo.`);
     }
-  }
-}
 
-async function ensureBaseModel() {
-  await withRetry('pull', async () => {
-    console.log(`Pulling base model ${BASE_MODEL}...`);
-    await postJson('/api/pull', { model: BASE_MODEL, stream: false });
-    console.log(`✓ Base model ${BASE_MODEL} ready.`);
-  });
-}
+    // 2. Create Custom Models (Plan & Eval)
+    const customModels = [
+      { name: PLAN_MODEL_NAME, from: PLAN_BASE_MODEL },
+      { name: EVAL_MODEL_NAME, from: EVAL_BASE_MODEL },
+    ];
 
-async function createDerivedModel(modelName, systemPrompt) {
-  await withRetry(modelName, async () => {
-    console.log(`Creating derived model ${modelName} from ${BASE_MODEL}...`);
-    await postJson('/api/create', {
-      model: modelName,
-      from: BASE_MODEL,
-      system: systemPrompt.trim(),
-      parameters: {
-        num_ctx: NUM_CTX,
-        temperature: 0.1,
-        repeat_penalty: 1.1,
-      },
-      stream: false,
-    });
-    console.log(`✓ Derived model ${modelName} ready.`);
-  });
-}
+    for (const custom of customModels) {
+      console.log(`[BOOTSTRAP] Creando modelo personalizado: ${custom.name} desde ${custom.from}...`);
+      
+      const modelfile = `FROM ${custom.from}\nPARAMETER num_ctx ${process.env.OLLAMA_NUM_CTX || 16384}`;
+      
+      const createRes = await fetch(`${OLLAMA_HOST}/api/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: custom.name, 
+          from: custom.from, // Some versions prefer this
+          modelfile: modelfile, // Some versions require this
+          stream: false 
+        }),
+      });
 
-async function main() {
-  console.log(`DockUS Ollama Bootstrap (JSON-powered)`);
-  console.log(`  Host:       ${OLLAMA_HOST}`);
-  console.log(`  Base model: ${BASE_MODEL}`);
-  console.log();
+      if (!createRes.ok) {
+        const error = await createRes.text();
+        throw new Error(`Error al crear ${custom.name}: ${error}`);
+      }
+      console.log(`[BOOTSTRAP] Modelo ${custom.name} creado exitosamente.`);
+    }
 
-  let prompts = {};
-  try {
-    const rawPrompts = await readFile(PROMPTS_JSON_PATH, 'utf8');
-    prompts = JSON.parse(rawPrompts);
-    console.log(`✓ Loaded prompts from ${PROMPTS_JSON_PATH}`);
-  } catch (error) {
-    console.error(`✗ Failed to read prompts.json: ${error.message}`);
+    console.log('[BOOTSTRAP] Aprovisionamiento completado con éxito.');
+    process.exit(0);
+  } catch (err) {
+    console.error('[BOOTSTRAP] ERROR CRÍTICO:', err.message);
     process.exit(1);
   }
-
-  await ensureBaseModel();
-
-  if (prompts.plan) {
-    await createDerivedModel(PLAN_MODEL, prompts.plan);
-  }
-  if (prompts.eval) {
-    await createDerivedModel(EVAL_MODEL, prompts.eval);
-  }
-
-  console.log();
-  console.log('✓ Ollama bootstrap complete.');
 }
 
-main().catch((error) => {
-  console.error(
-    `\n✗ Ollama bootstrap failed: ${error instanceof Error ? error.message : String(error)}`,
-  );
-  process.exitCode = 1;
-});
+bootstrap();
