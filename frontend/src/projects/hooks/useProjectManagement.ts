@@ -47,6 +47,8 @@ export function useProjectManagement(session: SessionRecord | null) {
     rubricInstructions: "",
     opensAt: "",
     closesAt: "",
+    assignedGroupIds: [] as string[],
+    suiteFile: null as File | null,
   });
   const [editForm, setEditForm] = useState({
     title: "",
@@ -158,7 +160,13 @@ export function useProjectManagement(session: SessionRecord | null) {
         rubricInstructions: normalizeOptionalText(createForm.rubricInstructions),
         opensAt: normalizeOptionalDateTime(createForm.opensAt),
         closesAt: normalizeOptionalDateTime(createForm.closesAt),
+        assignedGroupIds: createForm.assignedGroupIds,
       });
+
+      if (createForm.suiteFile) {
+        await projectsApi.uploadTestSuite(response.id, createForm.suiteFile);
+      }
+
       setCreateForm({
         title: "",
         contextAcademico: "",
@@ -168,6 +176,8 @@ export function useProjectManagement(session: SessionRecord | null) {
         rubricInstructions: "",
         opensAt: "",
         closesAt: "",
+        assignedGroupIds: [],
+        suiteFile: null,
       });
       setDebugPayload(response);
       setEditorNotice({ text: "Proyecto creado correctamente.", tone: "info" });

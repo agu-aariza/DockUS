@@ -106,14 +106,8 @@ export function useRuntimeManagement(session: SessionRecord | null) {
   };
 
   const handleReconcile = async () => {
-    if (!selectedProjectId) return;
-    setBusyAction("reconcile");
-    try {
-      await projectsApi.reconcileRuntime(selectedProjectId);
-      setMessage({ text: "Reconcile solicitado.", tone: "info" });
-      await refreshRuntimeStatus(selectedProjectId);
-    } catch (e) { setMessage({ text: getErrorMessage(e), tone: "warning" }); }
-    finally { setBusyAction(null); }
+    // No-op en arquitectura efímera
+    setMessage({ text: "Infraestructura bajo demanda activa (Efímera).", tone: "info" });
   };
 
   // Sync effects
@@ -134,7 +128,8 @@ export function useRuntimeManagement(session: SessionRecord | null) {
       } catch (e) { setMessage({ text: getErrorMessage(e), tone: "warning" }); }
     };
     void sync();
-    const inv = setInterval(() => { projectsApi.runtime(selectedProjectId).then(setRuntimeStatus).catch(() => {}); }, 5000);
+    // Sondeo de estado plataforma menos agresivo (arquitectura efímera)
+    const inv = setInterval(() => { projectsApi.runtime(selectedProjectId).then(setRuntimeStatus).catch(() => {}); }, 15000);
     return () => clearInterval(inv);
   }, [reqAssignmentId, selectedProjectId]);
 

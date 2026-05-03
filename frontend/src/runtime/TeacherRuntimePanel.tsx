@@ -14,7 +14,6 @@ import { BuilderLiveRunPane } from "../builder/components/BuilderLiveRunPane";
 import { BuilderRunsTable } from "../builder/components/BuilderRunsTable";
 import type {
   ProjectRuntimeEnvironmentStatus,
-  ProjectRuntimeNetworkSummary,
   SessionRecord,
 } from "../shared/types";
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
@@ -44,70 +43,7 @@ function formatStudentName(name?: string, email?: string) {
   return name;
 }
 
-
-function NetworkCard({
-  network,
-}: {
-  network: ProjectRuntimeNetworkSummary;
-}): JSX.Element {
-  return (
-    <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
-            <RiServerLine />
-          </div>
-          <div>
-            <div className="text-sm font-bold tracking-tight text-slate-950 uppercase">
-              {network.name}
-            </div>
-            <div className="ui-label lowercase">
-              Scope: {network.scope}
-            </div>
-          </div>
-        </div>
-        <span className="rounded-full bg-brand-blue/10 border border-brand-blue/20 px-3 py-1 text-[11px] font-bold text-brand-blue-dark">
-          {network.containers.length} Contenedores
-        </span>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {network.containers.length === 0 ? (
-          <div className="col-span-full rounded-2xl border border-dashed border-slate-100 bg-slate-50/50 px-3 py-6 text-center text-xs font-medium text-slate-400">
-            Sin contenedores activos en esta red.
-          </div>
-        ) : (
-          network.containers.map((container) => (
-            <div
-              key={container.id}
-              className="group relative rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:shadow-slate-200/50"
-            >
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 truncate">
-                  <div className={`h-2 w-2 rounded-full ${container.state === 'running' ? 'bg-emerald-400' : 'bg-slate-300'}`} />
-                  <span className="truncate text-xs font-bold text-slate-900">
-                    {container.name}
-                  </span>
-                </div>
-              </div>
-              <div className="ui-label">
-                ID: {container.id.slice(0, 12)}
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <span className="ui-label text-slate-400">Restarts: {container.restartCount}</span>
-                <span className="rounded-lg bg-white px-2 py-0.5 ui-label text-slate-600 border border-slate-200">
-                  {container.status}
-                </span>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
-type RuntimeTab = "control" | "infra" | "history" | "live";
+type RuntimeTab = "control" | "history" | "live";
 
 export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.Element {
   const rc = useRuntimeManagement(session);
@@ -181,8 +117,6 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
   const runtimeStatus = rc.runtimeStatus?.status ?? "ABSENT";
   const runtimeStyle = RUNTIME_STATUS_STYLES[runtimeStatus];
   const runs = rc.runsResponse?.data ?? [];
-  const activeNetworks = rc.runtimeStatus?.networks ?? [];
-  const activeRuns = rc.runtimeStatus?.activeRuns ?? [];
 
   const projectOptions: VisualPickerOption[] = useMemo(() => 
     rc.projectOptions.map(p => ({
@@ -248,7 +182,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
     <div className="space-y-6">
       <PageHeader 
         title="Runtime Operativo"
-        subtitle="Orquestación de entornos virtualizados, monitoreo de infraestructura Docker y auditoría de ejecución en tiempo real."
+        subtitle="Evaluación integral mediante ejecución efímera en contenedores aislados y auditoría por LLM."
         icon={<RiPulseFill />}
         badge={runtimeStatus}
         actions={
@@ -256,7 +190,6 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
             <Tabs 
               tabs={[
                 { id: "control", label: "Control", icon: RiPlayLine },
-                { id: "infra", label: "Infra", icon: RiServerLine },
                 { id: "history", label: "Historial", icon: RiArrowRightUpLine },
                 { id: "live", label: "En vivo", icon: RiRefreshLine },
               ]}
@@ -279,22 +212,22 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Estado del Nodo"
-          value={runtimeStatus}
-          helper={rc.runtimeStatus?.workspaceNetworkName ?? "Sin red asociada"}
-          icon={<RiServerLine />}
+          label="Estado Plataforma"
+          value={runtimeStatus === 'READY' ? 'OPERATIVA' : runtimeStatus}
+          helper="Motor de ejecución efímera"
+          icon={<RiPulseFill />}
           variant={runtimeStatus === 'READY' ? 'info' : 'warning'}
         />
         <MetricCard
-          label="Topologías Activas"
-          value={activeNetworks.length}
-          helper="Workspace + runs efímeros"
+          label="Capacidad Evaluación"
+          value="LLM + Docker"
+          helper="Análisis integral activo"
           icon={<RiServerLine />}
           variant="info"
         />
         <MetricCard
-          label="Runs activos"
-          value={activeRuns.length}
+          label="Runs Recientes"
+          value={runs.length}
           helper="Procesos en este proyecto"
           icon={<RiPlayLine />}
           variant="default"
@@ -317,8 +250,8 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                   <RiPlayLine />
                 </div>
                 <div>
-                  <h4 className="text-xl font-bold tracking-tight">Motor de Ejecución</h4>
-                  <p className="text-sm text-slate-400">Selección de contexto y orquestación de nuevos runs técnicos.</p>
+                  <h4 className="text-xl font-bold tracking-tight">Evaluación Integral</h4>
+                  <p className="text-sm text-slate-400">Ejecución efímera de código y evaluación por LLM en tiempo real.</p>
                 </div>
               </div>
               <span className={`rounded-full border px-4 py-1.5 text-xs font-bold ${runtimeStyle}`}>
@@ -334,7 +267,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                 <VisualPicker
                   options={projectOptions}
                   value={rc.selectedProjectId}
-                  onSelect={(id, label) => rc.setSelectedProjectId(id)}
+                  onSelect={(id) => rc.setSelectedProjectId(id)}
                   placeholder="Selecciona un proyecto..."
                   searchPlaceholder="Buscar por título o contexto..."
                 />
@@ -344,7 +277,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                 <VisualPicker
                   options={assignmentOptions}
                   value={rc.selectedAssignmentId}
-                  onSelect={(id, label) => rc.setSelectedAssignmentId(id)}
+                  onSelect={(id) => rc.setSelectedAssignmentId(id)}
                   placeholder="Selecciona un alumno..."
                   searchPlaceholder="Buscar por nombre o email..."
                   className={!rc.selectedProjectId ? 'opacity-50 grayscale pointer-events-none' : ''}
@@ -355,7 +288,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                 <VisualPicker
                   options={deliveryOptions}
                   value={rc.selectedDeliveryId}
-                  onSelect={(id, label) => rc.setSelectedDeliveryId(id)}
+                  onSelect={(id) => rc.setSelectedDeliveryId(id)}
                   placeholder="Selecciona versión..."
                   searchPlaceholder="Buscar versión o estado..."
                   className={!rc.selectedAssignmentId ? 'opacity-50 grayscale pointer-events-none' : ''}
@@ -379,8 +312,8 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                 <div className="eyebrow mb-3">Resumen de Destino</div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-500">Red Docker:</span>
-                    <span className="font-bold text-slate-900">{rc.runtimeStatus?.workspaceNetworkName ?? "n/a"}</span>
+                    <span className="font-medium text-slate-500">Modo Ejecución:</span>
+                    <span className="font-bold text-emerald-600">Efímero / Aislado</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-slate-500">Alumno:</span>
@@ -414,20 +347,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                   ) : (
                     <RiPlayLine className="text-2xl" />
                   )}
-                  Lanzar Run Técnico
-                </Button>
-                <Button
-                  className="px-8 flex-1 sm:flex-none"
-                  onClick={() => void rc.handleReconcile()}
-                  disabled={!rc.selectedProjectId || rc.busyAction === "reconcile"}
-                  variant="secondary"
-                >
-                  {rc.busyAction === "reconcile" ? (
-                    <RiLoader4Line className="animate-spin text-xl" />
-                  ) : (
-                    <RiRefreshLine className="text-xl" />
-                  )}
-                  Preparar Infraestructura
+                  Lanzar Evaluación
                 </Button>
               </div>
 
@@ -451,7 +371,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
             {runtimeStatus !== "READY" && rc.selectedProjectId ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3 text-sm text-amber-800">
                 <RiServerLine className="text-lg" />
-                <span>La infraestructura Docker no está lista. Pulsa "Preparar Infraestructura" para aprovisionar las redes.</span>
+                <span>El motor de ejecución no está listo. Contacta con soporte técnico si el problema persiste.</span>
               </div>
             ) : null}
 
@@ -461,67 +381,6 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
               </div>
             ) : null}
           </div>
-        </section>
-      ) : null}
-
-      {activeTab === "infra" ? (
-        <section className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between gap-4 px-2">
-            <div>
-              <h3 className="text-xl font-bold tracking-tight text-slate-950">Topología de Infraestructura</h3>
-              <p className="text-sm text-slate-500">Redes y contenedores virtualizados asociados al proyecto activo.</p>
-            </div>
-            <div className="flex h-11 items-center gap-2 rounded-2xl bg-slate-100 px-4 py-1 text-xs font-bold text-slate-600">
-              <RiServerLine className="text-lg" />
-              {rc.runtimeStatus?.workspaceNetworkName ?? "Sin red activa"}
-            </div>
-          </div>
-
-          <div className="grid gap-6">
-            {activeNetworks.length === 0 ? (
-              <div className="rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-slate-50/50 py-20 px-6 text-center">
-                <RiServerLine className="mx-auto text-5xl text-slate-300 mb-4" />
-                <h5 className="text-lg font-bold text-slate-900">Sin redes detectadas</h5>
-                <p className="text-sm text-slate-500 max-w-sm mx-auto">No hay topologías Docker activas en este momento para el proyecto.</p>
-              </div>
-            ) : (
-              activeNetworks.map((network) => (
-                <NetworkCard key={network.name} network={network} />
-              ))
-            )}
-          </div>
-
-          {activeRuns.length > 0 && (
-            <div className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm">
-              <h4 className="eyebrow mb-6">Runs Activos en Tiempo Real</h4>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {activeRuns.map((run) => (
-                  <button
-                    key={run.buildRunId}
-                    className="flex flex-col items-start p-5 rounded-3xl border border-slate-100 bg-slate-50/50 transition-all hover:bg-white hover:shadow-lg hover:shadow-slate-200/50 text-left"
-                    onClick={() => {
-                      rc.setSelectedRunId(run.buildRunId);
-                      setActiveTab("live");
-                    }}
-                  >
-                    <div className="flex w-full items-center justify-between mb-3">
-                      <span className="text-xs font-bold text-slate-900 font-mono">{run.buildRunId.slice(0, 8)}</span>
-                      <span className="rounded-full bg-brand-gold/10 px-2.5 py-0.5 ui-label text-brand-gold-dark">
-                        {run.status}
-                      </span>
-                    </div>
-                    <div className="eyebrow mb-4">
-                      {run.activeStage || "Preparando etapa..." }
-                    </div>
-                    <div className="mt-auto pt-4 border-t border-slate-100 w-full text-[10px] text-slate-500 flex items-center justify-between">
-                      <span>Red: {run.executionNetworkName?.slice(0, 15) || 'n/a'}</span>
-                      <RiArrowRightUpLine className="text-lg text-slate-300" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </section>
       ) : null}
 

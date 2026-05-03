@@ -267,10 +267,6 @@ export interface DownloadUrlResponse {
 export type BuildRunStatus =
   | "QUEUED"
   | "ANALYZING"
-  | "BUILDING"
-  | "DEPLOYING"
-  | "VALIDATING"
-  | "CLEANING"
   | "SUCCESS"
   | "FAILED"
   | "CANCELLED";
@@ -278,12 +274,9 @@ export type BuildRunStatus =
 export type BuildRunKind = "STANDARD";
 
 export type BuildStage =
-  | "ANALYSIS"
-  | "BUILD"
-  | "DEPLOY"
-  | "PROBES"
-  | "STABILITY"
-  | "TESTS"
+  | "WORKSPACE"
+  | "EXECUTION"
+  | "LLM_EVALUATION"
   | "CLEANUP";
 
 export type TechnicalFeedbackSeverity = "low" | "medium" | "high";
@@ -398,6 +391,11 @@ export interface BuildRunEntity {
     structuralType?: string;
     evaluativeState?: string;
     confidence?: string;
+    rationale?: string;
+    recommendedGrade?: number;
+    evidenceSummary?: string;
+    observedEvidence?: string[];
+    evaluationLimits?: string[];
     capabilities?: Record<
       string,
       {

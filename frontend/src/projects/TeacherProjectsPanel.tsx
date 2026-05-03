@@ -288,6 +288,8 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
       rubricInstructions: "",
       opensAt: "",
       closesAt: "",
+      assignedGroupIds: [],
+      suiteFile: null,
     });
     pc.setSelectedProjectId("");
     clearWorkspace();
@@ -599,6 +601,113 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     onChange={(e) => pc.setCreateForm(prev => ({ ...prev, rubricInstructions: e.target.value }))}
                   />
                 </div>
+
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 pt-6 border-t border-slate-100">
+                  {/* Grupos Académicos */}
+                  <div className="space-y-4">
+                    <label className="label-text">Asignar Grupos Académicos</label>
+                    <p className="text-xs text-slate-500 mb-3">Los alumnos de los grupos seleccionados serán matriculados automáticamente.</p>
+                    <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-2">
+                      {pc.groups.map((group) => {
+                        const isSelected = pc.createForm.assignedGroupIds.includes(group.id);
+                        return (
+                          <button
+                            key={group.id}
+                            type="button"
+                            onClick={() => {
+                              const newIds = isSelected
+                                ? pc.createForm.assignedGroupIds.filter(id => id !== group.id)
+                                : [...pc.createForm.assignedGroupIds, group.id];
+                              pc.setCreateForm(prev => ({ ...prev, assignedGroupIds: newIds }));
+                            }}
+                            className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${
+                              isSelected 
+                                ? "bg-brand-maroon/5 border-brand-maroon shadow-sm" 
+                                : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+                                isSelected ? "bg-brand-maroon text-white" : "bg-slate-100 text-slate-500"
+                              }`}>
+                                <RiGroupLine className="text-lg" />
+                              </div>
+                              <div>
+                                <p className={`font-bold text-sm ${isSelected ? "text-brand-maroon" : "text-slate-900"}`}>{group.name}</p>
+                                <p className="text-xs text-slate-500">{group.code || 'Sin código'}</p>
+                              </div>
+                            </div>
+                            {isSelected && <RiCheckFill className="text-brand-maroon text-xl" />}
+                          </button>
+                        );
+                      })}
+                      {pc.groups.length === 0 && (
+                        <div className="p-8 text-center rounded-2xl bg-slate-50 border border-slate-100">
+                          <RiGroupLine className="mx-auto text-3xl text-slate-300 mb-3" />
+                          <p className="text-sm text-slate-500">No hay grupos creados todavía.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Suite de Evaluación */}
+                  <div className="space-y-4">
+                    <label className="label-text">Suite de Evaluación Inicial</label>
+                    <p className="text-xs text-slate-500 mb-3">Sube el archivo .zip con los tests docentes para este proyecto.</p>
+                    
+                    <div 
+                      className={`relative flex flex-col items-center justify-center rounded-3xl border-2 border-dashed p-8 text-center transition-all h-[300px] ${
+                        pc.createForm.suiteFile 
+                          ? "bg-emerald-50 border-emerald-200 shadow-sm" 
+                          : "bg-slate-50/50 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                      }`}
+                    >
+                      <input 
+                        id="new-project-suite"
+                        type="file" 
+                        className="hidden" 
+                        accept=".zip"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          pc.setCreateForm(prev => ({ ...prev, suiteFile: file }));
+                        }}
+                      />
+                      
+                      <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm transition-colors ${
+                        pc.createForm.suiteFile ? "bg-emerald-500 text-white" : "bg-white text-slate-400"
+                      }`}>
+                        {pc.createForm.suiteFile ? <RiCheckFill className="text-3xl" /> : <RiFolderUploadLine className="text-3xl" />}
+                      </div>
+                      
+                      {pc.createForm.suiteFile ? (
+                        <>
+                          <h5 className="text-sm font-bold text-emerald-900">{pc.createForm.suiteFile.name}</h5>
+                          <p className="mt-1 text-xs text-emerald-600">{(pc.createForm.suiteFile.size / 1024).toFixed(1)} KB pronto para subir</p>
+                          <button 
+                            type="button"
+                            className="mt-4 text-xs font-bold text-rose-600 hover:underline"
+                            onClick={() => pc.setCreateForm(prev => ({ ...prev, suiteFile: null }))}
+                          >
+                            Quitar archivo
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <h5 className="text-sm font-bold text-slate-900">Seleccionar Suite (.zip)</h5>
+                          <p className="mt-1 text-xs text-slate-500">Haz clic para buscar en tu equipo</p>
+                          <button 
+                            type="button"
+                            className="mt-6 btn-secondary !py-2"
+                            onClick={() => document.getElementById('new-project-suite')?.click()}
+                          >
+                            Explorar archivos
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
                   <Button type="submit" variant="primary">
                     <RiFolderAddLine />

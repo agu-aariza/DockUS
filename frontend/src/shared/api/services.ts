@@ -181,6 +181,7 @@ export const projectsApi = {
     rubricInstructions?: string;
     opensAt?: string;
     closesAt?: string;
+    assignedGroupIds?: string[];
   }): Promise<ProjectEntity> {
     const { data } = await http.post<ProjectEntity>('/projects', payload);
     return data;

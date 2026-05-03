@@ -60,7 +60,10 @@ export function WorkspaceBar(): JSX.Element | null {
           const res = await assignmentsApi.listByProject(selection.projectId);
           setAssignments(res);
         } else if (openPicker === 'delivery' && selection.projectId) {
-          const res = await deliveriesApi.list({ projectId: selection.projectId });
+          const res = await deliveriesApi.list({ 
+            projectId: selection.projectId,
+            assignmentId: selection.assignmentId || undefined
+          });
           setDeliveries(res.data);
         } else if (openPicker === 'run' && selection.deliveryId) {
           const res = await builderApi.listByDelivery({ deliveryId: selection.deliveryId });
