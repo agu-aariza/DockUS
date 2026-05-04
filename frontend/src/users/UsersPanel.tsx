@@ -58,8 +58,15 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
           {/* Filters Column */}
           <div className="xl:col-span-1">
-            <div className="bg-white border border-slate-200 rounded-[2rem] shadow-xl shadow-slate-200/40 p-8 sticky top-8">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Filtros Inteligentes</h3>
+            <div className="flex flex-col h-full rounded-lg border border-academic-surface-variant bg-white p-6 shadow-academic overflow-hidden sticky top-32">
+              <div className="flex items-center justify-between gap-3 mb-6">
+                <div>
+                  <p className="eyebrow !mb-1">Filtros Inteligentes</p>
+                  <h3 className="text-xl font-bold tracking-tight text-slate-950">
+                    Criterios
+                  </h3>
+                </div>
+              </div>
               <div className="space-y-8">
                 <div>
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">Nivel de Acceso</label>
@@ -96,7 +103,7 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
                   </div>
                 </div>
                 <Button 
-                  className="w-full py-4 rounded-2xl"
+                  className="w-full py-4 rounded-xl"
                   onClick={() => void uc.handleList()} 
                   disabled={!uc.canList}
                   variant="primary"
@@ -109,7 +116,7 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
 
           {/* Table Column */}
           <div className="xl:col-span-3">
-            <div className="bg-white border border-slate-200 rounded-[2rem] shadow-xl shadow-slate-200/40 overflow-hidden">
+            <div className="bg-white border border-academic-surface-variant rounded-lg shadow-academic overflow-hidden">
               <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Registros Encontrados</h3>
               </div>

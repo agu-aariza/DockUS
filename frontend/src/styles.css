@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,12 +10,12 @@
   }
 
   body {
-    @apply bg-brand-cream text-slate-900 antialiased;
+    @apply bg-academic-surface text-academic-on-surface antialiased font-sans;
   }
 
   ::selection {
-    background-color: rgb(126 25 27 / 0.10);
-    @apply text-brand-primary;
+    background-color: rgb(91 4 13 / 0.10); /* primary with opacity */
+    @apply text-academic-primary;
   }
 
   #root {
@@ -22,61 +24,77 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: #b38e5d transparent;
+    scrollbar-color: #cfa470 transparent; /* tertiary/gold color */
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-primary px-6 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-brand-maroon-dark hover:shadow-[0_10px_25px_-5px_rgba(126,25,27,0.3)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-maroon-light/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
+    @apply inline-flex items-center justify-center gap-2 rounded bg-academic-primary px-6 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-academic-primary-container hover:shadow-academic hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-academic-primary/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-brand-gold-light bg-white px-6 py-3 text-sm font-bold text-brand-secondary transition-all duration-300 hover:border-brand-secondary hover:bg-brand-cream hover:shadow-[0_8px_20px_-4px_rgba(179,142,93,0.2)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-gold-light/20 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
+    @apply inline-flex items-center justify-center gap-2 rounded border border-academic-secondary bg-transparent px-6 py-3 text-sm font-bold text-academic-secondary transition-all duration-300 hover:bg-academic-secondary hover:text-white hover:shadow-academic hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-academic-secondary/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
   }
 
   .btn-tertiary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-tertiary px-6 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-brand-blue-dark hover:shadow-[0_10px_25px_-5px_rgba(46,115,154,0.3)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue-light/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded bg-academic-tertiary-container px-6 py-3 text-sm font-bold text-academic-on-tertiary-container transition-all duration-300 hover:bg-academic-tertiary hover:text-white hover:shadow-academic hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-academic-tertiary/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-rose-50 px-6 py-3 text-sm font-bold text-rose-600 transition-all duration-300 hover:bg-rose-600 hover:text-white hover:shadow-[0_10px_25px_-5px_rgba(225,29,72,0.25)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-200 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded bg-academic-error-container px-6 py-3 text-sm font-bold text-academic-on-error-container transition-all duration-300 hover:bg-academic-error hover:text-white hover:shadow-academic hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-academic-error/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .input-field {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-primary/10 hover:border-slate-400;
+    @apply w-full rounded border border-academic-outline bg-white px-3 py-2.5 text-sm text-academic-on-surface transition-all placeholder:text-academic-outline-variant focus:border-academic-secondary focus:outline-none focus:ring-1 focus:ring-academic-secondary hover:border-academic-on-surface-variant;
   }
 
   .card {
-    @apply overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-md hover:border-slate-300;
+    @apply overflow-hidden rounded-lg border border-academic-surface-variant bg-white shadow-sm transition-all hover:shadow-academic hover:border-academic-outline-variant;
+  }
+  
+  .card-top-accent-primary {
+    @apply border-t-2 border-t-academic-primary;
+  }
+
+  .card-top-accent-secondary {
+    @apply border-t-2 border-t-academic-secondary;
   }
 
   .label-text {
-    @apply mb-1.5 block text-sm font-medium text-slate-700;
+    @apply mb-1.5 block text-sm font-medium text-academic-on-surface-variant;
   }
 
   .panel-header {
-    @apply flex flex-col gap-1 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between;
+    @apply flex flex-col gap-1 border-b border-academic-surface-variant px-6 py-5 sm:flex-row sm:items-center sm:justify-between;
   }
 
   .section-heading {
-    @apply font-display text-2xl font-bold tracking-tight text-slate-900;
+    @apply font-display text-3xl font-semibold tracking-tight text-academic-on-surface;
   }
 
   .section-copy {
-    @apply text-base leading-relaxed text-slate-600;
+    @apply text-base leading-relaxed text-academic-on-surface-variant;
   }
 
   .eyebrow {
-    @apply text-[10px] font-black uppercase tracking-[0.2em] text-brand-secondary;
+    @apply font-mono text-[10px] font-black uppercase tracking-[0.2em] text-academic-secondary;
   }
 
   .ui-label {
-    @apply text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold-dark;
+    @apply font-mono text-[10px] font-black uppercase tracking-[0.2em] text-academic-tertiary;
   }
 
   .status-chip {
-    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-mono uppercase font-bold tracking-wider;
+  }
+  
+  .academic-tab {
+    @apply relative py-2 px-4 text-sm font-medium text-academic-on-surface-variant transition-colors hover:text-academic-primary;
+  }
+  
+  .academic-tab.active {
+    @apply text-academic-primary border-b-2 border-academic-primary;
   }
 }
 
@@ -86,14 +104,14 @@
   height: 8px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(30, 30, 30, 0.5);
+  background: rgba(40, 24, 11, 0.05); /* academic-on-surface light */
   border-radius: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.5); /* tailwind slate-500 half opacity */
+  background: rgba(138, 113, 112, 0.5); /* academic-outline half opacity */
   border-radius: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.8);
+  background: rgba(138, 113, 112, 0.8);
 }
 

@@ -89,10 +89,10 @@ function DeliveryListItem({
 }) {
   return (
     <article
-      className={`relative w-full rounded-2xl border p-4 text-left transition-all ${
+      className={`group w-full rounded-lg border p-5 text-left transition-all duration-300 relative overflow-hidden ${
         active
-          ? "border-brand-maroon bg-brand-maroon text-white shadow-lg ring-1 ring-brand-maroon"
-          : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-md"
+          ? "border-academic-primary bg-academic-primary text-academic-on-primary shadow-academic-lg scale-[1.02] z-10"
+          : "border-academic-surface-variant bg-white hover:border-academic-outline hover:bg-academic-surface-container-lowest hover:shadow-academic active:scale-95"
       }`}
     >
       <button type="button" onClick={onSelect} className="w-full text-left">
@@ -106,9 +106,9 @@ function DeliveryListItem({
             </div>
           </div>
           <span
-            className={`rounded-full border px-2 py-0.5 ui-label ${
+            className={`rounded-full px-3 py-1 ui-label ${
               active
-                ? "border-white/20 bg-white/10 text-white"
+                ? "bg-white/10 text-white/90 border border-white/10"
                 : STATUS_STYLE[delivery.status]
             }`}
           >
@@ -306,23 +306,22 @@ export function TeacherDeliveriesPanel({
         badge={deliveries.length.toString()}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
+      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] items-start relative max-w-full">
+        <aside className="flex flex-col h-full rounded-lg border border-academic-surface-variant bg-white p-6 shadow-academic overflow-hidden lg:sticky lg:top-32">
+          <div className="flex items-center justify-between gap-3 mb-6">
             <div>
-              <p className="eyebrow">
-                Filtros Maestros
-              </p>
-              <h3 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
-                Cola Operativa
+              <p className="eyebrow !mb-1">Cola Operativa</p>
+              <h3 className="text-xl font-bold tracking-tight text-slate-950">
+                Entregas
               </h3>
             </div>
             <Button
               variant="secondary"
+              className="h-10 w-10 !p-0 rounded-xl"
               onClick={() => void dc.refreshDeliveries()}
               disabled={!dc.selectedAssignmentId}
             >
-              <RiRefreshLine />
+              <RiRefreshLine className={dc.loadingDeliveries ? "animate-spin" : ""} />
             </Button>
           </div>
 

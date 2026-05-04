@@ -101,35 +101,35 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
         icon={<RiTeamFill />}
         badge={groups.length.toString()}
         actions={
-          canWrite && (
+          <div className="flex items-center gap-2">
             <Button 
-              variant="primary"
-              className="lg:mt-4"
-              onClick={() => setIsCreating(true)}
+               variant="secondary"
+               className="h-11 px-4 flex items-center justify-center rounded-xl"
+               onClick={refreshGroups}
+               disabled={loading}
+               title="Refrescar datos"
             >
-              <RiAddLine /> Nuevo Grupo
+              <RiRefreshLine className={loading ? "animate-spin" : ""} />
+              <span>{loading ? "Actualizando..." : "Actualizar grupos"}</span>
             </Button>
-          )
+            {canWrite && (
+              <Button 
+                variant="primary"
+                className="h-11"
+                onClick={() => setIsCreating(true)}
+              >
+                <RiAddLine /> Nuevo Grupo
+              </Button>
+            )}
+          </div>
         }
       />
-        <div className="flex items-center gap-2">
-           <Button 
-              variant="secondary"
-             className="h-11 px-4 flex items-center justify-center rounded-xl"
-              onClick={refreshGroups}
-             disabled={loading}
-              title="Refrescar datos"
-            >
-             <RiRefreshLine className={loading ? "animate-spin" : ""} />
-             <span>{loading ? "Actualizando..." : "Actualizar grupos"}</span>
-            </Button>
-        </div>
 
-      <div className="grid gap-8 lg:grid-cols-[380px_1fr] items-start relative max-w-full">
+      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] items-start relative max-w-full">
         {/* Sidebar: Group Selection & Creation */}
-        <aside className="space-y-6 lg:sticky lg:top-32 max-h-[calc(100vh-140px)] overflow-y-auto overflow-x-hidden no-scrollbar pb-10">
+        <aside className="flex flex-col h-full rounded-lg border border-academic-surface-variant bg-white p-6 shadow-academic overflow-hidden lg:sticky lg:top-32">
           {isCreating && (
-            <div className="p-6 rounded-[2.5rem] border border-brand-maroon/10 bg-brand-maroon/5 space-y-4 animate-in zoom-in-95 shadow-sm">
+            <div className="mb-6 p-5 rounded-lg border border-brand-maroon/10 bg-brand-maroon/5 space-y-4 animate-in zoom-in-95 shadow-sm">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-black uppercase tracking-widest text-brand-maroon">Crear Nuevo Grupo</h4>
                 <button onClick={() => setIsCreating(false)} className="text-brand-maroon/40 hover:text-brand-maroon">×</button>
@@ -162,58 +162,78 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
             </div>
           )}
           
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm mb-6 relative overflow-hidden group">
-            <div className="absolute -right-4 -top-4 opacity-[0.03] text-7xl text-slate-900 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-              <RiSearchLine />
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <div>
+              <p className="eyebrow !mb-1">Catálogo</p>
+              <h3 className="text-xl font-bold tracking-tight text-slate-950">
+                Grupos
+              </h3>
             </div>
-            <h4 className="eyebrow mb-4">Explorar Grupos</h4>
-            <div className="relative">
-              <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-maroon transition-colors" />
-              <input 
-                className="w-full h-12 pl-11 pr-4 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-brand-maroon/20 focus:ring-4 focus:ring-brand-maroon/5 transition-all text-sm font-medium" 
-                placeholder="Buscar grupo o código..."
+            <span className="flex h-8 min-w-[2rem] items-center justify-center rounded-full bg-slate-900 px-2 text-[11px] font-bold text-white shadow-lg shadow-slate-900/10">
+              {groups.length}
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            <div className="group relative">
+              <RiSearchLine className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg transition-colors group-focus-within:text-brand-maroon" />
+              <input
+                className="input-field pl-11 h-12 bg-slate-50 border-transparent focus:bg-white focus:border-brand-maroon/30 focus:ring-4 focus:ring-brand-maroon/5 transition-all"
+                placeholder="Buscar grupo..."
                 value={groupSearch}
                 onChange={(e) => setGroupSearch(e.target.value)}
               />
             </div>
           </div>
           
-          <div className="space-y-3">
-            {filteredGroups.map((group) => (
-              <button
-                key={group.id}
-                className={`w-full flex items-center justify-between p-5 rounded-[2rem] border transition-all duration-300 group overflow-hidden ${
-                  focusedGroupId === group.id
-                    ? 'border-brand-maroon bg-brand-maroon text-white shadow-[0_20px_50px_-12px_rgba(114,14,35,0.3)] z-10'
-                    : 'border-slate-100 bg-white hover:border-slate-300 hover:bg-slate-50 hover:shadow-md active:scale-95'
-                }`}
-                onClick={() => setFocusedGroupId(group.id)}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-xl transition-all duration-500 ${
-                    focusedGroupId === group.id ? 'bg-white/10 text-white shadow-inner' : 'bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-brand-maroon group-hover:scale-110'
-                  }`}>
-                    <RiGroupLine />
-                  </div>
-                  <div className="text-left min-w-0">
-                    <p className="text-sm font-bold truncate leading-none tracking-tight">{group.name}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded transition-colors ${
-                        focusedGroupId === group.id ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-500'
-                      }`}>
+          <div className="mt-8 flex-1 overflow-y-auto space-y-3 pr-1 -mr-1 custom-scrollbar">
+            {filteredGroups.map((group) => {
+              const isSelected = focusedGroupId === group.id;
+              return (
+                <button
+                  key={group.id}
+                  className={`group w-full rounded-lg border p-5 text-left transition-all duration-300 relative overflow-hidden ${isSelected
+                    ? "border-academic-primary bg-academic-primary text-academic-on-primary shadow-academic-lg scale-[1.02] z-10"
+                    : "border-academic-surface-variant bg-white hover:border-academic-outline hover:bg-academic-surface-container-lowest hover:shadow-academic active:scale-95"
+                    }`}
+                  onClick={() => setFocusedGroupId(group.id)}
+                >
+                  {isSelected && (
+                    <div className="absolute top-0 right-0 p-1 opacity-20">
+                      <RiGroupLine className="text-4xl -rotate-12 translate-x-2 -translate-y-2" />
+                    </div>
+                  )}
+
+                  <div className="flex items-start justify-between gap-3 relative">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <RiGroupLine className={isSelected ? "text-academic-secondary" : "text-academic-outline group-hover:text-academic-outline-variant"} />
+                        <span className="line-clamp-1 text-sm font-bold tracking-tight">
+                          {group.name}
+                        </span>
+                      </div>
+                      <div className={`ui-label leading-relaxed line-clamp-1 ${isSelected ? "text-slate-400" : "text-slate-500"}`}>
                         {group.code || 'DOC'}
-                      </span>
-                      <span className={`text-[10px] font-bold ${focusedGroupId === group.id ? 'text-slate-400' : 'text-slate-400'}`}>
-                        {group.studentCount} Alumnos
+                      </div>
+                    </div>
+                    <RiArrowRightSLine className={`text-lg transition-transform ${isSelected ? "text-white/40 translate-x-1" : "text-slate-200 group-hover:text-slate-400"}`} />
+                  </div>
+
+                  <div className="mt-5 flex items-center justify-between relative">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`rounded-full px-3 py-1 ui-label ${isSelected
+                          ? "bg-white/10 text-white/90 border border-white/10"
+                          : "bg-slate-100 text-slate-500"
+                          }`}
+                      >
+                        {group.studentCount} ALUMNOS
                       </span>
                     </div>
                   </div>
-                </div>
-                <RiArrowRightSLine className={`text-xl transition-transform duration-300 ${
-                  focusedGroupId === group.id ? 'text-white/40 translate-x-1' : 'text-slate-200 group-hover:text-slate-400 translate-x-0 group-hover:translate-x-1'
-                }`} />
-              </button>
-            ))}
+                </button>
+              );
+            })}
             
             {filteredGroups.length === 0 && !loading && (
                <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-[3rem] bg-slate-50/50 animate-in fade-in zoom-in-95">

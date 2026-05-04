@@ -71,9 +71,9 @@ const STATUS_LABEL: Record<ProjectStatus, string> = {
 };
 
 const STATUS_STYLE: Record<ProjectStatus, string> = {
-  DRAFT: "border-brand-blue/20 bg-brand-blue/5 text-brand-blue",
-  ACTIVE: "border-brand-maroon/20 bg-brand-maroon/5 text-brand-maroon",
-  ARCHIVED: "border-brand-gold/20 bg-brand-gold/5 text-brand-gold-dark",
+  DRAFT: "border-academic-secondary/30 bg-academic-secondary/5 text-academic-secondary",
+  ACTIVE: "border-academic-primary/30 bg-academic-primary/5 text-academic-primary",
+  ARCHIVED: "border-academic-tertiary/30 bg-academic-tertiary/5 text-academic-tertiary",
 };
 
 function formatOptionalDate(value?: string | null): string {
@@ -145,69 +145,69 @@ function ProjectOverview({
         />
       </section>
 
-        <article className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm lg:col-span-4">
-          <div className="flex flex-col xl:flex-row gap-8">
-            {/* Operational Actions */}
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h4 className="eyebrow">
-                    Operaciones de Gestión
-                  </h4>
-                  <h3 className="mt-2 text-xl font-bold text-slate-900">Control Operativo</h3>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-2xl text-slate-300">
-                  <RiSettings4Line />
-                </div>
+      <article className="rounded-lg border border-academic-surface-variant bg-white p-8 shadow-academic lg:col-span-4">
+        <div className="flex flex-col xl:flex-row gap-8">
+          {/* Operational Actions */}
+          <div className="flex-1 space-y-4">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h4 className="eyebrow">
+                  Operaciones de Gestión
+                </h4>
+                <h3 className="mt-2 text-xl font-bold text-slate-900">Control Operativo</h3>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                <button 
-                  className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-maroon/20 hover:text-brand-maroon hover:shadow-md transition-all" 
-                  onClick={onRefreshAssignments}
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-maroon group-hover/btn:border-brand-maroon/10 shadow-sm">
-                    <RiRefreshLine className="text-lg" />
-                  </div>
-                  <span>Sincronizar asignaciones</span>
-                </button>
-
-                <button 
-                  className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-blue/20 hover:text-brand-blue hover:shadow-md transition-all" 
-                  onClick={onFetchTestSuite}
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-blue group-hover/btn:border-brand-blue/10 shadow-sm">
-                    <RiTestTubeLine className="text-lg" />
-                  </div>
-                  <span>Recuperar suite docente</span>
-                </button>
-
-                <button 
-                  className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-blue/20 hover:text-brand-blue hover:shadow-md transition-all" 
-                  onClick={onOpenMonitoring}
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-blue group-hover/btn:border-brand-blue/10 shadow-sm">
-                    <RiBarChart2Line className="text-lg" />
-                  </div>
-                  <span>Ver seguimiento</span>
-                </button>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-2xl text-slate-300">
+                <RiSettings4Line />
               </div>
             </div>
 
-            {/* Right Side: Danger actions */}
-            <div className="xl:w-[240px] shrink-0 xl:border-l xl:border-slate-100 xl:pl-8 flex items-end">
-              <button 
-                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-rose-50 border border-rose-100 text-sm font-bold text-rose-600 hover:bg-rose-600 hover:text-white hover:shadow-lg hover:shadow-rose-500/20 transition-all" 
-                onClick={onDelete}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <button
+                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-maroon/20 hover:text-brand-maroon hover:shadow-md transition-all"
+                onClick={onRefreshAssignments}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-rose-500 shadow-sm group-hover/btn:bg-white/20 group-hover/btn:text-white transition-colors">
-                  <RiDeleteBin6Line className="text-lg" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-maroon group-hover/btn:border-brand-maroon/10 shadow-sm">
+                  <RiRefreshLine className="text-lg" />
                 </div>
-                <span>Eliminar proyecto</span>
+                <span>Sincronizar asignaciones</span>
+              </button>
+
+              <button
+                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-blue/20 hover:text-brand-blue hover:shadow-md transition-all"
+                onClick={onFetchTestSuite}
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-blue group-hover/btn:border-brand-blue/10 shadow-sm">
+                  <RiTestTubeLine className="text-lg" />
+                </div>
+                <span>Recuperar suite docente</span>
+              </button>
+
+              <button
+                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-blue/20 hover:text-brand-blue hover:shadow-md transition-all"
+                onClick={onOpenMonitoring}
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-blue group-hover/btn:border-brand-blue/10 shadow-sm">
+                  <RiBarChart2Line className="text-lg" />
+                </div>
+                <span>Ver seguimiento</span>
               </button>
             </div>
           </div>
-        </article>
+
+          {/* Right Side: Danger actions */}
+          <div className="xl:w-[240px] shrink-0 xl:border-l xl:border-slate-100 xl:pl-8 flex items-end">
+            <button
+              className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-rose-50 border border-rose-100 text-sm font-bold text-rose-600 hover:bg-rose-600 hover:text-white hover:shadow-lg hover:shadow-rose-500/20 transition-all"
+              onClick={onDelete}
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-rose-500 shadow-sm group-hover/btn:bg-white/20 group-hover/btn:text-white transition-colors">
+                <RiDeleteBin6Line className="text-lg" />
+              </div>
+              <span>Eliminar proyecto</span>
+            </button>
+          </div>
+        </div>
+      </article>
     </div>
   );
 }
@@ -355,7 +355,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <PageHeader 
+      <PageHeader
         title="Gestión de Proyectos"
         subtitle="Gestión estratégica de proyectos académicos: orquestación de asignaciones, seguimiento de progreso y auditoría de calidad."
         icon={<RiFoldersLine />}
@@ -368,7 +368,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
       />
 
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="flex flex-col h-full rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm overflow-hidden">
+        <aside className="flex flex-col h-full rounded-lg border border-academic-surface-variant bg-white p-6 shadow-academic overflow-hidden">
           <div className="flex items-center justify-between gap-3 mb-6">
             <div>
               <p className="eyebrow !mb-1">Catálogo</p>
@@ -417,9 +417,9 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 return (
                   <button
                     key={project.id}
-                    className={`group w-full rounded-[2rem] border p-5 text-left transition-all duration-300 relative overflow-hidden ${isSelected
-                      ? "border-slate-900 bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-[1.02] z-10"
-                      : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50 hover:shadow-md active:scale-95"
+                    className={`group w-full rounded-lg border p-5 text-left transition-all duration-300 relative overflow-hidden ${isSelected
+                      ? "border-academic-primary bg-academic-primary text-academic-on-primary shadow-academic-lg scale-[1.02] z-10"
+                      : "border-academic-surface-variant bg-white hover:border-academic-outline hover:bg-academic-surface-container-lowest hover:shadow-academic active:scale-95"
                       }`}
                     onClick={() => openProject(project.id)}
                   >
@@ -432,7 +432,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     <div className="flex items-start justify-between gap-3 relative">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <RiFoldersLine className={isSelected ? "text-brand-gold" : "text-slate-300 group-hover:text-slate-400"} />
+                          <RiFoldersLine className={isSelected ? "text-academic-secondary" : "text-academic-outline group-hover:text-academic-outline-variant"} />
                           <span className="line-clamp-1 text-sm font-bold tracking-tight">
                             {project.title}
                           </span>
@@ -496,7 +496,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
 
         <section className="min-w-0 space-y-5">
           {detailMode === "new-project" ? (
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="rounded-lg border border-academic-surface-variant bg-white p-8 shadow-academic">
               <div className="flex flex-col gap-3 border-b border-slate-100 pb-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="eyebrow">Definición de Proyecto</p>
@@ -620,16 +620,14 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                                 : [...pc.createForm.assignedGroupIds, group.id];
                               pc.setCreateForm(prev => ({ ...prev, assignedGroupIds: newIds }));
                             }}
-                            className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${
-                              isSelected 
-                                ? "bg-brand-maroon/5 border-brand-maroon shadow-sm" 
+                            className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${isSelected
+                                ? "bg-brand-maroon/5 border-brand-maroon shadow-sm"
                                 : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-4">
-                              <div className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
-                                isSelected ? "bg-brand-maroon text-white" : "bg-slate-100 text-slate-500"
-                              }`}>
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${isSelected ? "bg-brand-maroon text-white" : "bg-slate-100 text-slate-500"
+                                }`}>
                                 <RiGroupLine className="text-lg" />
                               </div>
                               <div>
@@ -654,36 +652,34 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                   <div className="space-y-4">
                     <label className="label-text">Suite de Evaluación Inicial</label>
                     <p className="text-xs text-slate-500 mb-3">Sube el archivo .zip con los tests docentes para este proyecto.</p>
-                    
-                    <div 
-                      className={`relative flex flex-col items-center justify-center rounded-3xl border-2 border-dashed p-8 text-center transition-all h-[300px] ${
-                        pc.createForm.suiteFile 
-                          ? "bg-emerald-50 border-emerald-200 shadow-sm" 
+
+                    <div
+                      className={`relative flex flex-col items-center justify-center rounded-3xl border-2 border-dashed p-8 text-center transition-all h-[300px] ${pc.createForm.suiteFile
+                          ? "bg-emerald-50 border-emerald-200 shadow-sm"
                           : "bg-slate-50/50 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                      }`}
+                        }`}
                     >
-                      <input 
+                      <input
                         id="new-project-suite"
-                        type="file" 
-                        className="hidden" 
+                        type="file"
+                        className="hidden"
                         accept=".zip"
                         onChange={(e) => {
                           const file = e.target.files?.[0] || null;
                           pc.setCreateForm(prev => ({ ...prev, suiteFile: file }));
                         }}
                       />
-                      
-                      <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm transition-colors ${
-                        pc.createForm.suiteFile ? "bg-emerald-500 text-white" : "bg-white text-slate-400"
-                      }`}>
+
+                      <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm transition-colors ${pc.createForm.suiteFile ? "bg-emerald-500 text-white" : "bg-white text-slate-400"
+                        }`}>
                         {pc.createForm.suiteFile ? <RiCheckFill className="text-3xl" /> : <RiFolderUploadLine className="text-3xl" />}
                       </div>
-                      
+
                       {pc.createForm.suiteFile ? (
                         <>
                           <h5 className="text-sm font-bold text-emerald-900">{pc.createForm.suiteFile.name}</h5>
                           <p className="mt-1 text-xs text-emerald-600">{(pc.createForm.suiteFile.size / 1024).toFixed(1)} KB pronto para subir</p>
-                          <button 
+                          <button
                             type="button"
                             className="mt-4 text-xs font-bold text-rose-600 hover:underline"
                             onClick={() => pc.setCreateForm(prev => ({ ...prev, suiteFile: null }))}
@@ -695,7 +691,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         <>
                           <h5 className="text-sm font-bold text-slate-900">Seleccionar Suite (.zip)</h5>
                           <p className="mt-1 text-xs text-slate-500">Haz clic para buscar en tu equipo</p>
-                          <button 
+                          <button
                             type="button"
                             className="mt-6 btn-secondary !py-2"
                             onClick={() => document.getElementById('new-project-suite')?.click()}
@@ -728,59 +724,43 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
             </div>
           ) : selectedCanvasProject ? (
             <>
-              <div className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm">
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-3 mb-4">
-                      <p className="eyebrow">Perfil del Proyecto Académico</p>
+              <div className="rounded-lg border border-academic-surface-variant bg-white p-8 shadow-academic">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                  {/* Left Side: Pills, Title, Subtitle */}
+                  <div className="min-w-0 flex-1 pr-6">
+                    <div className="flex flex-wrap items-center gap-3 mb-3">
                       <ProjectStatusPill status={selectedCanvasProject.status} />
-                      <span className="rounded-full bg-slate-50 border border-slate-200 px-3 py-1 ui-label text-slate-500">
-                        {selectedCanvasProject.maxDeliveriesPerStudent} Intentos
+                      <span className="inline-flex items-center rounded-full border border-academic-secondary/30 bg-academic-secondary/5 px-3 py-1 ui-label text-academic-secondary uppercase">
+                        {selectedCanvasProject.maxDeliveriesPerStudent} INTENTOS
+                      </span>
+                      <span className="inline-flex items-center rounded-full border border-academic-secondary/30 bg-academic-secondary/5 px-3 py-1 ui-label text-academic-secondary uppercase">
+                        PERFIL DEL PROYECTO
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <h3 className="truncate text-4xl font-bold tracking-tight text-slate-950">
-                        {selectedCanvasProject.title}
-                      </h3>
 
-                      {selectedCanvasProject.teachers && selectedCanvasProject.teachers.length > 0 && (
-                        <div className="flex flex-col items-center gap-3 shrink-0">
-                          <div className="flex -space-x-3">
-                            {selectedCanvasProject.teachers.map((teacher) => (
-                              <div
-                                key={teacher.id}
-                                className="h-10 w-10 rounded-full border-4 border-white bg-brand-blue/10 flex items-center justify-center text-xs font-bold text-brand-blue uppercase shadow-sm"
-                                title={`${teacher.firstName} ${teacher.lastName}`}
-                              >
-                                {teacher.firstName[0]}{teacher.lastName[0]}
-                              </div>
-                            ))}
-                          </div>
-                          <div className="hidden sm:block text-center">
-                            <p className="ui-label text-slate-400 mb-0.5">Propiedad</p>
-                            <p className="text-xs font-medium text-slate-600">
-                              {selectedCanvasProject.teachers.map(t => t.firstName).join(', ')}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-600">
+                    <h3 className="truncate text-3xl font-bold tracking-tight text-slate-950">
+                      {selectedCanvasProject.title}
+                    </h3>
+
+                    <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600 line-clamp-2">
                       {selectedCanvasProject.contextAcademico || "Sin contexto académico definido."}
                     </p>
                   </div>
 
-                  <Tabs 
-                    tabs={[
-                      { id: "catalog", label: "Resumen", icon: RiLayoutGridFill },
-                      { id: "assignments", label: "Alumnos", icon: RiTeamFill },
-                      { id: "monitoring", label: "Seguimiento", icon: RiBarChart2Line },
-                      { id: "config", label: "Ajustes", icon: RiSettings4Line },
-                    ]}
-                    activeTab={activeSubTab}
-                    onTabChange={(id) => setActiveSubTab(id as SubTab)}
-                    variant="primary"
-                  />
+                  {/* Right Side: Tabs */}
+                  <div className="flex items-center shrink-0">
+                    <Tabs
+                      tabs={[
+                        { id: "catalog", label: "Resumen", icon: RiLayoutGridFill },
+                        { id: "assignments", label: "Alumnos", icon: RiTeamFill },
+                        { id: "monitoring", label: "Seguimiento", icon: RiBarChart2Line },
+                        { id: "config", label: "Ajustes", icon: RiSettings4Line },
+                      ]}
+                      activeTab={activeSubTab}
+                      onTabChange={(id) => setActiveSubTab(id as SubTab)}
+                      variant="primary"
+                    />
+                  </div>
                 </div>
               </div>
 
