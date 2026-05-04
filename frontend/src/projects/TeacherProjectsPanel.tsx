@@ -995,7 +995,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                             </div>
                             <div className="px-4 py-3 bg-brand-blue/5 rounded-2xl border border-brand-blue/10 text-brand-blue text-[10px] font-bold uppercase tracking-wider h-[46px] flex items-center shrink-0">
                               <RiInformationFill className="mr-2 text-brand-blue-light" />
-                              {pc.allTeachers.length - (selectedCanvasProject.teachers?.length || 0)} disponibles
+                              {pc.allTeachers.filter(t => !selectedCanvasProject.teachers?.some(st => st.id === t.id)).length} disponibles
                             </div>
                           </div>
 

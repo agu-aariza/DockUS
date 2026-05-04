@@ -86,7 +86,8 @@ export class ProjectAssignmentsService {
     // We use a raw query or query builder to search within the array column.
     const assignmentsWithGroup = await this.assignmentsRepository
       .createQueryBuilder('assignment')
-      .select('DISTINCT assignment.projectId', 'projectId')
+      .distinct(true)
+      .select('assignment.projectId', 'projectId')
       .addSelect('assignment.assignedById', 'assignedById') // We'll use the last assigner as a proxy
       .where(':groupId = ANY(assignment.sourceGroupIds)', { groupId })
       .andWhere('assignment.revokedAt IS NULL')

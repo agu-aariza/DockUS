@@ -182,10 +182,13 @@ export class GroupsService {
     };
 
     // Calculate unresolved emails
-    const foundStudents = await this.usersRepository.find({
-      where: { id: In(studentIds) },
-      select: ['email'],
-    });
+    let foundStudents: User[] = [];
+    if (studentIds.length > 0) {
+      foundStudents = await this.usersRepository.find({
+        where: { id: In(studentIds) },
+        select: ['id', 'email', 'firstName', 'lastName'],
+      });
+    }
     const foundEmails = foundStudents.map((s) => s.email);
     results.summary.unresolvedEmails = studentEmails.filter(
       (email) => !foundEmails.includes(email),
