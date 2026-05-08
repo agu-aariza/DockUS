@@ -82,6 +82,9 @@ export class BuildRun {
   @Column({ type: 'jsonb', nullable: true })
   llmAssessment!: unknown;
 
+  @Column({ type: 'jsonb', nullable: true })
+  codeQualityFindings!: unknown;
+
   @Column({ type: 'text', nullable: true })
   llmReasoning!: string | null;
 

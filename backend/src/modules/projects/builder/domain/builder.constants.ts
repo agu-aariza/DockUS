@@ -10,3 +10,6 @@ export const DEFAULT_BASE_NODE_IMAGE = 'node:20-alpine';
 
 export const ALLOWED_PYTHON_VERSIONS = ['3.8', '3.9', '3.10', '3.11', '3.12'] as const;
 export const ALLOWED_NODE_VERSIONS = ['16', '18', '20', '21', '22'] as const;
+export const ALLOWED_C_VERSIONS = ['c99', 'c11', 'c17'] as const;
+
+export const DEFAULT_BASE_C_IMAGE = 'gcc:13-bookworm';

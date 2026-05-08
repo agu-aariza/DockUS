@@ -33,12 +33,15 @@ import { BuilderPedagogicalService } from './application/services/builder-pedago
 import { BuildRunArtifact } from './domain/entities/build-run-artifact.entity';
 import { BuildRunEventEntity } from './domain/entities/build-run-event.entity';
 import { BuildRun } from './domain/entities/build-run.entity';
+import { CodeQualityFindingEntity } from './domain/entities/code-quality-finding.entity';
 import { BuilderLlmEvaluatorService } from './domain/llm/builder-llm-evaluator.service';
 import { BuilderRunEventsService } from './domain/events/builder-run-events.service';
 import { EvidenceService } from './infrastructure/evidence/evidence.service';
 import { BuilderLogTrimmer } from './infrastructure/utils/builder-log-trimmer.util';
 import { BuilderController } from './presentation/builder.controller';
 import { BuilderProcessor } from './presentation/builder.processor';
+import { BuilderCodeQualityService } from './domain/llm/builder-code-quality.service';
+import { BuilderQualityAggregationService } from './application/services/builder-quality-aggregation.service';
 
 @Module({
   imports: [
@@ -56,6 +59,7 @@ import { BuilderProcessor } from './presentation/builder.processor';
       BuildRun,
       BuildRunArtifact,
       BuildRunEventEntity,
+      CodeQualityFindingEntity,
     ]),
     StorageInfrastructureModule,
   ],
@@ -74,8 +78,10 @@ import { BuilderProcessor } from './presentation/builder.processor';
     BuilderLogTrimmer,
     BuilderCacheManagerService,
     BuilderPedagogicalService,
+    BuilderCodeQualityService,
+    BuilderQualityAggregationService,
   ],
-  exports: [BuilderService],
+  exports: [BuilderService, BuilderQualityAggregationService],
 })
 export class BuilderModule implements OnModuleInit {
   constructor(private readonly builderService: BuilderService) {}

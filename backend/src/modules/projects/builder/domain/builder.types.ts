@@ -1,22 +1,31 @@
 import { BuildRunArtifactType } from './entities/build-run-artifact.entity';
 
+export const BUILDER_LLM_SCHEMA_VERSION = 'builder-llm/v2' as const;
+export type BuilderLlmSchemaVersion = typeof BUILDER_LLM_SCHEMA_VERSION;
+
+export const BUILDER_LLM_STAGES = ['plan', 'evaluation'] as const;
+export type BuilderLlmStage = (typeof BUILDER_LLM_STAGES)[number];
+
 export type StructuralType = string;
- 
+
 export const CAPABILITY_IDS = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'] as const;
 export type CapabilityId = (typeof CAPABILITY_IDS)[number];
- 
+
 export const EVALUATIVE_STATES = ['E1', 'E2', 'E3', 'E4'] as const;
 export type EvaluativeState = (typeof EVALUATIVE_STATES)[number];
- 
+
 export const ASSESSMENTS = ['yes', 'no', 'unknown'] as const;
 export type Assessment = (typeof ASSESSMENTS)[number];
- 
+
 export const CONFIDENCE_LEVELS = ['low', 'medium', 'high'] as const;
 export type Confidence = (typeof CONFIDENCE_LEVELS)[number];
- 
+
+export const BUILDER_RUNTIME_FAMILIES = ['python', 'node', 'c', 'unknown'] as const;
+export type BuilderRuntimeFamily = (typeof BUILDER_RUNTIME_FAMILIES)[number];
+
 export const BUILD_RUN_KINDS = ['STANDARD'] as const;
 export type BuildRunKind = (typeof BUILD_RUN_KINDS)[number];
- 
+
 export const BUILD_RUN_EVENT_TYPES = [
   'RUN_ENQUEUED',
   'RUN_STARTED',
@@ -30,44 +39,103 @@ export const BUILD_RUN_EVENT_TYPES = [
   'RUN_CANCELLED',
 ] as const;
 export type BuildRunEventType = (typeof BUILD_RUN_EVENT_TYPES)[number];
- 
+
 export interface CapabilityAssessment {
   status: Assessment;
   rationale: string;
 }
- 
-export interface LlmPlanRecipe {
+
+export type BuilderCapabilityMap = Record<CapabilityId, CapabilityAssessment>;
+
+export interface BuilderRuntimeDescriptorV2 {
+  family: BuilderRuntimeFamily;
+  version: string | null;
+  supported: boolean;
+  reason: string | null;
+}
+
+export interface BuilderServiceRecipeV2 {
+  port: number;
+  healthcheck: string[] | null;
+}
+
+export interface BuilderRecipeV2 {
   install: string[][];
   run: string[] | null;
   test: string[][];
-  healthcheck: string[] | null;
-  servicePort: number | null;
   systemPackages: string[];
-  runtimeVersion?: string | null;
-  workingDirectory?: string | null;
-  environment?: Record<string, string> | null;
+  cwd: string | null;
+  environment: Record<string, string> | null;
+  service: BuilderServiceRecipeV2 | null;
 }
- 
-export interface BuilderLlmAssessment {
+
+export interface BuilderLlmContractV2Base {
+  schemaVersion: BuilderLlmSchemaVersion;
+  stage: BuilderLlmStage;
   thought: string;
   structuralType: StructuralType;
-  capabilities: Record<CapabilityId, CapabilityAssessment>;
+  capabilities: BuilderCapabilityMap;
   evaluativeState: EvaluativeState;
   confidence: Confidence;
   rationale: string;
-  recommendedGrade?: number;
   externalRequirements: string[];
-  recipe: LlmPlanRecipe;
+  runtime: BuilderRuntimeDescriptorV2;
+  recipe: BuilderRecipeV2;
   evidenceSummary: string;
   observedEvidence: string[];
   evaluationLimits: string[];
+  recommendedGrade?: number;
 }
- 
+
+export interface BuilderPlanContractV2 extends BuilderLlmContractV2Base {
+  stage: 'plan';
+  recommendedGrade?: undefined;
+}
+
+export interface BuilderEvaluationContractV2
+  extends BuilderLlmContractV2Base {
+  stage: 'evaluation';
+  recommendedGrade?: number;
+}
+
+export type BuilderLlmContractV2 =
+  | BuilderPlanContractV2
+  | BuilderEvaluationContractV2;
+
+export type BuilderLlmAssessment = BuilderEvaluationContractV2;
+
+export interface BuilderLlmStagePromptSnapshot {
+  stage: BuilderLlmStage;
+  model: string;
+  systemPrompt: string | null;
+  prompt: string;
+  createdAt: string;
+}
+
+export interface BuilderLlmStageErrorInfo {
+  name: string;
+  code?: string;
+  message: string;
+  httpStatus?: number | null;
+  stack: string | null;
+  timestamp: string;
+}
+
+export interface BuilderLlmStageTrace<
+  TContract extends BuilderLlmContractV2 = BuilderLlmContractV2,
+> extends BuilderLlmStagePromptSnapshot {
+  schemaVersion: BuilderLlmSchemaVersion;
+  rawResponse: string | null;
+  parsedContract: TContract | null;
+  error: BuilderLlmStageErrorInfo | null;
+}
+
 export interface AssignmentContext {
   expectedType: string | null;
   rubricInstructions: string | null;
+  expectedOutput: string | null;
 }
- 
+
 export interface BuildRunRuntimeTarget {
   projectId: string;
   workspaceNetworkName: string;
@@ -75,13 +143,13 @@ export interface BuildRunRuntimeTarget {
   primaryContainerId: string | null;
   helperContainerIds: string[];
 }
- 
+
 export interface RuntimeFile {
   relativePath: string;
   absolutePath: string;
   sizeBytes: number;
 }
- 
+
 export interface BuilderRunEvent {
   id: string;
   buildRunId: string;
@@ -92,7 +160,7 @@ export interface BuilderRunEvent {
   payload: Record<string, unknown> | null;
   createdAt: string;
 }
- 
+
 export interface EvidenceArtifactPublic {
   id: string;
   type: BuildRunArtifactType;
@@ -100,9 +168,35 @@ export interface EvidenceArtifactPublic {
   sizeBytes: number;
   createdAt: string;
 }
- 
+
 export interface BuilderRunEventsPage {
   events: BuilderRunEvent[];
   latestSequence: number;
   hasMore: boolean;
+}
+
+export const CODE_QUALITY_CATEGORIES = [
+  'security',
+  'architecture',
+  'quality',
+  'rubricCompliance',
+] as const;
+export type CodeQualityCategory = (typeof CODE_QUALITY_CATEGORIES)[number];
+
+export type FindingSeverity = 'low' | 'medium' | 'high';
+
+export interface CodeQualityFinding {
+  title: string;
+  detail: string;
+  severity: FindingSeverity;
+  file?: string;
+  line?: number;
+}
+
+export interface BuilderCodeQualityContractV2 {
+  thought: string;
+  security: CodeQualityFinding[];
+  architecture: CodeQualityFinding[];
+  quality: CodeQualityFinding[];
+  rubricCompliance: CodeQualityFinding[];
 }

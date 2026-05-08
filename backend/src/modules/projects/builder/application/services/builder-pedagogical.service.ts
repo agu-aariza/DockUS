@@ -47,7 +47,31 @@ export class BuilderPedagogicalService {
         concept: 'Seguridad y Permisos del Sistema de Archivos',
         explanation: 'La aplicación intentó realizar una acción en el sistema de archivos para la cual no tiene permisos.',
         advice: 'Evita intentar escribir en rutas absolutas del sistema. Usa siempre rutas relativas dentro de tu directorio de trabajo.',
-      }
+      },
+      {
+        regex: /segmentation fault|segfault/i,
+        concept: 'Gestión de Memoria y Punteros',
+        explanation: 'El programa accedió a memoria inválida durante la ejecución.',
+        advice: 'Revisa punteros no inicializados, accesos fuera de rango y el ciclo de vida de la memoria reservada dinámicamente.',
+      },
+      {
+        regex: /undefined reference/i,
+        concept: 'Enlazado y Compilación Separada',
+        explanation: 'El compilador encontró declaraciones, pero el enlazador no pudo resolver la implementación final.',
+        advice: 'Comprueba que estás compilando y enlazando todos los archivos fuente necesarios y que las librerías adicionales se pasan correctamente al linker.',
+      },
+      {
+        regex: /implicit declaration/i,
+        concept: 'Prototipos de Función y Headers',
+        explanation: 'Se está usando una función sin que el compilador conozca su prototipo.',
+        advice: 'Incluye la cabecera correcta y declara los prototipos en archivos .h para que el compilador pueda validar tipos y firmas.',
+      },
+      {
+        regex: /memory leak|definitely lost/i,
+        concept: 'Gestión Dinámica de Memoria',
+        explanation: 'Se reservó memoria que no fue liberada correctamente al finalizar su uso.',
+        advice: 'Empareja cada malloc/calloc/realloc con su free correspondiente y revisa rutas de error o retornos tempranos.',
+      },
     ];
 
     for (const pattern of patterns) {

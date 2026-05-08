@@ -373,4 +373,21 @@ export class BuilderController {
       request.user,
     );
   }
+
+  @ApiOperation({
+    summary: 'Obtener insights de calidad por assignment',
+    description: 'Agrega patrones de calidad de todos los alumnos de un assignment.',
+  })
+  @ApiParam({ name: 'assignmentId', description: 'UUID del assignment.' })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get('assignments/:assignmentId/quality-insights')
+  async getAssignmentQualityInsights(
+    @Param('assignmentId', ParseUUIDPipe) assignmentId: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.builderService.getAssignmentQualityInsights(
+      assignmentId,
+      request.user,
+    );
+  }
 }

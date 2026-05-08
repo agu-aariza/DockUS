@@ -120,4 +120,12 @@ export class BuilderAccessService {
       'No tiene permisos para operar ejecuciones sobre una entrega ajena.',
     );
   }
+
+  assertIsStaff(actor: AuthenticatedUser): void {
+    if (actor.role !== UserRole.ADMIN && actor.role !== UserRole.TEACHER) {
+      throw new ForbiddenException(
+        'Solo profesorado y administradores pueden acceder a esta información.',
+      );
+    }
+  }
 }

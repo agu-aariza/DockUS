@@ -124,4 +124,14 @@ export class BuilderService {
   failStaleRunsOnStartup(): Promise<void> {
     return this.builderRunCommandsService.failStaleRunsOnStartup();
   }
+
+  getAssignmentQualityInsights(
+    assignmentId: string,
+    actor: AuthenticatedUser,
+  ) {
+    return this.builderRunQueriesService.getAssignmentQualityInsights(
+      assignmentId,
+      actor,
+    );
+  }
 }
