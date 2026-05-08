@@ -21,6 +21,7 @@ Los prompts de **Plan** y **Eval** se compilan en modelos derivados de Ollama (v
 |---------|-------------------|-------------|
 | `ollama-plan.Modelfile` | `dockus-builder-plan` | Modelfile para `ollama create` manual |
 | `ollama-eval.Modelfile` | `dockus-builder-eval` | Modelfile para `ollama create` manual |
+| `ollama-quality.Modelfile` | `dockus-builder-quality` | Modelfile para `ollama create` manual |
 
 Los Modelfiles sirven para creación manual (`ollama create -f ollama-plan.Modelfile dockus-builder-plan`). En producción, usa `ollama-bootstrap.mjs`.
 
@@ -32,10 +33,13 @@ node scripts/ollama-bootstrap.mjs
 ```
 
 Variables de entorno:
-- `OLLAMA_HOST` — URL del servidor Ollama (default: `http://ollama:11434`)
-- `MODEL_NAME` — modelo base (default: `qwen2.5-coder:7b`)
+- `OLLAMA_HOST` — URL interna canónica del servidor Ollama (default: `http://ollama:11434`)
 - `PLAN_MODEL_NAME` — nombre del modelo plan (default: `dockus-builder-plan`)
 - `EVAL_MODEL_NAME` — nombre del modelo eval (default: `dockus-builder-eval`)
+- `QUALITY_MODEL_NAME` — nombre del modelo quality (default: `dockus-builder-quality`)
+- `PLAN_BASE_MODEL` — modelo base del planner (default: `qwen2.5-coder:7b`)
+- `EVAL_BASE_MODEL` — modelo base del evaluator (default: `deepseek-r1:7b`)
+- `QUALITY_BASE_MODEL` — modelo base del análisis de calidad (default: `deepseek-r1:7b`)
 - `OLLAMA_NUM_CTX` — ventana de contexto (default: `16384`)
 
 ## Análisis Estático
