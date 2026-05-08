@@ -1,18 +1,41 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AssignmentContext, BuilderLlmAssessment } from '../builder.types';
-import { parseBuilderLlmAssessment } from './builder-llm-assessment.parser';
+import {
+  AssignmentContext,
+  BuilderEvaluationContractV2,
+  BuilderLlmStageErrorInfo,
+  BuilderLlmStagePromptSnapshot,
+  BuilderLlmStageTrace,
+  BuilderPlanContractV2,
+  BUILDER_LLM_SCHEMA_VERSION,
+} from '../builder.types';
 import {
   PromptId,
   PromptRegistryService,
 } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
+import {
+  createOllamaConnectivityError,
+  createOllamaHttpError,
+  createOllamaInvalidResponseError,
+  createOllamaTimeoutError,
+  OllamaRequestError,
+} from '../../../../../shared/infrastructure/ai/ollama-request.util';
 import { BuilderLogTrimmer } from '../../infrastructure/utils/builder-log-trimmer.util';
+import { parseBuilderPlanContractV2 } from './builder-plan-contract.parser';
+import { parseBuilderEvaluationContractV2 } from './builder-evaluation-contract.parser';
 
 export interface EvaluatorInput {
   projectRootDir: string;
   sourceCodePayload: string;
   executionLogs: string;
   assignmentContext: AssignmentContext;
+  plannerAssessment?: BuilderPlanContractV2;
+}
+
+interface BuilderLlmTraceHooks {
+  onBeforeCall?: (
+    snapshot: BuilderLlmStagePromptSnapshot,
+  ) => Promise<void> | void;
 }
 
 @Injectable()
@@ -22,6 +45,8 @@ export class BuilderLlmEvaluatorService {
   private readonly model: string;
   private readonly planModel: string;
   private readonly timeoutMs: number;
+  private readonly planMaxInputChars: number;
+  private readonly evalMaxInputChars: number;
   private readonly systemPrompt: string;
   private readonly planSystemPrompt: string;
 
@@ -32,7 +57,7 @@ export class BuilderLlmEvaluatorService {
   ) {
     this.baseUrl = this.configService.get<string>(
       'BUILDER_OLLAMA_BASE_URL',
-      'http://localhost:11434',
+      'http://ollama:11434',
     );
     this.model = this.configService.get<string>(
       'BUILDER_OLLAMA_EVAL_MODEL',
@@ -40,75 +65,174 @@ export class BuilderLlmEvaluatorService {
     );
     this.planModel = this.configService.get<string>(
       'BUILDER_OLLAMA_PLAN_MODEL',
-      'qwen2.5-coder:1.5b',
+      'dockus-builder-plan',
     );
     this.timeoutMs = this.configService.get<number>(
       'BUILDER_OLLAMA_TIMEOUT_MS',
       120000,
     );
+    this.planMaxInputChars = this.configService.get<number>(
+      'BUILDER_LLM_PLAN_MAX_INPUT_CHARS',
+      15000,
+    );
+    this.evalMaxInputChars = this.configService.get<number>(
+      'BUILDER_LLM_EVAL_MAX_INPUT_CHARS',
+      15000,
+    );
     this.systemPrompt = this.promptRegistry.getPrompt(PromptId.EVAL);
     this.planSystemPrompt = this.promptRegistry.getPrompt(PromptId.PLAN);
   }
 
-  async evaluate(input: EvaluatorInput): Promise<BuilderLlmAssessment> {
-    this.logger.log('Iniciando evaluación integral con LLM.');
+  async evaluate(input: EvaluatorInput): Promise<BuilderEvaluationContractV2> {
+    const trace = await this.evaluateWithTrace(input);
+    if (trace.parsedContract) {
+      return trace.parsedContract;
+    }
 
-    const userPrompt = `
+    throw new Error(
+      trace.error?.message ??
+        'No se pudo obtener una evaluación válida del LLM.',
+    );
+  }
+
+  async evaluateWithTrace(
+    input: EvaluatorInput,
+    hooks?: BuilderLlmTraceHooks,
+  ): Promise<BuilderLlmStageTrace<BuilderEvaluationContractV2>> {
+    this.logStageStart('evaluation', this.model);
+
+    const userPrompt = this.truncatePrompt(
+      `
 Instrucciones de la rúbrica:
 ${input.assignmentContext.rubricInstructions}
+
+Salida esperada (Oráculo):
+${input.assignmentContext.expectedOutput || 'No se ha definido una salida exacta esperada.'}
+
+Hipótesis del planner:
+${input.plannerAssessment ? JSON.stringify(input.plannerAssessment, null, 2) : 'No disponible.'}
 
 Código fuente del alumno:
 ${input.sourceCodePayload}
 
 Resultado de la ejecución de los tests del profesor (Logs):
 ${this.logTrimmer.smartTrim(input.executionLogs) || 'No hay logs o no se ejecutaron tests.'}
-`;
+`,
+      this.evalMaxInputChars,
+    );
+
+    const snapshot = this.createPromptSnapshot(
+      'evaluation',
+      this.model,
+      userPrompt,
+      this.systemPrompt,
+    );
+    await hooks?.onBeforeCall?.(snapshot);
+
+    let response: string | null = null;
 
     try {
-      const response = await this.callSpecificModel(
+      response = await this.callSpecificModel(
         this.model,
         userPrompt,
         this.systemPrompt,
       );
-      return parseBuilderLlmAssessment(response, { mode: 'evaluation' });
     } catch (error: unknown) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error en evaluación LLM: ${errorMsg}`);
-      throw error;
+      const serializedError = this.serializeError(error);
+      this.logStageError('evaluation', this.model, serializedError);
+      return this.buildTrace(snapshot, null, serializedError);
+    }
+
+    try {
+      const parsedContract = parseBuilderEvaluationContractV2(response);
+      return this.buildTrace(snapshot, response, null, parsedContract);
+    } catch (parseError) {
+      const serializedError = this.serializeError(
+        parseError,
+        'invalid_contract',
+      );
+      this.logStageError('evaluation', this.model, serializedError);
+      this.logger.error(
+        `Fallo al parsear respuesta del Evaluador. Respuesta bruta: ${response}`,
+      );
+      return this.buildTrace(snapshot, response, serializedError);
     }
   }
 
   async plan(input: {
     sourceCodePayload: string;
     assignmentContext: AssignmentContext;
-  }): Promise<BuilderLlmAssessment> {
-    this.logger.log('Iniciando planificación con LLM.');
+  }): Promise<BuilderPlanContractV2> {
+    const trace = await this.planWithTrace(input);
+    if (trace.parsedContract) {
+      return trace.parsedContract;
+    }
 
-    const userPrompt = `
+    throw new Error(
+      trace.error?.message ?? 'No se pudo obtener un plan válido del LLM.',
+    );
+  }
+
+  async planWithTrace(
+    input: {
+      sourceCodePayload: string;
+      assignmentContext: AssignmentContext;
+    },
+    hooks?: BuilderLlmTraceHooks,
+  ): Promise<BuilderLlmStageTrace<BuilderPlanContractV2>> {
+    this.logStageStart('plan', this.planModel);
+
+    const userPrompt = this.truncatePrompt(
+      `
 EXPECTATIVAS DEL PROFESOR:
 Tipo de proyecto esperado: ${input.assignmentContext.expectedType}
+
+Salida esperada (Oráculo):
+${input.assignmentContext.expectedOutput || 'No se ha definido una salida exacta esperada.'}
+
 Instrucciones de rúbrica: ${input.assignmentContext.rubricInstructions}
 
 WORKSPACE DEL ALUMNO (ARCHIVOS):
 ${input.sourceCodePayload}
-`;
+`,
+      this.planMaxInputChars,
+    );
+
+    const snapshot = this.createPromptSnapshot(
+      'plan',
+      this.planModel,
+      userPrompt,
+      this.planSystemPrompt,
+    );
+    await hooks?.onBeforeCall?.(snapshot);
+
+    let response: string | null = null;
 
     try {
-      const response = await this.callSpecificModel(
+      response = await this.callSpecificModel(
         this.planModel,
         userPrompt,
         this.planSystemPrompt,
       );
-      try {
-        return parseBuilderLlmAssessment(response, { mode: 'planning' });
-      } catch (parseError) {
-        this.logger.error(`Fallo al parsear respuesta del Planner. Respuesta bruta: ${response}`);
-        throw parseError;
-      }
     } catch (error: unknown) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error en planificación LLM: ${errorMsg}`);
-      throw error;
+      const serializedError = this.serializeError(error);
+      this.logStageError('plan', this.planModel, serializedError);
+      return this.buildTrace(snapshot, null, serializedError);
+    }
+
+    try {
+      const parsedContract = parseBuilderPlanContractV2(response);
+      return this.buildTrace(snapshot, response, null, parsedContract);
+    } catch (parseError) {
+      const serializedError = this.serializeError(
+        parseError,
+        'invalid_contract',
+      );
+      this.logStageError('plan', this.planModel, serializedError);
+      this.logger.error(
+        `Fallo al parsear respuesta del Planner. Respuesta bruta: ${response}`,
+      );
+      return this.buildTrace(snapshot, response, serializedError);
     }
   }
 
@@ -141,26 +265,140 @@ ${input.sourceCodePayload}
 
       if (!response.ok) {
         const details = await response.text();
-        throw new Error(
-          `Ollama devolvió ${response.status}: ${details.slice(0, 250)}`,
-        );
+        throw createOllamaHttpError({
+          baseUrl: this.baseUrl,
+          target: model,
+          status: response.status,
+          details,
+        });
       }
 
       const payload = (await response.json()) as { response?: unknown };
       if (typeof payload.response !== 'string') {
-        throw new Error(
+        throw createOllamaInvalidResponseError(
           'Respuesta de evaluación LLM sin campo response string.',
         );
       }
 
       return payload.response;
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Timeout agotado al evaluar builder con LLM.');
+      if (error instanceof OllamaRequestError) {
+        throw error;
       }
-      throw error;
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw createOllamaTimeoutError(this.baseUrl, 'evaluar builder');
+      }
+      throw createOllamaConnectivityError(this.baseUrl, error);
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  private truncatePrompt(prompt: string, maxChars: number): string {
+    if (!prompt || prompt.length <= maxChars) {
+      return prompt;
+    }
+
+    const suffix = '\n...[truncated]';
+    const targetLength = Math.max(0, maxChars - suffix.length);
+    return `${prompt.slice(0, targetLength)}${suffix}`;
+  }
+
+  private createPromptSnapshot(
+    stage: BuilderLlmStagePromptSnapshot['stage'],
+    model: string,
+    prompt: string,
+    systemPrompt: string | null,
+  ): BuilderLlmStagePromptSnapshot {
+    return {
+      stage,
+      model,
+      systemPrompt,
+      prompt,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  private logStageStart(stage: 'plan' | 'evaluation', model: string): void {
+    this.logger.log(
+      JSON.stringify({
+        event: 'builder_llm_stage_start',
+        stage,
+        model,
+        baseUrl: this.baseUrl,
+        timeoutMs: this.timeoutMs,
+      }),
+    );
+  }
+
+  private logStageError(
+    stage: 'plan' | 'evaluation',
+    model: string,
+    error: BuilderLlmStageErrorInfo,
+  ): void {
+    this.logger.error(
+      JSON.stringify({
+        event: 'builder_llm_stage_error',
+        stage,
+        model,
+        baseUrl: this.baseUrl,
+        code: error.code ?? 'unknown',
+        httpStatus: error.httpStatus ?? null,
+        message: error.message,
+      }),
+    );
+  }
+
+  private buildTrace<
+    TContract extends BuilderPlanContractV2 | BuilderEvaluationContractV2,
+  >(
+    snapshot: BuilderLlmStagePromptSnapshot,
+    rawResponse: string | null,
+    error: BuilderLlmStageErrorInfo | null,
+    parsedContract: TContract | null = null,
+  ): BuilderLlmStageTrace<TContract> {
+    return {
+      schemaVersion: BUILDER_LLM_SCHEMA_VERSION,
+      ...snapshot,
+      rawResponse,
+      parsedContract,
+      error,
+    };
+  }
+
+  private serializeError(
+    error: unknown,
+    fallbackCode?: string,
+  ): BuilderLlmStageErrorInfo {
+    if (error instanceof OllamaRequestError) {
+      return {
+        name: error.name,
+        code: error.code,
+        message: error.message,
+        httpStatus: error.httpStatus,
+        stack: error.stack ?? null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    if (error instanceof Error) {
+      return {
+        name: error.name,
+        code: fallbackCode,
+        message: error.message,
+        httpStatus: null,
+        stack: error.stack ?? null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    return {
+      name: 'UnknownError',
+      code: fallbackCode ?? 'unknown',
+      message: String(error),
+      httpStatus: null,
+      stack: null,
+      timestamp: new Date().toISOString(),
+    };
   }
 }
