@@ -60,6 +60,7 @@ export function useDeliveryManagement(session: SessionRecord | null) {
   const [reportRun, setReportRun] = useState<BuildRunEntity | null>(null);
   const [reportDelivery, setReportDelivery] = useState<DeliveryEntity | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [loadingDeliveries, setLoadingDeliveries] = useState(false);
 
   const { canRead, canWrite, canAdmin } = useManagementPermissions(session);
 
@@ -67,6 +68,7 @@ export function useDeliveryManagement(session: SessionRecord | null) {
 
   const refreshDeliveries = async (assignmentId = selectedAssignmentId) => {
     if (!assignmentId || !canRead) return;
+    setLoadingDeliveries(true);
     try {
       lastFetchedAssignmentId.current = assignmentId;
       const response = await deliveriesApi.list({ assignmentId, page: 1, limit: 50, sortBy: "createdAt", sortOrder: "DESC" });
@@ -82,6 +84,8 @@ export function useDeliveryManagement(session: SessionRecord | null) {
       }
     } catch (e) {
       setWorkspaceNotice({ text: getErrorMessage(e), tone: "warning" });
+    } finally {
+      setLoadingDeliveries(false);
     }
   };
 
@@ -244,7 +248,7 @@ export function useDeliveryManagement(session: SessionRecord | null) {
     gradingForm, setGradingForm,
     workspaceNotice, editorNotice, reportNotice,
     debugPayload, setDebugPayload,
-    reportRun, reportDelivery, reportLoading,
+    reportRun, reportDelivery, reportLoading, loadingDeliveries,
     canRead, canWrite, canAdmin,
     refreshDeliveries, handleCreate, handleUpdate, handleStatusUpdate, handleViewReport, handleGradingUpdate,
     navigate
