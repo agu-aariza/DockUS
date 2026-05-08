@@ -90,6 +90,10 @@ export class Project {
   @Column({ type: 'text', nullable: true })
   rubricInstructions: string | null;
 
+  /** Salida esperada del programa para validación automática. */
+  @Column({ type: 'text', nullable: true })
+  expectedOutput: string | null;
+
   /** Momento a partir del que se permiten entregas. */
   @Column({ type: 'timestamp', nullable: true })
   opensAt: Date | null;

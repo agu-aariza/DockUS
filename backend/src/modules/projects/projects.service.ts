@@ -25,6 +25,7 @@ import { ProjectLifecycleService } from './project-lifecycle.service';
 import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectRuntimeService } from './runtime/project-runtime.service';
+import { BuilderQualityAggregationService } from './builder/application/services/builder-quality-aggregation.service';
 import { buildPaginationMeta } from '../../shared/utils/pagination.util';
 import { Delivery } from './deliveries/entities/delivery.entity';
 import {
@@ -33,7 +34,10 @@ import {
   ProjectOperationalIssuesReconcileResult,
   ProjectOperationalIssuesSummary,
   ProjectProgressSummary,
+  ProjectQualityInsightsSummary,
+  ProjectStudentQualityInsights,
 } from './projects.types';
+import type { CodeQualityCategory } from './builder/domain/builder.types';
 
 export type {
   PaginatedProjectsResponse,
@@ -41,6 +45,8 @@ export type {
   ProjectOperationalIssuesReconcileResult,
   ProjectOperationalIssuesSummary,
   ProjectProgressSummary,
+  ProjectQualityInsightsSummary,
+  ProjectStudentQualityInsights,
 } from './projects.types';
 
 const PROJECT_SORT_COLUMNS: Record<ProjectSortField, string> = {
@@ -62,6 +68,7 @@ export class ProjectsService {
     private readonly projectAccessService: ProjectAccessService,
     private readonly projectGradebookService: ProjectGradebookService,
     private readonly projectOperationalIssuesService: ProjectOperationalIssuesService,
+    private readonly builderQualityAggregationService: BuilderQualityAggregationService,
   ) {}
 
   async findById(
@@ -251,6 +258,38 @@ export class ProjectsService {
     actor: AuthenticatedUser,
   ): Promise<Project> {
     return this.projectLifecycleService.removeTeacher(id, teacherId, actor);
+  }
+
+  async getQualityInsights(
+    projectId: string,
+    actor: AuthenticatedUser,
+  ): Promise<ProjectQualityInsightsSummary> {
+    await this.projectAccessService.findOwnedProjectOrThrow(projectId, actor);
+    return this.builderQualityAggregationService.getAggregatedFindings(projectId);
+  }
+
+  async getQualityInsightsByCategory(
+    projectId: string,
+    category: CodeQualityCategory,
+    actor: AuthenticatedUser,
+  ): Promise<ProjectQualityInsightsSummary> {
+    await this.projectAccessService.findOwnedProjectOrThrow(projectId, actor);
+    return this.builderQualityAggregationService.getFindingsByCategory(
+      projectId,
+      category,
+    );
+  }
+
+  async getQualityInsightsForStudent(
+    projectId: string,
+    studentId: string,
+    actor: AuthenticatedUser,
+  ): Promise<ProjectStudentQualityInsights> {
+    await this.projectAccessService.findOwnedProjectOrThrow(projectId, actor);
+    return this.builderQualityAggregationService.getFindingsForStudent(
+      projectId,
+      studentId,
+    );
   }
 
   async findOwnedProjectOrThrow(

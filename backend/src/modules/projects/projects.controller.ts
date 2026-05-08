@@ -9,6 +9,7 @@
  */
 
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -60,8 +61,11 @@ import {
   ProjectOperationalIssuesReconcileResult,
   PaginatedProjectsResponse,
   ProjectOperationalIssuesSummary,
+  ProjectQualityInsightsSummary,
+  ProjectStudentQualityInsights,
   ProjectsService,
 } from './projects.service';
+import { CODE_QUALITY_CATEGORIES } from './builder/domain/builder.types';
 import {
   StorageObjectResponse,
   StorageService,
@@ -411,6 +415,62 @@ export class ProjectsController {
     return this.projectsService.removeTeacher(id, teacherId, request.user);
   }
 
+  @ApiOperation({
+    summary: 'Consultar insights agregados de calidad del proyecto',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get(':id/quality-insights')
+  async getQualityInsights(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProjectQualityInsightsSummary> {
+    return this.projectsService.getQualityInsights(id, request.user);
+  }
+
+  @ApiOperation({
+    summary: 'Consultar insights agregados de calidad por categoría',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @ApiParam({
+    name: 'category',
+    description: 'Categoría de hallazgos agregados.',
+    enum: CODE_QUALITY_CATEGORIES,
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get(':id/quality-insights/categories/:category')
+  async getQualityInsightsByCategory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('category') categoryParam: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProjectQualityInsightsSummary> {
+    const category = this.parseQualityCategory(categoryParam);
+    return this.projectsService.getQualityInsightsByCategory(
+      id,
+      category,
+      request.user,
+    );
+  }
+
+  @ApiOperation({
+    summary: 'Consultar hallazgos de calidad de un alumno dentro del proyecto',
+  })
+  @ApiParam(PROJECT_ID_PARAM)
+  @ApiParam({ name: 'studentId', description: 'UUID del alumno.' })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Get(':id/quality-insights/students/:studentId')
+  async getQualityInsightsForStudent(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ProjectStudentQualityInsights> {
+    return this.projectsService.getQualityInsightsForStudent(
+      id,
+      studentId,
+      request.user,
+    );
+  }
+
   /**
    * Borrado logico de proyecto.
    */
@@ -575,5 +635,21 @@ export class ProjectsController {
       `attachment; filename="project-${id}-progress.csv"`,
     );
     response.send(csv);
+  }
+
+  private parseQualityCategory(
+    value: string,
+  ): (typeof CODE_QUALITY_CATEGORIES)[number] {
+    if (
+      !CODE_QUALITY_CATEGORIES.includes(
+        value as (typeof CODE_QUALITY_CATEGORIES)[number],
+      )
+    ) {
+      throw new BadRequestException(
+        `Categoria de quality insights invalida: ${value}.`,
+      );
+    }
+
+    return value as (typeof CODE_QUALITY_CATEGORIES)[number];
   }
 }

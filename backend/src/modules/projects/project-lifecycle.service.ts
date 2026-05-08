@@ -34,6 +34,7 @@ export class ProjectLifecycleService {
       creatorId: actor.userId,
       maxDeliveriesPerStudent: dto.maxDeliveriesPerStudent ?? 1,
       expectedType: dto.expectedType?.trim() || null,
+      expectedOutput: dto.expectedOutput?.trim() || null,
       rubricInstructions: dto.rubricInstructions?.trim() || null,
       opensAt: this.normalizeDateInput(dto.opensAt),
       closesAt: this.normalizeDateInput(dto.closesAt),
@@ -85,6 +86,10 @@ export class ProjectLifecycleService {
 
     if (dto.expectedType !== undefined) {
       project.expectedType = dto.expectedType?.trim() || null;
+    }
+
+    if (dto.expectedOutput !== undefined) {
+      project.expectedOutput = dto.expectedOutput?.trim() || null;
     }
 
     if (dto.rubricInstructions !== undefined) {

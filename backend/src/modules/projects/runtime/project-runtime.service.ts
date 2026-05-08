@@ -5,6 +5,8 @@ export interface EphemeralExecutionOptions {
   image: string;
   command: string[];
   projectRootDir: string;
+  workingDir?: string;
+  environment?: Record<string, string>;
   extraBinds?: string[];
   onStdoutChunk?: (chunk: string) => void;
   onStderrChunk?: (chunk: string) => void;
@@ -40,7 +42,8 @@ export class ProjectRuntimeService {
         imageTag: options.image,
         command: options.command,
         binds: [`${options.projectRootDir}:/app`, ...(options.extraBinds || [])],
-        workingDir: '/app',
+        workingDir: options.workingDir ?? '/app',
+        environment: options.environment,
         onStdoutChunk: options.onStdoutChunk,
         onStderrChunk: options.onStderrChunk,
       });

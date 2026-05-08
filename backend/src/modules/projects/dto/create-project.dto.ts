@@ -84,6 +84,14 @@ export class CreateProjectDto {
   rubricInstructions?: string;
 
   @ApiPropertyOptional({
+    example: 'Hola Mundo',
+    description: 'Salida esperada del programa para validación automática.',
+  })
+  @IsString()
+  @IsOptional()
+  expectedOutput?: string;
+
+  @ApiPropertyOptional({
     example: '2026-05-10T08:00:00.000Z',
     description: 'Momento de apertura del plazo de entregas.',
   })

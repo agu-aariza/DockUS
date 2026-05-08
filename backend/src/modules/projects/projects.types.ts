@@ -1,4 +1,9 @@
 import { DeliveryStatus } from './deliveries/entities/delivery.entity';
+import type {
+  CodeQualityCategory,
+  CodeQualityFinding,
+  FindingSeverity,
+} from './builder/domain/builder.types';
 import type { BuilderOutcome } from './dto/project-progress-query.dto';
 import type {
   ReconcileOperationalIssueCategory,
@@ -92,4 +97,24 @@ export interface ProjectOperationalIssuesReconcileResult {
     outcome: 'would_apply' | 'applied' | 'failed';
     detail: string;
   }>;
+}
+
+export interface ProjectQualityInsight {
+  title: string;
+  category: CodeQualityCategory;
+  severity: FindingSeverity;
+  studentCount: number;
+}
+
+export interface ProjectQualityInsightsSummary {
+  projectId: string;
+  totalStudentsAnalyzed: number;
+  insights: ProjectQualityInsight[];
+  category?: CodeQualityCategory;
+}
+
+export interface ProjectStudentQualityInsights {
+  projectId: string;
+  studentId: string;
+  findings: Record<CodeQualityCategory, CodeQualityFinding[]>;
 }
