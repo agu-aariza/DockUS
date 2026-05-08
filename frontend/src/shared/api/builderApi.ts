@@ -2,6 +2,8 @@ import { http } from "./http";
 import type {
   BuildRunEntity,
   BuildRunEventsPage,
+  DownloadUrlResponse,
+  EvidenceArtifactDto,
   EnqueueBuildRunResponse,
   PaginatedResponse,
 } from "../types";
@@ -77,6 +79,33 @@ export const builderApi = {
           limit: input.limit,
         }),
       },
+    );
+    return data;
+  },
+
+  async listEvidenceArtifacts(buildRunId: string): Promise<EvidenceArtifactDto[]> {
+    const { data } = await http.get<EvidenceArtifactDto[]>(
+      `/builder/runs/${buildRunId}/evidence`,
+    );
+    return data;
+  },
+
+  async getEvidenceDownloadUrl(
+    buildRunId: string,
+    artifactId: string,
+  ): Promise<DownloadUrlResponse> {
+    const { data } = await http.get<DownloadUrlResponse>(
+      `/builder/runs/${buildRunId}/evidence/${artifactId}/download-url`,
+    );
+    return data;
+  },
+
+  async getQualityInsights(assignmentId: string): Promise<{
+    totalDeliveriesAnalyzed: number;
+    insights: Array<{ title: string; count: number; category: string }>;
+  }> {
+    const { data } = await http.get(
+      `/builder/assignments/${assignmentId}/quality-insights`,
     );
     return data;
   },

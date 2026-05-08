@@ -24,8 +24,11 @@ import type {
   ProjectOperationalIssuesReconcileResult,
   ProjectOperationalIssuesSummary,
   ProjectProgressSummary,
+  ProjectQualityInsightsResponse,
+  ProjectStudentQualityInsightsResponse,
   ProjectRuntimeStatusResponse,
   ProjectStatus,
+  QualityInsightCategory,
   StorageAssetRole,
   StorageObjectEntity,
   StorageScopeType,
@@ -178,6 +181,7 @@ export const projectsApi = {
     status?: ProjectStatus;
     maxDeliveriesPerStudent?: number;
     expectedType?: string;
+    expectedOutput?: string;
     rubricInstructions?: string;
     opensAt?: string;
     closesAt?: string;
@@ -195,6 +199,7 @@ export const projectsApi = {
       status: ProjectStatus;
       maxDeliveriesPerStudent: number;
       expectedType: string;
+      expectedOutput: string;
       rubricInstructions: string;
       opensAt: string;
       closesAt: string;
@@ -362,6 +367,35 @@ export const projectsApi = {
       responseType: "blob",
     });
     return response.data as Blob;
+  },
+
+  async getQualityInsights(
+    projectId: string,
+  ): Promise<ProjectQualityInsightsResponse> {
+    const { data } = await http.get<ProjectQualityInsightsResponse>(
+      `/projects/${projectId}/quality-insights`,
+    );
+    return data;
+  },
+
+  async getQualityInsightsByCategory(
+    projectId: string,
+    category: QualityInsightCategory,
+  ): Promise<ProjectQualityInsightsResponse> {
+    const { data } = await http.get<ProjectQualityInsightsResponse>(
+      `/projects/${projectId}/quality-insights/categories/${category}`,
+    );
+    return data;
+  },
+
+  async getQualityInsightsForStudent(
+    projectId: string,
+    studentId: string,
+  ): Promise<ProjectStudentQualityInsightsResponse> {
+    const { data } = await http.get<ProjectStudentQualityInsightsResponse>(
+      `/projects/${projectId}/quality-insights/students/${studentId}`,
+    );
+    return data;
   },
 
   async runtime(projectId: string): Promise<ProjectRuntimeStatusResponse> {

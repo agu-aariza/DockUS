@@ -15,6 +15,11 @@ export type DeliveryStatus = "DRAFT" | "SUBMITTED" | "IN_REVIEW" | "EVALUATED";
 export type StorageScopeType = "DELIVERY" | "PROJECT";
 export type StorageAssetRole = "STUDENT_SOURCE" | "TEACHER_TESTS";
 export type BuilderOutcome = "PASS" | "FAIL" | "PARTIAL" | "UNKNOWN";
+export type QualityInsightCategory =
+  | "security"
+  | "architecture"
+  | "quality"
+  | "rubricCompliance";
 export type SupportedProjectType =
   | "CLI"
   | "MODULE_CLI"
@@ -127,6 +132,7 @@ export interface ProjectEntity {
   contextAcademico: string | null;
   maxDeliveriesPerStudent: number;
   expectedType: string | null;
+  expectedOutput: string | null;
   rubricInstructions: string | null;
   opensAt?: string | null;
   closesAt?: string | null;
@@ -140,6 +146,26 @@ export interface ProjectEntity {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+}
+
+export interface ProjectQualityInsight {
+  title: string;
+  category: QualityInsightCategory;
+  severity: TechnicalFeedbackSeverity;
+  studentCount: number;
+}
+
+export interface ProjectQualityInsightsResponse {
+  projectId: string;
+  totalStudentsAnalyzed: number;
+  insights: ProjectQualityInsight[];
+  category?: QualityInsightCategory;
+}
+
+export interface ProjectStudentQualityInsightsResponse {
+  projectId: string;
+  studentId: string;
+  findings: Record<QualityInsightCategory, TechnicalFeedbackItem[]>;
 }
 
 export interface BuildRunRuntimeTarget {
@@ -272,6 +298,42 @@ export type BuildRunStatus =
   | "CANCELLED";
 
 export type BuildRunKind = "STANDARD";
+
+export type EvidenceArtifactType =
+  | "BUILD_LOG"
+  | "RUNTIME_EVENTS"
+  | "CONTAINER_INSPECT"
+  | "CONTAINER_LOG"
+  | "TEST_LOG"
+  | "REPORT_TEXT"
+  | "REPORT_JSON"
+  | "REPRODUCIBILITY_JSON"
+  | "PREFLIGHT"
+  | "CLASSIFICATION"
+  | "STRATEGY"
+  | "STATIC_FINDINGS"
+  | "STATIC_REVIEW"
+  | "SELF_HEALING_TRACE"
+  | "LLM_PLAN_PROMPT"
+  | "LLM_PLAN_RAW_RESPONSE"
+  | "LLM_PLAN_PARSED"
+  | "LLM_PLAN_ERROR"
+  | "LLM_EVAL_PROMPT"
+  | "LLM_EVAL_RAW_RESPONSE"
+  | "LLM_EVAL_PARSED"
+  | "LLM_EVAL_ERROR"
+  | "LLM_QUALITY_PROMPT"
+  | "LLM_QUALITY_RAW_RESPONSE"
+  | "LLM_QUALITY_PARSED"
+  | "LLM_QUALITY_ERROR";
+
+export interface EvidenceArtifactDto {
+  id: string;
+  type: EvidenceArtifactType;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
 
 export type BuildStage =
   | "WORKSPACE"
@@ -406,7 +468,7 @@ export interface BuildRunEntity {
     recipe?: unknown;
   } | null;
   preflightSummary?: BuilderPreflightSummary | null;
-  evidenceArtifacts?: unknown;
+  evidenceArtifacts?: EvidenceArtifactDto[] | null;
   report?: BuilderReportEntity | null;
   executionContext?: unknown;
   runtimeTarget?: BuildRunRuntimeTarget | null;
