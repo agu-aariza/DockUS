@@ -53,10 +53,11 @@ export const envValidationSchema = Joi.object({
   STORAGE_BOOTSTRAP_ON_STARTUP: Joi.boolean().default(true),
   BUILDER_OLLAMA_BASE_URL: Joi.string()
     .uri({ scheme: ['http', 'https'] })
-    .default('http://localhost:11434'),
+    .default('http://ollama:11434'),
   BUILDER_OLLAMA_MODEL: Joi.string().default('qwen2.5-coder:7b'),
   BUILDER_OLLAMA_PLAN_MODEL: Joi.string().default('dockus-builder-plan'),
   BUILDER_OLLAMA_EVAL_MODEL: Joi.string().default('dockus-builder-eval'),
+  BUILDER_OLLAMA_QUALITY_MODEL: Joi.string().default('dockus-builder-quality'),
   BUILDER_OLLAMA_TIMEOUT_MS: Joi.number().integer().min(1000).default(120000),
   BUILDER_LLM_ASSIST_ENABLED: Joi.boolean().default(true),
   BUILDER_SELF_HEAL_MAX_ATTEMPTS: Joi.number()
@@ -91,6 +92,10 @@ export const envValidationSchema = Joi.object({
     .integer()
     .min(2000)
     .default(15000),
+  BUILDER_LLM_QUALITY_MAX_INPUT_CHARS: Joi.number()
+    .integer()
+    .min(2000)
+    .default(20000),
   BUILDER_DOCKER_BUILD_TIMEOUT_MS: Joi.number()
     .integer()
     .min(10000)

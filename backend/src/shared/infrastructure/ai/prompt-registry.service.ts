@@ -5,6 +5,8 @@ import * as path from 'path';
 export enum PromptId {
   PLAN = 'plan',
   EVAL = 'eval',
+  REPAIR = 'repair',
+  TECHNICAL_FEEDBACK = 'technical-feedback',
 }
 
 @Injectable()
