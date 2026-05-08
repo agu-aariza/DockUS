@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".tmp-test-dist",
+    "types": ["node", "vite/client"]
+  },
+  "include": ["src", "tests"]
+}
