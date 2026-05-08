@@ -9,6 +9,7 @@ import {
 import type {
   BuildRunEntity,
   DeliveryEntity,
+  EvidenceArtifactDto,
   PaginatedResponse,
   ProjectAssignmentEntity,
   ProjectEntity,
@@ -38,6 +39,10 @@ export function useRuntimeManagement(session: SessionRecord | null) {
   const [runsResponse, setRunsResponse] = useState<PaginatedResponse<BuildRunEntity> | null>(null);
   const [selectedRunId, setSelectedRunId] = useState("");
   const [selectedRun, setSelectedRun] = useState<BuildRunEntity | null>(null);
+  const [evidenceArtifacts, setEvidenceArtifacts] = useState<EvidenceArtifactDto[]>([]);
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
+  const [downloadingArtifactId, setDownloadingArtifactId] = useState<string | null>(null);
   
   const [message, setMessage] = useState<NoticeState | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -153,6 +158,81 @@ export function useRuntimeManagement(session: SessionRecord | null) {
   }, [selectedRunId]);
 
   useEffect(() => {
+    if (!selectedRunId) {
+      setEvidenceArtifacts([]);
+      setEvidenceError(null);
+      setEvidenceLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    let firstFetch = true;
+
+    const sync = async () => {
+      if (firstFetch) {
+        setEvidenceLoading(true);
+      }
+
+      try {
+        const artifacts = await builderApi.listEvidenceArtifacts(selectedRunId);
+        if (!cancelled) {
+          setEvidenceArtifacts(artifacts);
+          setEvidenceError(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setEvidenceError(getErrorMessage(e));
+        }
+      } finally {
+        if (!cancelled && firstFetch) {
+          setEvidenceLoading(false);
+        }
+        firstFetch = false;
+      }
+    };
+
+    void sync();
+
+    if (selectedRun?.isTerminal) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const inv = setInterval(() => {
+      firstFetch = false;
+      void sync();
+    }, 4000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(inv);
+    };
+  }, [selectedRun?.isTerminal, selectedRunId]);
+
+  const handleDownloadArtifact = async (artifactId: string) => {
+    if (!selectedRunId) {
+      return;
+    }
+
+    setDownloadingArtifactId(artifactId);
+    try {
+      const { downloadUrl } = await builderApi.getEvidenceDownloadUrl(
+        selectedRunId,
+        artifactId,
+      );
+
+      if (typeof window !== "undefined") {
+        window.open(downloadUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (e) {
+      setMessage({ text: getErrorMessage(e), tone: "warning" });
+    } finally {
+      setDownloadingArtifactId(null);
+    }
+  };
+
+  useEffect(() => {
     const next = new URLSearchParams(searchParams);
     let changed = false;
     
@@ -197,8 +277,10 @@ export function useRuntimeManagement(session: SessionRecord | null) {
     selectedAssignmentId, setSelectedAssignmentId,
     selectedDeliveryId, setSelectedDeliveryId,
     runtimeStatus, runsResponse, selectedRunId, setSelectedRunId, selectedRun, setSelectedRun,
+    evidenceArtifacts, evidenceLoading, evidenceError, downloadingArtifactId,
     message, setMessage, busyAction, setBusyAction,
     streamState, latestSequence, streamError, liveEvents,
-    handleStartRun, handleCancelRun, handleReconcile, loadRuns, refreshRuntimeStatus
+    handleStartRun, handleCancelRun, handleReconcile, loadRuns, refreshRuntimeStatus,
+    handleDownloadArtifact,
   };
 }

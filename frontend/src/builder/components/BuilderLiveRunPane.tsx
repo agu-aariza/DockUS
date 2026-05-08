@@ -1,7 +1,11 @@
 import { pretty } from "../../shared/utils/errors";
-import type { BuildRunEntity, BuildRunEvent } from "../../shared/types";
+import type {
+  BuildRunEntity,
+  BuildRunEvent,
+  EvidenceArtifactDto,
+} from "../../shared/types";
 import type { StreamState } from "../hooks/useBuilderRunStream";
-import { formatDate, summarizeRun } from "../utils";
+import { formatDate } from "../utils";
 import { Button } from "../../shared/components/ui/Button";
 import { Badge, Card } from "../../shared/components/ui/Layout";
 import {
@@ -13,28 +17,96 @@ import {
   RiPlayLine,
 } from "react-icons/ri";
 
-const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
+const cn = (...classes: (string | boolean | undefined)[]) =>
+  classes.filter(Boolean).join(" ");
 
 const PREFLIGHT_COMPATIBILITY_LABEL: Record<string, string> = {
-  SUPPORTED_AUTO: "soportado automáticamente",
+  SUPPORTED_AUTO: "soportado automaticamente",
   SUPPORTED_WITH_MANIFEST: "soportado mediante dockus.yml",
   PARTIAL: "parcial",
   UNSUPPORTED: "no soportado",
+};
+
+const ARTIFACT_LABELS: Record<string, string> = {
+  BUILD_LOG: "Build log",
+  RUNTIME_EVENTS: "Eventos del runtime",
+  CONTAINER_INSPECT: "Estado del contenedor",
+  CONTAINER_LOG: "Log del contenedor",
+  TEST_LOG: "Log de tests",
+  REPORT_TEXT: "Informe legible",
+  REPORT_JSON: "Informe JSON",
+  REPRODUCIBILITY_JSON: "Reproducibilidad",
+  PREFLIGHT: "Preflight",
+  CLASSIFICATION: "Clasificacion",
+  STRATEGY: "Estrategia",
+  STATIC_FINDINGS: "Hallazgos estaticos",
+  STATIC_REVIEW: "Revision estatica",
+  SELF_HEALING_TRACE: "Traza de autocorreccion",
+  LLM_PLAN_PROMPT: "Prompt del planner",
+  LLM_PLAN_RAW_RESPONSE: "Respuesta bruta del planner",
+  LLM_PLAN_PARSED: "Planner normalizado",
+  LLM_PLAN_ERROR: "Error del planner",
+  LLM_EVAL_PROMPT: "Prompt de evaluacion",
+  LLM_EVAL_RAW_RESPONSE: "Respuesta bruta de evaluacion",
+  LLM_EVAL_PARSED: "Evaluacion normalizada",
+  LLM_EVAL_ERROR: "Error de evaluacion",
+  LLM_QUALITY_PROMPT: "Prompt de calidad",
+  LLM_QUALITY_RAW_RESPONSE: "Respuesta bruta de calidad",
+  LLM_QUALITY_PARSED: "Calidad normalizada",
+  LLM_QUALITY_ERROR: "Error de calidad",
 };
 
 interface BuilderLiveRunPaneProps {
   selectedRun: BuildRunEntity | null;
   liveEvents: BuildRunEvent[];
   streamState: StreamState;
+  streamError?: string | null;
+  evidenceArtifacts?: EvidenceArtifactDto[];
+  evidenceLoading?: boolean;
+  evidenceError?: string | null;
+  downloadingArtifactId?: string | null;
+  onDownloadArtifact?: (artifactId: string) => void;
   onRefresh: () => void;
   onCancel: () => void;
   busyAction: string | null;
+}
+
+function normalizeItems(values?: string[]): string[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return values
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function formatArtifactLabel(type: string): string {
+  return ARTIFACT_LABELS[type] ?? type.replace(/_/g, " ");
+}
+
+function formatBytes(sizeBytes: number): string {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function BuilderLiveRunPane({
   selectedRun,
   liveEvents,
   streamState,
+  streamError = null,
+  evidenceArtifacts = [],
+  evidenceLoading = false,
+  evidenceError = null,
+  downloadingArtifactId = null,
+  onDownloadArtifact,
   onRefresh,
   onCancel,
   busyAction,
@@ -48,11 +120,29 @@ export function BuilderLiveRunPane({
     .reverse()
     .join("");
 
-  const timelineEvents = liveEvents.filter((event) => event.eventType !== "LOG_CHUNK");
+  const timelineEvents = liveEvents.filter(
+    (event) => event.eventType !== "LOG_CHUNK",
+  );
+  const observedEvidence = normalizeItems(
+    selectedRun?.llmAssessment?.observedEvidence,
+  );
+  const evaluationLimits = normalizeItems(
+    selectedRun?.llmAssessment?.evaluationLimits,
+  );
+  const showAssessmentContext =
+    observedEvidence.length > 0 || evaluationLimits.length > 0;
+
+  const evidenceEmptyMessage = !selectedRun
+    ? null
+    : !selectedRun.isTerminal
+      ? "Las evidencias descargables apareceran conforme avance la ejecucion."
+      : selectedRun.status === "FAILED" || evaluationLimits.length > 0
+        ? "El run termino con limites o fallos y no genero artefactos descargables adicionales."
+        : "Este run termino sin artefactos descargables.";
 
   return (
     <Card
-      title="Ejecución en vivo"
+      title="Ejecucion en vivo"
       className="min-w-0 rounded-3xl"
       headerAction={
         <div className="flex flex-wrap items-center gap-2">
@@ -64,7 +154,9 @@ export function BuilderLiveRunPane({
           </Button>
           <Button
             variant="danger"
-            disabled={!selectedRun || selectedRun.isTerminal || busyAction === "cancel"}
+            disabled={
+              !selectedRun || selectedRun.isTerminal || busyAction === "cancel"
+            }
             onClick={onCancel}
           >
             Cancelar
@@ -72,101 +164,164 @@ export function BuilderLiveRunPane({
         </div>
       }
     >
-      <div className="flex items-center gap-4 py-2 mb-4 border-b border-slate-100">
+      <div className="mb-4 flex items-center gap-4 border-b border-slate-100 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Contexto</span>
-          <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">{selectedRun?.runKind}</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Contexto
+          </span>
+          <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-900">
+            {selectedRun?.runKind}
+          </span>
         </div>
         <div className="h-4 w-px bg-slate-200" />
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Arquitectura</span>
-          <span className="text-xs font-bold text-brand-maroon bg-brand-maroon/5 px-2 py-0.5 rounded-md">{selectedRun?.llmAssessment?.structuralType ?? 'Analizando...'}</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Arquitectura
+          </span>
+          <span className="rounded-md bg-brand-maroon/5 px-2 py-0.5 text-xs font-bold text-brand-maroon">
+            {selectedRun?.llmAssessment?.structuralType ?? "Analizando..."}
+          </span>
         </div>
       </div>
 
       {selectedRun ? (
         <>
-          <div className="grid gap-4 mb-6 md:grid-cols-3">
-            {/* ESTADO EJECUCION */}
+          {streamError ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              El stream en vivo encontro un error: {streamError}. El panel sigue
+              disponible con refresco manual y polling.
+            </div>
+          ) : null}
+
+          <div className="mb-6 grid gap-4 md:grid-cols-3">
             <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md">
-              <div className="absolute top-0 right-0 p-3 opacity-10 text-4xl text-slate-900">
+              <div className="absolute right-0 top-0 p-3 text-4xl text-slate-900 opacity-10">
                 <RiPulseFill />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Estado Ejecución</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                Estado Ejecucion
+              </div>
               <div className="mt-2 flex items-center gap-3">
-                <div className={cn(
-                  "h-3 w-3 rounded-full",
-                  selectedRun.status === 'SUCCESS' ? 'bg-emerald-500 animate-pulse' : 
-                  selectedRun.status === 'FAILED' ? 'bg-rose-500' : 'bg-brand-blue animate-bounce'
-                )} />
-                <span className="text-2xl font-black tracking-tighter text-slate-900">{selectedRun.status}</span>
+                <div
+                  className={cn(
+                    "h-3 w-3 rounded-full",
+                    selectedRun.status === "SUCCESS"
+                      ? "bg-emerald-500 animate-pulse"
+                      : selectedRun.status === "FAILED"
+                        ? "bg-rose-500"
+                        : "bg-brand-blue animate-bounce",
+                  )}
+                />
+                <span className="text-2xl font-black tracking-tighter text-slate-900">
+                  {selectedRun.status}
+                </span>
               </div>
               <div className="mt-2 text-xs font-bold text-slate-500">
-                Etapa: <span className="text-brand-maroon">{selectedRun.activeStage ?? "Orquestando"}</span>
+                Etapa:{" "}
+                <span className="text-brand-maroon">
+                  {selectedRun.activeStage ?? "Orquestando"}
+                </span>
               </div>
             </div>
 
-            {/* ENTORNO DOCKER */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3">Infraestructura</div>
+              <div className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                Infraestructura
+              </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Network</span>
-                  <span className="text-[10px] font-mono font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                    {selectedRun.runtimeTarget?.executionNetworkName?.slice(0, 16) ?? "pending"}
+                  <span className="text-[10px] font-bold uppercase text-slate-400">
+                    Network
+                  </span>
+                  <span className="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[10px] font-mono font-bold text-slate-600">
+                    {selectedRun.runtimeTarget?.executionNetworkName?.slice(0, 16) ??
+                      "pending"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Container</span>
-                  <span className="text-[10px] font-mono font-bold text-brand-blue bg-brand-blue/5 px-2 py-0.5 rounded border border-brand-blue/10">
-                    {selectedRun.runtimeTarget?.primaryContainerId?.slice(0, 12) ?? "resolving"}
+                  <span className="text-[10px] font-bold uppercase text-slate-400">
+                    Container
+                  </span>
+                  <span className="rounded border border-brand-blue/10 bg-brand-blue/5 px-2 py-0.5 text-[10px] font-mono font-bold text-brand-blue">
+                    {selectedRun.runtimeTarget?.primaryContainerId?.slice(0, 12) ??
+                      "resolving"}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* RESULTADO ACADEMICO */}
             <div className="relative overflow-hidden rounded-2xl border border-brand-gold/20 bg-brand-gold/[0.03] p-5 shadow-sm transition-all hover:shadow-md">
-              <div className="absolute top-0 right-0 p-3 opacity-20 text-4xl text-brand-gold">
-                <RiRefreshLine className={cn(selectedRun.status !== 'SUCCESS' && selectedRun.status !== 'FAILED' ? "animate-spin-slow" : "")} />
+              <div className="absolute right-0 top-0 p-3 text-4xl text-brand-gold opacity-20">
+                <RiRefreshLine
+                  className={cn(
+                    selectedRun.status !== "SUCCESS" &&
+                      selectedRun.status !== "FAILED" &&
+                      "animate-spin-slow",
+                  )}
+                />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold-dark mb-2">Evaluación Académica</div>
-              
+              <div className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold-dark">
+                Evaluacion Academica
+              </div>
+
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-baseline gap-1">
-                  <span className={cn(
-                    "text-4xl font-black tracking-tighter",
-                    selectedRun.llmAssessment?.evaluativeState === 'E1' ? 'text-emerald-600' : 
-                    selectedRun.llmAssessment?.evaluativeState === 'E2' ? 'text-brand-gold-dark' : 'text-slate-400'
-                  )}>
+                  <span
+                    className={cn(
+                      "text-4xl font-black tracking-tighter",
+                      selectedRun.llmAssessment?.evaluativeState === "E1"
+                        ? "text-emerald-600"
+                        : selectedRun.llmAssessment?.evaluativeState === "E2"
+                          ? "text-brand-gold-dark"
+                          : "text-slate-400",
+                    )}
+                  >
                     {selectedRun.llmAssessment?.evaluativeState ?? "--"}
                   </span>
-                  <span className="text-[10px] font-bold text-brand-gold-dark/60 uppercase">Eval</span>
+                  <span className="text-[10px] font-bold uppercase text-brand-gold-dark/60">
+                    Eval
+                  </span>
                 </div>
 
-                {selectedRun.llmAssessment?.recommendedGrade !== undefined && (
-                  <div className={cn(
-                    "flex flex-col items-center justify-center px-4 py-1.5 rounded-xl border-2 shadow-lg scale-110",
-                    selectedRun.llmAssessment.recommendedGrade >= 7 ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-600" :
-                    selectedRun.llmAssessment.recommendedGrade >= 5 ? "bg-amber-500/10 border-amber-500/40 text-amber-600" :
-                    "bg-red-500/10 border-red-500/40 text-red-600"
-                  )}>
-                    <span className="text-[9px] font-black uppercase tracking-widest opacity-60">Nota Final</span>
-                    <span className="text-2xl font-black leading-none">{selectedRun.llmAssessment.recommendedGrade.toFixed(2)}</span>
+                {selectedRun.llmAssessment?.recommendedGrade !== undefined ? (
+                  <div
+                    className={cn(
+                      "flex scale-110 flex-col items-center justify-center rounded-xl border-2 px-4 py-1.5 shadow-lg",
+                      selectedRun.llmAssessment.recommendedGrade >= 7
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600"
+                        : selectedRun.llmAssessment.recommendedGrade >= 5
+                          ? "border-amber-500/40 bg-amber-500/10 text-amber-600"
+                          : "border-red-500/40 bg-red-500/10 text-red-600",
+                    )}
+                  >
+                    <span className="text-[9px] font-black uppercase tracking-widest opacity-60">
+                      Nota Final
+                    </span>
+                    <span className="text-2xl font-black leading-none">
+                      {selectedRun.llmAssessment.recommendedGrade.toFixed(2)}
+                    </span>
                   </div>
-                )}
+                ) : null}
               </div>
 
-              <div className="mt-3 flex items-center justify-between border-t border-brand-gold/10 pt-2 text-[10px] font-bold text-brand-gold-dark/50 uppercase tracking-widest">
-                <span>Confianza: {selectedRun.llmAssessment?.confidence ?? 'n/a'}</span>
-                {selectedRun.llmAssessment?.recommendedGrade !== undefined && (
-                  <span className={cn(
-                    "px-1.5 py-0.5 rounded-full text-[9px]",
-                    selectedRun.llmAssessment.recommendedGrade >= 5 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                  )}>
-                    {selectedRun.llmAssessment.recommendedGrade >= 5 ? "Aprobado" : "Suspenso"}
+              <div className="mt-3 flex items-center justify-between border-t border-brand-gold/10 pt-2 text-[10px] font-bold uppercase tracking-widest text-brand-gold-dark/50">
+                <span>
+                  Confianza: {selectedRun.llmAssessment?.confidence ?? "n/a"}
+                </span>
+                {selectedRun.llmAssessment?.recommendedGrade !== undefined ? (
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[9px]",
+                      selectedRun.llmAssessment.recommendedGrade >= 5
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700",
+                    )}
+                  >
+                    {selectedRun.llmAssessment.recommendedGrade >= 5
+                      ? "Aprobado"
+                      : "Suspenso"}
                   </span>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
@@ -175,15 +330,19 @@ export function BuilderLiveRunPane({
             <section className="rounded-2xl border border-brand-maroon/10 bg-brand-maroon/[0.02] p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-maroon px-2 py-0.5 bg-brand-maroon/10 rounded">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="rounded bg-brand-maroon/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-maroon">
                       LLM Assessment
                     </span>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                      selectedRun.llmAssessment.confidence === 'high' ? 'bg-emerald-100 text-emerald-700' :
-                      selectedRun.llmAssessment.confidence === 'medium' ? 'bg-amber-100 text-amber-700' :
-                      'bg-slate-100 text-slate-700'
-                    }`}>
+                    <span
+                      className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                        selectedRun.llmAssessment.confidence === "high"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : selectedRun.llmAssessment.confidence === "medium"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
                       Confianza: {selectedRun.llmAssessment.confidence}
                     </span>
                   </div>
@@ -194,46 +353,97 @@ export function BuilderLiveRunPane({
                     {selectedRun.llmAssessment.rationale}
                   </p>
                 </div>
-                  <div className="flex flex-col items-end">
-                    <div className={cn(
+                <div className="flex flex-col items-end">
+                  <div
+                    className={cn(
                       "text-2xl font-black",
-                      selectedRun.llmAssessment.evaluativeState === 'E1' ? 'text-emerald-500' :
-                      selectedRun.llmAssessment.evaluativeState === 'E2' ? 'text-brand-gold' :
-                      selectedRun.llmAssessment.evaluativeState === 'E3' ? 'text-amber-500' :
-                      'text-rose-500'
-                    )}>
-                      {selectedRun.llmAssessment.evaluativeState}
-                    </div>
-                    <span className="ui-label text-slate-400">Score de Calidad</span>
+                      selectedRun.llmAssessment.evaluativeState === "E1"
+                        ? "text-emerald-500"
+                        : selectedRun.llmAssessment.evaluativeState === "E2"
+                          ? "text-brand-gold"
+                          : selectedRun.llmAssessment.evaluativeState === "E3"
+                            ? "text-amber-500"
+                            : "text-rose-500",
+                    )}
+                  >
+                    {selectedRun.llmAssessment.evaluativeState}
                   </div>
-
-                  {selectedRun.llmAssessment.recommendedGrade !== undefined && (
-                    <div className="h-12 w-px bg-slate-200" />
-                  )}
-
-                  {selectedRun.llmAssessment.recommendedGrade !== undefined && (
-                    <div className="flex flex-col items-end">
-                      <div className={cn(
-                        "text-2xl font-black",
-                        selectedRun.llmAssessment.recommendedGrade >= 7 ? "text-emerald-500" :
-                        selectedRun.llmAssessment.recommendedGrade >= 5 ? "text-amber-500" :
-                        "text-red-500"
-                      )}>
-                        {selectedRun.llmAssessment.recommendedGrade.toFixed(2)}
-                      </div>
-                      <span className="ui-label text-slate-400">Nota Final</span>
-                    </div>
-                  )}
+                  <span className="ui-label text-slate-400">Score de Calidad</span>
                 </div>
 
-              {selectedRun.llmAssessment.evidenceSummary && (
+                {selectedRun.llmAssessment.recommendedGrade !== undefined ? (
+                  <div className="h-12 w-px bg-slate-200" />
+                ) : null}
+
+                {selectedRun.llmAssessment.recommendedGrade !== undefined ? (
+                  <div className="flex flex-col items-end">
+                    <div
+                      className={cn(
+                        "text-2xl font-black",
+                        selectedRun.llmAssessment.recommendedGrade >= 7
+                          ? "text-emerald-500"
+                          : selectedRun.llmAssessment.recommendedGrade >= 5
+                            ? "text-amber-500"
+                            : "text-red-500",
+                      )}
+                    >
+                      {selectedRun.llmAssessment.recommendedGrade.toFixed(2)}
+                    </div>
+                    <span className="ui-label text-slate-400">Nota Final</span>
+                  </div>
+                ) : null}
+              </div>
+
+              {selectedRun.llmAssessment.evidenceSummary ? (
                 <div className="mt-6 border-t border-slate-200/60 pt-4">
-                  <div className="ui-label mb-2 text-slate-500">Evidencia Observada</div>
-                  <p className="text-xs leading-5 text-slate-500 italic">
+                  <div className="ui-label mb-2 text-slate-500">
+                    Evidencia Observada
+                  </div>
+                  <p className="text-xs italic leading-5 text-slate-500">
                     {selectedRun.llmAssessment.evidenceSummary}
                   </p>
                 </div>
-              )}
+              ) : null}
+
+              {showAssessmentContext ? (
+                <div className="mt-6 grid gap-4 border-t border-slate-200/60 pt-4 lg:grid-cols-2">
+                  {observedEvidence.length > 0 ? (
+                    <article className="rounded-2xl border border-emerald-200 bg-white/80 p-4">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                        Que observo el sistema
+                      </div>
+                      <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                        {observedEvidence.map((item) => (
+                          <li
+                            key={item}
+                            className="rounded-xl bg-emerald-50 px-3 py-2"
+                          >
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  ) : null}
+
+                  {evaluationLimits.length > 0 ? (
+                    <article className="rounded-2xl border border-amber-200 bg-white/80 p-4">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                        Lo que no pudo validar
+                      </div>
+                      <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                        {evaluationLimits.map((item) => (
+                          <li
+                            key={item}
+                            className="rounded-xl bg-amber-50 px-3 py-2"
+                          >
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  ) : null}
+                </div>
+              ) : null}
             </section>
           ) : null}
 
@@ -248,8 +458,9 @@ export function BuilderLiveRunPane({
                     {selectedRun.preflightSummary.supportedProjectType}
                   </div>
                   <div className="mt-1 text-sm text-slate-600">
-                    {PREFLIGHT_COMPATIBILITY_LABEL[selectedRun.preflightSummary.compatibility] ??
-                      selectedRun.preflightSummary.compatibility}
+                    {PREFLIGHT_COMPATIBILITY_LABEL[
+                      selectedRun.preflightSummary.compatibility
+                    ] ?? selectedRun.preflightSummary.compatibility}
                     {" · perfil "}
                     {selectedRun.preflightSummary.executionProfile}
                     {" · gestor "}
@@ -259,8 +470,8 @@ export function BuilderLiveRunPane({
               </div>
               <div className="mt-4 grid gap-2 text-sm text-slate-600">
                 <div>
-                  <span className="font-semibold text-slate-900">Working dir</span>:{" "}
-                  {selectedRun.preflightSummary.workingDirectory}
+                  <span className="font-semibold text-slate-900">Working dir</span>
+                  : {selectedRun.preflightSummary.workingDirectory}
                 </div>
                 <div>
                   <span className="font-semibold text-slate-900">Run</span>:{" "}
@@ -272,34 +483,123 @@ export function BuilderLiveRunPane({
             </section>
           ) : null}
 
+          <section className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="text-sm font-medium text-slate-950">
+                  Evidencias del run
+                </div>
+                <div className="text-xs text-slate-500">
+                  Artefactos persistidos y descargables para auditoria del
+                  profesorado.
+                </div>
+              </div>
+              {selectedRun.isTerminal ? (
+                <Badge variant="idle">Run cerrado</Badge>
+              ) : (
+                <Badge variant="warning">Run en progreso</Badge>
+              )}
+            </div>
+
+            {evidenceLoading ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                Cargando evidencias disponibles...
+              </div>
+            ) : evidenceError ? (
+              <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
+                No se pudo cargar la lista de evidencias: {evidenceError}
+              </div>
+            ) : evidenceArtifacts.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                {evidenceEmptyMessage}
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                {evidenceArtifacts.map((artifact) => (
+                  <article
+                    key={artifact.id}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900">
+                          {formatArtifactLabel(artifact.type)}
+                        </div>
+                        <div className="mt-1 text-xs font-mono text-slate-500">
+                          {artifact.type}
+                        </div>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        className="px-4 py-2 text-xs"
+                        disabled={
+                          downloadingArtifactId === artifact.id ||
+                          typeof onDownloadArtifact !== "function"
+                        }
+                        onClick={() => onDownloadArtifact?.(artifact.id)}
+                      >
+                        {downloadingArtifactId === artifact.id
+                          ? "Preparando..."
+                          : "Descargar"}
+                      </Button>
+                    </div>
+
+                    <div className="mt-4 grid gap-2 text-xs text-slate-500 sm:grid-cols-3">
+                      <div>
+                        <span className="font-semibold text-slate-700">Tipo</span>
+                        <div>{artifact.contentType}</div>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-700">Tamano</span>
+                        <div>{formatBytes(artifact.sizeBytes)}</div>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-700">Creado</span>
+                        <div>{formatDate(artifact.createdAt)}</div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
           <div className="grid gap-4 2xl:grid-cols-[0.95fr_1.05fr]">
             <section className="min-w-0 rounded-2xl border border-slate-200 bg-slate-950 p-4 shadow-2xl">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-                    <RiPulseFill className={streamState === 'streaming' ? 'animate-pulse' : ''} />
+                    <RiPulseFill
+                      className={streamState === "streaming" ? "animate-pulse" : ""}
+                    />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-slate-100 tracking-tight">Consola en vivo</div>
-                    <div className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">
+                    <div className="text-sm font-bold tracking-tight text-slate-100">
+                      Consola en vivo
+                    </div>
+                    <div className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
                       Build & Runtime Logs
                     </div>
                   </div>
                 </div>
-                {streamState === 'streaming' && (
-                  <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                {streamState === "streaming" ? (
+                  <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1">
                     <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-                    <span className="text-[10px] font-bold text-emerald-500 uppercase">Streaming</span>
+                    <span className="text-[10px] font-bold uppercase text-emerald-500">
+                      Streaming
+                    </span>
                   </div>
-                )}
+                ) : null}
               </div>
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none opacity-20 group-hover:opacity-30 transition-opacity" />
-                <pre className="max-h-[460px] max-w-full overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-6 text-emerald-300/90 p-2 custom-scrollbar selection:bg-emerald-500/30">
+              <div className="group relative">
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-20 transition-opacity group-hover:opacity-30" />
+                <pre className="custom-scrollbar max-h-[460px] max-w-full overflow-y-auto whitespace-pre-wrap break-all p-2 font-mono text-[11px] leading-6 text-emerald-300/90 selection:bg-emerald-500/30">
                   {consoleOutput || (
-                    <div className="flex flex-col items-center justify-center py-20 text-slate-600 gap-3">
+                    <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-600">
                       <RiLoader4Line className="text-3xl animate-spin" />
-                      <span className="text-xs font-medium italic">Esperando ráfaga de logs del orquestador...</span>
+                      <span className="text-xs font-medium italic">
+                        Esperando rafaga de logs del orquestador...
+                      </span>
                     </div>
                   )}
                 </pre>
@@ -308,86 +608,134 @@ export function BuilderLiveRunPane({
 
             <section className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="mb-3">
-                <div className="text-sm font-medium text-slate-950">Línea temporal de la ejecución</div>
+                <div className="text-sm font-medium text-slate-950">
+                  Linea temporal de la ejecucion
+                </div>
                 <div className="text-xs text-slate-500">
                   Eventos persistidos fuera del stream de consola
                 </div>
               </div>
 
-              <div className="max-h-[520px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+              <div className="custom-scrollbar max-h-[520px] space-y-3 overflow-y-auto pr-2">
                 {timelineEvents.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
-                    Aún no hay eventos visibles para este run.
+                    Aun no hay eventos visibles para este run.
                   </div>
                 ) : (
                   timelineEvents.map((event) => {
-                    const isEvidence = event.message?.includes("--- HEALTHCHECK EVIDENCE ---");
-                    const evidenceMatch = event.message?.match(/--- HEALTHCHECK EVIDENCE ---\n([\s\S]*)/);
+                    const isEvidence = event.message?.includes(
+                      "--- HEALTHCHECK EVIDENCE ---",
+                    );
+                    const evidenceMatch = event.message?.match(
+                      /--- HEALTHCHECK EVIDENCE ---\n([\s\S]*)/,
+                    );
                     const evidenceContent = evidenceMatch ? evidenceMatch[1] : null;
-                    const cleanMessage = isEvidence 
-                      ? event.message.split("--- HEALTHCHECK EVIDENCE ---")[0].trim() 
+                    const cleanMessage = isEvidence
+                      ? event.message.split("--- HEALTHCHECK EVIDENCE ---")[0].trim()
                       : event.message;
 
-                    // Determinación de color y estilo por tipo de evento
-                    const isError = event.eventType.includes("ERROR") || event.message?.toLowerCase().includes("error") || event.message?.toLowerCase().includes("failed");
-                    const isSuccess = event.eventType.includes("COMPLETED") || event.eventType.includes("SUCCESS");
-                    const isSystem = event.eventType.includes("START") || event.eventType.includes("ENQUEUED");
-                    const isIA = event.message?.includes("IA") || event.message?.includes("LLM");
+                    const isError =
+                      event.eventType.includes("ERROR") ||
+                      event.message?.toLowerCase().includes("error") ||
+                      event.message?.toLowerCase().includes("failed");
+                    const isSuccess =
+                      event.eventType.includes("COMPLETED") ||
+                      event.eventType.includes("SUCCESS");
+                    const isSystem =
+                      event.eventType.includes("START") ||
+                      event.eventType.includes("ENQUEUED");
+                    const isIA =
+                      event.message?.includes("IA") || event.message?.includes("LLM");
 
                     let sidebarColor = "bg-slate-300";
                     let icon = <RiStackFill />;
                     let iconBg = "bg-slate-100 text-slate-500";
 
-                    if (isEvidence) { sidebarColor = "bg-emerald-500"; icon = <RiPulseFill />; iconBg = "bg-emerald-500 text-white animate-pulse"; }
-                    else if (isError) { sidebarColor = "bg-rose-500"; icon = <RiStopLine />; iconBg = "bg-rose-100 text-rose-600"; }
-                    else if (isSuccess) { sidebarColor = "bg-emerald-500"; icon = <RiPulseFill />; iconBg = "bg-emerald-100 text-emerald-600"; }
-                    else if (isIA) { sidebarColor = "bg-brand-gold"; icon = <RiRefreshLine />; iconBg = "bg-brand-gold/10 text-brand-gold-dark"; }
-                    else if (isSystem) { sidebarColor = "bg-brand-blue"; icon = <RiPlayLine />; iconBg = "bg-brand-blue/10 text-brand-blue-dark"; }
+                    if (isEvidence) {
+                      sidebarColor = "bg-emerald-500";
+                      icon = <RiPulseFill />;
+                      iconBg = "bg-emerald-500 text-white animate-pulse";
+                    } else if (isError) {
+                      sidebarColor = "bg-rose-500";
+                      icon = <RiStopLine />;
+                      iconBg = "bg-rose-100 text-rose-600";
+                    } else if (isSuccess) {
+                      sidebarColor = "bg-emerald-500";
+                      icon = <RiPulseFill />;
+                      iconBg = "bg-emerald-100 text-emerald-600";
+                    } else if (isIA) {
+                      sidebarColor = "bg-brand-gold";
+                      icon = <RiRefreshLine />;
+                      iconBg = "bg-brand-gold/10 text-brand-gold-dark";
+                    } else if (isSystem) {
+                      sidebarColor = "bg-brand-blue";
+                      icon = <RiPlayLine />;
+                      iconBg = "bg-brand-blue/10 text-brand-blue-dark";
+                    }
 
                     return (
                       <article
                         key={event.id}
-                        className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 hover:shadow-md ${
-                          isEvidence 
-                            ? "border-emerald-200 bg-emerald-50/30 ring-1 ring-emerald-100" 
-                            : isError 
+                        className={`group relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 hover:shadow-md ${
+                          isEvidence
+                            ? "border-emerald-200 bg-emerald-50/30 ring-1 ring-emerald-100"
+                            : isError
                               ? "border-rose-100 bg-rose-50/30"
                               : "border-slate-200 bg-white"
-                        } p-4`}
+                        }`}
                       >
-                        {/* Barra lateral de color */}
-                        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${sidebarColor} opacity-80 group-hover:opacity-100 transition-opacity`} />
-                        
-                        <div className="flex items-start justify-between gap-4 ml-2">
+                        <div
+                          className={`absolute bottom-0 left-0 top-0 w-1.5 ${sidebarColor} opacity-80 transition-opacity group-hover:opacity-100`}
+                        />
+
+                        <div className="ml-2 flex items-start justify-between gap-4">
                           <div className="flex gap-3">
-                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconBg} shadow-sm transition-transform group-hover:scale-110`}>
+                            <div
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconBg} shadow-sm transition-transform group-hover:scale-110`}
+                            >
                               {icon}
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <strong className={`text-xs font-black uppercase tracking-widest ${
-                                  isEvidence ? "text-emerald-700" : isError ? "text-rose-700" : "text-slate-900"
-                                }`}>
+                                <strong
+                                  className={`text-xs font-black uppercase tracking-widest ${
+                                    isEvidence
+                                      ? "text-emerald-700"
+                                      : isError
+                                        ? "text-rose-700"
+                                        : "text-slate-900"
+                                  }`}
+                                >
                                   {isEvidence ? "Proof of Life Verified" : event.eventType}
                                 </strong>
-                                {isIA && <span className="text-[9px] font-bold bg-brand-gold/20 text-brand-gold-dark px-1.5 py-0.5 rounded uppercase">AI Enhanced</span>}
+                                {isIA ? (
+                                  <span className="rounded bg-brand-gold/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-gold-dark">
+                                    AI Enhanced
+                                  </span>
+                                ) : null}
                               </div>
-                              <p className={`mt-1.5 text-sm leading-relaxed ${
-                                isEvidence ? "font-bold text-emerald-900" : isError ? "text-rose-900" : "text-slate-600"
-                              }`}>
+                              <p
+                                className={`mt-1.5 text-sm leading-relaxed ${
+                                  isEvidence
+                                    ? "font-bold text-emerald-900"
+                                    : isError
+                                      ? "text-rose-900"
+                                      : "text-slate-600"
+                                }`}
+                              >
                                 {cleanMessage}
                               </p>
                             </div>
                           </div>
-                          <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap bg-slate-50 px-2 py-1 rounded-lg">
+                          <span className="whitespace-nowrap rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400">
                             {formatDate(event.createdAt)}
                           </span>
                         </div>
 
-                        {isEvidence && evidenceContent && (
+                        {isEvidence && evidenceContent ? (
                           <div className="mt-4 ml-11 overflow-hidden rounded-xl border border-emerald-200 bg-slate-950 shadow-inner">
-                            <div className="flex items-center justify-between bg-slate-900/50 px-3 py-1.5 border-b border-white/5">
-                              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">
+                            <div className="flex items-center justify-between border-b border-white/5 bg-slate-900/50 px-3 py-1.5">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">
                                 Service Response Evidence
                               </span>
                               <div className="flex gap-1">
@@ -399,12 +747,14 @@ export function BuilderLiveRunPane({
                               {evidenceContent.trim()}
                             </pre>
                           </div>
-                        )}
+                        ) : null}
 
                         {event.payload && !isEvidence ? (
                           <div className="mt-3 ml-11">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Payload Data</div>
-                            <pre className="max-w-full overflow-x-auto rounded-xl bg-slate-900 p-3 text-[10px] text-slate-300 border border-white/5 shadow-inner">
+                            <div className="mb-1 ml-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                              Payload Data
+                            </div>
+                            <pre className="max-w-full overflow-x-auto rounded-xl border border-white/5 bg-slate-900 p-3 text-[10px] text-slate-300 shadow-inner">
                               {pretty(event.payload)}
                             </pre>
                           </div>
@@ -419,7 +769,8 @@ export function BuilderLiveRunPane({
         </>
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-          Selecciona una ejecución del historial para abrir la consola y la línea temporal.
+          Selecciona una ejecucion del historial para abrir la consola y la
+          linea temporal.
         </div>
       )}
     </Card>

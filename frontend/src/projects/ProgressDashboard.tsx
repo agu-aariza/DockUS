@@ -18,7 +18,9 @@ import {
   RiTimeLine,
   RiUserLine,
   RiUserSharedLine,
+  RiBarChartFill,
 } from "react-icons/ri";
+import { QualityInsightsDashboard } from "../builder/components/QualityInsightsDashboard";
 import type {
   BuilderOutcome,
   DeliveryEntity,
@@ -128,6 +130,7 @@ export function ProgressDashboard({
   const [historyDeliveries, setHistoryDeliveries] = useState<DeliveryEntity[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [selectedStudentName, setSelectedStudentName] = useState("");
+  const [activeTab, setActiveTab] = useState<"gradebook" | "insights">("gradebook");
 
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
@@ -440,7 +443,44 @@ export function ProgressDashboard({
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center gap-1 border-b border-slate-200">
+            <button
+              onClick={() => setActiveTab("gradebook")}
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all ${
+                activeTab === "gradebook"
+                  ? "border-b-2 border-brand-blue text-brand-blue bg-brand-blue/5"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <RiTeamLine />
+              Gradebook de Alumnos
+            </button>
+            <button
+              onClick={() => setActiveTab("insights")}
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all ${
+                activeTab === "insights"
+                  ? "border-b-2 border-brand-maroon text-brand-maroon bg-brand-maroon/5"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <RiBarChartFill />
+              Insights de Calidad
+            </button>
+          </div>
+
+          {activeTab === "insights" ? (
+            <QualityInsightsDashboard
+              projectId={projectId}
+              students={
+                summary?.perStudent.map((student) => ({
+                  studentId: student.studentId,
+                  studentName: student.studentName,
+                  studentEmail: student.studentEmail,
+                })) ?? []
+              }
+            />
+          ) : (
+            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-900">
@@ -614,7 +654,8 @@ export function ProgressDashboard({
               </div>
             )}
           </div>
-        </div>
+        )}
+      </div>
       ) : (
         !embedded && (
           <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">

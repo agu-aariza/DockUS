@@ -422,6 +422,14 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
               selectedRun={rc.selectedRun}
               liveEvents={rc.liveEvents}
               streamState={rc.streamState}
+              streamError={rc.streamError}
+              evidenceArtifacts={rc.evidenceArtifacts}
+              evidenceLoading={rc.evidenceLoading}
+              evidenceError={rc.evidenceError}
+              downloadingArtifactId={rc.downloadingArtifactId}
+              onDownloadArtifact={(artifactId) =>
+                void rc.handleDownloadArtifact(artifactId)
+              }
               onRefresh={() => void rc.loadRuns()}
               onCancel={() => void rc.handleCancelRun()}
               busyAction={rc.busyAction}

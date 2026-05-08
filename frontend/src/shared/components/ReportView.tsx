@@ -16,6 +16,7 @@ import {
   RiCodeSSlashLine,
   RiSparklingLine,
 } from "react-icons/ri";
+import { AssessmentContextSummary } from "./AssessmentContextSummary";
 import { TerminalViewer } from "./TerminalViewer";
 
 /* ------------------------------------------------------------------ */
@@ -435,6 +436,10 @@ export function ReportView({
           </ul>
         </div>
       )}
+
+      {run.llmAssessment ? (
+        <AssessmentContextSummary llmAssessment={run.llmAssessment} mode={mode} />
+      ) : null}
 
       {/* ─── Feedback Técnico ─────────────────────────────────── */}
       {hasFeedback && (

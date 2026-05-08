@@ -285,6 +285,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
       status: "DRAFT",
       maxDeliveriesPerStudent: "1",
       expectedType: "",
+      expectedOutput: "",
       rubricInstructions: "",
       opensAt: "",
       closesAt: "",
@@ -593,6 +594,15 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                   </div>
                 </div>
                 <div>
+                  <label className="label-text">Salida esperada (Oracle)</label>
+                  <textarea
+                    className="input-field min-h-[120px] font-mono text-xs"
+                    placeholder="Pega aquí la salida esperada para que el evaluador compare stdout/stderr."
+                    value={pc.createForm.expectedOutput}
+                    onChange={(e) => pc.setCreateForm(prev => ({ ...prev, expectedOutput: e.target.value }))}
+                  />
+                </div>
+                <div>
                   <label className="label-text">Instrucciones de rúbrica</label>
                   <textarea
                     className="input-field min-h-[160px]"
@@ -877,6 +887,16 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                             value={pc.editForm.expectedType}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, expectedType: e.target.value }))}
                           />
+                        </div>
+                        <div className="space-y-2 lg:col-span-2">
+                          <label className="ui-label">Salida esperada (Oracle)</label>
+                          <textarea
+                            className="input-field min-h-[100px] py-4 font-mono text-xs"
+                            placeholder="Pega aquí la salida exacta que esperas que el programa imprima..."
+                            value={pc.editForm.expectedOutput}
+                            onChange={e => pc.setEditForm(prev => ({ ...prev, expectedOutput: e.target.value }))}
+                          />
+                          <p className="text-[10px] text-slate-400">El LLM comparará la salida real con este texto para verificar la corrección.</p>
                         </div>
                         <div className="space-y-2">
                           <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Intentos por alumno</label>
@@ -1174,6 +1194,4 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
     </div>
   );
 }
-
-
 

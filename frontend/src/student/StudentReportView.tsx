@@ -1,5 +1,6 @@
 import type { BuilderReportEntity, BuildRunEntity, TechnicalFeedbackItem } from "../shared/types";
 import { RiCheckLine, RiCloseLine, RiAlertLine, RiQuestionLine, RiLightbulbFlashLine, RiInformationLine } from "react-icons/ri";
+import { AssessmentContextSummary } from "../shared/components/AssessmentContextSummary";
 
 interface Props {
   run: BuildRunEntity;
@@ -116,6 +117,10 @@ export function StudentReportView({ run, deliveryVersion }: Props): JSX.Element 
           </ul>
         </div>
       )}
+
+      {run.llmAssessment ? (
+        <AssessmentContextSummary llmAssessment={run.llmAssessment} mode="student" />
+      ) : null}
 
       {/* Qué se ha detectado (Feedback Estructurado) */}
       {hasFeedback && (
