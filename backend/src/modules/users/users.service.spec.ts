@@ -25,6 +25,7 @@ const buildUser = (overrides: Partial<User> = {}): User => ({
   createdAt: new Date('2026-03-09T00:00:00.000Z'),
   updatedAt: new Date('2026-03-09T00:00:00.000Z'),
   deletedAt: undefined as unknown as Date,
+  assignedProjects: [],
   ...overrides,
 });
 
@@ -116,7 +117,7 @@ describe('UsersService', () => {
     };
     const uniqueViolation = new QueryFailedError('INSERT INTO users', [], {
       code: '23505',
-    });
+    } as any);
     usersRepository.save.mockRejectedValue(uniqueViolation);
 
     await expect(service.createFromDto(dto)).rejects.toBeInstanceOf(

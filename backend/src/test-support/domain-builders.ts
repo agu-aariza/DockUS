@@ -43,6 +43,7 @@ export function buildProject(overrides: Partial<Project> = {}): Project {
     runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.ABSENT,
     runtimeProvisionedAt: null,
     runtimeLastError: null,
+    expectedOutput: null,
     opensAt: null,
     closesAt: null,
     creator: null as unknown as Project['creator'],

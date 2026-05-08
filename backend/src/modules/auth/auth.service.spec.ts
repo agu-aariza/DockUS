@@ -28,6 +28,7 @@ const buildUser = (overrides: Partial<User> = {}): User => ({
   createdAt: new Date('2026-03-09T00:00:00.000Z'),
   updatedAt: new Date('2026-03-09T00:00:00.000Z'),
   deletedAt: undefined as unknown as Date,
+  assignedProjects: [],
   ...overrides,
 });
 

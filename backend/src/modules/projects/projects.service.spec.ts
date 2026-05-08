@@ -22,17 +22,21 @@ import { ProjectLifecycleService } from './project-lifecycle.service';
 import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectsService } from './projects.service';
 import { ProjectRuntimeService } from './runtime/project-runtime.service';
+import { BuilderQualityAggregationService } from './builder/application/services/builder-quality-aggregation.service';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
 
   const queryBuilder = {
+    innerJoin: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     getManyAndCount: jest.fn(),
+    getExists: jest.fn().mockResolvedValue(true),
   };
 
   const projectsRepository = {
@@ -83,12 +87,21 @@ describe('ProjectsService', () => {
     reconcileOperationalIssues: jest.fn(),
   };
 
+  const builderQualityAggregationService = {
+    getAggregatedFindings: jest.fn(),
+    getFindingsByCategory: jest.fn(),
+    getFindingsForStudent: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     queryBuilder.andWhere.mockReturnThis();
+    queryBuilder.innerJoin.mockReturnThis();
+    queryBuilder.where.mockReturnThis();
     queryBuilder.orderBy.mockReturnThis();
     queryBuilder.skip.mockReturnThis();
     queryBuilder.take.mockReturnThis();
+    queryBuilder.getExists.mockResolvedValue(true);
     const projectAccessService = new ProjectAccessService(
       projectsRepository as unknown as Repository<Project>,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
@@ -101,6 +114,7 @@ describe('ProjectsService', () => {
       projectAccessService as unknown as ProjectAccessService,
       projectGradebookService as unknown as ProjectGradebookService,
       projectOperationalIssuesService as unknown as ProjectOperationalIssuesService,
+      builderQualityAggregationService as unknown as BuilderQualityAggregationService,
     );
   });
 
@@ -260,5 +274,23 @@ describe('ProjectsService', () => {
         buildActor(UserRole.ADMIN),
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('debe delegar los insights agregados de calidad tras validar acceso al proyecto', async () => {
+    const actor = buildActor(UserRole.TEACHER, 'teacher-1');
+    const project = buildProject({ id: 'project-1' });
+    projectsRepository.findOne.mockResolvedValue(project);
+    builderQualityAggregationService.getAggregatedFindings.mockResolvedValue({
+      projectId: project.id,
+      totalStudentsAnalyzed: 2,
+      insights: [],
+    });
+
+    const result = await service.getQualityInsights(project.id, actor);
+
+    expect(builderQualityAggregationService.getAggregatedFindings).toHaveBeenCalledWith(
+      project.id,
+    );
+    expect(result.projectId).toBe(project.id);
   });
 });
