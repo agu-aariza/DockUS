@@ -1,5 +1,10 @@
 import { runCommand } from './command-runner.util';
 import { DockerContainerService } from './docker-container.service';
+import { DockerExecutionService } from './docker-execution.service';
+import {
+  DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
+  DEFAULT_DOCKER_EPHEMERAL_TIMEOUT_MS,
+} from './docker.constants';
 
 jest.mock('./command-runner.util', () => ({
   runCommand: jest.fn(),
@@ -77,6 +82,81 @@ describe('DockerContainerService', () => {
       ]),
       expect.objectContaining({
         timeoutMs: 15_000,
+      }),
+    );
+  });
+
+  it('ejecuta contenedores efimeros sin filesystem de solo lectura', async () => {
+    mockedRunCommand.mockResolvedValueOnce({
+      exitCode: 0,
+      stdout: 'ok\n',
+      stderr: '',
+      timedOut: false,
+    });
+
+    await service.runEphemeralContainer({
+      containerName: 'ephemeral-run-123',
+      imageTag: 'python:3.11-slim',
+      command: ['python', '-m', 'pip', 'install', '-r', 'requirements.txt'],
+      runtime: 'runc',
+      binds: ['/tmp/workspace:/app'],
+      workingDir: '/app',
+      timeoutMs: 15_000,
+    });
+
+    const [, args] = mockedRunCommand.mock.calls[0];
+
+    expect(args).toContain('container');
+    expect(args).toContain('run');
+    expect(args).not.toContain('--read-only');
+    expect(args).not.toContain('--cap-drop');
+    expect(args).not.toContain('ALL');
+    expect(args).toEqual(
+      expect.arrayContaining([
+        '--security-opt',
+        'no-new-privileges',
+        '--tmpfs',
+        '/tmp',
+        '-v',
+        '/tmp/workspace:/app',
+        '-w',
+        '/app',
+        'python:3.11-slim',
+      ]),
+    );
+  });
+});
+
+describe('DockerExecutionService', () => {
+  it('uses a longer timeout for ephemeral runs than for control-plane checks', async () => {
+    const runEphemeralContainer = jest.fn().mockResolvedValue({
+      exitCode: 0,
+      stdout: 'ok',
+      stderr: '',
+    });
+
+    const service = new DockerExecutionService(
+      {
+        get: jest.fn((_key: string, fallback?: unknown) => fallback),
+      } as any,
+      {} as any,
+      {
+        runEphemeralContainer,
+      } as any,
+    );
+
+    await service.runEphemeralContainer({
+      containerName: 'ephemeral-run-456',
+      imageTag: 'gcc:13-bookworm',
+      command: ['sh', '-c', 'echo ok'],
+    });
+
+    expect(DEFAULT_DOCKER_EPHEMERAL_TIMEOUT_MS).toBeGreaterThan(
+      DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
+    );
+    expect(runEphemeralContainer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeoutMs: DEFAULT_DOCKER_EPHEMERAL_TIMEOUT_MS,
       }),
     );
   });

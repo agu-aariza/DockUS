@@ -4,6 +4,7 @@ import { DockerContainerService } from './docker-container.service';
 import { DockerNetworkService } from './docker-network.service';
 import {
   DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
+  DEFAULT_DOCKER_EPHEMERAL_TIMEOUT_MS,
   DEFAULT_DOCKER_RUNTIME,
 } from './docker.constants';
 
@@ -81,7 +82,7 @@ export class DockerExecutionService {
     return this.dockerContainerService.runEphemeralContainer({
       ...options,
       runtime: this.dockerRuntime,
-      timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
+      timeoutMs: DEFAULT_DOCKER_EPHEMERAL_TIMEOUT_MS,
       maxBufferedChars: 250000, // Ephemeral commands could produce more output, but 250k is consistent
       onStdoutChunk: options.onStdoutChunk,
       onStderrChunk: options.onStderrChunk,

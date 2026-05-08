@@ -33,6 +33,7 @@ export interface DockerContainerRunOptions extends DockerLabelledTimeoutOptions 
   }>;
   binds?: string[];
   workingDir?: string;
+  environment?: Record<string, string>;
   onStdoutChunk?: (chunk: string) => void;
   onStderrChunk?: (chunk: string) => void;
 }

@@ -38,6 +38,9 @@ export class DockerContainerService {
 
     const bindArgs = (options.binds ?? []).flatMap((bind) => ['-v', bind]);
     const workdirArgs = options.workingDir ? ['-w', options.workingDir] : [];
+    const environmentArgs = Object.entries(options.environment ?? {}).flatMap(
+      ([key, value]) => ['-e', `${key}=${value}`],
+    );
 
     const args = [
       'container',
@@ -51,11 +54,8 @@ export class DockerContainerService {
         : []),
       '--runtime',
       options.runtime,
-      '--read-only',
       '--security-opt',
       'no-new-privileges',
-      '--cap-drop',
-      'ALL',
       '--tmpfs',
       '/tmp',
       ...buildDockerLabelArgs(options.labels),
@@ -64,6 +64,7 @@ export class DockerContainerService {
       ...this.toPortArgs(options.ports),
       ...bindArgs,
       ...workdirArgs,
+      ...environmentArgs,
       options.imageTag,
       ...options.command,
     ];
@@ -211,6 +212,9 @@ export class DockerContainerService {
           : [];
     const bindArgs = (options.binds ?? []).flatMap((bind) => ['-v', bind]);
     const workdirArgs = options.workingDir ? ['-w', options.workingDir] : [];
+    const environmentArgs = Object.entries(options.environment ?? {}).flatMap(
+      ([key, value]) => ['-e', `${key}=${value}`],
+    );
     const args = [
       'container',
       'create',
@@ -235,6 +239,7 @@ export class DockerContainerService {
       ...this.toPortArgs(options.ports),
       ...bindArgs,
       ...workdirArgs,
+      ...environmentArgs,
       options.imageTag,
       ...options.command,
     ];
