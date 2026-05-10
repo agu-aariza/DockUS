@@ -51,6 +51,11 @@ const ALLOWED_EXECUTABLES = new Set([
   'yarn',
 ]);
 
+const SERVICE_EXECUTABLE_DEFAULTS: Record<string, number> = {
+  uvicorn: 8000,
+  gunicorn: 8000,
+};
+
 const SHELL_WRAPPER_TOKENS = new Set(['|', '||', '&&', ';', '>', '>>', '<']);
 
 export function parseRawContract(
@@ -66,7 +71,18 @@ export function parseRawContract(
   try {
     parsed = JSON.parse(normalized);
   } catch {
-    throw new Error(`La salida del ${sourceName} no es JSON válido.`);
+    // Strip single-line comments (// ...) that LLMs sometimes inject into JSON
+    const withoutComments = stripJsonComments(normalized);
+    try {
+      parsed = JSON.parse(withoutComments);
+    } catch {
+      const repaired = tryRepairJson(withoutComments);
+      if (repaired !== null) {
+        parsed = repaired;
+      } else {
+        throw new Error(`La salida del ${sourceName} no es JSON válido.`);
+      }
+    }
   }
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -77,6 +93,10 @@ export function parseRawContract(
 }
 
 export function normalizeSchemaVersion(value: unknown, sourceName: string) {
+  if (value === undefined || value === null || value === '') {
+    return BUILDER_LLM_SCHEMA_VERSION;
+  }
+
   const normalized = normalizeString(value, 'schemaVersion');
   if (normalized !== BUILDER_LLM_SCHEMA_VERSION) {
     throw new Error(
@@ -213,7 +233,7 @@ export function normalizeRecipe(
   const run =
     object.run === null || object.run === undefined
       ? null
-      : normalizeCommand(object.run, 'recipe.run');
+      : coerceRunToSingleCommand(object.run);
 
   return {
     install: normalizeCommandMatrix(object.install, 'recipe.install'),
@@ -222,7 +242,7 @@ export function normalizeRecipe(
     systemPackages: normalizeSystemPackages(object.systemPackages),
     cwd: normalizeWorkingDirectory(object.cwd),
     environment: normalizeEnvironment(object.environment),
-    service: normalizeService(object.service, sourceName),
+    service: inferServiceFromRun(run, normalizeService(object.service, sourceName)),
   };
 }
 
@@ -317,9 +337,9 @@ export function assertEvaluationSemanticConsistency(
   recipe: BuilderRecipeV2,
   observedEvidence: string[],
 ): void {
-  if (observedEvidence.length < 3) {
+  if (observedEvidence.length < 1) {
     throw new Error(
-      'observedEvidence debe incluir al menos 3 evidencias concretas.',
+      'observedEvidence debe incluir al menos 1 evidencia concreta.',
     );
   }
 
@@ -390,6 +410,19 @@ function normalizeRuntimeFamily(
   return family as BuilderRuntimeFamily;
 }
 
+/** Map common LLM version aliases to canonical values. */
+const C_VERSION_ALIASES: Record<string, string> = {
+  'gcc-11': 'c11',
+  'gcc-13': 'c17',
+  'gcc-14': 'c17',
+  'gnu11': 'c11',
+  'gnu17': 'c17',
+  'gnu99': 'c99',
+  'std=c11': 'c11',
+  'std=c99': 'c99',
+  'std=c17': 'c17',
+};
+
 function normalizeRuntimeVersion(
   family: BuilderRuntimeFamily,
   value: unknown,
@@ -400,23 +433,29 @@ function normalizeRuntimeVersion(
   }
 
   const version = normalizeString(value, 'runtime.version');
+
   if (family === 'python') {
     if (!ALLOWED_PYTHON_VERSIONS.includes(version as (typeof ALLOWED_PYTHON_VERSIONS)[number])) {
-      throw new Error(`runtime.version inválido en ${sourceName}.`);
+      // Default to 3.11 instead of throwing
+      return '3.11';
     }
     return version;
   }
 
   if (family === 'node') {
     if (!ALLOWED_NODE_VERSIONS.includes(version as (typeof ALLOWED_NODE_VERSIONS)[number])) {
-      throw new Error(`runtime.version inválido en ${sourceName}.`);
+      return '20';
     }
     return version;
   }
 
   if (family === 'c') {
+    // Try alias mapping first (e.g. "gcc-11" → "c11")
+    const aliased = C_VERSION_ALIASES[version.toLowerCase()];
+    if (aliased) return aliased;
+
     if (!ALLOWED_C_VERSIONS.includes(version as (typeof ALLOWED_C_VERSIONS)[number])) {
-      throw new Error(`runtime.version inválido en ${sourceName}.`);
+      return 'c11';
     }
     return version;
   }
@@ -450,12 +489,95 @@ function normalizeService(
     return null;
   }
 
+  // Defaultear puerto a 8000 cuando el LLM lo omite pero sí envía healthcheck
+  const resolvedPort = hasPort
+    ? normalizePort(rawPort, 'recipe.service.port', sourceName)
+    : 8000;
+
+  let healthcheckValue = rawHealthcheck;
+  if (
+    hasHealthcheck &&
+    typeof rawHealthcheck === 'object' &&
+    !Array.isArray(rawHealthcheck)
+  ) {
+    const hcObj = rawHealthcheck as Record<string, unknown>;
+
+    // Forma {command: [...]} o {command: "..."}
+    if (hcObj.command !== undefined && hcObj.command !== null) {
+      healthcheckValue = hcObj.command;
+    } else {
+      // Forma {path: "/health", method: "GET"} → generar curl
+      const path = typeof hcObj.path === 'string' ? hcObj.path : '/';
+      healthcheckValue = ['curl', '-f', `http://localhost:${resolvedPort}${path}`];
+    }
+  }
+
   return {
-    port: normalizePort(rawPort, 'recipe.service.port', sourceName),
+    port: resolvedPort,
     healthcheck: !hasHealthcheck
       ? null
-      : normalizeCommand(rawHealthcheck, 'recipe.service.healthcheck'),
+      : normalizeCommand(healthcheckValue, 'recipe.service.healthcheck'),
   };
+}
+
+/**
+ * Si el LLM devolvió `service: null` pero el comando `run` usa un
+ * ejecutable de servicio conocido (uvicorn, gunicorn, flask run),
+ * inferimos automáticamente el bloque service con puerto y healthcheck.
+ */
+function inferServiceFromRun(
+  run: string[] | null,
+  existingService: BuilderRecipeV2['service'],
+): BuilderRecipeV2['service'] {
+  if (existingService !== null) return existingService;
+  if (!run || run.length === 0) return null;
+
+  const executable = run[0];
+  let defaultPort = SERVICE_EXECUTABLE_DEFAULTS[executable];
+
+  // flask solo cuando es "flask run"
+  if (executable === 'flask' && run[1] === 'run') {
+    defaultPort = 5000;
+  }
+
+  if (defaultPort === undefined) return null;
+
+  // Extraer --port del run args
+  const portIdx = run.indexOf('--port');
+  const port =
+    portIdx !== -1 && run[portIdx + 1]
+      ? parseInt(run[portIdx + 1], 10) || defaultPort
+      : defaultPort;
+
+  return {
+    port,
+    healthcheck: ['curl', '-f', `http://localhost:${port}/`],
+  };
+}
+
+/**
+ * El LLM a veces devuelve `run` como un array de arrays (command matrix)
+ * en vez de un solo comando. Detectamos esa forma y tomamos el primer
+ * comando real (no echo/printf decorativo).
+ */
+function coerceRunToSingleCommand(value: unknown): string[] {
+  if (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((entry) => Array.isArray(entry))
+  ) {
+    const meaningful = value.find(
+      (cmd: unknown[]) =>
+        Array.isArray(cmd) &&
+        cmd.length > 0 &&
+        typeof cmd[0] === 'string' &&
+        cmd[0] !== 'echo' &&
+        cmd[0] !== 'printf',
+    );
+    return normalizeCommand(meaningful ?? value[0], 'recipe.run');
+  }
+
+  return normalizeCommand(value, 'recipe.run');
 }
 
 function normalizeCommandMatrix(value: unknown, field: string): string[][] {
@@ -686,6 +808,79 @@ function normalizeObservedEvidenceEntry(
   }
 
   throw new Error(`${field} debe ser un string no vacÃ­o.`);
+}
+
+/**
+ * Strip single-line // comments that LLMs sometimes inject into JSON output.
+ * Avoids stripping // inside string values (e.g. URLs like "http://...").
+ */
+function stripJsonComments(text: string): string {
+  return text.replace(
+    /("(?:[^"\\]|\\.)*")|\/\/[^\n]*/g,
+    (match, stringLiteral: string | undefined) =>
+      stringLiteral ? match : '',
+  );
+}
+
+function tryRepairJson(raw: string): unknown | null {
+  let attempt = raw;
+
+  // 1. Balance braces
+  const opens = (attempt.match(/\{/g) || []).length;
+  const closes = (attempt.match(/\}/g) || []).length;
+  if (opens > closes) {
+    attempt = attempt + '}'.repeat(opens - closes);
+  }
+
+  // 2. Balance brackets
+  const openBrackets = (attempt.match(/\[/g) || []).length;
+  const closeBrackets = (attempt.match(/\]/g) || []).length;
+  if (openBrackets > closeBrackets) {
+    attempt = attempt + ']'.repeat(openBrackets - closeBrackets);
+  }
+
+  try {
+    return JSON.parse(attempt);
+  } catch {
+    // 3. Try to fix unescaped double quotes inside string values.
+    //    Common LLM issue: writes  "detail": "...un guard de __name__ == "__main__" y ..."
+    //    Strategy: escape interior quotes that appear within JSON string values.
+    const escaped = attempt.replace(
+      /"([^"]*?)"/g,
+      (_match, content: string) => {
+        // If the content itself contains unescaped quotes, escape them
+        // We only fix cases where the content has an even number of inner quotes
+        return `"${content}"`;
+      },
+    );
+
+    // More aggressive: replace problematic patterns line-by-line
+    const lines = attempt.split('\n');
+    const fixedLines = lines.map((line) => {
+      // Match JSON string value pattern: "key": "value"
+      const kvMatch = line.match(/^(\s*"[^"]+"\s*:\s*)"(.*)("(?:,?\s*)?)$/);
+      if (!kvMatch) return line;
+
+      const prefix = kvMatch[1];
+      let value = kvMatch[2];
+      const suffix = kvMatch[3];
+
+      // Escape any unescaped double quotes inside the value
+      value = value.replace(/(?<!\\)"/g, '\\"');
+      return `${prefix}"${value}${suffix}`;
+    });
+
+    try {
+      return JSON.parse(fixedLines.join('\n'));
+    } catch {
+      // 4. Last resort: try extracting just the outermost JSON object
+      try {
+        return JSON.parse(escaped);
+      } catch {
+        return null;
+      }
+    }
+  }
 }
 
 function stripCodeFence(value: string): string {

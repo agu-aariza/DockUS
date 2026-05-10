@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { CodeQualityFinding } from '../../domain/builder.types';
 
 export interface PedagogicalFeedback {
   concept: string;
@@ -85,6 +86,19 @@ export class BuilderPedagogicalService {
     }
 
     return feedback;
+  }
+
+  toTechnicalFeedbackItems(
+    feedbacks: PedagogicalFeedback[],
+  ): CodeQualityFinding[] {
+    return feedbacks.map((feedback) => ({
+      title: feedback.concept,
+      detail:
+        `Observacion: ${feedback.explanation} ` +
+        'Impacto: este problema impide validar correctamente la entrega. ' +
+        `Recomendacion: ${feedback.advice}`,
+      severity: 'high',
+    }));
   }
 
   /**

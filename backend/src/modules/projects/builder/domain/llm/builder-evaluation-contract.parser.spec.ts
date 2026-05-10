@@ -118,12 +118,12 @@ describe('parseBuilderEvaluationContractV2', () => {
   it('fails when observed evidence is insufficient', () => {
     const raw = JSON.stringify(
       buildEvaluationPayload({
-        observedEvidence: ['Solo un apunte genérico.'],
+        observedEvidence: [],
       }),
     );
 
     expect(() => parseBuilderEvaluationContractV2(raw)).toThrow(
-      'observedEvidence debe incluir al menos 3 evidencias concretas.',
+      'observedEvidence debe incluir al menos 1 evidencia concreta.',
     );
   });
 

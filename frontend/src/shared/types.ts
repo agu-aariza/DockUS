@@ -67,6 +67,7 @@ export type StudentWorkflowState =
   | "RECEIVED"
   | "QUEUED"
   | "RUNNING"
+  | "BUILD_FAILED"
   | "REPORT_READY"
   | "AWAITING_TEACHER_REVIEW"
   | "GRADED";
@@ -358,6 +359,18 @@ export interface TechnicalFeedbackReport {
   rubricCompliance: TechnicalFeedbackItem[];
 }
 
+export type BuilderCoachingPassReadiness =
+  | "BLOCKED"
+  | "READY_WITH_SUGGESTIONS";
+
+export interface BuilderReportCoaching {
+  passReadiness: BuilderCoachingPassReadiness;
+  mustFix: TechnicalFeedbackItem[];
+  shouldImprove: TechnicalFeedbackItem[];
+  strengths: TechnicalFeedbackItem[];
+  nextAttemptChecklist: string[];
+}
+
 export interface BuilderSelfHealingReport {
   attempted: boolean;
   recovered: boolean;
@@ -432,6 +445,7 @@ export interface BuilderReportEntity {
   overallOutcome?: "PASS" | "FAIL" | "PARTIAL" | "UNKNOWN";
   technicalFeedback?: TechnicalFeedbackReport;
   selfHealing?: BuilderSelfHealingReport;
+  coaching?: BuilderReportCoaching;
 }
 
 export interface BuildRunEntity {

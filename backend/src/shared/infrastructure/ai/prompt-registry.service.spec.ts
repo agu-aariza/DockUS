@@ -66,5 +66,9 @@ describe('prompts.json', () => {
     expect(manifest['technical-feedback']).toContain('gets');
     expect(manifest['technical-feedback']).toContain('.h');
     expect(manifest['technical-feedback']).toContain('.c');
+    expect(manifest['technical-feedback']).toContain('errores de compilacion');
+    expect(manifest['technical-feedback']).toContain('naming');
+    expect(manifest['technical-feedback']).toContain('for');
+    expect(manifest['technical-feedback']).toContain('impide aprobar');
   });
 });

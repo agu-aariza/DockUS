@@ -32,4 +32,24 @@ describe('BuilderPedagogicalService', () => {
       ]),
     );
   });
+
+  it('converts pedagogical feedback into blocking technical findings for coaching', () => {
+    const items = service.toTechnicalFeedbackItems([
+      {
+        concept: 'Sintaxis y Analisis Estatico',
+        explanation:
+          'Tu codigo contiene errores de escritura que impiden que el interprete lo entienda.',
+        advice:
+          'Revisa la sintaxis y ejecuta una comprobacion local antes de reenviar.',
+      },
+    ]);
+
+    expect(items).toEqual([
+      expect.objectContaining({
+        title: 'Sintaxis y Analisis Estatico',
+        severity: 'high',
+        detail: expect.stringContaining('Recomendacion: Revisa la sintaxis'),
+      }),
+    ]);
+  });
 });

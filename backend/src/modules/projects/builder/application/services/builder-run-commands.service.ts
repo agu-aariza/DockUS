@@ -21,14 +21,19 @@ import {
   DEFAULT_STALE_RUN_THRESHOLD_MS,
 } from '../../domain/builder.constants';
 import {
+  BuilderCoachingPassReadiness,
   BuilderEvaluationContractV2,
   BuilderCodeQualityContractV2,
   BuilderLlmContractV2,
+  BuilderOutcome,
+  BuilderReportEntity,
   BuilderLlmStagePromptSnapshot,
   BuilderLlmStageTrace,
   BuilderPlanContractV2,
   BUILDER_LLM_SCHEMA_VERSION,
+  BuilderTechnicalFeedbackReport,
   CODE_QUALITY_CATEGORIES,
+  CodeQualityFinding,
   EvidenceArtifactPublic,
 } from '../../domain/builder.types';
 import { BuildRun, BuildRunStatus } from '../../domain/entities/build-run.entity';
@@ -354,7 +359,12 @@ export class BuilderRunCommandsService {
           });
         }
 
-        const runCmd = recipe.run.join(' ');
+        const PYTHON_MODULE_EXECUTABLES = new Set(['uvicorn', 'gunicorn', 'flask']);
+        const runCmd =
+          recipe.runtimeFamily !== 'c' &&
+          PYTHON_MODULE_EXECUTABLES.has(recipe.run[0])
+            ? ['python', '-m', recipe.run[0], ...recipe.run.slice(1)].join(' ')
+            : recipe.run.join(' ');
         const testCmd =
           recipe.test && recipe.test.length > 0
             ? recipe.test.map((cmd) => cmd.join(' ')).join(' && ')
@@ -525,29 +535,8 @@ export class BuilderRunCommandsService {
       run.llmReasoning = `[PLANNER THOUGHT]: ${planAssessment.thought}\n\n[AUDITOR THOUGHT]: ${assessment.thought}`;
       run.warnings = workspace.warnings;
 
-      await fs
-        .rm(workspace.projectRootDir, { recursive: true, force: true })
-        .catch(() => undefined);
-      await this.buildRunsRepository.save(run);
-
-      await this.persistJsonArtifact(
-        run.id,
-        BuildRunArtifactType.REPORT_JSON,
-        assessment,
-        'Artefacto de evaluacion JSON generado.',
-      );
-
-      const pedagogicalFeedbacks =
-        this.builderPedagogicalService.generateFeedback(executionLogs);
-      const pedagogicalNotes =
-        this.builderPedagogicalService.formatFeedbackForStudent(
-          pedagogicalFeedbacks,
-        );
-
-      await this.updateDeliveryStatusAndFeedback(
-        delivery.id,
-        DeliveryStatus.EVALUATED,
-        assessment.evidenceSummary + pedagogicalNotes,
+      let qualityFindings = this.buildEmptyCodeQualityContract(
+        'Analisis de calidad todavia no disponible.',
       );
 
       // --- Fase 4: Analisis de Calidad de Codigo (Background-ish) ---
@@ -575,9 +564,7 @@ export class BuilderRunCommandsService {
           );
         await this.persistQualityTraceArtifacts(run.id, qualityTrace);
 
-        const qualityFindings = this.resolveCodeQualityFindings(qualityTrace);
-        run.codeQualityFindings = qualityFindings;
-        await this.buildRunsRepository.save(run);
+        qualityFindings = this.resolveCodeQualityFindings(qualityTrace);
         if (qualityTrace.parsedContract) {
           await this.persistCodeQualityFindingRows(
             run.id,
@@ -589,7 +576,39 @@ export class BuilderRunCommandsService {
       } catch (qError) {
         const message = qError instanceof Error ? qError.message : String(qError);
         this.logger.error(`Error en analisis de calidad: ${message}`);
+        qualityFindings = this.buildEmptyCodeQualityContract(
+          `Analisis degradado por error interno: ${message}`,
+        );
       }
+
+      const pedagogicalFeedback =
+        this.builderPedagogicalService.generateFeedback(executionLogs);
+      const pedagogicalItems =
+        this.builderPedagogicalService.toTechnicalFeedbackItems(
+          pedagogicalFeedback,
+        );
+      const report = this.composeReport(
+        assessment,
+        qualityFindings,
+        pedagogicalItems,
+      );
+
+      run.codeQualityFindings = qualityFindings;
+      run.report = report;
+
+      await fs
+        .rm(workspace.projectRootDir, { recursive: true, force: true })
+        .catch(() => undefined);
+      await this.buildRunsRepository.save(run);
+
+      await this.persistJsonArtifact(
+        run.id,
+        BuildRunArtifactType.REPORT_JSON,
+        report,
+        'Informe canonico del run generado.',
+      );
+
+      await this.updateDeliveryStatus(delivery.id, DeliveryStatus.EVALUATED);
 
       await this.builderRunSupportService.emitEvent({
         buildRunId: run.id,
@@ -602,10 +621,7 @@ export class BuilderRunCommandsService {
         run.id,
         this.builderRunSupportService.toErrorMessage(error),
       );
-      await this.updateDeliveryStatusAndFeedback(
-        delivery.id,
-        DeliveryStatus.EVALUATED,
-      );
+      await this.updateDeliveryStatus(delivery.id, DeliveryStatus.EVALUATED);
       throw error;
     }
   }
@@ -650,10 +666,9 @@ export class BuilderRunCommandsService {
     );
   }
 
-  private async updateDeliveryStatusAndFeedback(
+  private async updateDeliveryStatus(
     deliveryId: string,
     status: DeliveryStatus,
-    aiFeedback?: string,
   ): Promise<void> {
     const delivery = await this.deliveriesRepository.findOne({
       where: { id: deliveryId },
@@ -661,12 +676,6 @@ export class BuilderRunCommandsService {
     if (!delivery) return;
 
     delivery.status = status;
-    if (aiFeedback) {
-      const timestamp = new Date().toLocaleString();
-      const feedbackHeader = `\n--- [AI EVIDENCE - ${timestamp}] ---\n`;
-      delivery.graderNotes =
-        (delivery.graderNotes || '') + feedbackHeader + aiFeedback;
-    }
     await this.deliveriesRepository.save(delivery);
   }
 
@@ -794,7 +803,7 @@ export class BuilderRunCommandsService {
 
   private resolveCodeQualityFindings(
     trace: BuilderCodeQualityTrace,
-  ) {
+  ): BuilderCodeQualityContractV2 {
     if (trace.parsedContract) {
       return trace.parsedContract;
     }
@@ -818,6 +827,249 @@ export class BuilderRunCommandsService {
       quality: [],
       rubricCompliance: [],
     };
+  }
+
+  private buildEmptyCodeQualityContract(
+    thought: string,
+  ): BuilderCodeQualityContractV2 {
+    return {
+      thought,
+      security: [],
+      architecture: [],
+      quality: [],
+      rubricCompliance: [],
+    };
+  }
+
+  private composeReport(
+    assessment: BuilderEvaluationContractV2,
+    qualityFindings: BuilderCodeQualityContractV2,
+    pedagogicalItems: CodeQualityFinding[],
+  ): BuilderReportEntity {
+    const technicalFeedback = this.toTechnicalFeedbackReport(qualityFindings);
+    const coaching = this.composeCoaching(
+      assessment,
+      technicalFeedback,
+      pedagogicalItems,
+    );
+
+    return {
+      overallOutcome: this.resolveReportOutcome(assessment, coaching),
+      llmRecommendations: coaching.nextAttemptChecklist.slice(0, 3),
+      technicalFeedback,
+      coaching,
+    };
+  }
+
+  private toTechnicalFeedbackReport(
+    findings: BuilderCodeQualityContractV2,
+  ): BuilderTechnicalFeedbackReport {
+    return {
+      security: findings.security,
+      architecture: findings.architecture,
+      quality: findings.quality,
+      rubricCompliance: findings.rubricCompliance,
+    };
+  }
+
+  private composeCoaching(
+    assessment: BuilderEvaluationContractV2,
+    technicalFeedback: BuilderTechnicalFeedbackReport,
+    pedagogicalItems: CodeQualityFinding[],
+  ): {
+    passReadiness: BuilderCoachingPassReadiness;
+    mustFix: CodeQualityFinding[];
+    shouldImprove: CodeQualityFinding[];
+    strengths: CodeQualityFinding[];
+    nextAttemptChecklist: string[];
+  } {
+    const strengths = this.dedupeFindings(
+      this.flattenTechnicalFeedback(technicalFeedback).filter((finding) =>
+        this.isStrengthFinding(finding),
+      ),
+    );
+
+    const mustFix = this.dedupeFindings([
+      ...technicalFeedback.security.filter(
+        (finding) =>
+          finding.severity === 'high' && !this.isStrengthFinding(finding),
+      ),
+      ...technicalFeedback.architecture.filter(
+        (finding) =>
+          finding.severity === 'high' && !this.isStrengthFinding(finding),
+      ),
+      ...technicalFeedback.quality.filter(
+        (finding) =>
+          finding.severity === 'high' && !this.isStrengthFinding(finding),
+      ),
+      ...technicalFeedback.rubricCompliance.filter(
+        (finding) =>
+          finding.severity === 'high' && !this.isStrengthFinding(finding),
+      ),
+      ...(assessment.evaluativeState !== 'E1' ? pedagogicalItems : []),
+      ...this.buildBlockingLimitFindings(assessment.evaluationLimits ?? []),
+    ]);
+
+    if (mustFix.length === 0 && assessment.evaluativeState !== 'E1') {
+      mustFix.push({
+        title: 'La entrega no se pudo validar por completo',
+        detail:
+          `Observacion: ${assessment.rationale} ` +
+          'Impacto: el sistema no pudo confirmar que la practica cumple lo esencial. ' +
+          'Recomendacion: corrige la causa principal indicada en el informe y vuelve a ejecutar la entrega.',
+        severity: 'high',
+      });
+    }
+
+    const shouldImprove = this.dedupeFindings(
+      this.flattenTechnicalFeedback(technicalFeedback).filter(
+        (finding) =>
+          !this.isStrengthFinding(finding) &&
+          !mustFix.some((mustFixItem) => this.sameFinding(mustFixItem, finding)),
+      ),
+    );
+
+    return {
+      passReadiness:
+        mustFix.length > 0 ? 'BLOCKED' : 'READY_WITH_SUGGESTIONS',
+      mustFix,
+      shouldImprove,
+      strengths,
+      nextAttemptChecklist: this.buildChecklist([
+        ...mustFix,
+        ...shouldImprove,
+      ]),
+    };
+  }
+
+  private resolveReportOutcome(
+    assessment: BuilderEvaluationContractV2,
+    coaching: { passReadiness: BuilderCoachingPassReadiness },
+  ): BuilderOutcome {
+    if (coaching.passReadiness === 'BLOCKED') {
+      return assessment.evaluativeState === 'E2' ? 'PARTIAL' : 'FAIL';
+    }
+
+    if (assessment.evaluativeState === 'E2') {
+      return 'PARTIAL';
+    }
+
+    if (assessment.evaluativeState === 'E3' || assessment.evaluativeState === 'E4') {
+      return 'FAIL';
+    }
+
+    if (assessment.evaluativeState === 'E1') {
+      return 'PASS';
+    }
+
+    return 'UNKNOWN';
+  }
+
+  private flattenTechnicalFeedback(
+    technicalFeedback: BuilderTechnicalFeedbackReport,
+  ): CodeQualityFinding[] {
+    return [
+      ...technicalFeedback.security,
+      ...technicalFeedback.architecture,
+      ...technicalFeedback.quality,
+      ...technicalFeedback.rubricCompliance,
+    ];
+  }
+
+  private isStrengthFinding(finding: CodeQualityFinding): boolean {
+    const normalizedTitle = finding.title
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .trim();
+    return normalizedTitle.startsWith('BUENA PRACTICA:');
+  }
+
+  private buildBlockingLimitFindings(limits: string[]): CodeQualityFinding[] {
+    return limits
+      .filter((limit) => this.isBlockingEvaluationLimit(limit))
+      .map((limit) => ({
+        title: 'Limite de validacion que debes resolver',
+        detail:
+          `Observacion: ${limit} ` +
+          'Impacto: el sistema no pudo confirmar el comportamiento esperado. ' +
+          'Recomendacion: corrige el bloqueo operativo o funcional antes de reenviar.',
+        severity: 'high' as const,
+      }));
+  }
+
+  private isBlockingEvaluationLimit(limit: string): boolean {
+    return /fall|error|bloque|no se pudo|no pudo|inval|syntax|segfault|denied|missing|not found/iu.test(
+      limit,
+    );
+  }
+
+  private buildChecklist(findings: CodeQualityFinding[]): string[] {
+    const checklist: string[] = [];
+
+    for (const finding of findings) {
+      const recommendation = this.extractRecommendation(finding.detail);
+      const location =
+        finding.file && finding.line
+          ? ` (${finding.file}:${finding.line})`
+          : finding.file
+            ? ` (${finding.file})`
+            : '';
+      const entry = `${finding.title}: ${recommendation}${location}`;
+      if (!checklist.includes(entry)) {
+        checklist.push(entry);
+      }
+      if (checklist.length >= 5) {
+        break;
+      }
+    }
+
+    return checklist;
+  }
+
+  private extractRecommendation(detail: string): string {
+    const match = /Recomendaci[oó]n:\s*(.+)$/iu.exec(detail);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+
+    const firstSentence = detail
+      .split('.')
+      .map((part) => part.trim())
+      .find(Boolean);
+    return firstSentence ?? detail.trim();
+  }
+
+  private dedupeFindings(findings: CodeQualityFinding[]): CodeQualityFinding[] {
+    const seen = new Set<string>();
+    const deduped: CodeQualityFinding[] = [];
+
+    for (const finding of findings) {
+      const key = this.findingKey(finding);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      deduped.push(finding);
+    }
+
+    return deduped;
+  }
+
+  private sameFinding(
+    left: CodeQualityFinding,
+    right: CodeQualityFinding,
+  ): boolean {
+    return this.findingKey(left) === this.findingKey(right);
+  }
+
+  private findingKey(finding: CodeQualityFinding): string {
+    return [
+      finding.title,
+      finding.detail,
+      finding.file ?? '',
+      finding.line ?? '',
+    ].join('|');
   }
 
   private async persistCodeQualityFindingRows(

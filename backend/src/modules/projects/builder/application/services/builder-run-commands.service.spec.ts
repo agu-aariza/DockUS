@@ -198,6 +198,11 @@ describe('BuilderRunCommandsService', () => {
     analyze: jest.MockedFunction<BuilderCodeQualityService['analyze']>;
     analyzeWithTrace: jest.MockedFunction<any>;
   };
+  let builderPedagogicalService: {
+    generateFeedback: jest.Mock;
+    formatFeedbackForStudent: jest.Mock;
+    toTechnicalFeedbackItems: jest.Mock;
+  };
   let codeQualityFindingsRepository: {
     delete: jest.MockedFunction<Repository<CodeQualityFindingEntity>['delete']>;
     save: jest.MockedFunction<Repository<CodeQualityFindingEntity>['save']>;
@@ -282,6 +287,11 @@ describe('BuilderRunCommandsService', () => {
         createdAt: '2026-05-05T10:02:00.000Z',
       }),
     };
+    builderPedagogicalService = {
+      generateFeedback: jest.fn().mockReturnValue([]),
+      formatFeedbackForStudent: jest.fn().mockReturnValue(''),
+      toTechnicalFeedbackItems: jest.fn().mockReturnValue([]),
+    };
     codeQualityFindingsRepository = {
       delete: jest.fn().mockResolvedValue({ affected: 0 } as never),
       save: jest.fn().mockImplementation(async (value) => value as never),
@@ -304,8 +314,10 @@ describe('BuilderRunCommandsService', () => {
       evidenceService as unknown as EvidenceService,
       { calculateCacheInfo: jest.fn() } as unknown as BuilderCacheManagerService,
       {
-        generateFeedback: jest.fn().mockReturnValue([]),
-        formatFeedbackForStudent: jest.fn().mockReturnValue(''),
+        generateFeedback: builderPedagogicalService.generateFeedback,
+        formatFeedbackForStudent: builderPedagogicalService.formatFeedbackForStudent,
+        toTechnicalFeedbackItems:
+          builderPedagogicalService.toTechnicalFeedbackItems,
       } as unknown as BuilderPedagogicalService,
       builderCodeQualityService as unknown as BuilderCodeQualityService,
     );
@@ -417,7 +429,92 @@ describe('BuilderRunCommandsService', () => {
     expect(evidenceService.persistJsonArtifact).toHaveBeenCalledWith(
       run.id,
       BuildRunArtifactType.REPORT_JSON,
-      evaluationContract,
+      expect.objectContaining({
+        overallOutcome: 'PASS',
+        llmRecommendations: [],
+        coaching: expect.objectContaining({
+          passReadiness: 'READY_WITH_SUGGESTIONS',
+          mustFix: [],
+          shouldImprove: [],
+          strengths: [],
+          nextAttemptChecklist: [],
+        }),
+        technicalFeedback: expect.objectContaining({
+          security: [],
+          architecture: [],
+          quality: [],
+          rubricCompliance: [],
+        }),
+      }),
+    );
+  });
+
+  it('keeps manual grader notes untouched while still transitioning deliveries from IN_REVIEW to EVALUATED', async () => {
+    const tempDir = mkdtempSync(path.join(tmpdir(), 'builder-run-manual-notes-'));
+    const filePath = path.join(tempDir, 'main.py');
+    writeFileSync(filePath, 'print("hello")\n', 'utf8');
+
+    const delivery = buildDelivery({
+      id: run.deliveryId,
+      status: DeliveryStatus.IN_REVIEW,
+      graderNotes: 'Comentario docente oficial.',
+    });
+    deliveriesRepository.findOne.mockResolvedValue(delivery);
+    builderAccessService.findDeliveryOrThrow.mockResolvedValue(delivery);
+
+    builderWorkspaceService.prepareWorkspace.mockResolvedValue({
+      projectRootDir: tempDir,
+      runtimeFiles: [
+        {
+          relativePath: 'main.py',
+          absolutePath: filePath,
+          sizeBytes: 15,
+        },
+      ],
+      inputManifest: [],
+      teacherTestRuntimeFiles: [],
+      hasTeacherTests: false,
+      warnings: [],
+    });
+
+    const planContract = buildPlanContract();
+    const evaluationContract = buildEvaluationContract({
+      evidenceSummary: 'La salida observada coincide con el oraculo.',
+    });
+    builderLlmEvaluatorService.planWithTrace.mockResolvedValue(
+      buildTrace<BuilderPlanContractV2>({
+        stage: 'plan',
+        rawResponse: JSON.stringify(planContract),
+        parsedContract: planContract,
+      }),
+    );
+    builderLlmEvaluatorService.evaluateWithTrace.mockResolvedValue(
+      buildTrace<BuilderEvaluationContractV2>({
+        stage: 'evaluation',
+        rawResponse: JSON.stringify(evaluationContract),
+        parsedContract: evaluationContract,
+      }),
+    );
+    (
+      builderPedagogicalService.formatFeedbackForStudent as jest.Mock
+    ).mockReturnValue('\nSugerencia pedagogica.');
+
+    await service.processBuildRunJob({
+      buildRunId: run.id,
+      deliveryId: run.deliveryId,
+      actor: {
+        userId: 'teacher-1',
+        email: 'teacher@dockus.test',
+        role: UserRole.TEACHER,
+      },
+    });
+
+    expect(deliveriesRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: delivery.id,
+        status: DeliveryStatus.EVALUATED,
+        graderNotes: 'Comentario docente oficial.',
+      }),
     );
   });
 
@@ -868,8 +965,16 @@ describe('BuilderRunCommandsService', () => {
       run.id,
       BuildRunArtifactType.REPORT_JSON,
       expect.objectContaining({
-        stage: 'evaluation',
-        evaluativeState: 'E3',
+        overallOutcome: 'FAIL',
+        coaching: expect.objectContaining({
+          passReadiness: 'BLOCKED',
+        }),
+        technicalFeedback: expect.objectContaining({
+          security: [],
+          architecture: [],
+          quality: [],
+          rubricCompliance: [],
+        }),
       }),
     );
     expect(warnSpy).toHaveBeenCalledWith(
@@ -1132,6 +1237,347 @@ describe('BuilderRunCommandsService', () => {
           title: 'sprintf inseguro',
         }),
       ]),
+    );
+  });
+
+  it('composes a canonical coaching report with must-fix items, optional improvements and strengths', async () => {
+    const tempDir = mkdtempSync(path.join(tmpdir(), 'builder-run-coaching-'));
+    const filePath = path.join(tempDir, 'main.c');
+    writeFileSync(filePath, 'int main(void) { return 0; }\n', 'utf8');
+
+    builderWorkspaceService.prepareWorkspace.mockResolvedValue({
+      projectRootDir: tempDir,
+      runtimeFiles: [
+        {
+          relativePath: 'main.c',
+          absolutePath: filePath,
+          sizeBytes: 29,
+        },
+      ],
+      inputManifest: [],
+      teacherTestRuntimeFiles: [],
+      hasTeacherTests: false,
+      warnings: [],
+    });
+
+    const planContract = buildPlanContract({
+      structuralType: 'T2',
+      runtime: {
+        family: 'c',
+        version: 'c11',
+        supported: true,
+        reason: null,
+      },
+      recipe: {
+        install: [['gcc', '-std=c11', 'main.c', '-o', 'main']],
+        run: ['./main'],
+        test: [],
+        systemPackages: [],
+        cwd: '/app',
+        environment: null,
+        service: null,
+      },
+    });
+    const evaluationContract = buildEvaluationContract({
+      structuralType: 'T2',
+      evaluativeState: 'E3',
+      confidence: 'medium',
+      rationale: 'La compilacion no llega a producir un binario valido.',
+      observedEvidence: [
+        'gcc reporto un error de sintaxis.',
+        'No se genero el binario esperado.',
+        'EXIT CODE: 1',
+      ],
+      evaluationLimits: [
+        'La compilacion fallo antes de poder validar la salida esperada.',
+      ],
+      runtime: {
+        family: 'c',
+        version: 'c11',
+        supported: true,
+        reason: null,
+      },
+      recipe: {
+        install: [['gcc', '-std=c11', 'main.c', '-o', 'main']],
+        run: ['./main'],
+        test: [],
+        systemPackages: [],
+        cwd: '/app',
+        environment: null,
+        service: null,
+      },
+    });
+    const qualityContract: BuilderCodeQualityContractV2 = {
+      thought: 'Hallazgos mezclados.',
+      security: [],
+      architecture: [
+        {
+          title: 'BUENA PRACTICA: validacion temprana',
+          detail:
+            'Observacion: validas los argumentos de entrada. Impacto: reduces errores. Recomendacion: manten este patron.',
+          severity: 'low',
+          file: 'main.c',
+          line: 3,
+        },
+      ],
+      quality: [
+        {
+          title: 'Demasiados if consecutivos',
+          detail:
+            'Observacion: la logica repite ramas similares. Impacto: complica el mantenimiento. Recomendacion: usa un for o extrae una funcion auxiliar.',
+          severity: 'medium',
+          file: 'main.c',
+          line: 18,
+        },
+      ],
+      rubricCompliance: [
+        {
+          title: 'La salida no coincide con la rubrica',
+          detail:
+            'Observacion: el resultado no coincide con el oraculo. Impacto: impide aprobar la practica. Recomendacion: revisa el calculo final.',
+          severity: 'high',
+          file: 'main.c',
+          line: 22,
+        },
+      ],
+    };
+
+    builderLlmEvaluatorService.planWithTrace.mockResolvedValue(
+      buildTrace<BuilderPlanContractV2>({
+        stage: 'plan',
+        rawResponse: JSON.stringify(planContract),
+        parsedContract: planContract,
+      }),
+    );
+    builderLlmEvaluatorService.evaluateWithTrace.mockResolvedValue(
+      buildTrace<BuilderEvaluationContractV2>({
+        stage: 'evaluation',
+        rawResponse: JSON.stringify(evaluationContract),
+        parsedContract: evaluationContract,
+      }),
+    );
+    builderCodeQualityService.analyzeWithTrace.mockResolvedValue({
+      model: 'quality-model',
+      systemPrompt: 'QUALITY_SYSTEM',
+      prompt: 'QUALITY_PROMPT',
+      rawResponse: JSON.stringify(qualityContract),
+      parsedContract: qualityContract,
+      error: null,
+      createdAt: '2026-05-05T10:03:00.000Z',
+    });
+    builderPedagogicalService.generateFeedback.mockReturnValue([
+      {
+        concept: 'Sintaxis y Analisis Estatico',
+        explanation: 'La compilacion falla por un error de sintaxis.',
+        advice: "Anade ';' y recompila antes de reenviar.",
+      },
+    ]);
+    builderPedagogicalService.toTechnicalFeedbackItems.mockReturnValue([
+      {
+        title: 'Sintaxis y Analisis Estatico',
+        detail:
+          "Observacion: la compilacion falla por un error de sintaxis. Impacto: el programa no se puede validar. Recomendacion: anade ';' y recompila antes de reenviar.",
+        severity: 'high',
+        file: null,
+        line: null,
+      },
+    ]);
+
+    await service.processBuildRunJob({
+      buildRunId: run.id,
+      deliveryId: run.deliveryId,
+      actor: {
+        userId: 'teacher-1',
+        email: 'teacher@dockus.test',
+        role: UserRole.TEACHER,
+      },
+    });
+
+    expect(buildRunsRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        report: expect.objectContaining({
+          overallOutcome: 'FAIL',
+          llmRecommendations: expect.arrayContaining([
+            expect.stringMatching(/anade|recompila/i),
+          ]),
+          coaching: expect.objectContaining({
+            passReadiness: 'BLOCKED',
+            mustFix: expect.arrayContaining([
+              expect.objectContaining({
+                title: 'Sintaxis y Analisis Estatico',
+              }),
+              expect.objectContaining({
+                title: 'La salida no coincide con la rubrica',
+              }),
+            ]),
+            shouldImprove: expect.arrayContaining([
+              expect.objectContaining({
+                title: 'Demasiados if consecutivos',
+              }),
+            ]),
+            strengths: expect.arrayContaining([
+              expect.objectContaining({
+                title: 'BUENA PRACTICA: validacion temprana',
+              }),
+            ]),
+            nextAttemptChecklist: expect.arrayContaining([
+              expect.stringContaining('recompila'),
+            ]),
+          }),
+          technicalFeedback: expect.objectContaining({
+            rubricCompliance: expect.arrayContaining([
+              expect.objectContaining({
+                title: 'La salida no coincide con la rubrica',
+              }),
+            ]),
+          }),
+        }),
+      }),
+    );
+    expect(evidenceService.persistJsonArtifact).toHaveBeenCalledWith(
+      run.id,
+      BuildRunArtifactType.REPORT_JSON,
+      expect.objectContaining({
+        coaching: expect.objectContaining({
+          passReadiness: 'BLOCKED',
+        }),
+      }),
+    );
+  });
+
+  it('falls back to pedagogical must-fix guidance when quality analysis does not return usable findings', async () => {
+    const tempDir = mkdtempSync(path.join(tmpdir(), 'builder-run-coaching-fallback-'));
+    const filePath = path.join(tempDir, 'main.py');
+    writeFileSync(filePath, 'print("hello")\n', 'utf8');
+
+    builderWorkspaceService.prepareWorkspace.mockResolvedValue({
+      projectRootDir: tempDir,
+      runtimeFiles: [
+        {
+          relativePath: 'main.py',
+          absolutePath: filePath,
+          sizeBytes: 15,
+        },
+      ],
+      inputManifest: [],
+      teacherTestRuntimeFiles: [],
+      hasTeacherTests: false,
+      warnings: [],
+    });
+
+    const planContract = buildPlanContract({
+      structuralType: 'T1',
+      runtime: {
+        family: 'python',
+        version: '3.11',
+        supported: true,
+        reason: null,
+      },
+      recipe: {
+        install: [],
+        run: ['python', 'main.py'],
+        test: [],
+        systemPackages: [],
+        cwd: '/app',
+        environment: null,
+        service: null,
+      },
+    });
+    const evaluationContract = buildEvaluationContract({
+      structuralType: 'T1',
+      evaluativeState: 'E3',
+      runtime: {
+        family: 'python',
+        version: '3.11',
+        supported: true,
+        reason: null,
+      },
+      recipe: {
+        install: [],
+        run: ['python', 'main.py'],
+        test: [],
+        systemPackages: [],
+        cwd: '/app',
+        environment: null,
+        service: null,
+      },
+      evaluationLimits: [
+        'La ejecucion fallo antes de validar el comportamiento esperado.',
+      ],
+    });
+
+    builderLlmEvaluatorService.planWithTrace.mockResolvedValue(
+      buildTrace<BuilderPlanContractV2>({
+        stage: 'plan',
+        rawResponse: JSON.stringify(planContract),
+        parsedContract: planContract,
+      }),
+    );
+    builderLlmEvaluatorService.evaluateWithTrace.mockResolvedValue(
+      buildTrace<BuilderEvaluationContractV2>({
+        stage: 'evaluation',
+        rawResponse: JSON.stringify(evaluationContract),
+        parsedContract: evaluationContract,
+      }),
+    );
+    builderCodeQualityService.analyzeWithTrace.mockResolvedValue({
+      model: 'quality-model',
+      systemPrompt: 'QUALITY_SYSTEM',
+      prompt: 'QUALITY_PROMPT',
+      rawResponse: '{"thought":"oops"}',
+      parsedContract: null,
+      error: {
+        name: 'Error',
+        message: 'quality debe ser un array.',
+        stack: 'trace',
+        timestamp: '2026-05-05T10:03:00.000Z',
+      },
+      createdAt: '2026-05-05T10:03:00.000Z',
+    });
+    builderPedagogicalService.generateFeedback.mockReturnValue([
+      {
+        concept: 'Sintaxis y Analisis Estatico',
+        explanation: 'Python no puede interpretar el archivo.',
+        advice: 'Revisa la sintaxis y ejecuta el script localmente.',
+      },
+    ]);
+    builderPedagogicalService.toTechnicalFeedbackItems.mockReturnValue([
+      {
+        title: 'Sintaxis y Analisis Estatico',
+        detail:
+          'Observacion: Python no puede interpretar el archivo. Impacto: no se pudo validar la entrega. Recomendacion: revisa la sintaxis y ejecuta el script localmente.',
+        severity: 'high',
+        file: null,
+        line: null,
+      },
+    ]);
+    projectRuntimeService.executeEphemeral.mockRejectedValue(
+      new Error('SyntaxError: invalid syntax'),
+    );
+
+    await service.processBuildRunJob({
+      buildRunId: run.id,
+      deliveryId: run.deliveryId,
+      actor: {
+        userId: 'teacher-1',
+        email: 'teacher@dockus.test',
+        role: UserRole.TEACHER,
+      },
+    });
+
+    expect(buildRunsRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        report: expect.objectContaining({
+          coaching: expect.objectContaining({
+            passReadiness: 'BLOCKED',
+            mustFix: expect.arrayContaining([
+              expect.objectContaining({
+                title: 'Sintaxis y Analisis Estatico',
+              }),
+            ]),
+          }),
+        }),
+      }),
     );
   });
 

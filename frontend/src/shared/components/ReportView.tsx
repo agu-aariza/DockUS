@@ -17,6 +17,7 @@ import {
   RiSparklingLine,
 } from "react-icons/ri";
 import { AssessmentContextSummary } from "./AssessmentContextSummary";
+import { CoachingSummary } from "./CoachingSummary";
 import { TerminalViewer } from "./TerminalViewer";
 
 /* ------------------------------------------------------------------ */
@@ -98,6 +99,8 @@ const AXIS_ICON: Record<string, typeof RiShieldCheckLine> = {
   Arquitectura: RiCodeSSlashLine,
   Calidad: RiSparklingLine,
   "Calidad y Estilo": RiSparklingLine,
+  "Cumplimiento de rubrica": RiInformationLine,
+  Rubrica: RiInformationLine,
 };
 
 const PREFLIGHT_COMPATIBILITY_LABEL: Record<string, string> = {
@@ -298,6 +301,7 @@ export function ReportView({
     : "—";
 
   const selfHealing = report.selfHealing;
+  const coaching = report.coaching ?? null;
   const techFeedback = report.technicalFeedback ?? {
     security: [],
     architecture: [],
@@ -310,6 +314,10 @@ export function ReportView({
     techFeedback.architecture.length > 0 ||
     techFeedback.quality.length > 0 ||
     techFeedback.rubricCompliance.length > 0;
+  const observedEvidenceCount =
+    run.llmAssessment?.observedEvidence?.length ?? 0;
+  const evaluationLimitsCount =
+    run.llmAssessment?.evaluationLimits?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -347,6 +355,76 @@ export function ReportView({
           </div>
         </div>
       </div>
+
+      {mode === "student" ? (
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Lectura guiada del informe
+              </p>
+              <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
+                Empieza por el plan de accion y usa la evidencia como respaldo
+              </h3>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                En esta vista el foco esta en ayudarte a decidir la siguiente
+                version: primero veras bloqueos, mejoras y checklist, y debajo
+                quedaran la evidencia curada y los detalles tecnicos del run.
+              </p>
+            </div>
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
+              Informe listo para revisar
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Remediacion
+              </div>
+              <div className="mt-2 text-sm font-semibold text-slate-900">
+                {coaching
+                  ? coaching.passReadiness === "BLOCKED"
+                    ? "Hay correcciones obligatorias antes de pasar"
+                    : "La practica ya supera lo esencial"
+                  : "Consulta el resultado general y las observaciones"}
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {coaching
+                  ? `${coaching.mustFix.length} must-fix · ${coaching.shouldImprove.length} mejora(s) · ${coaching.nextAttemptChecklist.length} paso(s) sugeridos`
+                  : "El informe tecnico se resume debajo en coaching, evidencia y feedback estructurado."}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Evidencia observada
+              </div>
+              <div className="mt-2 text-sm font-semibold text-slate-900">
+                {observedEvidenceCount > 0
+                  ? `${observedEvidenceCount} evidencia(s) curada(s)`
+                  : "Sin evidencia curada destacada"}
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {evaluationLimitsCount > 0
+                  ? `${evaluationLimitsCount} limite(s) de evaluacion explicados para que sepas que no pudo concluir el sistema.`
+                  : "No hay limites destacados en el resumen curado de esta ejecucion."}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Lectura recomendada
+              </div>
+              <div className="mt-2 text-sm font-semibold text-slate-900">
+                1. Coaching · 2. Rubrica · 3. Logs
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Si vas a reenviar, empieza por el checklist. Si tienes dudas
+                tecnicas, baja despues a la evidencia y al log del build.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {preflight ? <PreflightSummaryBlock preflight={preflight} /> : null}
 
@@ -413,7 +491,17 @@ export function ReportView({
       )}
 
       {/* ─── Recomendaciones LLM ──────────────────────────────── */}
-      {report.llmRecommendations && report.llmRecommendations.length > 0 && (
+      {coaching ? (
+        <CoachingSummary
+          coaching={coaching}
+          mode={mode}
+          rubricItems={techFeedback.rubricCompliance}
+        />
+      ) : null}
+
+      {!coaching &&
+        report.llmRecommendations &&
+        report.llmRecommendations.length > 0 && (
         <div className="rounded-3xl border-brand-blue/20 bg-brand-blue/5 p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4 text-brand-blue-dark">
             <RiLightbulbFlashLine className="text-xl" />
@@ -478,6 +566,10 @@ export function ReportView({
                   <FeedbackAxis
                     title="Calidad y Estilo"
                     items={techFeedback.quality}
+                  />
+                  <FeedbackAxis
+                    title="Cumplimiento de rubrica"
+                    items={techFeedback.rubricCompliance}
                   />
                 </div>
               )}

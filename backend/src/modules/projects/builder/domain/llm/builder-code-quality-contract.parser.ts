@@ -1,4 +1,5 @@
 import { BuilderCodeQualityContractV2 } from '../builder.types';
+import { parseRawContract } from './builder-llm-contract.parser.shared';
 
 const FINDING_SEVERITIES = ['low', 'medium', 'high'] as const;
 type FindingSeverity = (typeof FINDING_SEVERITIES)[number];
@@ -6,12 +7,16 @@ type FindingSeverity = (typeof FINDING_SEVERITIES)[number];
 export function parseBuilderCodeQualityContractV2(
   raw: string,
 ): BuilderCodeQualityContractV2 {
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  const jsonStr = jsonMatch ? jsonMatch[0] : raw;
+  let parsed: Record<string, unknown>;
 
   try {
-    const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
+    parsed = parseRawContract(raw, 'quality LLM');
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Fallo al parsear CodeQualityContract: ${message}`);
+  }
 
+  try {
     return {
       thought: normalizeThought(parsed.thought),
       security: normalizeFindingArray('security', parsed.security),

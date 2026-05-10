@@ -193,10 +193,51 @@ export interface CodeQualityFinding {
   line?: number;
 }
 
+export const BUILDER_OUTCOMES = ['PASS', 'FAIL', 'PARTIAL', 'UNKNOWN'] as const;
+export type BuilderOutcome = (typeof BUILDER_OUTCOMES)[number];
+
+export const BUILDER_COACHING_PASS_READINESS = [
+  'BLOCKED',
+  'READY_WITH_SUGGESTIONS',
+] as const;
+export type BuilderCoachingPassReadiness =
+  (typeof BUILDER_COACHING_PASS_READINESS)[number];
+
 export interface BuilderCodeQualityContractV2 {
   thought: string;
   security: CodeQualityFinding[];
   architecture: CodeQualityFinding[];
   quality: CodeQualityFinding[];
   rubricCompliance: CodeQualityFinding[];
+}
+
+export interface BuilderSelfHealingReport {
+  attempted: boolean;
+  recovered: boolean;
+  attemptsUsed: number;
+  summary: string;
+}
+
+export interface BuilderTechnicalFeedbackReport {
+  security: CodeQualityFinding[];
+  architecture: CodeQualityFinding[];
+  quality: CodeQualityFinding[];
+  rubricCompliance: CodeQualityFinding[];
+}
+
+export interface BuilderReportCoaching {
+  passReadiness: BuilderCoachingPassReadiness;
+  mustFix: CodeQualityFinding[];
+  shouldImprove: CodeQualityFinding[];
+  strengths: CodeQualityFinding[];
+  nextAttemptChecklist: string[];
+}
+
+export interface BuilderReportEntity {
+  readableText?: string;
+  llmRecommendations?: string[];
+  overallOutcome?: BuilderOutcome;
+  technicalFeedback?: BuilderTechnicalFeedbackReport;
+  selfHealing?: BuilderSelfHealingReport;
+  coaching?: BuilderReportCoaching;
 }

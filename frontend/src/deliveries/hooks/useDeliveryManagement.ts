@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState, useRef } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   assignmentsApi,
@@ -18,6 +18,10 @@ import type {
 } from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useManagementPermissions } from "../../shared/session/useManagementPermissions";
+import {
+  extractLegacyAiEvidence,
+  mergeManualAndLegacyNotes,
+} from "../teacherReviewNavigation";
 
 export type NoticeTone = "info" | "warning";
 export interface NoticeState {
@@ -25,7 +29,10 @@ export interface NoticeState {
   tone: NoticeTone;
 }
 
-export function useDeliveryManagement(session: SessionRecord | null) {
+export function useDeliveryManagement(
+  session: SessionRecord | null,
+  options?: { initialDeliveryId?: string | null },
+) {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectEntity[]>([]);
   const [assignments, setAssignments] = useState<ProjectAssignmentEntity[]>([]);
@@ -62,9 +69,17 @@ export function useDeliveryManagement(session: SessionRecord | null) {
   const [reportLoading, setReportLoading] = useState(false);
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
 
+  const reportAbortRef = useRef<AbortController | null>(null);
+  const lastReportDeliveryIdRef = useRef<string | null>(null);
+  const reportInFlightRef = useRef(false);
+
   const { canRead, canWrite, canAdmin } = useManagementPermissions(session);
 
   const selectedDelivery = deliveries?.data.find(d => d.id === selectedDeliveryId) ?? null;
+  const selectedDeliveryReviewNotes = useMemo(
+    () => extractLegacyAiEvidence(selectedDelivery?.graderNotes),
+    [selectedDelivery?.graderNotes],
+  );
 
   const refreshDeliveries = async (assignmentId = selectedAssignmentId) => {
     if (!assignmentId || !canRead) return;
@@ -75,11 +90,20 @@ export function useDeliveryManagement(session: SessionRecord | null) {
       setDeliveries(response);
       setWorkspaceNotice({ text: "Entregas actualizadas.", tone: "info" });
       
-      // Only auto-select if no delivery is selected or the selected one is gone
-      if (!selectedDeliveryId || !response.data.some(d => d.id === selectedDeliveryId)) {
+      // Determine which delivery should be active
+      const activeId = selectedDeliveryId || options?.initialDeliveryId;
+      
+      // Only auto-select if no relevant delivery is selected or the selected one is gone
+      if (!activeId || !response.data.some(d => d.id === activeId)) {
         const firstId = response.data[0]?.id;
         if (firstId) {
           setDelivery(firstId, `v${response.data[0].version} - ${response.data[0].studentEmail}`);
+        }
+      } else if (activeId && !selectedDeliveryId) {
+        // If we have an initial ID but it's not yet in workspace context, sync it now that we have labels
+        const match = response.data.find(d => d.id === activeId);
+        if (match) {
+          setDelivery(activeId, `v${match.version} - ${match.studentEmail}`);
         }
       }
     } catch (e) {
@@ -129,27 +153,50 @@ export function useDeliveryManagement(session: SessionRecord | null) {
     }
   };
 
-  const handleViewReport = async (deliveryId = selectedDeliveryId) => {
+  const handleViewReport = useCallback(async (deliveryId = selectedDeliveryId, { force = false }: { force?: boolean } = {}) => {
     if (!deliveryId || !canRead) return;
+    if (reportInFlightRef.current) return;
+    if (!force && lastReportDeliveryIdRef.current === deliveryId) return;
+
+    reportAbortRef.current?.abort();
+    const controller = new AbortController();
+    reportAbortRef.current = controller;
+    reportInFlightRef.current = true;
+
     setReportLoading(true);
     try {
       const delivery = await deliveriesApi.detail(deliveryId);
+      if (controller.signal.aborted) return;
+
       setReportDelivery(delivery);
       const runs = await builderApi.listByDelivery({ deliveryId, limit: 1, sortOrder: "DESC" });
+      if (controller.signal.aborted) return;
+
       const latestRun = runs.data[0] ?? null;
       if (!latestRun) {
+        lastReportDeliveryIdRef.current = deliveryId;
+        setReportRun(null);
         setReportNotice({ text: "No hay runs registrados.", tone: "warning" });
         return;
       }
+
       const fullRun = await builderApi.detail(latestRun.id);
+      if (controller.signal.aborted) return;
+
+      lastReportDeliveryIdRef.current = deliveryId;
       setReportRun(fullRun);
       setReportNotice({ text: "Informe cargado.", tone: "info" });
     } catch (e) {
+      if (controller.signal.aborted) return;
+      lastReportDeliveryIdRef.current = deliveryId;
       setReportNotice({ text: getErrorMessage(e), tone: "warning" });
     } finally {
-      setReportLoading(false);
+      if (!controller.signal.aborted) {
+        reportInFlightRef.current = false;
+        setReportLoading(false);
+      }
     }
-  };
+  }, [selectedDeliveryId, canRead]);
 
   const handleGradingUpdate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -157,7 +204,10 @@ export function useDeliveryManagement(session: SessionRecord | null) {
     try {
       const response = await deliveriesApi.updateGrading(gradingForm.id.trim(), {
         grade: gradingForm.grade.trim() ? Number(gradingForm.grade) : null,
-        graderNotes: gradingForm.graderNotes.trim() || undefined,
+        graderNotes: mergeManualAndLegacyNotes(
+          gradingForm.graderNotes,
+          selectedDeliveryReviewNotes.legacyRaw,
+        ),
       });
       setEditorNotice({ text: "Calificación actualizada.", tone: "info" });
       setDelivery(response.id);
@@ -207,6 +257,9 @@ export function useDeliveryManagement(session: SessionRecord | null) {
       setReportRun(null);
       setReportDelivery(null);
       lastFetchedAssignmentId.current = null;
+      lastReportDeliveryIdRef.current = null;
+      reportAbortRef.current?.abort();
+      reportInFlightRef.current = false;
       setCreateForm(prev => ({ ...prev, assignmentId: "" }));
       return;
     }
@@ -231,7 +284,7 @@ export function useDeliveryManagement(session: SessionRecord | null) {
       setGradingForm({
         id: d.id,
         grade: d.grade !== null ? String(d.grade) : "",
-        graderNotes: d.graderNotes ?? "",
+        graderNotes: extractLegacyAiEvidence(d.graderNotes).manualNotes ?? "",
       });
     }
   }, [deliveries, selectedDeliveryId]);
@@ -242,6 +295,7 @@ export function useDeliveryManagement(session: SessionRecord | null) {
     selectedAssignmentId,
     selectedDeliveryId,
     selectedDelivery,
+    selectedDeliveryReviewNotes,
     createForm, setCreateForm,
     updateForm, setUpdateForm,
     statusForm, setStatusForm,
