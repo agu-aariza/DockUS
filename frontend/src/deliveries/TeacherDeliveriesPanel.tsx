@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   RiAlertLine,
   RiArrowRightUpLine,
@@ -35,6 +36,10 @@ import type {
   SessionRecord,
 } from "../shared/types";
 import { useDeliveryManagement } from "./hooks/useDeliveryManagement";
+import { TeacherReviewSummary } from "./components/TeacherReviewSummary";
+import {
+  normalizeTeacherDeliveryTab,
+} from "./teacherReviewNavigation";
 import { MetricCard } from "../shared/components/MetricCard";
 import { PageHeader } from "../shared/components/ui/PageHeader";
 import { Button } from "../shared/components/ui/Button";
@@ -180,10 +185,13 @@ function AssignmentLabel({ assignment }: { assignment: ProjectAssignmentEntity |
 export function TeacherDeliveriesPanel({
   session,
 }: TeacherDeliveriesPanelProps): JSX.Element {
-  const dc = useDeliveryManagement(session);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dc = useDeliveryManagement(session, { initialDeliveryId: searchParams.get("deliveryId") });
   const { selection, setProject, setAssignment, setDelivery } = useWorkspace();
   const deliveries = dc.deliveries?.data ?? [];
-  const [detailTab, setDetailTab] = useState<DetailTab>("overview");
+  const [detailTab, setDetailTab] = useState<DetailTab>(() => 
+    normalizeTeacherDeliveryTab(searchParams.get("tab"))
+  );
   const [deliverySearch, setDeliverySearch] = useState("");
   const deferredDeliverySearch = useDeferredValue(deliverySearch);
   const { pushToast } = useToast();
@@ -237,6 +245,12 @@ export function TeacherDeliveriesPanel({
     (project) => project.id === dc.selectedProjectId,
   );
   const selectedDelivery = dc.selectedDelivery;
+
+  const requestedProjectId = searchParams.get("projectId");
+  const requestedAssignmentId = searchParams.get("assignmentId");
+  const requestedDeliveryId = searchParams.get("deliveryId");
+  const requestedDetailTab = normalizeTeacherDeliveryTab(searchParams.get("tab"));
+
   const submittedCount = deliveries.filter((delivery) => delivery.status === "SUBMITTED").length;
   const reviewCount = deliveries.filter((delivery) => delivery.status === "IN_REVIEW").length;
   const evaluatedCount = deliveries.filter((delivery) => delivery.status === "EVALUATED").length;
@@ -245,7 +259,99 @@ export function TeacherDeliveriesPanel({
     const delivery = deliveries.find(d => d.id === deliveryId);
     setDelivery(deliveryId, delivery ? `v${delivery.version} - ${delivery.studentName}` : undefined);
     setDetailTab(tab);
+    if (tab !== "overview") {
+      void dc.handleViewReport(deliveryId);
+    }
   };
+
+  // 1. Sync Workspace Selection from URL (Immediate ID sync)
+  useEffect(() => {
+    if (requestedProjectId && selection.projectId !== requestedProjectId) {
+      setProject(requestedProjectId);
+    }
+  }, [requestedProjectId, selection.projectId, setProject]);
+
+  useEffect(() => {
+    if (requestedAssignmentId && selection.assignmentId !== requestedAssignmentId) {
+      setAssignment(requestedAssignmentId);
+    }
+  }, [requestedAssignmentId, selection.assignmentId, setAssignment]);
+
+  useEffect(() => {
+    if (requestedDeliveryId && selection.deliveryId !== requestedDeliveryId) {
+      setDelivery(requestedDeliveryId);
+    }
+  }, [requestedDeliveryId, selection.deliveryId, setDelivery]);
+
+  // 2. Sync Tab from URL
+  useEffect(() => {
+    if (requestedDetailTab !== detailTab) {
+      setDetailTab(requestedDetailTab);
+    }
+  }, [requestedDetailTab]);
+
+  // 3. Update Labels and handle report loading once data is available
+  useEffect(() => {
+    if (!requestedProjectId) return;
+    const project = dc.projects.find(p => p.id === requestedProjectId);
+    if (project && selection.projectTitle !== project.title) {
+      setProject(project.id, project.title);
+    }
+  }, [dc.projects, requestedProjectId, selection.projectTitle, setProject]);
+
+  useEffect(() => {
+    if (!requestedAssignmentId) return;
+    const assignment = dc.assignments.find(a => a.id === requestedAssignmentId);
+    if (assignment && selection.assignmentLabel !== `${assignment.studentName} · ${assignment.projectTitle}`) {
+      setAssignment(assignment.id, `${assignment.studentName} · ${assignment.projectTitle}`);
+    }
+  }, [dc.assignments, requestedAssignmentId, selection.assignmentLabel, setAssignment]);
+
+  useEffect(() => {
+    if (!requestedDeliveryId) return;
+    const delivery = deliveries.find(d => d.id === requestedDeliveryId);
+    
+    // Update label if found
+    if (delivery && selection.deliveryLabel !== `v${delivery.version} - ${delivery.studentName}`) {
+      setDelivery(requestedDeliveryId, `v${delivery.version} - ${delivery.studentName}`);
+    }
+
+    // Trigger report load if needed
+    if (delivery && detailTab !== "overview") {
+      void dc.handleViewReport(requestedDeliveryId);
+    }
+  }, [deliveries, requestedDeliveryId, selection.deliveryLabel, setDelivery, detailTab]);
+
+  useEffect(() => {
+    if (!dc.selectedProjectId || !dc.selectedAssignmentId) {
+      return;
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.set("projectId", dc.selectedProjectId);
+    next.set("assignmentId", dc.selectedAssignmentId);
+
+    if (dc.selectedDeliveryId) {
+      next.set("deliveryId", dc.selectedDeliveryId);
+      next.set("tab", detailTab);
+    } else if (!requestedDeliveryId) {
+      // Only clear if neither local state nor URL has it
+      next.delete("deliveryId");
+      next.delete("tab");
+    }
+
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [
+    dc.selectedAssignmentId,
+    dc.selectedDeliveryId,
+    dc.selectedProjectId,
+    detailTab,
+    requestedDeliveryId,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const projectOptions: VisualPickerOption[] = useMemo(() => 
     dc.projects.map(p => ({
@@ -480,12 +586,15 @@ export function TeacherDeliveriesPanel({
                           id: "report", 
                           label: "Informe", 
                           icon: RiFileTextLine,
-                          onClick: () => void dc.handleViewReport()
                         },
                       ]}
                       activeTab={detailTab}
                       onTabChange={(id) => {
-                        setDetailTab(id as DetailTab);
+                        const nextTab = id as DetailTab;
+                        setDetailTab(nextTab);
+                        if (nextTab !== "overview" && selectedDelivery) {
+                          void dc.handleViewReport(selectedDelivery.id);
+                        }
                       }}
                       variant="primary"
                     />
@@ -574,7 +683,8 @@ export function TeacherDeliveriesPanel({
                         </div>
                         <div>
                           <strong className="text-slate-900">Observaciones docentes:</strong>{" "}
-                          {selectedDelivery.graderNotes || "Aún no hay feedback manual publicado."}
+                          {dc.selectedDeliveryReviewNotes.manualNotes ||
+                            "Aún no hay feedback manual publicado."}
                         </div>
                       </div>
                     </article>
@@ -606,7 +716,10 @@ export function TeacherDeliveriesPanel({
                         <Button
                           variant="secondary"
                           className="w-full justify-start"
-                          onClick={() => setDetailTab("grading")}
+                          onClick={() => {
+                            setDetailTab("grading");
+                            void dc.handleViewReport();
+                          }}
                         >
                           <RiFolderChartLine />
                           Editar nota y feedback
@@ -655,37 +768,12 @@ export function TeacherDeliveriesPanel({
 
               {detailTab === "grading" && (
                 <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-                  <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                    <h4 className="eyebrow">
-                      Estado actual
-                    </h4>
-                    <div className="mt-5 space-y-4 text-sm leading-6 text-slate-600">
-                      <div>
-                        <strong className="text-slate-900">Alumno:</strong>{" "}
-                        {selectedDelivery.studentEmail}
-                      </div>
-                      <div>
-                        <strong className="text-slate-900">Versión:</strong> v{selectedDelivery.version}
-                      </div>
-                      <div>
-                        <strong className="text-slate-900">Builder:</strong>{" "}
-                        {selectedDelivery.status === "EVALUATED"
-                          ? "La entrega ya tiene evaluación técnica disponible."
-                          : "Todavía no hay cierre técnico completo."}
-                      </div>
-                      <div>
-                        <strong className="text-slate-900">Nota actual:</strong>{" "}
-                        {selectedDelivery.grade !== null
-                          ? selectedDelivery.grade.toFixed(2)
-                          : "Sin nota oficial"}
-                      </div>
-                      <div>
-                        <strong className="text-slate-900">Feedback actual:</strong>{" "}
-                        {selectedDelivery.graderNotes ||
-                          "Todavía no has dejado observaciones docentes."}
-                      </div>
-                    </div>
-                  </article>
+                  <TeacherReviewSummary
+                    delivery={selectedDelivery}
+                    latestRun={dc.reportRun}
+                    manualGraderNotes={dc.selectedDeliveryReviewNotes.manualNotes}
+                    legacyAiEvidence={dc.selectedDeliveryReviewNotes.legacyBlocks}
+                  />
 
                   {dc.canWrite ? (
                     <form
@@ -772,7 +860,7 @@ export function TeacherDeliveriesPanel({
                     </div>
                     <Button
                       variant="secondary"
-                      onClick={() => void dc.handleViewReport()}
+                      onClick={() => void dc.handleViewReport(undefined, { force: true })}
                       disabled={!dc.selectedDeliveryId || dc.reportLoading}
                     >
                       <RiFileTextLine />
@@ -781,6 +869,15 @@ export function TeacherDeliveriesPanel({
                   </div>
 
                   <div className="mt-6">
+                    <TeacherReviewSummary
+                      delivery={selectedDelivery}
+                      latestRun={dc.reportRun}
+                      manualGraderNotes={dc.selectedDeliveryReviewNotes.manualNotes}
+                      legacyAiEvidence={dc.selectedDeliveryReviewNotes.legacyBlocks}
+                    />
+                  </div>
+
+                  <div className="mt-8">
                     {dc.reportLoading ? (
                       <div className="flex justify-center py-16 text-slate-400">
                         <RiLoader4Line className="animate-spin text-2xl" />
