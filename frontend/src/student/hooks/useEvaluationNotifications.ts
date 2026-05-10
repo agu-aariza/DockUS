@@ -1,21 +1,16 @@
 /**
- * Hook que hace polling de las entregas del alumno en estado IN_REVIEW
- * y detecta cuando un BuildRun llega a estado terminal para notificar.
+ * Hook que hace polling de las entregas recientes del alumno y detecta
+ * cuando aparece un informe técnico o una nota oficial nueva.
  */
-import { useState, useEffect, useCallback, useRef } from "react";
-import { deliveriesApi } from "../../shared/api/services";
-import { builderApi } from "../../shared/api/builderApi";
-import type { DeliveryEntity, BuildRunEntity } from "../../shared/types";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-export interface EvaluationNotification {
-  id: string;
-  deliveryId: string;
-  deliveryVersion: number;
-  projectTitle: string;
-  outcome: "SUCCESS" | "FAILED" | "CANCELLED";
-  reportAvailable: boolean;
-  dismissedAt: string | null;
-}
+import { builderApi } from "../../shared/api/builderApi";
+import { deliveriesApi } from "../../shared/api/services";
+import type { BuildRunEntity } from "../../shared/types";
+import {
+  deriveEvaluationNotifications,
+  type EvaluationNotification,
+} from "../evaluationNotifications";
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -26,58 +21,48 @@ export function useEvaluationNotifications() {
 
   const checkForCompletedRuns = useCallback(async () => {
     try {
-      // Get deliveries that are being reviewed
       const response = await deliveriesApi.list({
-        status: "IN_REVIEW",
         limit: 20,
-        sortBy: "createdAt",
+        sortBy: "updatedAt",
         sortOrder: "DESC",
       });
 
-      const inReviewDeliveries = response.data;
+      const recentDeliveries = response.data;
+      const latestRunsByDeliveryId: Record<string, BuildRunEntity | null> = {};
 
-      for (const delivery of inReviewDeliveries) {
+      for (const delivery of recentDeliveries) {
         try {
           const runs = await builderApi.listByDelivery({
             deliveryId: delivery.id,
             limit: 1,
             sortOrder: "DESC",
           });
-
-          if (runs.data.length === 0) continue;
-
-          const latestRun = runs.data[0];
-          const isTerminal = ["SUCCESS", "FAILED", "CANCELLED"].includes(latestRun.status);
-
-          if (isTerminal && !seenRunIdsRef.current.has(latestRun.id)) {
-            seenRunIdsRef.current.add(latestRun.id);
-
-            setNotifications((prev) => [
-              {
-                id: latestRun.id,
-                deliveryId: delivery.id,
-                deliveryVersion: delivery.version,
-                projectTitle: delivery.projectTitle,
-                outcome: latestRun.status as "SUCCESS" | "FAILED" | "CANCELLED",
-                reportAvailable: latestRun.report != null,
-                dismissedAt: null,
-              },
-              ...prev,
-            ]);
-          }
+          latestRunsByDeliveryId[delivery.id] = runs.data[0] ?? null;
         } catch {
-          // Silently skip individual delivery check failures
+          latestRunsByDeliveryId[delivery.id] = null;
         }
       }
+
+      const nextNotifications = deriveEvaluationNotifications({
+        deliveries: recentDeliveries,
+        latestRunsByDeliveryId,
+        seenNotificationIds: seenRunIdsRef.current,
+      });
+
+      if (nextNotifications.length > 0) {
+        nextNotifications.forEach((notification) => {
+          seenRunIdsRef.current.add(notification.id);
+        });
+        setNotifications((prev) => [...nextNotifications, ...prev]);
+      }
     } catch {
-      // Silently skip poll errors — we'll retry on next interval
+      // Silently skip poll errors; we'll retry on the next interval.
     }
   }, []);
 
   useEffect(() => {
     activeRef.current = true;
 
-    // Initial check
     void checkForCompletedRuns();
 
     const interval = setInterval(() => {
@@ -92,21 +77,28 @@ export function useEvaluationNotifications() {
     };
   }, [checkForCompletedRuns]);
 
-  const dismissNotification = useCallback((runId: string) => {
+  const dismissNotification = useCallback((notificationId: string) => {
     setNotifications((prev) =>
-      prev.map((n) =>
-        n.id === runId ? { ...n, dismissedAt: new Date().toISOString() } : n,
+      prev.map((notification) =>
+        notification.id === notificationId
+          ? { ...notification, dismissedAt: new Date().toISOString() }
+          : notification,
       ),
     );
   }, []);
 
   const dismissAll = useCallback(() => {
     setNotifications((prev) =>
-      prev.map((n) => ({ ...n, dismissedAt: new Date().toISOString() })),
+      prev.map((notification) => ({
+        ...notification,
+        dismissedAt: new Date().toISOString(),
+      })),
     );
   }, []);
 
-  const activeNotifications = notifications.filter((n) => !n.dismissedAt);
+  const activeNotifications = notifications.filter(
+    (notification) => !notification.dismissedAt,
+  );
 
   return {
     notifications: activeNotifications,

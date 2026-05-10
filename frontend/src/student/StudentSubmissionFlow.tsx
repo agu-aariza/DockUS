@@ -1,31 +1,41 @@
 import { useState } from "react";
-import type { SessionRecord } from "../shared/types";
-import { deliveriesApi, storageApi } from "../shared/api/services";
+import {
+  RiAlertLine,
+  RiArrowLeftLine,
+  RiArrowRightLine,
+  RiCheckLine,
+  RiCheckboxCircleLine,
+  RiFileList3Line,
+  RiFileZipLine,
+  RiFolderOpenLine,
+  RiInboxArchiveLine,
+  RiLoader4Line,
+  RiRocketLine,
+  RiUploadCloud2Line,
+} from "react-icons/ri";
+
 import { builderApi } from "../shared/api/builderApi";
+import { deliveriesApi, storageApi } from "../shared/api/services";
+import { MetricCard } from "../shared/components/MetricCard";
+import { EmptyState } from "../shared/components/EmptyState";
+import { Button } from "../shared/components/ui/Button";
+import type { SessionRecord } from "../shared/types";
 import { getErrorMessage } from "../shared/utils/errors";
 import { computeSha256Hex } from "../shared/utils/hash";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
-import {
-  RiUploadCloud2Line,
-  RiCheckLine,
-  RiLoader4Line,
-  RiArrowRightLine,
-  RiArrowLeftLine,
-  RiFolderOpenLine,
-  RiFileZipLine,
-  RiRocketLine,
-  RiCheckboxCircleLine,
-  RiAlertLine,
-} from "react-icons/ri";
-import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
+import { StudentKeyValueList, StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
 import {
   describeAssignmentTimeline,
   formatAssignmentDate,
+  pickPrimaryAssignment,
 } from "./deadlineUtils";
+import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
+import { SubmissionCoachingPreview } from "./SubmissionCoachingPreview";
 import {
   deriveStudentWorkflowState,
   describeStudentWorkflowState,
 } from "./studentWorkflowState";
+import { deriveStudentWorkspaceInsights } from "./studentWorkspaceInsights";
 
 interface Props {
   session: SessionRecord | null;
@@ -35,16 +45,40 @@ interface Props {
 
 type Step = 1 | 2 | 3 | 4;
 
-export function StudentSubmissionFlow({ session, data, onNavigate }: Props): JSX.Element {
+function getStepState(currentStep: Step, targetStep: number): "complete" | "active" | "idle" {
+  if (currentStep > targetStep) {
+    return "complete";
+  }
+  if (currentStep === targetStep) {
+    return "active";
+  }
+  return "idle";
+}
+
+export function StudentSubmissionFlow({
+  data,
+  onNavigate,
+}: Props): JSX.Element {
   const { selection, setDelivery, setProject, setAssignment } = useWorkspace();
   const { assignments, deliveries, latestRunByDeliveryId, refresh } = data;
-  
+
+  const initialAssignment =
+    pickPrimaryAssignment(
+      assignments,
+      selection.assignmentId,
+      selection.projectId,
+    ) ?? assignments[0] ?? null;
+
   const [step, setStep] = useState<Step>(1);
-  const [selectedAssignmentId, setSelectedAssignmentId] = useState(selection.assignmentId || (assignments[0]?.id ?? ""));
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState(
+    initialAssignment?.id ?? "",
+  );
   const [file, setFile] = useState<File | null>(null);
+  const [fileSizeError, setFileSizeError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  
-  const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">(
+    "idle",
+  );
   const [errorMessage, setErrorMessage] = useState("");
   const [createdVersion, setCreatedVersion] = useState<number | null>(null);
   const [createdDeliveryId, setCreatedDeliveryId] = useState<string | null>(null);
@@ -52,7 +86,8 @@ export function StudentSubmissionFlow({ session, data, onNavigate }: Props): JSX
   const [buildLaunching, setBuildLaunching] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
 
-  const activeAssignment = assignments.find(a => a.id === selectedAssignmentId);
+  const activeAssignment =
+    assignments.find((assignment) => assignment.id === selectedAssignmentId) ?? null;
   const latestAssignmentDelivery =
     deliveries.find((delivery) => delivery.assignmentId === selectedAssignmentId) ??
     null;
@@ -60,7 +95,8 @@ export function StudentSubmissionFlow({ session, data, onNavigate }: Props): JSX
     ? latestRunByDeliveryId[latestAssignmentDelivery.id] ?? null
     : null;
   const noAssignments = assignments.length === 0;
-  const noRemainingDeliveries = activeAssignment && activeAssignment.remainingDeliveries <= 0;
+  const noRemainingDeliveries =
+    activeAssignment !== null && activeAssignment.remainingDeliveries <= 0;
   const now = Date.now();
   const notYetOpen = Boolean(
     activeAssignment?.opensAt && new Date(activeAssignment.opensAt).getTime() > now,
@@ -84,35 +120,60 @@ export function StudentSubmissionFlow({ session, data, onNavigate }: Props): JSX
     },
   );
 
+  const insights = deriveStudentWorkspaceInsights(
+    activeAssignment ? [activeAssignment] : [],
+    latestAssignmentDelivery ? [latestAssignmentDelivery] : [],
+    latestRunByDeliveryId,
+  );
+
+  const canContinueFromStep1 =
+    Boolean(selectedAssignmentId) &&
+    !noAssignments &&
+    !noRemainingDeliveries &&
+    !notYetOpen;
+
   const handleNextStep = () => {
-    if (step === 1 && selectedAssignmentId && !noRemainingDeliveries && !notYetOpen) setStep(2);
-    else if (step === 2 && file) setStep(3);
-  };
+    if (step === 1 && canContinueFromStep1) {
+      setStep(2);
+      return;
+    }
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const selected = e.dataTransfer.files?.[0];
-    if (selected && selected.size > 50 * 1024 * 1024) {
-      alert("El archivo no puede superar los 50MB.");
-      setFile(null);
-    } else {
-      setFile(selected || null);
+    if (step === 2 && file) {
+      setStep(3);
     }
   };
 
+  const handleFileSelection = (selectedFile: File | null) => {
+    if (selectedFile && selectedFile.size > 50 * 1024 * 1024) {
+      setFileSizeError(true);
+      setFile(null);
+      return;
+    }
+
+    setFileSizeError(false);
+    setFile(selectedFile);
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent) => {
+    event.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    setIsDragging(false);
+    handleFileSelection(event.dataTransfer.files?.[0] ?? null);
+  };
+
   const handleSubmit = async () => {
-    if (!selectedAssignmentId || !file) return;
+    if (!selectedAssignmentId || !file) {
+      return;
+    }
 
     setStatus("uploading");
     setErrorMessage("");
@@ -129,22 +190,22 @@ export function StudentSubmissionFlow({ session, data, onNavigate }: Props): JSX
         logicalName: file.name,
         logicalPath: `student-uploads/${file.name}`,
         contentType: file.type || "application/octet-stream",
-        hash: hash,
+        hash,
         sizeBytes: file.size,
-        file: file,
+        file,
       });
 
       if (activeAssignment) {
         setProject(activeAssignment.projectId, activeAssignment.projectTitle);
-        setAssignment(activeAssignment.id, activeAssignment.studentEmail);
+        setAssignment(activeAssignment.id, activeAssignment.projectTitle);
       }
       setDelivery(delivery.id, `v${delivery.version}`);
       setCreatedVersion(delivery.version);
       setCreatedDeliveryId(delivery.id);
-      
+
       await refresh();
       setStatus("success");
-      setStep(4); // Move to the optional builder step
+      setStep(4);
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
       setStatus("error");
@@ -152,7 +213,10 @@ export function StudentSubmissionFlow({ session, data, onNavigate }: Props): JSX
   };
 
   const handleLaunchBuilder = async () => {
-    if (!createdDeliveryId) return;
+    if (!createdDeliveryId) {
+      return;
+    }
+
     setBuildLaunching(true);
     setBuildError(null);
 
@@ -166,374 +230,618 @@ export function StudentSubmissionFlow({ session, data, onNavigate }: Props): JSX
     }
   };
 
-  // Step 4: Post-submission options
+  if (noAssignments) {
+    return (
+      <div className="space-y-6">
+        <StudentSurface tone="accent">
+          <StudentSurfaceHeader
+            eyebrow="Nueva entrega"
+            title="Aun no tienes practicas disponibles"
+            description="En cuanto el profesorado te asigne una practica, desde aqui podras preparar la siguiente version y seguir el circuito completo de remediacion."
+            actions={
+              <Button variant="secondary" onClick={() => onNavigate("proyectos")}>
+                Ver proyectos
+              </Button>
+            }
+          />
+        </StudentSurface>
+        <EmptyState
+          icon={<RiFolderOpenLine className="text-4xl text-slate-400" />}
+          title="Sin convocatorias activas"
+          description="No hay ninguna practica disponible para subir en este momento. Revisa el resumen o espera a nuevas asignaciones."
+        />
+      </div>
+    );
+  }
+
   if (step === 4) {
     return (
-      <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-6 py-10 max-w-2xl mx-auto shadow-sm">
-        <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-            <RiCheckLine className="text-3xl" />
+      <div className="space-y-6">
+        <StudentSurface tone="accent">
+          <StudentSurfaceHeader
+            eyebrow="Entrega registrada"
+            title={`Version v${createdVersion ?? "?"} enviada correctamente`}
+            description={`Tu archivo ${file?.name ?? ""} ya forma parte del historial de la practica. Ahora puedes dejar lanzada la evaluacion tecnica o volver al workspace para seguirla despues.`}
+            badge={
+              <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                Entrega confirmada
+              </span>
+            }
+          />
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <MetricCard
+              label="Practica"
+              value={activeAssignment?.projectTitle ?? "Proyecto"}
+              helper="Contexto activo"
+              icon={<RiFolderOpenLine />}
+              variant="default"
+            />
+            <MetricCard
+              label="Version"
+              value={`v${createdVersion ?? "?"}`}
+              helper="Nueva entrega registrada"
+              icon={<RiUploadCloud2Line />}
+              variant="success"
+            />
+            <MetricCard
+              label="Intentos restantes"
+              value={Math.max(0, (activeAssignment?.remainingDeliveries ?? 1) - 1)}
+              helper="Despues de esta subida"
+              icon={<RiInboxArchiveLine />}
+              variant="info"
+            />
           </div>
-          <h3 className="mt-4 text-xl font-bold text-slate-900">Versión v{createdVersion} entregada</h3>
-          <p className="mt-2 text-sm text-slate-600">
-            Hemos recibido tu archivo <strong>{file?.name}</strong> correctamente.
-          </p>
-        </div>
+        </StudentSurface>
 
-        {/* Builder launch section */}
-        <div className="mt-8 rounded-2xl border border-emerald-300 bg-white p-6">
-          <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-            <RiRocketLine className="text-indigo-500" />
-            ¿Quieres evaluar tu código ahora?
-          </h4>
-          <p className="mt-1 text-sm text-slate-600">
-            El sistema analizará tu código, lo construirá en un contenedor y ejecutará las pruebas del profesor automáticamente.
-          </p>
+        <div className="grid gap-6 xl:grid-cols-[1.05fr,1.35fr]">
+          <StudentSurface>
+            <StudentSurfaceHeader
+              eyebrow="Siguiente decision"
+              title="Quieres lanzar la evaluacion automatica ahora?"
+              description="Si la ejecutas ahora, DockUS analizara el codigo, intentara construirlo y te devolvera un informe tecnico con evidencia y coaching para la siguiente version."
+            />
 
-          {buildLaunched ? (
-            <div className="mt-4 flex items-center gap-2 text-sm text-emerald-700 font-medium">
-              <RiCheckboxCircleLine className="text-lg" />
-              Evaluación lanzada. Recibirás una notificación cuando termine.
-            </div>
-          ) : buildError ? (
-            <div className="mt-4 space-y-3">
-              <div className="flex items-start gap-2 text-sm text-rose-700">
-                <RiAlertLine className="text-lg mt-0.5 flex-shrink-0" />
-                <span>{buildError}</span>
+            {buildLaunched ? (
+              <div className="mt-6 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
+                    <RiCheckboxCircleLine className="text-xl" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-emerald-900">
+                      Evaluacion ya lanzada
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-emerald-800">
+                      El run tecnico ya esta en marcha. Puedes seguirlo desde informes
+                      o volver al resumen para esperar el resultado.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <button className="btn-primary text-sm" onClick={handleLaunchBuilder} disabled={buildLaunching}>
-                Reintentar
-              </button>
-            </div>
-          ) : (
-            <div className="mt-4 flex gap-3">
-              <button
-                className="btn-primary"
-                onClick={handleLaunchBuilder}
-                disabled={buildLaunching}
-              >
-                {buildLaunching ? (
-                  <>
-                    <RiLoader4Line className="animate-spin text-lg" />
-                    Lanzando...
-                  </>
-                ) : (
-                  <>
-                    <RiRocketLine className="text-lg" />
-                    Evaluar ahora
-                  </>
-                )}
-              </button>
-              <button
-                className="btn-secondary"
-                onClick={() => onNavigate("informes")}
-              >
-                Omitir por ahora
-              </button>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="mt-6 space-y-4">
+                <div className="rounded-[1.5rem] border border-academic-surface-variant bg-academic-surface-container-lowest p-5 text-sm leading-6 text-academic-on-surface-variant">
+                  Lanzar el builder ahora te ahorra contexto perdido: el siguiente
+                  informe quedara asociado a esta version y podras usarlo para reenviar
+                  con criterio si aun te quedan intentos.
+                </div>
 
-        <div className="mt-6 flex justify-center gap-4">
-          <button className="btn-secondary" onClick={() => onNavigate("entregas")}>
-            Ver mis entregas
-          </button>
-          {buildLaunched && (
-            <button className="btn-primary" onClick={() => onNavigate("informes")}>
-              Seguir el estado <RiArrowRightLine />
-            </button>
-          )}
+                {buildError ? (
+                  <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                    {buildError}
+                  </div>
+                ) : null}
+
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Button
+                    variant="primary"
+                    disabled={buildLaunching}
+                    onClick={handleLaunchBuilder}
+                  >
+                    {buildLaunching ? (
+                      <>
+                        <RiLoader4Line className="animate-spin" />
+                        Lanzando evaluacion
+                      </>
+                    ) : (
+                      <>
+                        <RiRocketLine />
+                        Evaluar ahora
+                      </>
+                    )}
+                  </Button>
+                  <Button variant="secondary" onClick={() => onNavigate("informes")}>
+                    Seguir despues
+                  </Button>
+                </div>
+              </div>
+            )}
+          </StudentSurface>
+
+          <StudentSurface tone="subtle">
+            <StudentSurfaceHeader
+              eyebrow="Navegacion rapida"
+              title="Sigue trabajando desde el workspace"
+              description="Ya no necesitas rehacer el contexto: la practica, la version y el historial quedan enlazados para las siguientes superficies."
+            />
+            <StudentKeyValueList
+              className="mt-6"
+              items={[
+                {
+                  label: "Historial",
+                  value: "Revisar el registro completo de tus versiones",
+                },
+                {
+                  label: "Informes",
+                  value: buildLaunched
+                    ? "Esperar el nuevo informe tecnico"
+                    : "Consultar informes anteriores o seguir mas tarde",
+                },
+                {
+                  label: "Resumen",
+                  value: "Volver al command center del alumno",
+                },
+              ]}
+            />
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Button variant="secondary" onClick={() => onNavigate("entregas")}>
+                Ver mis entregas
+              </Button>
+              <Button variant="primary" onClick={() => onNavigate("resumen")}>
+                Ir al resumen
+              </Button>
+            </div>
+          </StudentSurface>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      {activeAssignment && activeTimeline ? (
-        <div
-          className={`rounded-2xl border px-5 py-4 text-sm shadow-sm ${
-            activeTimeline.state === "late"
-              ? "border-amber-200 bg-amber-50 text-amber-900"
-              : activeTimeline.state === "upcoming"
-                ? "border-sky-200 bg-sky-50 text-sky-900"
-                : "border-emerald-200 bg-emerald-50 text-emerald-900"
-          }`}
-        >
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="font-semibold">{activeAssignment.projectTitle}</div>
-              <div className="mt-1">{activeTimeline.detail}</div>
+    <div className="space-y-6">
+      <StudentSurface tone="accent">
+        <StudentSurfaceHeader
+          eyebrow="Nueva version"
+          title="Prepara la siguiente entrega desde un unico flujo"
+          description="Selecciona la practica, revisa el estado real de la convocatoria y sube el archivo con el mismo contexto que luego veras en informes y entregas."
+          actions={
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button variant="secondary" onClick={() => onNavigate("entregas")}>
+                Ver historial
+              </Button>
+              <Button variant="primary" onClick={() => onNavigate("informes")}>
+                Consultar informes
+              </Button>
             </div>
-            <div className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em]">
-              {activeTimeline.countdownLabel ?? "Sin fecha límite"}
-            </div>
-          </div>
+          }
+        />
+
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <MetricCard
+            label="Practica activa"
+            value={activeAssignment?.projectTitle ?? "Sin seleccionar"}
+            helper={activeTimeline?.headline ?? "Elige una convocatoria"}
+            icon={<RiFolderOpenLine />}
+            variant="default"
+          />
+          <MetricCard
+            label="Intentos restantes"
+            value={activeAssignment?.remainingDeliveries ?? 0}
+            helper={`${activeAssignment?.deliveryCount ?? 0} entrega(s) registradas`}
+            icon={<RiInboxArchiveLine />}
+            variant={noRemainingDeliveries ? "warning" : "info"}
+          />
+          <MetricCard
+            label="Informes disponibles"
+            value={insights.reportsReady}
+            helper={`${insights.blockedReports} con bloqueos`}
+            icon={<RiFileList3Line />}
+            variant={insights.blockedReports > 0 ? "warning" : "success"}
+          />
+          <MetricCard
+            label="Estado actual"
+            value={workflow.label}
+            helper={workflow.description}
+            icon={<RiRocketLine />}
+            variant={
+              workflow.state === "REPORT_READY" || workflow.state === "GRADED"
+                ? "success"
+                : workflow.state === "BUILD_FAILED"
+                  ? "warning"
+                  : "default"
+            }
+          />
         </div>
-      ) : null}
+      </StudentSurface>
 
-      {activeAssignment ? (
-        <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Estado académico actual
-              </div>
-              <div className={`mt-2 inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${workflow.badgeClassName}`}>
-                {workflow.label}
-              </div>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                {workflow.description}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-xs text-slate-600">
-              {activeAssignment.deliveryCount} entrega(s) registradas · {activeAssignment.remainingDeliveries} intento(s) disponibles
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        {/* Wizard Header */}
-        <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
-          {[
-            { num: 1, label: "Proyecto" },
-            { num: 2, label: "Archivo" },
-            { num: 3, label: "Confirmar" },
-          ].map((s, i) => (
-            <div key={s.num} className="flex items-center">
-              {i > 0 && <div className="h-px w-8 md:w-12 bg-slate-200 mx-2" />}
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-colors ${
-                  step > s.num 
-                    ? "bg-emerald-500 text-white" 
-                    : step >= s.num 
-                      ? "bg-indigo-600 text-white" 
-                      : "bg-slate-100 text-slate-400"
-                }`}>
-                  {step > s.num ? <RiCheckLine /> : s.num}
-                </div>
-                <span className={`text-sm font-semibold hidden sm:inline ${step >= s.num ? "text-slate-900" : "text-slate-400"}`}>
-                  {s.label}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {status === "error" && (
-          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-            Error al procesar la entrega: {errorMessage}
-          </div>
-        )}
-
-        {/* Step 1 — Select Assignment */}
-        {step === 1 && (
-          <div className="space-y-6 animate-in fade-in">
-            <h3 className="text-xl font-bold text-slate-900">¿Qué práctica vas a entregar?</h3>
-
-            {noAssignments ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-                <RiFolderOpenLine className="mx-auto text-4xl text-slate-400 mb-3" />
-                <p className="text-sm text-slate-600">
-                  No tienes asignaciones activas. Contacta con tu profesor para que te asigne una práctica.
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                {assignments.map(a => (
-                  <label 
-                    key={a.id} 
-                    className={`flex cursor-pointer items-center gap-4 rounded-xl border p-4 transition-all ${
-                      a.remainingDeliveries <= 0
-                        ? "border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed"
-                        : selectedAssignmentId === a.id 
-                          ? "border-indigo-600 bg-indigo-50/50 shadow-sm" 
-                          : "border-slate-200 bg-white hover:bg-slate-50"
-                    }`}
-                  >
-                    <input 
-                      type="radio" 
-                      name="assignment" 
-                      value={a.id} 
-                      checked={selectedAssignmentId === a.id} 
-                      onChange={() => setSelectedAssignmentId(a.id)}
-                      disabled={a.remainingDeliveries <= 0}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-600"
-                    />
-                    <RiFolderOpenLine className={`text-2xl ${selectedAssignmentId === a.id ? "text-indigo-600" : "text-slate-400"}`} />
-                    <div className="flex-1">
-                      <div className="font-semibold text-slate-900">{a.projectTitle}</div>
-                      <div className={`text-xs mt-0.5 ${a.remainingDeliveries <= 0 ? "text-rose-500 font-medium" : "text-slate-500"}`}>
-                        {a.remainingDeliveries <= 0 
-                          ? "Sin intentos disponibles" 
-                          : `Te quedan ${a.remainingDeliveries} intentos`}
-                      </div>
-                      <div className="mt-2 text-xs text-slate-500">
-                        Abre {formatAssignmentDate(a.opensAt)} · Cierra {formatAssignmentDate(a.closesAt)}
-                      </div>
-                      {a.opensAt && new Date(a.opensAt).getTime() > now ? (
-                        <div className="mt-2 text-xs font-medium text-amber-700">
-                          La entrega todavía no está abierta.
-                        </div>
-                      ) : null}
-                      {a.closesAt && new Date(a.closesAt).getTime() < now ? (
-                        <div className="mt-2 text-xs font-medium text-amber-700">
-                          El plazo venció; aún puedes entregar con marca de retraso.
-                        </div>
-                      ) : null}
-                    </div>
-                    {a.deliveryCount > 0 && (
-                      <span className="text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">
-                        {a.deliveryCount} enviadas
-                      </span>
-                    )}
-                  </label>
-                ))}
-              </div>
-            )}
-            <div className="flex justify-end pt-4">
-              <button 
-                className="btn-primary" 
-                disabled={!selectedAssignmentId || noAssignments || !!noRemainingDeliveries || notYetOpen} 
-                onClick={handleNextStep}
-              >
-                Continuar <RiArrowRightLine />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2 — File Upload */}
-        {step === 2 && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Adjunta tu trabajo</h3>
-              <p className="mt-1 text-sm text-slate-600">
-                Sube un archivo comprimido (<code>.zip</code> o <code>.tar.gz</code>) con el código de <strong>{activeAssignment?.projectTitle}</strong>.
-              </p>
-            </div>
-            
-            <div 
-              className={`rounded-2xl border-2 border-dashed p-8 text-center transition-all relative ${
-                isDragging 
-                  ? 'border-indigo-500 bg-indigo-100 scale-[1.02] shadow-inner' 
-                  : 'border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50 bg-slate-50'
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
+      <div className="grid gap-6 xl:grid-cols-[1.02fr,1.45fr]">
+        <div className="space-y-6">
+          {activeAssignment && activeTimeline ? (
+            <StudentSurface
+              tone={
+                activeTimeline.state === "late"
+                  ? "warm"
+                  : activeTimeline.state === "upcoming"
+                    ? "subtle"
+                    : "default"
+              }
             >
-              <input
-                type="file"
-                className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
-                accept=".zip,.tar,.gz,.tgz"
-                onChange={(e) => {
-                  const selected = e.target.files?.[0];
-                  if (selected && selected.size > 50 * 1024 * 1024) {
-                    alert("El archivo no puede superar los 50MB.");
-                    e.target.value = '';
-                    setFile(null);
-                  } else {
-                    setFile(selected || null);
-                  }
-                }}
+              <StudentSurfaceHeader
+                eyebrow="Ventana academica"
+                title={activeTimeline.headline}
+                description={activeTimeline.detail}
+                badge={
+                  activeTimeline.countdownLabel ? (
+                    <span className="inline-flex rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold text-academic-on-surface">
+                      {activeTimeline.countdownLabel}
+                    </span>
+                  ) : undefined
+                }
               />
-              <RiFileZipLine className={`mx-auto text-5xl mb-3 transition-colors ${isDragging ? 'text-indigo-600' : 'text-indigo-300'}`} />
-              {file ? (
-                <div>
-                  <div className="font-bold text-lg text-indigo-700">{file.name}</div>
-                  <div className="text-sm font-medium text-slate-500 mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</div>
-                </div>
-              ) : (
-                <>
-                  <div className={`font-bold text-lg ${isDragging ? 'text-indigo-800' : 'text-slate-700'}`}>
-                    {isDragging ? '¡Suelta el archivo aquí!' : 'Haz clic o arrastra tu archivo aquí'}
-                  </div>
-                  <div className="text-sm font-medium text-slate-500 mt-2">Max 50MB. Formatos: .zip, .tar.gz</div>
-                </>
-              )}
-            </div>
+            </StudentSurface>
+          ) : null}
 
-            <div className="flex justify-between pt-4">
-              <button className="btn-secondary text-sm flex items-center gap-1" onClick={() => setStep(1)}>
-                <RiArrowLeftLine /> Volver
-              </button>
-              <button className="btn-primary" disabled={!file} onClick={handleNextStep}>
-                Continuar <RiArrowRightLine />
-              </button>
+          <StudentSurface>
+            <StudentSurfaceHeader
+              eyebrow="Briefing de la practica"
+              title={activeAssignment?.projectTitle ?? "Selecciona una practica"}
+              description="Antes de subir nada, confirma que esta es la convocatoria correcta y revisa si conviene reenviar ahora o esperar otro momento."
+              badge={
+                <span
+                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${workflow.badgeClassName}`}
+                >
+                  {workflow.label}
+                </span>
+              }
+            />
+            <StudentKeyValueList
+              className="mt-6"
+              items={[
+                {
+                  label: "Apertura",
+                  value: formatAssignmentDate(activeAssignment?.opensAt),
+                },
+                {
+                  label: "Cierre",
+                  value: formatAssignmentDate(activeAssignment?.closesAt),
+                },
+                {
+                  label: "Ultima entrega",
+                  value: latestAssignmentDelivery
+                    ? `v${latestAssignmentDelivery.version}`
+                    : "Aun no hay entregas",
+                },
+                {
+                  label: "Siguiente foco",
+                  value: noRemainingDeliveries
+                    ? "Ya no quedan intentos disponibles"
+                    : notYetOpen
+                      ? "Esperar a que se abra la ventana"
+                      : "Preparar archivo y confirmar subida",
+                },
+              ]}
+            />
+
+            {(noRemainingDeliveries || notYetOpen || afterDeadline) && activeAssignment ? (
+              <div className="mt-6 rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                {noRemainingDeliveries
+                  ? "Esta practica ya no tiene intentos restantes. Puedes seguir revisando el informe y el historial, pero no se habilitara otra subida."
+                  : notYetOpen
+                    ? "La convocatoria sigue cerrada. En cuanto se abra, podras continuar con el asistente de subida."
+                    : "La fecha de cierre ya paso. Puedes seguir entregando, pero esta version quedara marcada como fuera de plazo."}
+              </div>
+            ) : null}
+          </StudentSurface>
+
+          {latestAssignmentRun?.report?.coaching ? (
+            <SubmissionCoachingPreview
+              run={latestAssignmentRun}
+              remainingDeliveries={activeAssignment?.remainingDeliveries ?? 0}
+            />
+          ) : null}
+        </div>
+
+        <StudentSurface className="overflow-hidden p-0">
+          <div className="border-b border-academic-surface-variant bg-academic-surface-container-lowest px-6 py-5 sm:px-8">
+            <div className="flex flex-wrap items-center gap-4">
+              {[
+                { number: 1, label: "Practica" },
+                { number: 2, label: "Archivo" },
+                { number: 3, label: "Confirmar" },
+              ].map((item) => {
+                const state = getStepState(step, item.number);
+
+                return (
+                  <div key={item.number} className="flex items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
+                        state === "complete"
+                          ? "bg-emerald-500 text-white"
+                          : state === "active"
+                            ? "bg-brand-blue text-white"
+                            : "bg-white text-academic-outline"
+                      }`}
+                    >
+                      {state === "complete" ? <RiCheckLine /> : item.number}
+                    </div>
+                    <div>
+                      <div className="ui-label text-academic-outline">Paso {item.number}</div>
+                      <div className="text-sm font-semibold text-academic-on-surface">
+                        {item.label}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        )}
 
-        {/* Step 3 — Confirmation */}
-        {step === 3 && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-            <h3 className="text-xl font-bold text-slate-900">Confirma tu entrega</h3>
-            <div className="rounded-xl bg-slate-50 p-5 space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Proyecto:</span>
-                <span className="font-semibold text-slate-900">{activeAssignment?.projectTitle}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Archivo:</span>
-                <span className="font-semibold text-slate-900">{file?.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Ventana:</span>
-                <span className="font-semibold text-slate-900">
-                  {formatAssignmentDate(activeAssignment?.opensAt)} → {formatAssignmentDate(activeAssignment?.closesAt)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Tamaño:</span>
-                <span className="font-semibold text-slate-900">{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "—"}</span>
-              </div>
-              <div className="flex justify-between border-t border-slate-200 pt-3">
-                <span className="text-slate-500">Intentos tras esta entrega:</span>
-                <span className={`font-semibold ${
-                  activeAssignment && activeAssignment.remainingDeliveries - 1 <= 1 
-                    ? "text-amber-600" 
-                    : "text-slate-900"
-                }`}>
-                  {activeAssignment ? Math.max(0, activeAssignment.remainingDeliveries - 1) : 0} restantes
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4 text-sm text-indigo-800">
-              <strong>Nota:</strong> Tras enviar podrás lanzar la evaluación automática de tu código.
-            </div>
-            {afterDeadline ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                Esta entrega quedará marcada como fuera de plazo porque la fecha de cierre ya pasó.
+          <div className="p-6 sm:p-8">
+            {status === "error" ? (
+              <div className="mb-6 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                Error al procesar la entrega: {errorMessage}
               </div>
             ) : null}
 
-            <div className="flex justify-between pt-4">
-              <button className="btn-secondary text-sm flex items-center gap-1" disabled={status === "uploading"} onClick={() => setStep(2)}>
-                <RiArrowLeftLine /> Volver
-              </button>
-              <button
-                className="btn-primary"
-                disabled={status === "uploading"}
-                onClick={handleSubmit}
-              >
-                {status === "uploading" ? (
-                  <>
-                    <RiLoader4Line className="animate-spin text-lg" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <RiUploadCloud2Line className="text-lg" />
-                    Enviar ahora
-                  </>
-                )}
-              </button>
-            </div>
+            {step === 1 ? (
+              <div className="space-y-6">
+                <div>
+                  <div className="eyebrow text-academic-outline">
+                    Paso 1 · Convocatoria
+                  </div>
+                  <h3 className="mt-2 font-display text-3xl font-semibold tracking-tight text-academic-on-surface">
+                    Elige la practica que vas a entregar
+                  </h3>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-academic-on-surface-variant">
+                    El asistente se queda con la practica seleccionada para
+                    reutilizar el contexto en entregas, informes y coaching.
+                  </p>
+                </div>
+
+                <div className="grid gap-3">
+                  {assignments.map((assignment) => {
+                    const assignmentTimeline = describeAssignmentTimeline(
+                      assignment,
+                      now,
+                    );
+                    const disabled =
+                      assignment.remainingDeliveries <= 0 ||
+                      Boolean(
+                        assignment.opensAt &&
+                          new Date(assignment.opensAt).getTime() > now,
+                      );
+
+                    return (
+                      <label
+                        key={assignment.id}
+                        className={`flex cursor-pointer items-start gap-4 rounded-[1.5rem] border p-5 transition-all ${
+                          disabled
+                            ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-70"
+                            : selectedAssignmentId === assignment.id
+                              ? "border-brand-blue bg-brand-blue/5 shadow-sm"
+                              : "border-academic-surface-variant bg-white hover:-translate-y-0.5 hover:shadow-sm"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="assignment"
+                          value={assignment.id}
+                          checked={selectedAssignmentId === assignment.id}
+                          disabled={disabled}
+                          onChange={() => setSelectedAssignmentId(assignment.id)}
+                          className="mt-1 h-4 w-4 text-brand-blue focus:ring-brand-blue"
+                        />
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-academic-surface-container-lowest text-brand-blue">
+                          <RiFolderOpenLine className="text-xl" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="font-semibold text-academic-on-surface">
+                              {assignment.projectTitle}
+                            </div>
+                            <span className="inline-flex rounded-full border border-academic-surface-variant bg-academic-surface-container-lowest px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-academic-on-surface-variant">
+                              {assignmentTimeline.headline}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-academic-on-surface-variant">
+                            {assignmentTimeline.detail}
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2 text-xs text-academic-on-surface-variant">
+                            <span className="rounded-full border border-academic-surface-variant px-2.5 py-1">
+                              {assignment.remainingDeliveries} intento(s) disponibles
+                            </span>
+                            <span className="rounded-full border border-academic-surface-variant px-2.5 py-1">
+                              Abre {formatAssignmentDate(assignment.opensAt)}
+                            </span>
+                            <span className="rounded-full border border-academic-surface-variant px-2.5 py-1">
+                              Cierra {formatAssignmentDate(assignment.closesAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    variant="primary"
+                    disabled={!canContinueFromStep1}
+                    onClick={handleNextStep}
+                  >
+                    Continuar
+                    <RiArrowRightLine />
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {step === 2 ? (
+              <div className="space-y-6">
+                <div>
+                  <div className="eyebrow text-academic-outline">Paso 2 · Archivo</div>
+                  <h3 className="mt-2 font-display text-3xl font-semibold tracking-tight text-academic-on-surface">
+                    Adjunta el codigo de la nueva version
+                  </h3>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-academic-on-surface-variant">
+                    Sube un archivo comprimido en formato <code>.zip</code> o
+                    <code> .tar.gz</code> con el contenido de{" "}
+                    <strong>{activeAssignment?.projectTitle}</strong>.
+                  </p>
+                </div>
+
+                <div
+                  className={`relative rounded-[2rem] border-2 border-dashed px-6 py-10 text-center transition-all ${
+                    isDragging
+                      ? "border-brand-blue bg-brand-blue/5 shadow-inner"
+                      : "border-academic-surface-variant bg-academic-surface-container-lowest hover:border-brand-blue/40 hover:bg-brand-blue/5"
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <input
+                    type="file"
+                    accept=".zip,.tar,.gz,.tgz"
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    onChange={(event) =>
+                      handleFileSelection(event.target.files?.[0] ?? null)
+                    }
+                  />
+                  <RiFileZipLine className="mx-auto text-5xl text-brand-blue/60" />
+                  {file ? (
+                    <div className="mt-4">
+                      <div className="text-lg font-semibold text-academic-on-surface">
+                        {file.name}
+                      </div>
+                      <div className="mt-1 text-sm text-academic-on-surface-variant">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-4">
+                      <div className="text-lg font-semibold text-academic-on-surface">
+                        {isDragging
+                          ? "Suelta el archivo aqui"
+                          : "Haz clic o arrastra el archivo a esta zona"}
+                      </div>
+                      <div className="mt-2 text-sm text-academic-on-surface-variant">
+                        Maximo 50 MB · Formatos admitidos: .zip, .tar.gz
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {fileSizeError ? (
+                  <div className="flex items-center gap-2 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                    <RiAlertLine className="shrink-0 text-base" />
+                    El archivo no puede superar los 50 MB. Selecciona uno mas
+                    ligero antes de continuar.
+                  </div>
+                ) : null}
+
+                <div className="flex flex-col gap-3 border-t border-academic-surface-variant pt-4 sm:flex-row sm:justify-between">
+                  <Button variant="secondary" onClick={() => setStep(1)}>
+                    <RiArrowLeftLine />
+                    Volver
+                  </Button>
+                  <Button variant="primary" disabled={!file} onClick={handleNextStep}>
+                    Continuar
+                    <RiArrowRightLine />
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {step === 3 ? (
+              <div className="space-y-6">
+                <div>
+                  <div className="eyebrow text-academic-outline">
+                    Paso 3 · Confirmacion
+                  </div>
+                  <h3 className="mt-2 font-display text-3xl font-semibold tracking-tight text-academic-on-surface">
+                    Revisa el envio antes de registrarlo
+                  </h3>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-academic-on-surface-variant">
+                    Esta confirmacion cierra el asistente y registra la version
+                    en el historial de la practica.
+                  </p>
+                </div>
+
+                <div className="rounded-[2rem] border border-academic-surface-variant bg-academic-surface-container-lowest p-5">
+                  <StudentKeyValueList
+                    items={[
+                      {
+                        label: "Practica",
+                        value: activeAssignment?.projectTitle ?? "Sin practica",
+                      },
+                      { label: "Archivo", value: file?.name ?? "Sin archivo" },
+                      {
+                        label: "Ventana",
+                        value: `${formatAssignmentDate(activeAssignment?.opensAt)} -> ${formatAssignmentDate(activeAssignment?.closesAt)}`,
+                      },
+                      {
+                        label: "Tamano",
+                        value: file
+                          ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
+                          : "Sin archivo",
+                      },
+                      {
+                        label: "Intentos despues del envio",
+                        value: String(
+                          Math.max(
+                            0,
+                            (activeAssignment?.remainingDeliveries ?? 1) - 1,
+                          ),
+                        ),
+                      },
+                    ]}
+                  />
+                </div>
+
+                <div className="rounded-[1.5rem] border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm leading-6 text-brand-blue-dark">
+                  Tras enviar esta version, podras lanzar el builder en el mismo
+                  flujo para obtener evaluacion tecnica y coaching de remediacion.
+                </div>
+
+                {afterDeadline ? (
+                  <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                    La fecha de cierre ya paso. La entrega quedara marcada como
+                    fuera de plazo, aunque seguira registrada y evaluable.
+                  </div>
+                ) : null}
+
+                <div className="flex flex-col gap-3 border-t border-academic-surface-variant pt-4 sm:flex-row sm:justify-between">
+                  <Button
+                    variant="secondary"
+                    disabled={status === "uploading"}
+                    onClick={() => setStep(2)}
+                  >
+                    <RiArrowLeftLine />
+                    Volver
+                  </Button>
+                  <Button
+                    variant="primary"
+                    disabled={status === "uploading"}
+                    onClick={handleSubmit}
+                  >
+                    {status === "uploading" ? (
+                      <>
+                        <RiLoader4Line className="animate-spin" />
+                        Enviando
+                      </>
+                    ) : (
+                      <>
+                        <RiUploadCloud2Line />
+                        Enviar ahora
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </div>
-        )}
+        </StudentSurface>
       </div>
     </div>
   );

@@ -1,11 +1,25 @@
+import { useMemo, useState } from "react";
 import type { SessionRecord, DeliveryEntity } from "../shared/types";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
-import { RiInboxArchiveLine, RiFileTextLine } from "react-icons/ri";
+import {
+  RiFileTextLine,
+  RiFilter3Line,
+  RiInboxArchiveLine,
+  RiSortAsc,
+  RiSortDesc,
+  RiUploadCloud2Line,
+} from "react-icons/ri";
+import { Button } from "../shared/components/ui/Button";
+import { MetricCard } from "../shared/components/MetricCard";
+import { SkeletonTable } from "../shared/components/Skeleton";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import {
   deriveStudentWorkflowState,
   describeStudentWorkflowState,
 } from "./studentWorkflowState";
+import { deriveStudentRetryAction } from "./studentRetryActions";
+import { StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
+import { deriveStudentWorkspaceInsights, resolveStudentRunOutcome } from "./studentWorkspaceInsights";
 
 interface Props {
   session: SessionRecord | null;
@@ -13,138 +27,416 @@ interface Props {
   onNavigate: (tab: any) => void;
 }
 
-const STUDENT_STATUS_TEXT: Record<string, string> = {
-  DRAFT: "Preparando entrega",
-  SUBMITTED: "Entregada",
-  IN_REVIEW: "En revisión",
-  EVALUATED: "Evaluada",
-};
+function renderGradeBadge(grade: number | null): JSX.Element {
+  if (grade === null) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm italic text-slate-400">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+        </span>
+        Pendiente
+      </span>
+    );
+  }
 
-const STUDENT_STATUS_STYLE: Record<string, string> = {
-  DRAFT: "border-slate-200 bg-slate-100 text-slate-700",
-  SUBMITTED: "border-sky-200 bg-sky-50 text-sky-700",
-  IN_REVIEW: "border-amber-200 bg-amber-50 text-amber-700",
-  EVALUATED: "border-emerald-200 bg-emerald-50 text-emerald-700",
-};
+  let badgeClasses: string;
+  if (grade >= 9.0) {
+    badgeClasses = "bg-emerald-100 text-emerald-800 border border-emerald-200";
+  } else if (grade >= 7.0) {
+    badgeClasses = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+  } else if (grade >= 5.0) {
+    badgeClasses = "bg-sky-50 text-sky-700 border border-sky-200";
+  } else {
+    badgeClasses = "bg-rose-50 text-rose-700 border border-rose-200";
+  }
 
-export function StudentDeliveriesSection({ session, data, onNavigate }: Props): JSX.Element {
-  const { selection, setDelivery } = useWorkspace();
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeClasses}`}
+    >
+      {grade.toFixed(2)}
+    </span>
+  );
+}
+
+function renderOutcomeBadge(outcome: ReturnType<typeof resolveStudentRunOutcome>): JSX.Element {
+  if (!outcome) {
+    return (
+      <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">
+        Sin run
+      </span>
+    );
+  }
+
+  const styles =
+    outcome === "PASS"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : outcome === "FAIL"
+        ? "border-rose-200 bg-rose-50 text-rose-700"
+        : outcome === "PARTIAL"
+          ? "border-amber-200 bg-amber-50 text-amber-700"
+          : "border-slate-200 bg-slate-100 text-slate-700";
+
+  const label =
+    outcome === "PASS"
+      ? "Apto"
+      : outcome === "FAIL"
+        ? "No apto"
+        : outcome === "PARTIAL"
+          ? "Parcial"
+          : "Sin evaluar";
+
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${styles}`}>
+      {label}
+    </span>
+  );
+}
+
+export function StudentDeliveriesSection({
+  session,
+  data,
+  onNavigate,
+}: Props): JSX.Element {
+  const { selection, setDelivery, setAssignment, setProject } = useWorkspace();
   const { deliveries, assignments, latestRunByDeliveryId, loading, error } = data;
-  
-  const selectedAssignmentId = selection.assignmentId;
 
-  const handleSelectReport = (d: DeliveryEntity) => {
-    setDelivery(d.id, `v${d.version}`);
+  const selectedAssignmentId = selection.assignmentId;
+  const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+
+  const uniqueProjects = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const delivery of deliveries) {
+      const title = delivery.projectTitle ?? "Proyecto";
+      if (!seen.has(title)) {
+        seen.set(title, title);
+      }
+    }
+    return Array.from(seen.values());
+  }, [deliveries]);
+
+  const filteredDeliveries = useMemo(() => {
+    let list = selectedAssignmentId
+      ? deliveries.filter((delivery) => delivery.assignmentId === selectedAssignmentId)
+      : deliveries;
+
+    if (projectFilter !== "all") {
+      list = list.filter(
+        (delivery) => (delivery.projectTitle ?? "Proyecto") === projectFilter,
+      );
+    }
+
+    return [...list].sort((left, right) => {
+      const leftTime = new Date(left.createdAt).getTime();
+      const rightTime = new Date(right.createdAt).getTime();
+      return sortOrder === "newest" ? rightTime - leftTime : leftTime - rightTime;
+    });
+  }, [deliveries, projectFilter, selectedAssignmentId, sortOrder]);
+
+  const scopedAssignments = selectedAssignmentId
+    ? assignments.filter((assignment) => assignment.id === selectedAssignmentId)
+    : assignments;
+  const scopedInsights = deriveStudentWorkspaceInsights(
+    scopedAssignments,
+    filteredDeliveries,
+    latestRunByDeliveryId,
+  );
+  const filteredLatestGrade =
+    filteredDeliveries.find((delivery) => delivery.grade !== null)?.grade ?? null;
+
+  const handleSelectReport = (delivery: DeliveryEntity) => {
+    setDelivery(delivery.id, `v${delivery.version}`);
     onNavigate("informes");
   };
 
+  const handleRetry = (delivery: DeliveryEntity) => {
+    const assignment =
+      assignments.find((candidate) => candidate.id === delivery.assignmentId) ?? null;
+    if (assignment) {
+      setProject(assignment.projectId, assignment.projectTitle);
+      setAssignment(assignment.id, assignment.projectTitle);
+    }
+    setDelivery(delivery.id, `v${delivery.version}`);
+    onNavigate("subir");
+  };
+
   if (loading) {
-    return <div className="p-8 text-center text-slate-500">Cargando entregas...</div>;
+    return <SkeletonTable rows={4} />;
   }
 
   if (error) {
-    return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">Error: {error}</div>;
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+        Error: {error}
+      </div>
+    );
   }
 
-  const filteredDeliveries = selectedAssignmentId 
-    ? deliveries.filter(d => d.assignmentId === selectedAssignmentId) 
-    : deliveries;
+  function deriveRow(delivery: DeliveryEntity) {
+    const assignment =
+      assignments.find((candidate) => candidate.id === delivery.assignmentId) ?? null;
+    const latestRun = latestRunByDeliveryId[delivery.id] ?? null;
+    const workflow = describeStudentWorkflowState(
+      deriveStudentWorkflowState({
+        assignment,
+        delivery,
+        latestRun,
+      }),
+      {
+        isLate: delivery.isLate,
+        projectTitle: delivery.projectTitle,
+      },
+    );
+    const retryAction = deriveStudentRetryAction(delivery, latestRun);
+    const outcome = resolveStudentRunOutcome(latestRun);
+
+    return { workflow, retryAction, latestRun, outcome };
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold tracking-tight text-slate-950">
-          Historial de Entregas {selectedAssignmentId ? "del Proyecto" : "Generales"}
-        </h3>
-        <button 
-          className="btn-primary"
-          onClick={() => onNavigate("subir")}
-        >
-          Subir nueva versión
-        </button>
+      <StudentSurface tone="accent">
+        <StudentSurfaceHeader
+          eyebrow="Seguimiento académico"
+          title={
+            selectedAssignmentId
+              ? "Historial de entregas de la práctica"
+              : "Historial general de entregas"
+          }
+          description="Consulta versiones, resultado técnico, nota oficial y acceso directo al informe para decidir mejor tu siguiente versión."
+          actions={
+            <Button variant="primary" onClick={() => onNavigate("subir")}>
+              <RiUploadCloud2Line />
+              Subir nueva versión
+            </Button>
+          }
+        />
+      </StudentSurface>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <MetricCard
+          label="Versiones"
+          value={scopedInsights.totalDeliveries}
+          helper={selectedAssignmentId ? "Dentro de esta práctica" : "En todo tu workspace"}
+          icon={<RiInboxArchiveLine />}
+          variant="default"
+        />
+        <MetricCard
+          label="Informes listos"
+          value={scopedInsights.reportsReady}
+          helper={`${scopedInsights.blockedReports} con bloqueos`}
+          icon={<RiFileTextLine />}
+          variant={scopedInsights.blockedReports > 0 ? "warning" : "success"}
+        />
+        <MetricCard
+          label="Pendientes"
+          value={scopedInsights.pendingEvaluations}
+          helper="Runs aún en seguimiento"
+          icon={<RiFilter3Line />}
+          variant={scopedInsights.pendingEvaluations > 0 ? "info" : "default"}
+        />
+        <MetricCard
+          label="Última nota"
+          value={filteredLatestGrade !== null ? filteredLatestGrade.toFixed(2) : "—"}
+          helper={`${scopedInsights.officialGrades} nota(s) oficiales`}
+          icon={<RiFileTextLine />}
+          variant={filteredLatestGrade !== null ? "success" : "default"}
+        />
       </div>
+
+      {!selectedAssignmentId && deliveries.length > 0 ? (
+        <StudentSurface tone="subtle" className="p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium text-academic-on-surface-variant">
+              <RiFilter3Line className="text-base text-brand-blue" />
+              Filtra el histórico para comparar prácticas o concentrarte en una sola.
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <select
+                value={projectFilter}
+                onChange={(event) => setProjectFilter(event.target.value)}
+                className="input-field min-w-[220px]"
+              >
+                <option value="all">Todos los proyectos</option>
+                {uniqueProjects.map((title) => (
+                  <option key={title} value={title}>
+                    {title}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="secondary"
+                className="min-w-[180px]"
+                onClick={() =>
+                  setSortOrder((previous) =>
+                    previous === "newest" ? "oldest" : "newest",
+                  )
+                }
+              >
+                {sortOrder === "newest" ? <RiSortDesc /> : <RiSortAsc />}
+                {sortOrder === "newest" ? "Más recientes" : "Más antiguas"}
+              </Button>
+            </div>
+          </div>
+        </StudentSurface>
+      ) : null}
 
       {filteredDeliveries.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
           <RiInboxArchiveLine className="mx-auto text-4xl text-slate-400" />
-          <h3 className="mt-4 text-lg font-medium text-slate-900">Aún no hay entregas</h3>
+          <h3 className="mt-4 text-lg font-medium text-slate-900">
+            Aún no hay entregas
+          </h3>
           <p className="mt-2 text-sm text-slate-500">
             No has realizado ninguna entrega para este proyecto.
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-          <table className="min-w-full border-collapse text-left">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
-                <th className="px-4 py-3 font-medium">Versión</th>
-                <th className="px-4 py-3 font-medium">Proyecto</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium">Nota</th>
-                <th className="px-4 py-3 font-medium">Fecha</th>
-                <th className="px-4 py-3 font-medium text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredDeliveries.map((d) => (
-                <tr key={d.id} className="transition hover:bg-slate-50">
-                  {(() => {
-                    const assignment =
-                      assignments.find((candidate) => candidate.id === d.assignmentId) ??
-                      null;
-                    const workflow = describeStudentWorkflowState(
-                      deriveStudentWorkflowState({
-                        assignment,
-                        delivery: d,
-                        latestRun: latestRunByDeliveryId[d.id] ?? null,
-                      }),
-                      {
-                        isLate: d.isLate,
-                        projectTitle: d.projectTitle,
-                      },
-                    );
+        <>
+          <div className="space-y-3 md:hidden">
+            {filteredDeliveries.map((delivery) => {
+              const { workflow, retryAction, outcome } = deriveRow(delivery);
 
-                    return (
-                      <>
-                  <td className="px-4 py-4 text-sm font-medium text-slate-950">
-                    v{d.version}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">
-                    {d.projectTitle ?? "Proyecto"}
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${workflow.badgeClassName}`}>
+              return (
+                <StudentSurface key={delivery.id} className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="eyebrow text-academic-outline">Versión v{delivery.version}</div>
+                      <div className="mt-2 text-lg font-semibold text-academic-on-surface">
+                        {delivery.projectTitle ?? "Proyecto"}
+                      </div>
+                    </div>
+                    {renderGradeBadge(delivery.grade)}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${workflow.badgeClassName}`}
+                    >
                       {workflow.label}
                     </span>
-                    {d.isLate ? (
-                      <div className="mt-2 text-xs font-medium text-amber-700">Fuera de plazo</div>
+                    {renderOutcomeBadge(outcome)}
+                    {delivery.isLate ? (
+                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                        Fuera de plazo
+                      </span>
                     ) : null}
-                    <div className="mt-2 text-xs text-slate-500">
-                      {workflow.description}
+                  </div>
+
+                  <p className="mt-4 text-sm leading-6 text-academic-on-surface-variant">
+                    {workflow.description}
+                  </p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-academic-surface-variant bg-academic-surface-container-lowest px-4 py-3">
+                      <div className="ui-label text-academic-outline">Fecha</div>
+                      <div className="mt-2 text-sm font-medium text-academic-on-surface">
+                        {new Date(delivery.createdAt).toLocaleString()}
+                      </div>
                     </div>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">
-                    {d.grade !== null ? d.grade.toFixed(2) : "Pendiente"}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">
-                    {new Date(d.createdAt).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-4 text-right">
-                    <button 
-                      className="btn-secondary text-xs"
-                      onClick={() => handleSelectReport(d)}
+                    <div className="rounded-2xl border border-academic-surface-variant bg-academic-surface-container-lowest px-4 py-3">
+                      <div className="ui-label text-academic-outline">Intentos restantes</div>
+                      <div className="mt-2 text-sm font-medium text-academic-on-surface">
+                        {delivery.remainingDeliveries}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                    <Button variant="secondary" className="w-full" onClick={() => handleSelectReport(delivery)}>
+                      <RiFileTextLine />
+                      Ver informe
+                    </Button>
+                    {retryAction?.enabled ? (
+                      <Button variant="primary" className="w-full" onClick={() => handleRetry(delivery)}>
+                        <RiUploadCloud2Line />
+                        {retryAction.label}
+                      </Button>
+                    ) : null}
+                  </div>
+                </StudentSurface>
+              );
+            })}
+          </div>
+
+          <div className="hidden overflow-hidden rounded-[2rem] border border-academic-surface-variant bg-white shadow-sm md:block">
+            <table className="min-w-full border-collapse text-left">
+              <thead className="bg-academic-surface-container-lowest">
+                <tr className="border-b border-academic-surface-variant">
+                  {["Versión", "Práctica", "Estado", "Resultado y nota", "Fecha", "Acciones"].map((label) => (
+                    <th
+                      key={label}
+                      className="px-5 py-4 text-xs font-black uppercase tracking-[0.16em] text-academic-outline"
                     >
-                      <RiFileTextLine /> Ver informe
-                    </button>
-                  </td>
-                      </>
-                    );
-                  })()}
+                      {label}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-academic-surface-variant">
+                {filteredDeliveries.map((delivery) => {
+                  const { workflow, retryAction, outcome } = deriveRow(delivery);
+
+                  return (
+                    <tr key={delivery.id} className="align-top transition hover:bg-academic-surface-container-lowest">
+                      <td className="px-5 py-5">
+                        <div className="font-semibold text-academic-on-surface">
+                          v{delivery.version}
+                        </div>
+                        <div className="mt-1 text-xs text-academic-on-surface-variant">
+                          {delivery.remainingDeliveries} intento(s) disponibles
+                        </div>
+                      </td>
+                      <td className="px-5 py-5">
+                        <div className="font-semibold text-academic-on-surface">
+                          {delivery.projectTitle ?? "Proyecto"}
+                        </div>
+                        <div className="mt-1 text-sm text-academic-on-surface-variant">
+                          {delivery.isLate ? "Entrega tardía" : "Entrega en plazo"}
+                        </div>
+                      </td>
+                      <td className="px-5 py-5">
+                        <div className="flex flex-wrap gap-2">
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${workflow.badgeClassName}`}
+                          >
+                            {workflow.label}
+                          </span>
+                          {renderOutcomeBadge(outcome)}
+                        </div>
+                        <p className="mt-3 max-w-md text-sm leading-6 text-academic-on-surface-variant">
+                          {workflow.description}
+                        </p>
+                      </td>
+                      <td className="px-5 py-5">
+                        {renderGradeBadge(delivery.grade)}
+                      </td>
+                      <td className="px-5 py-5 text-sm text-academic-on-surface-variant">
+                        {new Date(delivery.createdAt).toLocaleString()}
+                      </td>
+                      <td className="px-5 py-5">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button variant="secondary" className="text-xs" onClick={() => handleSelectReport(delivery)}>
+                            <RiFileTextLine />
+                            Ver informe
+                          </Button>
+                          {retryAction?.enabled ? (
+                            <Button variant="primary" className="text-xs" onClick={() => handleRetry(delivery)}>
+                              <RiUploadCloud2Line />
+                              {retryAction.label}
+                            </Button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

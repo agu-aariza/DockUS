@@ -1,11 +1,29 @@
-import { RiUploadCloud2Line, RiArrowRightLine, RiFolderOpenLine, RiFileList3Line } from "react-icons/ri";
-import type { SessionRecord } from "../shared/types";
+import {
+  RiAlertLine,
+  RiArrowRightLine,
+  RiAwardLine,
+  RiBookOpenLine,
+  RiCheckboxCircleLine,
+  RiFileList3Line,
+  RiFolderOpenLine,
+  RiInboxArchiveLine,
+  RiUploadCloud2Line,
+} from "react-icons/ri";
+
+import type { SessionRecord, StudentWorkflowState } from "../shared/types";
+import { MetricCard } from "../shared/components/MetricCard";
+import { Button } from "../shared/components/ui/Button";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
+import { StudentKeyValueList, StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
 import {
   deriveStudentWorkflowState,
   describeStudentWorkflowState,
 } from "./studentWorkflowState";
+import { deriveStudentRetryAction } from "./studentRetryActions";
+import { describeAssignmentTimeline } from "./deadlineUtils";
+import { PipelineStepper } from "./PipelineStepper";
+import { deriveStudentWorkspaceInsights, resolveStudentRunOutcome } from "./studentWorkspaceInsights";
 
 interface Props {
   session: SessionRecord | null;
@@ -13,7 +31,79 @@ interface Props {
   onNavigate: (tab: any) => void;
 }
 
-export function StudentHomeSection({ session, data, onNavigate }: Props): JSX.Element {
+const HEADLINE_MAP: Record<StudentWorkflowState, string> = {
+  NOT_ASSIGNED: "Aún no tienes proyectos",
+  WINDOW_NOT_OPEN: "La ventana todavía no ha abierto",
+  READY_TO_SUBMIT: "Empieza tu entrega",
+  RECEIVED: "Sigue tu entrega",
+  QUEUED: "Tu evaluación está en cola",
+  RUNNING: "La evaluación está ejecutándose",
+  BUILD_FAILED: "Hubo un error en la evaluación",
+  REPORT_READY: "Tu informe está listo",
+  AWAITING_TEACHER_REVIEW: "Falta la revisión final",
+  GRADED: "Tu entrega ya tiene nota",
+};
+
+function formatDate(value?: string | null): string {
+  return value ? new Date(value).toLocaleString("es-ES") : "Sin fecha";
+}
+
+function formatOutcome(outcome: ReturnType<typeof resolveStudentRunOutcome>): {
+  label: string;
+  className: string;
+} {
+  switch (outcome) {
+    case "PASS":
+      return {
+        label: "Apto",
+        className:
+          "border-emerald-200 bg-emerald-50 text-emerald-700",
+      };
+    case "FAIL":
+      return {
+        label: "No apto",
+        className: "border-rose-200 bg-rose-50 text-rose-700",
+      };
+    case "PARTIAL":
+      return {
+        label: "Parcial",
+        className: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    case "UNKNOWN":
+      return {
+        label: "Sin resolver",
+        className: "border-slate-200 bg-slate-100 text-slate-700",
+      };
+    default:
+      return {
+        label: "Sin run",
+        className: "border-slate-200 bg-slate-100 text-slate-500",
+      };
+  }
+}
+
+function gradeColor(grade: number): string {
+  if (grade >= 9) return "text-emerald-700";
+  if (grade >= 5) return "text-emerald-600";
+  return "text-rose-700";
+}
+
+function timelineStyle(state: string): string {
+  switch (state) {
+    case "late":
+      return "border-rose-200 bg-rose-50 text-rose-800";
+    case "upcoming":
+      return "border-sky-200 bg-sky-50 text-sky-800";
+    default:
+      return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  }
+}
+
+export function StudentHomeSection({
+  session,
+  data,
+  onNavigate,
+}: Props): JSX.Element {
   const { selection } = useWorkspace();
   const {
     assignments,
@@ -24,28 +114,22 @@ export function StudentHomeSection({ session, data, onNavigate }: Props): JSX.El
     error,
   } = data;
 
-  const activeProjectName = selection.projectTitle ?? (assignments[0]?.projectTitle ?? "Ningún proyecto seleccionado");
-  const activeAssignment = assignments.find(a => a.projectId === selection.projectId) || assignments[0];
+  const activeAssignment =
+    assignments.find((assignment) => assignment.projectId === selection.projectId) ??
+    assignments[0] ??
+    null;
   const activeDelivery =
-    deliveries.find((delivery) => delivery.assignmentId === activeAssignment?.id) ??
-    latestDelivery;
+    (activeAssignment
+      ? deliveries.find((delivery) => delivery.assignmentId === activeAssignment.id)
+      : null) ??
+    latestDelivery ??
+    null;
   const activeRun = activeDelivery
     ? latestRunByDeliveryId[activeDelivery.id] ?? null
     : null;
-  const formatDate = (value?: string | null) =>
-    value ? new Date(value).toLocaleString("es-ES") : "Sin fecha";
   const now = Date.now();
   const hasAssignments = assignments.length > 0;
-  const opensInFuture = Boolean(
-    activeAssignment?.opensAt && new Date(activeAssignment.opensAt).getTime() > now,
-  );
-  const isPastDeadline = Boolean(
-    activeAssignment?.closesAt && new Date(activeAssignment.closesAt).getTime() < now,
-  );
-  
-  const maxAttempts = activeAssignment?.maxDeliveriesPerStudent ?? 0;
-  const usedAttempts = activeAssignment?.deliveryCount ?? 0;
-  const attemptsPercentage = maxAttempts > 0 ? Math.min(100, Math.round((usedAttempts / maxAttempts) * 100)) : 0;
+
   const workflowState = deriveStudentWorkflowState({
     assignment: activeAssignment,
     delivery: activeDelivery,
@@ -56,184 +140,313 @@ export function StudentHomeSection({ session, data, onNavigate }: Props): JSX.El
     isLate: activeDelivery?.isLate,
     projectTitle: activeAssignment?.projectTitle ?? activeDelivery?.projectTitle,
   });
-  
+  const retryAction = deriveStudentRetryAction(activeDelivery, activeRun);
+  const activeTimeline = activeAssignment
+    ? describeAssignmentTimeline(activeAssignment, now)
+    : null;
+  const insights = deriveStudentWorkspaceInsights(
+    assignments,
+    deliveries,
+    latestRunByDeliveryId,
+  );
+  const latestOutcome = formatOutcome(resolveStudentRunOutcome(activeRun));
+  const latestGrade = deliveries.find((delivery) => delivery.grade !== null)?.grade ?? null;
+
   if (loading) {
     return (
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-          <div className="h-4 w-32 bg-slate-200 rounded animate-pulse" />
-          <div className="h-6 w-48 bg-slate-100 rounded animate-pulse" />
-          <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
-          <div className="h-10 w-36 bg-slate-200 rounded-lg animate-pulse mt-4" />
+      <div className="grid gap-6 lg:grid-cols-[1.55fr,0.95fr]">
+        <div className="rounded-[2rem] border border-academic-surface-variant bg-white p-8 shadow-sm">
+          <div className="h-5 w-28 animate-pulse rounded bg-slate-200" />
+          <div className="mt-5 h-12 w-3/4 animate-pulse rounded bg-slate-100" />
+          <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-100" />
+          <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-slate-100" />
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-          <div className="h-4 w-28 bg-slate-200 rounded animate-pulse" />
-          <div className="h-5 w-40 bg-slate-100 rounded animate-pulse" />
-          <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+        <div className="grid gap-4">
+          {[1, 2, 3].map((index) => (
+            <div
+              key={index}
+              className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-sm"
+            >
+              <div className="h-4 w-28 animate-pulse rounded bg-slate-200" />
+              <div className="mt-4 h-8 w-2/3 animate-pulse rounded bg-slate-100" />
+            </div>
+          ))}
         </div>
       </div>
     );
   }
-  
+
   if (error) {
-    return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">Error: {error}</div>;
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+        Error: {error}
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {/* Qué toca hacer */}
-        <div className="md:col-span-2 xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">
-              ¿Qué te toca hacer ahora?
-            </div>
-            
-            {!hasAssignments ? (
-              <>
-                <h3 className="mt-3 text-xl font-bold text-slate-900">Aún no tienes proyectos</h3>
-                <p className="mt-2 text-sm text-slate-600">Contacta con tu profesor para que te asigne una práctica.</p>
-              </>
-            ) : (
-              <>
-                <div className={`mt-4 inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${workflow.badgeClassName}`}>
+      <div className="grid gap-6 xl:grid-cols-[1.55fr,0.95fr]">
+        <StudentSurface tone={workflowState === "BUILD_FAILED" ? "warm" : "accent"} className="p-8">
+          <div className="space-y-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="eyebrow text-brand-blue">Qué te toca hacer ahora</div>
+                <div
+                  className={`mt-4 inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${workflow.badgeClassName}`}
+                >
                   {workflow.label}
                 </div>
-                <h3 className="mt-3 text-xl font-bold text-slate-900">
-                  {workflowState === "READY_TO_SUBMIT"
-                    ? "Empieza tu entrega"
-                    : workflowState === "QUEUED"
-                      ? "Tu evaluación está en cola"
-                      : workflowState === "RUNNING"
-                        ? "La evaluación está ejecutándose"
-                        : workflowState === "REPORT_READY"
-                          ? "Tu informe está listo"
-                          : workflowState === "AWAITING_TEACHER_REVIEW"
-                            ? "Falta la revisión final"
-                            : workflowState === "GRADED"
-                              ? "Tu entrega ya tiene nota"
-                              : workflowState === "WINDOW_NOT_OPEN"
-                                ? "La ventana todavía no ha abierto"
-                                : "Sigue tu entrega"}
+                <h3 className="mt-4 font-display text-4xl font-semibold tracking-tight text-academic-on-surface sm:text-5xl">
+                  {hasAssignments ? HEADLINE_MAP[workflowState] : "Aún no tienes proyectos"}
                 </h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  {workflow.description}
+                <p className="mt-4 max-w-3xl text-base leading-8 text-academic-on-surface-variant">
+                  {hasAssignments
+                    ? workflow.description
+                    : "Cuando tu profesor te asigne una práctica, desde aquí verás el estado real de tus entregas, el informe técnico y el siguiente paso recomendado."}
                 </p>
-                {activeAssignment ? (
-                  <div className="mt-4 grid gap-2 text-sm text-slate-600">
-                    <div className="rounded-xl bg-slate-50 px-4 py-3">
-                      Apertura: <strong>{formatDate(activeAssignment.opensAt)}</strong>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 px-4 py-3">
-                      Cierre: <strong>{formatDate(activeAssignment.closesAt)}</strong>
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            )}
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            {!hasAssignments ? (
-              <button className="btn-secondary w-full justify-center" onClick={() => window.location.reload()}>
-                Actualizar página
-              </button>
-            ) : workflowState === "REPORT_READY" || workflowState === "AWAITING_TEACHER_REVIEW" || workflowState === "GRADED" ? (
-              <>
-                <button className="btn-primary" onClick={() => onNavigate("informes")}>
-                  <RiFileList3Line /> Consultar informe
-                </button>
-                <button className="btn-secondary" onClick={() => onNavigate("subir")}>
-                  <RiUploadCloud2Line /> Subir versión
-                </button>
-              </>
-            ) : workflowState === "QUEUED" || workflowState === "RUNNING" || workflowState === "RECEIVED" ? (
-              <button className="btn-primary" onClick={() => onNavigate("entregas")}>
-                <RiArrowRightLine /> Ver estado de entrega
-              </button>
-            ) : (
-              <>
-                <button className="btn-primary" onClick={() => onNavigate("subir")}>
-                  <RiUploadCloud2Line /> Subir versión
-                </button>
-                <button className="btn-secondary" onClick={() => onNavigate("proyectos")}>
-                  <RiFolderOpenLine /> Ver proyectos
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Última Actividad */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-              Última Actividad
-            </div>
-            {activeDelivery ? (
-              <div className="mt-4">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-900">v{activeDelivery.version}</span>
-                  <span className="text-slate-500">·</span>
-                  <span className="text-sm text-slate-600">{activeDelivery.projectTitle}</span>
-                </div>
-                <div className="mt-1 text-xs text-slate-500">
-                  Enviado el {new Date(activeDelivery.createdAt).toLocaleString()}
-                </div>
-                <div className={`mt-3 inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${workflow.badgeClassName}`}>
-                  {workflow.label}
-                </div>
-                {activeAssignment && (
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <span className="font-semibold text-slate-700">Intentos consumidos</span>
-                      <span className="text-slate-500">{usedAttempts} de {maxAttempts}</span>
-                    </div>
-                    <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-1000 ${
-                          attemptsPercentage >= 100 ? 'bg-rose-500' : attemptsPercentage > 75 ? 'bg-amber-500' : 'bg-indigo-500'
-                        }`}
-                        style={{ width: `${attemptsPercentage}%` }}
-                      />
-                    </div>
-                    {activeDelivery.grade !== null && (
-                      <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 p-3">
-                        <span className="text-sm text-slate-600">Nota actual</span>
-                        <span className="font-bold text-slate-900">{activeDelivery.grade.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {activeDelivery.isLate && (
-                      <p className="mt-2 text-xs text-amber-700 font-medium">⚠️ La última entrega quedó registrada fuera de plazo.</p>
-                    )}
-                  </div>
-                )}
               </div>
-            ) : (
-              <p className="mt-4 text-sm text-slate-500">Aún no has realizado ninguna entrega. Aquí aparecerá el progreso de la última versión enviada.</p>
-            )}
-          </div>
-          {activeAssignment ? (
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              {opensInFuture ? (
-                <span>La ventana de entrega todavía no está abierta.</span>
-              ) : isPastDeadline ? (
-                <span>El plazo ya venció, pero aún puedes entregar con marca de retraso.</span>
+
+              {activeAssignment ? (
+                <div className="rounded-[1.5rem] border border-brand-blue/10 bg-white/80 px-4 py-3 shadow-sm">
+                  <div className="ui-label text-brand-blue">Práctica activa</div>
+                  <div className="mt-2 text-sm font-semibold text-academic-on-surface">
+                    {activeAssignment.projectTitle}
+                  </div>
+                  <div className="mt-1 text-xs text-academic-on-surface-variant">
+                    {activeAssignment.deliveryCount} entrega(s) · {activeAssignment.remainingDeliveries} intento(s) disponibles
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {activeTimeline ? (
+              <div
+                className={`rounded-[1.5rem] border px-5 py-4 ${timelineStyle(activeTimeline.state)}`}
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="font-semibold">{activeTimeline.headline}</div>
+                    <p className="mt-1 text-sm opacity-90">{activeTimeline.detail}</p>
+                  </div>
+                  {activeTimeline.countdownLabel ? (
+                    <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em]">
+                      {activeTimeline.countdownLabel}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {hasAssignments ? (
+              <div className="rounded-[1.5rem] border border-academic-surface-variant bg-white/80 px-5 py-4 shadow-sm">
+                <div className="ui-label text-academic-outline">Pipeline de evaluación</div>
+                <div className="mt-4">
+                  <PipelineStepper
+                    workflowState={workflowState}
+                    stageStartedAt={activeDelivery?.createdAt ?? null}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              {!hasAssignments ? (
+                <Button variant="secondary" onClick={() => window.location.reload()}>
+                  Actualizar página
+                </Button>
+              ) : workflowState === "BUILD_FAILED" ? (
+                <>
+                  <Button variant="primary" onClick={() => onNavigate("subir")}>
+                    <RiAlertLine />
+                    Corregir y reenviar
+                  </Button>
+                  <Button variant="secondary" onClick={() => onNavigate("entregas")}>
+                    <RiArrowRightLine />
+                    Ver detalles
+                  </Button>
+                </>
+              ) : workflowState === "REPORT_READY" ||
+                workflowState === "AWAITING_TEACHER_REVIEW" ||
+                workflowState === "GRADED" ? (
+                <>
+                  <Button variant="primary" onClick={() => onNavigate("informes")}>
+                    <RiFileList3Line />
+                    Consultar informe
+                  </Button>
+                  {retryAction?.enabled ? (
+                    <Button variant="secondary" onClick={() => onNavigate("subir")}>
+                      <RiUploadCloud2Line />
+                      {retryAction.label}
+                    </Button>
+                  ) : null}
+                </>
+              ) : workflowState === "QUEUED" ||
+                workflowState === "RUNNING" ||
+                workflowState === "RECEIVED" ? (
+                <Button variant="primary" onClick={() => onNavigate("entregas")}>
+                  <RiArrowRightLine />
+                  Ver estado de entrega
+                </Button>
               ) : (
-                <span>La ventana de entrega está abierta.</span>
+                <>
+                  <Button variant="primary" onClick={() => onNavigate("subir")}>
+                    <RiUploadCloud2Line />
+                    Subir versión
+                  </Button>
+                  <Button variant="secondary" onClick={() => onNavigate("proyectos")}>
+                    <RiFolderOpenLine />
+                    Ver proyectos
+                  </Button>
+                </>
               )}
             </div>
-          ) : null}
-          {activeDelivery && (
-            <button 
-              className="mt-6 flex w-full items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-              onClick={() => onNavigate("entregas")}
-            >
-              Ver todo el historial
-              <RiArrowRightLine />
-            </button>
-          )}
+          </div>
+        </StudentSurface>
+
+        <div className="grid gap-4">
+          <StudentSurface>
+            <StudentSurfaceHeader
+              eyebrow="Práctica activa"
+              title={activeAssignment?.projectTitle ?? "Sin práctica seleccionada"}
+              description={
+                activeAssignment
+                  ? "Resumen del contexto académico y del margen operativo que todavía te queda en esta práctica."
+                  : "Cuando selecciones una práctica, aquí tendrás contexto académico y operativo resumido."
+              }
+            />
+            <StudentKeyValueList
+              className="mt-5"
+              items={[
+                {
+                  label: "Apertura",
+                  value: formatDate(activeAssignment?.opensAt),
+                },
+                {
+                  label: "Cierre",
+                  value: formatDate(activeAssignment?.closesAt),
+                },
+                {
+                  label: "Entregas registradas",
+                  value: activeAssignment?.deliveryCount ?? 0,
+                },
+                {
+                  label: "Intentos disponibles",
+                  value: activeAssignment?.remainingDeliveries ?? 0,
+                },
+              ]}
+            />
+          </StudentSurface>
+
+          <StudentSurface tone="subtle">
+            <StudentSurfaceHeader
+              eyebrow="Última entrega"
+              title={activeDelivery ? `Versión v${activeDelivery.version}` : "Todavía no has entregado"}
+              description={
+                activeDelivery
+                  ? "Estado más reciente asociado a tu entrega actual."
+                  : "Tu primera entrega aparecerá aquí con su estado, resultado y contexto."
+              }
+              badge={
+                <span
+                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${latestOutcome.className}`}
+                >
+                  {latestOutcome.label}
+                </span>
+              }
+            />
+            <StudentKeyValueList
+              className="mt-5"
+              items={[
+                {
+                  label: "Proyecto",
+                  value: activeDelivery?.projectTitle ?? "Sin registro",
+                },
+                {
+                  label: "Fecha de envío",
+                  value: activeDelivery ? formatDate(activeDelivery.createdAt) : "Sin fecha",
+                },
+                {
+                  label: "Estado académico",
+                  value: workflow.label,
+                },
+                {
+                  label: "Nota actual",
+                  value:
+                    activeDelivery?.grade != null
+                      ? (
+                        <span className={`font-semibold ${gradeColor(activeDelivery.grade)}`}>
+                          {activeDelivery.grade.toFixed(2)}
+                        </span>
+                      )
+                      : "Pendiente",
+                },
+              ]}
+            />
+          </StudentSurface>
+
+          <StudentSurface tone="warm">
+            <StudentSurfaceHeader
+              eyebrow="Panorama académico"
+              title="Seguimiento rápido"
+              description="Una vista compacta de cómo va tu ciclo completo de entregas en DockUS."
+            />
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-academic-surface-variant bg-white/85 px-4 py-4">
+                <div className="ui-label text-academic-outline">Informes listos</div>
+                <div className="mt-3 text-2xl font-semibold text-academic-on-surface">
+                  {insights.reportsReady}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-academic-surface-variant bg-white/85 px-4 py-4">
+                <div className="ui-label text-academic-outline">Bloqueos detectados</div>
+                <div className="mt-3 text-2xl font-semibold text-academic-on-surface">
+                  {insights.blockedReports}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-academic-surface-variant bg-white/85 px-4 py-4">
+                <div className="ui-label text-academic-outline">Evaluaciones pendientes</div>
+                <div className="mt-3 text-2xl font-semibold text-academic-on-surface">
+                  {insights.pendingEvaluations}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-academic-surface-variant bg-white/85 px-4 py-4">
+                <div className="ui-label text-academic-outline">Última nota</div>
+                <div className="mt-3 text-2xl font-semibold text-academic-on-surface">
+                  {latestGrade !== null ? latestGrade.toFixed(2) : "—"}
+                </div>
+              </div>
+            </div>
+          </StudentSurface>
         </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <MetricCard
+          label="Asignaciones activas"
+          value={insights.activeAssignments}
+          helper={`${insights.revokedAssignments} fuera de circulación`}
+          icon={<RiBookOpenLine />}
+          variant="default"
+        />
+        <MetricCard
+          label="Entregas con informe"
+          value={insights.reportsReady}
+          helper={`${insights.passedRuns} ya aprobadas`}
+          icon={<RiCheckboxCircleLine />}
+          variant={insights.blockedReports > 0 ? "warning" : "success"}
+        />
+        <MetricCard
+          label="Historial de entregas"
+          value={insights.totalDeliveries}
+          helper={
+            activeDelivery
+              ? `Última versión v${activeDelivery.version}`
+              : "Sin versiones todavía"
+          }
+          icon={<RiInboxArchiveLine />}
+          variant="info"
+        />
       </div>
     </div>
   );

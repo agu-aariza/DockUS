@@ -54,12 +54,18 @@ export function deriveStudentWorkflowState(input: {
     return "RUNNING";
   }
 
-  if (delivery.status === "EVALUATED") {
-    return "AWAITING_TEACHER_REVIEW";
+  if (latestRun.status === "FAILED" && !Boolean(latestRun.report)) {
+    return "BUILD_FAILED";
   }
 
-  if (delivery.status === "IN_REVIEW") {
-    return latestRun.report ? "REPORT_READY" : "AWAITING_TEACHER_REVIEW";
+  const hasReadableTechnicalClosure = Boolean(latestRun.report);
+
+  if (hasReadableTechnicalClosure) {
+    return "REPORT_READY";
+  }
+
+  if (delivery.status === "EVALUATED" || delivery.status === "IN_REVIEW") {
+    return "AWAITING_TEACHER_REVIEW";
   }
 
   return "RECEIVED";
@@ -128,6 +134,15 @@ export function describeStudentWorkflowState(
           lateSuffix,
         badgeClassName: "border-amber-200 bg-amber-50 text-amber-700",
       };
+    case "BUILD_FAILED":
+      return {
+        state,
+        label: "Error de construcción",
+        description:
+          "El proceso automático falló antes de generar un informe. Revisa tu código y vuelve a intentarlo." +
+          lateSuffix,
+        badgeClassName: "border-rose-200 bg-rose-50 text-rose-700",
+      };
     case "REPORT_READY":
       return {
         state,
@@ -153,7 +168,7 @@ export function describeStudentWorkflowState(
         description:
           "La entrega ya tiene nota oficial y observaciones consolidadas." +
           lateSuffix,
-        badgeClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        badgeClassName: "border-sky-200 bg-sky-50 text-sky-700",
       };
   }
 }

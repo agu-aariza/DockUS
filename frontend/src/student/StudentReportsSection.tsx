@@ -1,176 +1,459 @@
-import { useState, useEffect } from "react";
-import type { SessionRecord, BuildRunEntity, DeliveryEntity } from "../shared/types";
+import { useEffect, useMemo, useState } from "react";
+import {
+  RiArrowDownSLine,
+  RiArrowUpSLine,
+  RiFileList3Line,
+  RiFileTextLine,
+  RiInboxArchiveLine,
+  RiLineChartLine,
+} from "react-icons/ri";
+
 import { builderApi } from "../shared/api/builderApi";
+import { EmptyState } from "../shared/components/EmptyState";
+import { MetricCard } from "../shared/components/MetricCard";
+import { Skeleton, SkeletonCard } from "../shared/components/Skeleton";
+import { Button } from "../shared/components/ui/Button";
+import type {
+  BuildRunEntity,
+  DeliveryEntity,
+  SessionRecord,
+} from "../shared/types";
 import { getErrorMessage } from "../shared/utils/errors";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
-import { ReportView } from "../shared/components/ReportView";
-import { Skeleton, SkeletonCard } from "../shared/components/Skeleton";
-import { EmptyState } from "../shared/components/EmptyState";
-import { RiFileTextLine, RiArrowDownSLine, RiArrowUpSLine, RiInboxArchiveLine } from "react-icons/ri";
+import { StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
+import { deriveStudentWorkspaceInsights, hasTechnicalReport, resolveStudentRunOutcome } from "./studentWorkspaceInsights";
+import { ReportView } from "../shared/components/ReportView";
 
 interface Props {
   session: SessionRecord | null;
   data: StudentWorkspaceData;
 }
 
-function ReportContainer({ delivery, defaultOpen = false }: { delivery: DeliveryEntity; defaultOpen?: boolean }) {
-  const [run, setRun] = useState<BuildRunEntity | null>(null);
+function GradeTimeline({ deliveries }: { deliveries: DeliveryEntity[] }) {
+  const graded = deliveries
+    .filter((delivery) => delivery.grade !== null)
+    .sort((left, right) => left.version - right.version);
+
+  if (graded.length < 2) {
+    return null;
+  }
+
+  return (
+    <StudentSurface tone="subtle">
+      <StudentSurfaceHeader
+        eyebrow="Evolucion academica"
+        title="Como han cambiado tus notas"
+        description="Esta linea temporal te permite ver si tus iteraciones estan convergiendo o si la practica sigue atascada en los mismos bloqueos."
+      />
+      <div className="mt-6 flex items-end gap-3 overflow-x-auto pb-2">
+        {graded.map((delivery, index) => {
+          const grade = delivery.grade as number;
+          const heightPct = Math.max(12, Math.round((grade / 10) * 100));
+          const isLatest = index === graded.length - 1;
+          const color =
+            grade >= 5
+              ? "bg-emerald-400"
+              : "bg-rose-400";
+
+          return (
+            <div
+              key={delivery.id}
+              className={`flex min-w-[3.5rem] flex-col items-center ${
+                isLatest ? "opacity-100" : "opacity-70"
+              }`}
+            >
+              <span className="text-xs font-semibold text-academic-on-surface">
+                {grade.toFixed(1)}
+              </span>
+              <div className="mt-2 flex h-24 items-end">
+                <div
+                  className={`w-9 rounded-t-2xl ${color}`}
+                  style={{ height: `${heightPct}%` }}
+                />
+              </div>
+              <span className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-academic-outline">
+                v{delivery.version}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </StudentSurface>
+  );
+}
+
+function DeliveryStatusBadge({
+  delivery,
+  summaryRun,
+}: {
+  delivery: DeliveryEntity;
+  summaryRun: BuildRunEntity | null;
+}) {
+  const outcome = resolveStudentRunOutcome(summaryRun);
+
+  if (delivery.grade !== null) {
+    return (
+      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+        Nota {delivery.grade.toFixed(2)}
+      </span>
+    );
+  }
+
+  if (!summaryRun) {
+    return (
+      <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+        Sin evaluacion
+      </span>
+    );
+  }
+
+  if (outcome === "PASS") {
+    return (
+      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+        Apto
+      </span>
+    );
+  }
+
+  if (outcome === "FAIL") {
+    return (
+      <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+        No apto
+      </span>
+    );
+  }
+
+  if (outcome === "PARTIAL") {
+    return (
+      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+        Necesita mejoras
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+      En seguimiento
+    </span>
+  );
+}
+
+function ReportContainer({
+  delivery,
+  summaryRun,
+  defaultOpen = false,
+}: {
+  delivery: DeliveryEntity;
+  summaryRun: BuildRunEntity | null;
+  defaultOpen?: boolean;
+}) {
+  const [run, setRun] = useState<BuildRunEntity | null>(summaryRun);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(Boolean(summaryRun));
 
   useEffect(() => {
-    if (isOpen && !hasLoaded) {
-      async function loadReport() {
-        setLoading(true);
-        setError(null);
-        try {
-          const res = await builderApi.listByDelivery({ deliveryId: delivery.id, limit: 1, sortOrder: "DESC" });
-          if (res.data.length > 0) {
-            const fullRun = await builderApi.detail(res.data[0].id);
-            setRun(fullRun);
-          } else {
-            setRun(null);
-          }
-          setHasLoaded(true);
-        } catch (e) {
-          setError(getErrorMessage(e));
-        } finally {
-          setLoading(false);
-        }
-      }
-      void loadReport();
+    if (!isOpen || hasLoaded) {
+      return;
     }
-  }, [isOpen, hasLoaded, delivery.id]);
+
+    async function loadReport() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await builderApi.listByDelivery({
+          deliveryId: delivery.id,
+          limit: 1,
+          sortOrder: "DESC",
+        });
+        if (response.data.length > 0) {
+          const fullRun = await builderApi.detail(response.data[0].id);
+          setRun(fullRun);
+        } else {
+          setRun(null);
+        }
+        setHasLoaded(true);
+      } catch (loadError) {
+        setError(getErrorMessage(loadError));
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadReport();
+  }, [delivery.id, hasLoaded, isOpen]);
+
+  const outcome = resolveStudentRunOutcome(run ?? summaryRun);
+  const coaching = run?.report?.coaching ?? summaryRun?.report?.coaching ?? null;
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <button 
-        className="flex w-full items-center justify-between bg-slate-50 px-6 py-4 transition hover:bg-slate-100"
-        onClick={() => setIsOpen(!isOpen)}
+    <div className="overflow-hidden rounded-[2rem] border border-academic-surface-variant bg-white shadow-sm">
+      <button
+        className="flex w-full items-start justify-between gap-4 px-6 py-5 text-left transition hover:bg-academic-surface-container-lowest"
+        onClick={() => setIsOpen((previous) => !previous)}
       >
-        <div className="flex items-center gap-4">
-          <RiFileTextLine className="text-xl text-slate-400" />
-          <div className="text-left">
-            <h4 className="text-sm font-semibold text-slate-900">
-              Entrega v{delivery.version} · {delivery.projectTitle ?? "Proyecto"}
-            </h4>
-            <span className="text-xs text-slate-500">
-              {new Date(delivery.createdAt).toLocaleString()}
-            </span>
-            <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-slate-600">
-                {delivery.grade !== null ? `Nota ${delivery.grade.toFixed(2)}` : "Sin nota"}
-              </span>
+        <div className="flex min-w-0 flex-1 items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-academic-surface-container-lowest text-brand-blue">
+            <RiFileTextLine className="text-xl" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-lg font-semibold tracking-tight text-academic-on-surface">
+                Entrega v{delivery.version}
+              </h4>
+              <DeliveryStatusBadge delivery={delivery} summaryRun={summaryRun} />
               {delivery.isLate ? (
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">
+                <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
                   Fuera de plazo
                 </span>
               ) : null}
             </div>
+            <div className="mt-2 text-sm text-academic-on-surface-variant">
+              {delivery.projectTitle ?? "Proyecto"} ·{" "}
+              {new Date(delivery.createdAt).toLocaleString("es-ES")}
+            </div>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-academic-on-surface-variant">
+              {coaching
+                ? coaching.passReadiness === "BLOCKED"
+                  ? "El informe detecta bloqueos claros antes de poder pasar. Abre el expediente para ver coaching, evidencia y checklist."
+                  : "La entrega ya supera lo esencial y el informe se centra en mejoras de calidad, mantenibilidad y rubric compliance."
+                : summaryRun
+                  ? outcome === "PASS"
+                    ? "La version tiene un resultado tecnico positivo y puedes abrir el informe para revisar evidencia y mejoras opcionales."
+                    : "La version ya tiene resultado tecnico asociado. Abre el informe para revisar evidencia, limites y siguientes pasos."
+                  : "Todavia no hay un informe tecnico completo asociado a esta entrega."}
+            </p>
           </div>
         </div>
-        {isOpen ? <RiArrowUpSLine className="text-xl text-slate-400" /> : <RiArrowDownSLine className="text-xl text-slate-400" />}
+        <div className="shrink-0 pt-1 text-slate-400">
+          {isOpen ? <RiArrowUpSLine className="text-2xl" /> : <RiArrowDownSLine className="text-2xl" />}
+        </div>
       </button>
 
-      {isOpen && (
-        <div className="border-t border-slate-200 p-6 bg-slate-50/50">
+      {isOpen ? (
+        <div className="border-t border-academic-surface-variant bg-academic-surface-container-lowest/50 px-6 py-6">
           <div className="mb-5 grid gap-4 lg:grid-cols-3">
-            <article className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Nota final
+            <article className="rounded-[1.5rem] border border-academic-surface-variant bg-white p-4">
+              <div className="ui-label text-academic-outline">Estado de entrega</div>
+              <div className="mt-3 text-sm font-semibold text-academic-on-surface">
+                {delivery.isLate ? "Registrada fuera de plazo" : "Registrada dentro de plazo"}
               </div>
-              <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-                {delivery.grade !== null ? delivery.grade.toFixed(2) : "Pendiente"}
-              </div>
-            </article>
-            <article className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Estado de entrega
-              </div>
-              <div className="mt-3 text-sm font-medium text-slate-900">
-                {delivery.isLate ? "Fuera de plazo" : "Dentro de plazo"}
-              </div>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
+              <p className="mt-2 text-sm leading-6 text-academic-on-surface-variant">
                 {delivery.isLate
-                  ? "La versión se recibió después del cierre y queda marcada como tardía."
-                  : "La versión quedó registrada dentro de la ventana prevista."}
+                  ? "La version queda guardada como tardia, pero sigue disponible para revision tecnica y academica."
+                  : "La version quedo registrada dentro de la ventana prevista para la practica."}
               </p>
             </article>
-            <article className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Observaciones del profesor
-              </div>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                {delivery.graderNotes || "Todavía no hay observaciones manuales añadidas por el profesorado."}
+            <article className="rounded-[1.5rem] border border-academic-surface-variant bg-white p-4">
+              <div className="ui-label text-academic-outline">Observaciones docentes</div>
+              <p className="mt-3 text-sm leading-6 text-academic-on-surface-variant">
+                {delivery.graderNotes ||
+                  "Todavia no hay observaciones manuales del profesorado para esta version."}
+              </p>
+            </article>
+            <article className="rounded-[1.5rem] border border-academic-surface-variant bg-white p-4">
+              <div className="ui-label text-academic-outline">Trayectoria de la version</div>
+              <p className="mt-3 text-sm leading-6 text-academic-on-surface-variant">
+                {coaching
+                  ? `${coaching.mustFix.length} bloqueo(s), ${coaching.shouldImprove.length} mejora(s) y ${coaching.strengths.length} fortaleza(s) detectadas.`
+                  : summaryRun
+                    ? "Existe un run tecnico asociado listo para abrir."
+                    : "Aun no hay run tecnico completo para esta entrega."}
               </p>
             </article>
           </div>
 
           {loading ? (
-            <div className="text-center text-sm text-slate-500 py-4">Cargando informe...</div>
+            <div className="space-y-4">
+              <div className="grid gap-4 lg:grid-cols-3">
+                {[1, 2, 3].map((index) => (
+                  <div
+                    key={index}
+                    className="rounded-[1.5rem] border border-academic-surface-variant bg-white p-4"
+                  >
+                    <div className="h-3 w-24 animate-pulse rounded bg-slate-200" />
+                    <div className="mt-4 h-5 w-32 animate-pulse rounded bg-slate-100" />
+                    <div className="mt-3 h-4 w-full animate-pulse rounded bg-slate-100" />
+                  </div>
+                ))}
+              </div>
+              <SkeletonCard />
+            </div>
           ) : error ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">Error: {error}</div>
+            <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              Error: {error}
+            </div>
           ) : !run ? (
-            <div className="text-center text-sm text-slate-500 py-4">Esta entrega aún no ha sido evaluada.</div>
+            <div className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-6 text-center text-sm text-academic-on-surface-variant">
+              Esta entrega aun no tiene un informe tecnico disponible.
+            </div>
           ) : (
             <ReportView run={run} deliveryVersion={delivery.version} mode="student" />
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
 
-export function StudentReportsSection({ session, data }: Props): JSX.Element {
+export function StudentReportsSection({ data }: Props): JSX.Element {
   const { selection } = useWorkspace();
-  const { deliveries, loading, error } = data;
+  const { deliveries, latestRunByDeliveryId, loading, error } = data;
+  const [displayLimit, setDisplayLimit] = useState(10);
+
+  const sortedDeliveries = useMemo(
+    () =>
+      [...deliveries].sort(
+        (left, right) =>
+          new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+      ),
+    [deliveries],
+  );
+
+  const insights = deriveStudentWorkspaceInsights(
+    [],
+    sortedDeliveries,
+    latestRunByDeliveryId,
+  );
+  const latestGradedDelivery =
+    sortedDeliveries.find((delivery) => delivery.grade !== null) ?? null;
+  const highlightedDelivery =
+    selection.deliveryId
+      ? sortedDeliveries.find((delivery) => delivery.id === selection.deliveryId) ?? null
+      : sortedDeliveries.find((delivery) =>
+          hasTechnicalReport(latestRunByDeliveryId[delivery.id] ?? null),
+        ) ?? sortedDeliveries[0] ?? null;
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton type="text" className="h-6 w-52 mb-6" />
-        {[1, 2].map(i => <SkeletonCard key={i} />)}
+      <div className="space-y-6">
+        <div className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-sm">
+          <Skeleton type="text" className="h-6 w-52" />
+          <Skeleton type="text" className="mt-4 h-4 w-3/4" />
+        </div>
+        {[1, 2].map((index) => (
+          <SkeletonCard key={index} />
+        ))}
       </div>
     );
   }
 
   if (error) {
-    return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800 font-medium shadow-sm">Error: {error}</div>;
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800 shadow-sm">
+        Error: {error}
+      </div>
+    );
   }
 
-  if (deliveries.length === 0) {
+  if (sortedDeliveries.length === 0) {
     return (
-      <EmptyState 
+      <EmptyState
         icon={<RiInboxArchiveLine className="text-4xl text-slate-400" />}
-        title="Aún no hay informes"
-        description="No tienes entregas registradas en esta asignatura. Realiza tu primera entrega para generar un informe de evaluación técnica."
+        title="Aun no hay informes"
+        description="Cuando registres tu primera entrega, esta vista reunira el historial tecnico, las observaciones docentes y el coaching para la siguiente version."
       />
     );
   }
 
+  const remaining = sortedDeliveries.length - displayLimit;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold tracking-tight text-slate-950">
-          Mis Informes de Evaluación
-        </h3>
-        <span className="text-sm text-slate-500">
-          Mostrando los {Math.min(15, deliveries.length)} más recientes
-        </span>
-      </div>
-      
+      <StudentSurface tone="accent">
+        <StudentSurfaceHeader
+          eyebrow="Archivo tecnico"
+          title="Tus informes y expedientes de evaluacion"
+          description="Esta vista reune cada entrega con su informe tecnico, evidencia curada y observaciones manuales para que puedas revisar la practica con calma y decidir la siguiente iteracion."
+          actions={
+            <Button variant="secondary" onClick={() => setDisplayLimit(10)}>
+              Reiniciar lista
+            </Button>
+          }
+        />
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <MetricCard
+            label="Entregas"
+            value={sortedDeliveries.length}
+            helper="Expedientes disponibles"
+            icon={<RiInboxArchiveLine />}
+            variant="default"
+          />
+          <MetricCard
+            label="Informes listos"
+            value={insights.reportsReady}
+            helper={`${insights.blockedReports} con bloqueos`}
+            icon={<RiFileTextLine />}
+            variant={insights.blockedReports > 0 ? "warning" : "success"}
+          />
+          <MetricCard
+            label="Notas oficiales"
+            value={insights.officialGrades}
+            helper={
+              latestGradedDelivery
+                ? `Ultima nota ${latestGradedDelivery.grade?.toFixed(2)}`
+                : "Todavia sin nota oficial"
+            }
+            icon={<RiLineChartLine />}
+            variant={latestGradedDelivery ? "success" : "default"}
+          />
+          <MetricCard
+            label="Pendientes"
+            value={insights.pendingEvaluations}
+            helper="Runs aun en seguimiento"
+            icon={<RiFileList3Line />}
+            variant={insights.pendingEvaluations > 0 ? "info" : "default"}
+          />
+        </div>
+      </StudentSurface>
+
+      {highlightedDelivery ? (
+        <StudentSurface>
+          <StudentSurfaceHeader
+            eyebrow="Informe destacado"
+            title={`${highlightedDelivery.projectTitle ?? "Proyecto"} · entrega v${highlightedDelivery.version}`}
+            description="Este expediente resume la version que tienes mas activa o la ultima que genero un informe tecnico con contexto suficiente para remediar."
+            badge={
+              <DeliveryStatusBadge
+                delivery={highlightedDelivery}
+                summaryRun={latestRunByDeliveryId[highlightedDelivery.id] ?? null}
+              />
+            }
+          />
+          <p className="mt-6 text-sm leading-6 text-academic-on-surface-variant">
+            Usa el acordeon inferior para abrir el informe completo. El expediente
+            combina resultado tecnico, coaching, evidencia observada y feedback
+            docente cuando exista.
+          </p>
+        </StudentSurface>
+      ) : null}
+
+      <GradeTimeline deliveries={sortedDeliveries} />
+
       <div className="space-y-4">
-        {deliveries.slice(0, 15).map((delivery) => (
-          <ReportContainer 
-            key={delivery.id} 
-            delivery={delivery} 
-            defaultOpen={selection.deliveryId === delivery.id || (deliveries.length === 1)}
+        {sortedDeliveries.slice(0, displayLimit).map((delivery) => (
+          <ReportContainer
+            key={delivery.id}
+            delivery={delivery}
+            summaryRun={latestRunByDeliveryId[delivery.id] ?? null}
+            defaultOpen={
+              selection.deliveryId === delivery.id || sortedDeliveries.length === 1
+            }
           />
         ))}
       </div>
+
+      {remaining > 0 ? (
+        <Button
+          variant="secondary"
+          className="w-full justify-center"
+          onClick={() => setDisplayLimit((previous) => previous + 10)}
+        >
+          Mostrar mas ({remaining} restantes)
+        </Button>
+      ) : null}
     </div>
   );
 }
