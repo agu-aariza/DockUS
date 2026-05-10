@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  RiArrowRightUpLine,
   RiBarChartFill,
   RiCodeBoxFill,
   RiErrorWarningFill,
+  RiFileTextLine,
+  RiFolderChartLine,
   RiLayoutMasonryFill,
   RiLoader4Line,
   RiShieldFlashFill,
@@ -12,6 +15,7 @@ import {
 
 import { projectsApi } from "../../shared/api/services";
 import { Badge, Card } from "../../shared/components/ui/Layout";
+import type { TeacherDeliveryDetailTab } from "../../deliveries/teacherReviewNavigation";
 import type {
   ProjectQualityInsightsResponse,
   ProjectStudentQualityInsightsResponse,
@@ -42,6 +46,17 @@ interface QualityInsightsDashboardProps {
   projectId: string;
   students: QualityInsightsStudentOption[];
   api?: QualityInsightsDashboardApi;
+  reviewTargets?: Record<
+    string,
+    {
+      assignmentId: string;
+      deliveryId: string;
+    }
+  >;
+  onOpenStudentReview?: (
+    studentId: string,
+    tab?: TeacherDeliveryDetailTab,
+  ) => void;
 }
 
 const CATEGORY_OPTIONS: Array<"all" | QualityInsightCategory> = [
@@ -101,6 +116,8 @@ export function QualityInsightsDashboard({
   projectId,
   students,
   api = defaultApi,
+  reviewTargets = {},
+  onOpenStudentReview,
 }: QualityInsightsDashboardProps) {
   const [category, setCategory] = useState<"all" | QualityInsightCategory>("all");
   const [summary, setSummary] = useState<ProjectQualityInsightsResponse | null>(null);
@@ -200,6 +217,9 @@ export function QualityInsightsDashboard({
     () => students.find((student) => student.studentId === selectedStudentId) ?? null,
     [selectedStudentId, students],
   );
+  const selectedStudentReviewTarget = selectedStudentId
+    ? reviewTargets[selectedStudentId] ?? null
+    : null;
 
   const detectionTotals = useMemo(() => {
     const totals: Record<QualityInsightCategory, number> = {
@@ -434,6 +454,26 @@ export function QualityInsightsDashboard({
                     </div>
                   </div>
                 </div>
+                {selectedStudentReviewTarget && onOpenStudentReview ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-brand-blue/30 hover:text-brand-blue"
+                      onClick={() => onOpenStudentReview(selectedStudent.studentId, "report")}
+                    >
+                      <RiFileTextLine />
+                      Informe técnico
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-brand-maroon/30 hover:text-brand-maroon"
+                      onClick={() => onOpenStudentReview(selectedStudent.studentId, "grading")}
+                    >
+                      <RiFolderChartLine />
+                      Revisión docente
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
@@ -517,6 +557,16 @@ export function QualityInsightsDashboard({
                     );
                   })}
                 </div>
+                {selectedStudentReviewTarget && onOpenStudentReview ? (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-brand-blue/30 hover:text-brand-blue"
+                    onClick={() => onOpenStudentReview(selectedStudentId, "report")}
+                  >
+                    <RiArrowRightUpLine />
+                    Abrir revisión exacta de la entrega
+                  </button>
+                ) : null}
               </>
             )}
           </div>

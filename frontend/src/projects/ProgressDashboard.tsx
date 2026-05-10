@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { deliveriesApi, projectsApi } from "../shared/api/services";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";
 import {
@@ -9,6 +10,7 @@ import {
   RiDownload2Line,
   RiEyeLine,
   RiFileCodeLine,
+  RiFileTextLine,
   RiFilter3Line,
   RiHistoryLine,
   RiLoader4Line,
@@ -21,6 +23,12 @@ import {
   RiBarChartFill,
 } from "react-icons/ri";
 import { QualityInsightsDashboard } from "../builder/components/QualityInsightsDashboard";
+import {
+  buildTeacherDeliveryReviewPath,
+  extractLegacyAiEvidence,
+  resolveTeacherReviewTarget,
+} from "../deliveries/teacherReviewNavigation";
+import type { TeacherDeliveryDetailTab } from "../deliveries/teacherReviewNavigation";
 import type {
   BuilderOutcome,
   DeliveryEntity,
@@ -111,6 +119,7 @@ export function ProgressDashboard({
   selectedProjectId = "",
   embedded = false,
 }: ProgressDashboardProps): JSX.Element {
+  const navigate = useNavigate();
   const { pushToast } = useToast();
   const [projectId, setProjectId] = useState(selectedProjectId);
   const [summary, setSummary] = useState<ProjectProgressSummary | null>(null);
@@ -177,6 +186,25 @@ export function ProgressDashboard({
     } finally {
       setIsLoadingHistory(false);
     }
+  };
+
+  const openTeacherReview = (
+    assignmentId: string,
+    deliveryId: string,
+    tab: TeacherDeliveryDetailTab,
+  ) => {
+    if (!projectId.trim()) {
+      return;
+    }
+
+    navigate(
+      buildTeacherDeliveryReviewPath({
+        projectId: projectId.trim(),
+        assignmentId,
+        deliveryId,
+        tab: tab === "grading" ? "grading" : "report",
+      }),
+    );
   };
 
   const fetchDashboard = async (
@@ -446,22 +474,20 @@ export function ProgressDashboard({
           <div className="flex items-center gap-1 border-b border-slate-200">
             <button
               onClick={() => setActiveTab("gradebook")}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all ${
-                activeTab === "gradebook"
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all ${activeTab === "gradebook"
                   ? "border-b-2 border-brand-blue text-brand-blue bg-brand-blue/5"
                   : "text-slate-500 hover:text-slate-900"
-              }`}
+                }`}
             >
               <RiTeamLine />
               Gradebook de Alumnos
             </button>
             <button
               onClick={() => setActiveTab("insights")}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all ${
-                activeTab === "insights"
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all ${activeTab === "insights"
                   ? "border-b-2 border-brand-maroon text-brand-maroon bg-brand-maroon/5"
                   : "text-slate-500 hover:text-slate-900"
-              }`}
+                }`}
             >
               <RiBarChartFill />
               Insights de Calidad
@@ -478,184 +504,234 @@ export function ProgressDashboard({
                   studentEmail: student.studentEmail,
                 })) ?? []
               }
+              reviewTargets={Object.fromEntries(
+                gradebook
+                  .filter((row) => row.latestDeliveryId)
+                  .map((row) => [
+                    row.studentId,
+                    {
+                      assignmentId: row.assignmentId,
+                      deliveryId: row.latestDeliveryId!,
+                    },
+                  ]),
+              )}
+              onOpenStudentReview={(studentId, tab = "report") => {
+                const target = resolveTeacherReviewTarget(gradebook, studentId);
+                if (!target) {
+                  return;
+                }
+
+                openTeacherReview(target.assignmentId, target.deliveryId, tab);
+              }}
             />
           ) : (
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-900">
-                  Gradebook del proyecto
-                </h3>
-                <p className="mt-2 text-sm text-slate-500">
-                  {deferredRows.length} alumno(s) visibles tras aplicar filtros.
-                </p>
+              <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-900">
+                    Gradebook del proyecto
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-500">
+                    {deferredRows.length} alumno(s) visibles tras aplicar filtros.
+                  </p>
+                </div>
+                <button
+                  className="btn-secondary"
+                  onClick={() => void exportCsv()}
+                  disabled={exporting}
+                >
+                  <RiDownload2Line />
+                  {exporting ? "Exportando..." : "Exportar CSV"}
+                </button>
               </div>
-              <button
-                className="btn-secondary"
-                onClick={() => void exportCsv()}
-                disabled={exporting}
-              >
-                <RiDownload2Line />
-                {exporting ? "Exportando..." : "Exportar CSV"}
-              </button>
-            </div>
 
-            <div className="grid gap-4 border-b border-slate-100 bg-slate-50 p-6 lg:grid-cols-6">
-              <div className="lg:col-span-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                <RiFilter3Line />
-                Filtros operativos
+              <div className="grid gap-4 border-b border-slate-100 bg-slate-50 p-6 lg:grid-cols-6">
+                <div className="lg:col-span-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <RiFilter3Line />
+                  Filtros operativos
+                </div>
+                <div className="lg:col-span-2 relative">
+                  <RiSearchLine className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    className="input-field pl-10 bg-white"
+                    placeholder="Busca por nombre o correo..."
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
+                </div>
+                <select
+                  className="input-field bg-white"
+                  value={groupFilter}
+                  onChange={(event) => void handleGroupChange(event.target.value)}
+                >
+                  <option value="ALL">Todos los grupos</option>
+                  {availableGroups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="input-field bg-white"
+                  value={statusFilter}
+                  onChange={(event) =>
+                    setStatusFilter(event.target.value as DeliveryStatus | "ALL")
+                  }
+                >
+                  <option value="ALL">Todos los estados</option>
+                  <option value="SUBMITTED">Entregadas</option>
+                  <option value="IN_REVIEW">En revisión</option>
+                  <option value="EVALUATED">Evaluadas</option>
+                  <option value="DRAFT">Borrador</option>
+                </select>
+                <select
+                  className="input-field bg-white"
+                  value={outcomeFilter}
+                  onChange={(event) =>
+                    setOutcomeFilter(event.target.value as BuilderOutcome | "ALL")
+                  }
+                >
+                  <option value="ALL">Todos los outcomes</option>
+                  <option value="PASS">PASS</option>
+                  <option value="PARTIAL">PARTIAL</option>
+                  <option value="FAIL">FAIL</option>
+                  <option value="UNKNOWN">UNKNOWN</option>
+                </select>
+                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={lateOnly}
+                    onChange={(event) => setLateOnly(event.target.checked)}
+                  />
+                  Solo tardías
+                </label>
+                <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                  <RiTeamLine className="mr-2 text-base" />
+                  {groupFilter === "ALL"
+                    ? "Vista completa del proyecto"
+                    : `${availableGroups.find((group) => group.id === groupFilter)?.label ?? "Grupo filtrado"}`}
+                </div>
               </div>
-              <div className="lg:col-span-2 relative">
-                <RiSearchLine className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  className="input-field pl-10 bg-white"
-                  placeholder="Busca por nombre o correo..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-              </div>
-              <select
-                className="input-field bg-white"
-                value={groupFilter}
-                onChange={(event) => void handleGroupChange(event.target.value)}
-              >
-                <option value="ALL">Todos los grupos</option>
-                {availableGroups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="input-field bg-white"
-                value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as DeliveryStatus | "ALL")
-                }
-              >
-                <option value="ALL">Todos los estados</option>
-                <option value="SUBMITTED">Entregadas</option>
-                <option value="IN_REVIEW">En revisión</option>
-                <option value="EVALUATED">Evaluadas</option>
-                <option value="DRAFT">Borrador</option>
-              </select>
-              <select
-                className="input-field bg-white"
-                value={outcomeFilter}
-                onChange={(event) =>
-                  setOutcomeFilter(event.target.value as BuilderOutcome | "ALL")
-                }
-              >
-                <option value="ALL">Todos los outcomes</option>
-                <option value="PASS">PASS</option>
-                <option value="PARTIAL">PARTIAL</option>
-                <option value="FAIL">FAIL</option>
-                <option value="UNKNOWN">UNKNOWN</option>
-              </select>
-              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={lateOnly}
-                  onChange={(event) => setLateOnly(event.target.checked)}
-                />
-                Solo tardías
-              </label>
-              <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-                <RiTeamLine className="mr-2 text-base" />
-                {groupFilter === "ALL"
-                  ? "Vista completa del proyecto"
-                  : `${availableGroups.find((group) => group.id === groupFilter)?.label ?? "Grupo filtrado"}`}
-              </div>
-            </div>
 
-            {deferredRows.length === 0 ? (
-              <div className="px-6 py-12 text-center text-sm text-slate-500">
-                No hay filas de gradebook para los filtros seleccionados.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse text-left">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-white text-xs uppercase tracking-[0.16em] text-slate-500">
-                      <th className="px-4 py-3 font-medium">Alumno</th>
-                      <th className="px-4 py-3 font-medium">Grupos</th>
-                      <th className="px-4 py-3 font-medium">Estado</th>
-                      <th className="px-4 py-3 font-medium">Builder</th>
-                      <th className="px-4 py-3 font-medium">Nota</th>
-                      <th className="px-4 py-3 font-medium">Intentos</th>
-                      <th className="px-4 py-3 font-medium text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {deferredRows.map((row) => (
-                      <tr key={row.assignmentId} className="transition hover:bg-slate-50">
-                        <td className="px-4 py-4">
-                          <div className="font-medium text-slate-950">{row.studentName}</div>
-                          <div className="mt-1 text-sm text-slate-500">{row.studentEmail}</div>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-slate-600">
-                          {row.groupLabels.length > 0 ? row.groupLabels.join(" · ") : "Sin grupo"}
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[row.latestStatus ?? "DRAFT"] ?? STATUS_STYLE.DRAFT}`}>
-                            {STATUS_LABEL[row.latestStatus ?? "DRAFT"] ?? "Pending"}
-                          </span>
-                          {row.isLate ? (
-                            <div className="mt-2 text-xs font-medium text-amber-700">
-                              Fuera de plazo
-                            </div>
-                          ) : null}
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${OUTCOME_STYLE[row.latestBuilderOutcome ?? "UNKNOWN"]}`}>
-                            {row.latestBuilderOutcome ?? "UNKNOWN"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-slate-600">
-                          <div className="font-semibold text-slate-900">
-                            {row.grade !== null ? row.grade.toFixed(2) : "Pendiente"}
-                          </div>
-                          <div className="mt-1 line-clamp-2 text-xs text-slate-500">
-                            {row.graderNotes || "Sin observaciones manuales"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-slate-600">
-                          <div>{row.deliveryCount} enviadas</div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {row.remainingDeliveries} restantes
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-slate-600">
-                          {new Date(row.lastActivityAt).toLocaleString("es-ES")}
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              className="btn-secondary h-9 w-9 p-0 justify-center"
-                              title="Ver código de la última entrega"
-                              onClick={() => row.latestDeliveryId && handlePreview(row.latestDeliveryId)}
-                              disabled={!row.latestDeliveryId}
-                            >
-                              <RiCodeSSlashLine />
-                            </button>
-                            <button
-                              className="btn-secondary h-9 w-9 p-0 justify-center"
-                              title="Ver historial de entregas"
-                              onClick={() => handleViewHistory(row.assignmentId, row.studentName)}
-                            >
-                              <RiHistoryLine />
-                            </button>
-                          </div>
-                        </td>
+              {deferredRows.length === 0 ? (
+                <div className="px-6 py-12 text-center text-sm text-slate-500">
+                  No hay filas de gradebook para los filtros seleccionados.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse text-left">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-white text-xs uppercase tracking-[0.16em] text-slate-500">
+                        <th className="px-4 py-3 font-medium">Alumno</th>
+                        <th className="px-4 py-3 font-medium">Grupos</th>
+                        <th className="px-4 py-3 font-medium">Estado</th>
+                        <th className="px-4 py-3 font-medium">Builder</th>
+                        <th className="px-4 py-3 font-medium">Nota</th>
+                        <th className="px-4 py-3 font-medium">Intentos</th>
+                        <th className="px-4 py-3 font-medium text-center">Acciones</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {deferredRows.map((row) => (
+                        <tr key={row.assignmentId} className="transition hover:bg-slate-50">
+                          <td className="px-4 py-4">
+                            <div className="font-medium text-slate-950">{row.studentName}</div>
+                            <div className="mt-1 text-sm text-slate-500">{row.studentEmail}</div>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-600">
+                            {row.groupLabels.length > 0 ? row.groupLabels.join(" · ") : "Sin grupo"}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[row.latestStatus ?? "DRAFT"] ?? STATUS_STYLE.DRAFT}`}>
+                              {STATUS_LABEL[row.latestStatus ?? "DRAFT"] ?? "Pending"}
+                            </span>
+                            {row.isLate ? (
+                              <div className="mt-2 text-xs font-medium text-amber-700">
+                                Fuera de plazo
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${OUTCOME_STYLE[row.latestBuilderOutcome ?? "UNKNOWN"]}`}>
+                              {row.latestBuilderOutcome ?? "UNKNOWN"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-600">
+                            <div className="font-semibold text-slate-900">
+                              {row.grade !== null ? row.grade.toFixed(2) : "Pendiente"}
+                            </div>
+                            <div className="mt-1 line-clamp-2 text-xs text-slate-500">
+                              {extractLegacyAiEvidence(row.graderNotes).manualNotes ||
+                                "Sin observaciones manuales"}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-600">
+                            <div>{row.deliveryCount} enviadas</div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              {row.remainingDeliveries} restantes
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-600">
+                            {new Date(row.lastActivityAt).toLocaleString("es-ES")}
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                className="btn-secondary h-9 w-9 p-0 justify-center"
+                                title="Ver código de la última entrega"
+                                onClick={() => row.latestDeliveryId && handlePreview(row.latestDeliveryId)}
+                                disabled={!row.latestDeliveryId}
+                              >
+                                <RiCodeSSlashLine />
+                              </button>
+                              <button
+                                className="btn-secondary h-9 w-9 p-0 justify-center"
+                                title="Abrir informe técnico"
+                                onClick={() =>
+                                  row.latestDeliveryId &&
+                                  openTeacherReview(
+                                    row.assignmentId,
+                                    row.latestDeliveryId,
+                                    "report",
+                                  )
+                                }
+                                disabled={!row.latestDeliveryId}
+                              >
+                                <RiFileTextLine />
+                              </button>
+                              <button
+                                className="btn-secondary h-9 w-9 p-0 justify-center"
+                                title="Abrir corrección docente"
+                                onClick={() =>
+                                  row.latestDeliveryId &&
+                                  openTeacherReview(
+                                    row.assignmentId,
+                                    row.latestDeliveryId,
+                                    "grading",
+                                  )
+                                }
+                                disabled={!row.latestDeliveryId}
+                              >
+                                <RiAwardLine />
+                              </button>
+                              <button
+                                className="btn-secondary h-9 w-9 p-0 justify-center"
+                                title="Ver historial de entregas"
+                                onClick={() => handleViewHistory(row.assignmentId, row.studentName)}
+                              >
+                                <RiHistoryLine />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       ) : (
         !embedded && (
           <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
