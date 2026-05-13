@@ -68,7 +68,10 @@ export function EvaluationNotificationBanner({
   if (notifications.length === 0) return null;
 
   return (
-    <div className="mb-6 space-y-3 animate-in fade-in slide-in-from-top-4 duration-300">
+    <div
+      className="mb-6 space-y-3 animate-in fade-in slide-in-from-top-4 duration-300"
+      aria-live="polite"
+    >
       {notifications.length > 1 ? (
         <div className="flex justify-end">
           <button

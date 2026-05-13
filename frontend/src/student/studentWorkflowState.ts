@@ -13,7 +13,7 @@ export interface StudentWorkflowPresentation {
   badgeClassName: string;
 }
 
-const RUNNING_STATUSES = new Set<BuildRunStatus>(["ANALYZING"]);
+const RUNNING_STATUSES = new Set<BuildRunStatus>(["RUNNING"]);
 
 export function deriveStudentWorkflowState(input: {
   assignment?: ProjectAssignmentEntity | null;

@@ -20,10 +20,38 @@ import type {
 } from "../shared/types";
 import { getErrorMessage } from "../shared/utils/errors";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
+import { EvaluationProgressCard } from "./components/EvaluationProgressCard";
 import { StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { deriveStudentWorkspaceInsights, hasTechnicalReport, resolveStudentRunOutcome } from "./studentWorkspaceInsights";
 import { ReportView } from "../shared/components/ReportView";
+
+function computeMedianDurationMs(
+  runs: BuildRunEntity[],
+): number | null {
+  const durations = runs
+    .map((run) => {
+      if (!run.startedAt || !run.finishedAt) {
+        return null;
+      }
+      const duration =
+        new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime();
+      return duration > 0 ? duration : null;
+    })
+    .filter((duration): duration is number => duration !== null)
+    .sort((left, right) => left - right);
+
+  if (durations.length === 0) {
+    return null;
+  }
+
+  const middle = Math.floor(durations.length / 2);
+  if (durations.length % 2 === 1) {
+    return durations[middle];
+  }
+
+  return Math.round((durations[middle - 1] + durations[middle]) / 2);
+}
 
 interface Props {
   session: SessionRecord | null;
@@ -153,6 +181,18 @@ function ReportContainer({
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [hasLoaded, setHasLoaded] = useState(Boolean(summaryRun));
+
+  // When the parent refreshes and passes a newer summaryRun (different run id),
+  // reset local state so the component shows the latest report.
+  const summaryRunId = summaryRun?.id ?? null;
+  useEffect(() => {
+    if (summaryRun && run && summaryRun.id !== run.id) {
+      setRun(summaryRun);
+      setHasLoaded(false);
+    } else if (summaryRun && !run) {
+      setRun(summaryRun);
+    }
+  }, [summaryRunId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isOpen || hasLoaded) {
@@ -298,7 +338,7 @@ function ReportContainer({
   );
 }
 
-export function StudentReportsSection({ data }: Props): JSX.Element {
+export function StudentReportsSection({ session, data }: Props): JSX.Element {
   const { selection } = useWorkspace();
   const { deliveries, latestRunByDeliveryId, loading, error } = data;
   const [displayLimit, setDisplayLimit] = useState(10);
@@ -316,6 +356,15 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
     [],
     sortedDeliveries,
     latestRunByDeliveryId,
+  );
+  const activeEvaluationRun =
+    sortedDeliveries
+      .map((delivery) => latestRunByDeliveryId[delivery.id] ?? null)
+      .find((run) => Boolean(run && !run.isTerminal)) ?? null;
+  const historicalMedianMs = computeMedianDurationMs(
+    Object.values(latestRunByDeliveryId)
+      .filter((run): run is BuildRunEntity => Boolean(run))
+      .slice(0, 10),
   );
   const latestGradedDelivery =
     sortedDeliveries.find((delivery) => delivery.grade !== null) ?? null;
@@ -408,6 +457,14 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
           />
         </div>
       </StudentSurface>
+
+      {activeEvaluationRun ? (
+        <EvaluationProgressCard
+          run={activeEvaluationRun}
+          session={session}
+          historicalMedianMs={historicalMedianMs}
+        />
+      ) : null}
 
       {highlightedDelivery ? (
         <StudentSurface>

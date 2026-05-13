@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import JSZip from "jszip";
 import {
   RiAlertLine,
   RiArrowLeftLine,
@@ -16,14 +17,20 @@ import {
 
 import { builderApi } from "../shared/api/builderApi";
 import { deliveriesApi, storageApi } from "../shared/api/services";
-import { MetricCard } from "../shared/components/MetricCard";
 import { EmptyState } from "../shared/components/EmptyState";
+import { MetricCard } from "../shared/components/MetricCard";
 import { Button } from "../shared/components/ui/Button";
 import type { SessionRecord } from "../shared/types";
 import { getErrorMessage } from "../shared/utils/errors";
 import { computeSha256Hex } from "../shared/utils/hash";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
-import { StudentKeyValueList, StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
+import { EvaluationProgressCard } from "./components/EvaluationProgressCard";
+import { FileTreePreview } from "./components/FileTreePreview";
+import {
+  StudentKeyValueList,
+  StudentSurface,
+  StudentSurfaceHeader,
+} from "./components/StudentWorkspaceSurface";
 import {
   describeAssignmentTimeline,
   formatAssignmentDate,
@@ -36,6 +43,8 @@ import {
   describeStudentWorkflowState,
 } from "./studentWorkflowState";
 import { deriveStudentWorkspaceInsights } from "./studentWorkspaceInsights";
+import type { SubmissionPreviewFile } from "./utils/validateSubmission";
+import { validateSubmissionPreview } from "./utils/validateSubmission";
 
 interface Props {
   session: SessionRecord | null;
@@ -45,7 +54,12 @@ interface Props {
 
 type Step = 1 | 2 | 3 | 4;
 
-function getStepState(currentStep: Step, targetStep: number): "complete" | "active" | "idle" {
+const FILE_INPUT_ID = "student-submission-file";
+
+function getStepState(
+  currentStep: Step,
+  targetStep: number,
+): "complete" | "active" | "idle" {
   if (currentStep > targetStep) {
     return "complete";
   }
@@ -55,7 +69,64 @@ function getStepState(currentStep: Step, targetStep: number): "complete" | "acti
   return "idle";
 }
 
+async function previewZipFile(file: File): Promise<SubmissionPreviewFile[]> {
+  const zip = await JSZip.loadAsync(file);
+  const previewFiles: SubmissionPreviewFile[] = [];
+
+  for (const [path, entry] of Object.entries(zip.files)) {
+    if (entry.dir) {
+      continue;
+    }
+
+    const bytes = await entry.async("uint8array");
+    const normalizedPath = path.replace(/^\.?\//, "");
+    const shouldReadContent =
+      bytes.byteLength <= 32_000 &&
+      /\.(c|h|py|js|ts|tsx|json|toml|ya?ml|txt|md|env|cfg|ini|makefile)$/i.test(
+        normalizedPath,
+      );
+
+    previewFiles.push({
+      path: normalizedPath,
+      sizeBytes: bytes.byteLength,
+      content: shouldReadContent ? new TextDecoder("utf-8").decode(bytes) : null,
+    });
+  }
+
+  return previewFiles.sort((left, right) =>
+    left.path.localeCompare(right.path, "es"),
+  );
+}
+
+function computeMedianDurationMs(
+  runs: Array<{ startedAt?: string | null; finishedAt?: string | null }>,
+): number | null {
+  const durations = runs
+    .map((run) => {
+      if (!run.startedAt || !run.finishedAt) {
+        return null;
+      }
+      const duration =
+        new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime();
+      return duration > 0 ? duration : null;
+    })
+    .filter((duration): duration is number => duration !== null)
+    .sort((left, right) => left - right);
+
+  if (durations.length === 0) {
+    return null;
+  }
+
+  const middle = Math.floor(durations.length / 2);
+  if (durations.length % 2 === 1) {
+    return durations[middle];
+  }
+
+  return Math.round((durations[middle - 1] + durations[middle]) / 2);
+}
+
 export function StudentSubmissionFlow({
+  session,
   data,
   onNavigate,
 }: Props): JSX.Element {
@@ -82,9 +153,19 @@ export function StudentSubmissionFlow({
   const [errorMessage, setErrorMessage] = useState("");
   const [createdVersion, setCreatedVersion] = useState<number | null>(null);
   const [createdDeliveryId, setCreatedDeliveryId] = useState<string | null>(null);
+  const [createdBuildRunId, setCreatedBuildRunId] = useState<string | null>(null);
   const [buildLaunched, setBuildLaunched] = useState(false);
   const [buildLaunching, setBuildLaunching] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
+  const [previewFiles, setPreviewFiles] = useState<SubmissionPreviewFile[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previousPreviewFiles, setPreviousPreviewFiles] = useState<
+    Array<{ path: string; content: string }>
+  >([]);
+  const [previousPreviewError, setPreviousPreviewError] = useState<string | null>(
+    null,
+  );
 
   const activeAssignment =
     assignments.find((assignment) => assignment.id === selectedAssignmentId) ?? null;
@@ -125,12 +206,123 @@ export function StudentSubmissionFlow({
     latestAssignmentDelivery ? [latestAssignmentDelivery] : [],
     latestRunByDeliveryId,
   );
-
+  const previewValidation = validateSubmissionPreview({
+    expectedType: activeAssignment?.projectExpectedType ?? null,
+    files: previewFiles,
+    previousFiles: previousPreviewFiles,
+  });
+  const shouldWarnBeforeContinue =
+    step === 2 &&
+    file !== null &&
+    previewFiles.length > 0 &&
+    previewValidation.warnings.length > 0;
   const canContinueFromStep1 =
     Boolean(selectedAssignmentId) &&
     !noAssignments &&
     !noRemainingDeliveries &&
     !notYetOpen;
+
+  const createdRun =
+    createdDeliveryId !== null
+      ? (() => {
+          const candidate = latestRunByDeliveryId[createdDeliveryId] ?? null;
+          if (!candidate) {
+            return null;
+          }
+          return createdBuildRunId && candidate.id !== createdBuildRunId
+            ? null
+            : candidate;
+        })()
+      : null;
+  const historicalMedianMs = useMemo(
+    () =>
+      computeMedianDurationMs(
+        Object.values(latestRunByDeliveryId)
+          .filter((run): run is NonNullable<typeof run> => Boolean(run))
+          .slice(0, 10),
+      ),
+    [latestRunByDeliveryId],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!file) {
+      setPreviewFiles([]);
+      setPreviewLoading(false);
+      setPreviewError(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      setPreviewFiles([]);
+      setPreviewLoading(false);
+      setPreviewError(
+        "La vista previa cliente-side solo esta disponible para archivos .zip en esta fase.",
+      );
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setPreviewLoading(true);
+    setPreviewError(null);
+
+    void previewZipFile(file)
+      .then((files) => {
+        if (!cancelled) {
+          setPreviewFiles(files);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setPreviewFiles([]);
+          setPreviewError(getErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPreviewLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [file]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!latestAssignmentDelivery) {
+      setPreviousPreviewFiles([]);
+      setPreviousPreviewError(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void deliveriesApi
+      .preview(latestAssignmentDelivery.id)
+      .then((files) => {
+        if (!cancelled) {
+          setPreviousPreviewFiles(files);
+          setPreviousPreviewError(null);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setPreviousPreviewFiles([]);
+          setPreviousPreviewError(getErrorMessage(error));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [latestAssignmentDelivery?.id]);
 
   const handleNextStep = () => {
     if (step === 1 && canContinueFromStep1) {
@@ -147,10 +339,12 @@ export function StudentSubmissionFlow({
     if (selectedFile && selectedFile.size > 50 * 1024 * 1024) {
       setFileSizeError(true);
       setFile(null);
+      setPreviewFiles([]);
       return;
     }
 
     setFileSizeError(false);
+    setPreviewError(null);
     setFile(selectedFile);
   };
 
@@ -221,8 +415,10 @@ export function StudentSubmissionFlow({
     setBuildError(null);
 
     try {
-      await builderApi.runForDelivery(createdDeliveryId);
+      const response = await builderApi.runForDelivery(createdDeliveryId);
+      setCreatedBuildRunId(response.buildRunId);
       setBuildLaunched(true);
+      await refresh();
     } catch (error) {
       setBuildError(getErrorMessage(error));
     } finally {
@@ -302,21 +498,31 @@ export function StudentSubmissionFlow({
             />
 
             {buildLaunched ? (
-              <div className="mt-6 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
-                    <RiCheckboxCircleLine className="text-xl" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-emerald-900">
-                      Evaluacion ya lanzada
+              <div className="mt-6 space-y-4">
+                <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
+                      <RiCheckboxCircleLine className="text-xl" />
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-emerald-800">
-                      El run tecnico ya esta en marcha. Puedes seguirlo desde informes
-                      o volver al resumen para esperar el resultado.
-                    </p>
+                    <div>
+                      <div className="font-semibold text-emerald-900">
+                        Evaluacion ya lanzada
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-emerald-800">
+                        El run tecnico ya esta en marcha. Puedes seguirlo desde informes
+                        o volver al resumen para esperar el resultado.
+                      </p>
+                    </div>
                   </div>
                 </div>
+                {createdRun ? (
+                  <EvaluationProgressCard
+                    run={createdRun}
+                    session={session}
+                    historicalMedianMs={historicalMedianMs}
+                    onOpenReport={() => onNavigate("informes")}
+                  />
+                ) : null}
               </div>
             ) : (
               <div className="mt-6 space-y-4">
@@ -549,23 +755,25 @@ export function StudentSubmissionFlow({
                 { number: 2, label: "Archivo" },
                 { number: 3, label: "Confirmar" },
               ].map((item) => {
-                const state = getStepState(step, item.number);
+                const stepState = getStepState(step, item.number);
 
                 return (
                   <div key={item.number} className="flex items-center gap-3">
                     <div
                       className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
-                        state === "complete"
+                        stepState === "complete"
                           ? "bg-emerald-500 text-white"
-                          : state === "active"
+                          : stepState === "active"
                             ? "bg-brand-blue text-white"
                             : "bg-white text-academic-outline"
                       }`}
                     >
-                      {state === "complete" ? <RiCheckLine /> : item.number}
+                      {stepState === "complete" ? <RiCheckLine /> : item.number}
                     </div>
                     <div>
-                      <div className="ui-label text-academic-outline">Paso {item.number}</div>
+                      <div className="ui-label text-academic-outline">
+                        Paso {item.number}
+                      </div>
                       <div className="text-sm font-semibold text-academic-on-surface">
                         {item.label}
                       </div>
@@ -578,7 +786,7 @@ export function StudentSubmissionFlow({
 
           <div className="p-6 sm:p-8">
             {status === "error" ? (
-              <div className="mb-6 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              <div className="mb-6 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
                 Error al procesar la entrega: {errorMessage}
               </div>
             ) : null}
@@ -586,9 +794,7 @@ export function StudentSubmissionFlow({
             {step === 1 ? (
               <div className="space-y-6">
                 <div>
-                  <div className="eyebrow text-academic-outline">
-                    Paso 1 · Convocatoria
-                  </div>
+                  <div className="eyebrow text-academic-outline">Paso 1 · Convocatoria</div>
                   <h3 className="mt-2 font-display text-3xl font-semibold tracking-tight text-academic-on-surface">
                     Elige la practica que vas a entregar
                   </h3>
@@ -690,6 +896,13 @@ export function StudentSubmissionFlow({
                   </p>
                 </div>
 
+                <label
+                  htmlFor={FILE_INPUT_ID}
+                  className="text-sm font-semibold text-academic-on-surface"
+                >
+                  Archivo comprimido de la practica
+                </label>
+
                 <div
                   className={`relative rounded-[2rem] border-2 border-dashed px-6 py-10 text-center transition-all ${
                     isDragging
@@ -701,9 +914,11 @@ export function StudentSubmissionFlow({
                   onDrop={handleDrop}
                 >
                   <input
+                    id={FILE_INPUT_ID}
                     type="file"
                     accept=".zip,.tar,.gz,.tgz"
                     className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    aria-describedby={`${FILE_INPUT_ID}-hint`}
                     onChange={(event) =>
                       handleFileSelection(event.target.files?.[0] ?? null)
                     }
@@ -725,7 +940,10 @@ export function StudentSubmissionFlow({
                           ? "Suelta el archivo aqui"
                           : "Haz clic o arrastra el archivo a esta zona"}
                       </div>
-                      <div className="mt-2 text-sm text-academic-on-surface-variant">
+                      <div
+                        id={`${FILE_INPUT_ID}-hint`}
+                        className="mt-2 text-sm text-academic-on-surface-variant"
+                      >
                         Maximo 50 MB · Formatos admitidos: .zip, .tar.gz
                       </div>
                     </div>
@@ -733,10 +951,57 @@ export function StudentSubmissionFlow({
                 </div>
 
                 {fileSizeError ? (
-                  <div className="flex items-center gap-2 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                  <div className="flex items-center gap-2 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
                     <RiAlertLine className="shrink-0 text-base" />
                     El archivo no puede superar los 50 MB. Selecciona uno mas
                     ligero antes de continuar.
+                  </div>
+                ) : null}
+
+                {previewLoading ? (
+                  <div className="rounded-[1.5rem] border border-academic-surface-variant bg-academic-surface-container-lowest px-4 py-3 text-sm text-academic-on-surface-variant">
+                    Analizando la estructura del archivo para mostrar la vista previa...
+                  </div>
+                ) : null}
+
+                {previewError ? (
+                  <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    {previewError}
+                  </div>
+                ) : null}
+
+                {file && previewFiles.length > 0 ? (
+                  <FileTreePreview
+                    files={previewFiles}
+                    diff={previewValidation.diff}
+                    totalSizeBytes={previewValidation.totalSizeBytes}
+                  />
+                ) : null}
+
+                {previousPreviewError ? (
+                  <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    No pudimos comparar esta version con la entrega anterior: {previousPreviewError}
+                  </div>
+                ) : null}
+
+                {shouldWarnBeforeContinue ? (
+                  <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+                    <div className="font-semibold">
+                      Detectamos senales que conviene revisar antes de seguir
+                    </div>
+                    <ul className="mt-3 list-disc space-y-2 pl-5">
+                      {previewValidation.warnings.map((warning) => (
+                        <li key={warning.code}>{warning.message}</li>
+                      ))}
+                    </ul>
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                      <Button variant="primary" onClick={handleNextStep}>
+                        Continuar igualmente
+                      </Button>
+                      <Button variant="secondary" onClick={() => handleFileSelection(null)}>
+                        Elegir otro archivo
+                      </Button>
+                    </div>
                   </div>
                 ) : null}
 
@@ -745,7 +1010,11 @@ export function StudentSubmissionFlow({
                     <RiArrowLeftLine />
                     Volver
                   </Button>
-                  <Button variant="primary" disabled={!file} onClick={handleNextStep}>
+                  <Button
+                    variant="primary"
+                    disabled={!file || previewLoading}
+                    onClick={handleNextStep}
+                  >
                     Continuar
                     <RiArrowRightLine />
                   </Button>
@@ -756,9 +1025,7 @@ export function StudentSubmissionFlow({
             {step === 3 ? (
               <div className="space-y-6">
                 <div>
-                  <div className="eyebrow text-academic-outline">
-                    Paso 3 · Confirmacion
-                  </div>
+                  <div className="eyebrow text-academic-outline">Paso 3 · Confirmacion</div>
                   <h3 className="mt-2 font-display text-3xl font-semibold tracking-tight text-academic-on-surface">
                     Revisa el envio antes de registrarlo
                   </h3>
@@ -798,6 +1065,25 @@ export function StudentSubmissionFlow({
                     ]}
                   />
                 </div>
+
+                {previewFiles.length > 0 ? (
+                  <div className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700">
+                    <div className="font-semibold text-slate-900">
+                      Resumen de la comparacion con tu ultima version
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        +{previewValidation.diff.added.length} anadidos
+                      </span>
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                        {previewValidation.diff.persisted.length} persistentes
+                      </span>
+                      <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                        -{previewValidation.diff.removed.length} eliminados
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="rounded-[1.5rem] border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm leading-6 text-brand-blue-dark">
                   Tras enviar esta version, podras lanzar el builder en el mismo

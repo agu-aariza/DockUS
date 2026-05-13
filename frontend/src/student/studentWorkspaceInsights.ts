@@ -17,7 +17,7 @@ export interface StudentWorkspaceInsights {
   passedRuns: number;
 }
 
-const ACTIVE_BUILD_STATUSES = new Set(["QUEUED", "ANALYZING"]);
+const ACTIVE_BUILD_STATUSES = new Set(["QUEUED", "RUNNING"]);
 
 export function hasTechnicalReport(
   run: BuildRunEntity | null | undefined,

@@ -385,67 +385,41 @@ export function StudentHomeSection({
             />
           </StudentSurface>
 
-          <StudentSurface tone="warm">
-            <StudentSurfaceHeader
-              eyebrow="Panorama académico"
-              title="Seguimiento rápido"
-              description="Una vista compacta de cómo va tu ciclo completo de entregas en DockUS."
-            />
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-academic-surface-variant bg-white/85 px-4 py-4">
-                <div className="ui-label text-academic-outline">Informes listos</div>
-                <div className="mt-3 text-2xl font-semibold text-academic-on-surface">
-                  {insights.reportsReady}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-academic-surface-variant bg-white/85 px-4 py-4">
-                <div className="ui-label text-academic-outline">Bloqueos detectados</div>
-                <div className="mt-3 text-2xl font-semibold text-academic-on-surface">
-                  {insights.blockedReports}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-academic-surface-variant bg-white/85 px-4 py-4">
-                <div className="ui-label text-academic-outline">Evaluaciones pendientes</div>
-                <div className="mt-3 text-2xl font-semibold text-academic-on-surface">
-                  {insights.pendingEvaluations}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-academic-surface-variant bg-white/85 px-4 py-4">
-                <div className="ui-label text-academic-outline">Última nota</div>
-                <div className="mt-3 text-2xl font-semibold text-academic-on-surface">
-                  {latestGrade !== null ? latestGrade.toFixed(2) : "—"}
-                </div>
-              </div>
-            </div>
-          </StudentSurface>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Asignaciones activas"
           value={insights.activeAssignments}
-          helper={`${insights.revokedAssignments} fuera de circulación`}
+          helper={`${insights.revokedAssignments} revocadas`}
           icon={<RiBookOpenLine />}
           variant="default"
         />
         <MetricCard
-          label="Entregas con informe"
+          label="Entregas"
+          value={insights.totalDeliveries}
+          helper={`${insights.pendingEvaluations} en seguimiento`}
+          icon={<RiInboxArchiveLine />}
+          variant="info"
+        />
+        <MetricCard
+          label="Informes listos"
           value={insights.reportsReady}
-          helper={`${insights.passedRuns} ya aprobadas`}
-          icon={<RiCheckboxCircleLine />}
+          helper={`${insights.blockedReports} con bloqueos`}
+          icon={<RiFileList3Line />}
           variant={insights.blockedReports > 0 ? "warning" : "success"}
         />
         <MetricCard
-          label="Historial de entregas"
-          value={insights.totalDeliveries}
+          label="Notas oficiales"
+          value={insights.officialGrades}
           helper={
-            activeDelivery
-              ? `Última versión v${activeDelivery.version}`
-              : "Sin versiones todavía"
+            latestGrade !== null
+              ? `Última nota ${latestGrade.toFixed(2)}`
+              : "Todavía sin nota"
           }
-          icon={<RiInboxArchiveLine />}
-          variant="info"
+          icon={<RiAwardLine />}
+          variant={latestGrade !== null ? "success" : "default"}
         />
       </div>
     </div>

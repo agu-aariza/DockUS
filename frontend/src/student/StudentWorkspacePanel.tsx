@@ -12,29 +12,34 @@ import {
   RiUploadCloud2Fill,
 } from "react-icons/ri";
 
-import type { SessionRecord } from "../shared/types";
 import { MetricCard } from "../shared/components/MetricCard";
-import { Button } from "../shared/components/ui/Button";
 import { PageHeader } from "../shared/components/ui/PageHeader";
 import { Tabs } from "../shared/components/ui/Tabs";
+import { Button } from "../shared/components/ui/Button";
 import { useToast } from "../shared/toast/ToastContext";
+import type { SessionRecord } from "../shared/types";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
-import { StudentSurface, StudentKeyValueList, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
-import { StudentHomeSection } from "./StudentHomeSection";
-import { StudentAssignmentsSection } from "./StudentAssignmentsSection";
-import { StudentDeliveriesSection } from "./StudentDeliveriesSection";
-import { StudentSubmissionFlow } from "./StudentSubmissionFlow";
-import { StudentReportsSection } from "./StudentReportsSection";
 import { EvaluationNotificationBanner } from "./EvaluationNotificationBanner";
+import { StudentAssignmentsSection } from "./StudentAssignmentsSection";
 import { StudentDeadlineBanner } from "./StudentDeadlineBanner";
-import { useStudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
-import { useEvaluationNotifications } from "./hooks/useEvaluationNotifications";
-import { deriveStudentWorkspaceInsights } from "./studentWorkspaceInsights";
+import { StudentDeliveriesSection } from "./StudentDeliveriesSection";
+import { StudentHomeSection } from "./StudentHomeSection";
+import { StudentReportsSection } from "./StudentReportsSection";
+import { StudentSubmissionFlow } from "./StudentSubmissionFlow";
+import {
+  StudentKeyValueList,
+  StudentSurface,
+  StudentSurfaceHeader,
+} from "./components/StudentWorkspaceSurface";
 import { pickPrimaryAssignment } from "./deadlineUtils";
+import { useBuildRunStream } from "./hooks/useBuildRunStream";
+import { useEvaluationNotifications } from "./hooks/useEvaluationNotifications";
+import { useStudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import {
   deriveStudentWorkflowState,
   describeStudentWorkflowState,
 } from "./studentWorkflowState";
+import { deriveStudentWorkspaceInsights } from "./studentWorkspaceInsights";
 
 interface StudentWorkspacePanelProps {
   session: SessionRecord | null;
@@ -57,63 +62,11 @@ export function StudentWorkspacePanel({
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get("tab") as StudentTab) || "resumen";
   const { selection } = useWorkspace();
-
-  const workspaceData = useStudentWorkspaceData();
-  const { notifications, dismissNotification, dismissAll, hasUnread } =
-    useEvaluationNotifications();
-  const { pushToast } = useToast();
+  const mainHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const seenNotificationIdsRef = useRef(new Set<string>());
 
-  useEffect(() => {
-    notifications.forEach((notification) => {
-      if (seenNotificationIdsRef.current.has(notification.id)) {
-        return;
-      }
-
-      seenNotificationIdsRef.current.add(notification.id);
-      pushToast({
-        title:
-          notification.kind === "grade_published"
-            ? "Nota oficial publicada"
-            : "Informe técnico disponible",
-        description:
-          notification.kind === "grade_published" && notification.grade !== null
-            ? `${notification.projectTitle} · entrega v${notification.deliveryVersion} · nota ${notification.grade.toFixed(2)}`
-            : `${notification.projectTitle} · entrega v${notification.deliveryVersion}`,
-        tone:
-          notification.kind === "grade_published"
-            ? "success"
-            : notification.outcome === "FAILED"
-              ? "error"
-              : notification.outcome === "CANCELLED"
-                ? "warning"
-                : "success",
-        durationMs: 7000,
-      });
-    });
-  }, [notifications, pushToast]);
-
-  const handleTabChange = (tab: StudentTab) => {
-    setSearchParams({ tab });
-  };
-
-  const handleViewReport = (_deliveryId: string) => {
-    void workspaceData.refresh();
-    handleTabChange("informes");
-  };
-
-  const navigation = [
-    { id: "resumen", label: "Resumen", icon: <RiPulseLine /> },
-    { id: "proyectos", label: "Mis proyectos", icon: <RiFolderOpenFill /> },
-    { id: "entregas", label: "Mis entregas", icon: <RiInboxArchiveFill /> },
-    { id: "subir", label: "Subir versión", icon: <RiUploadCloud2Fill /> },
-    {
-      id: "informes",
-      label: "Mis informes",
-      icon: <RiFileTextFill />,
-      badge: hasUnread,
-    },
-  ];
+  const workspaceData = useStudentWorkspaceData();
+  const { pushToast } = useToast();
 
   const activeAssignment =
     pickPrimaryAssignment(
@@ -154,14 +107,111 @@ export function StudentWorkspacePanel({
     workspaceData.deliveries,
     workspaceData.latestRunByDeliveryId,
   );
+  const activeMonitoringRun =
+    workspaceData.deliveries
+      .map((delivery) => workspaceData.latestRunByDeliveryId[delivery.id] ?? null)
+      .find((run) => Boolean(run && !run.isTerminal)) ?? null;
+  const runMonitor = useBuildRunStream(activeMonitoringRun, session);
+  const { notifications, dismissNotification, dismissAll, hasUnread } =
+    useEvaluationNotifications({
+      pollIntervalMs: runMonitor.streamState === "streaming" ? 60_000 : 15_000,
+    });
+
+  useEffect(() => {
+    let hasNewNotifications = false;
+    notifications.forEach((notification) => {
+      if (seenNotificationIdsRef.current.has(notification.id)) {
+        return;
+      }
+
+      hasNewNotifications = true;
+      seenNotificationIdsRef.current.add(notification.id);
+      pushToast({
+        title:
+          notification.kind === "grade_published"
+            ? "Nota oficial publicada"
+            : "Informe tecnico disponible",
+        description:
+          notification.kind === "grade_published" && notification.grade !== null
+            ? `${notification.projectTitle} · entrega v${notification.deliveryVersion} · nota ${notification.grade.toFixed(2)}`
+            : `${notification.projectTitle} · entrega v${notification.deliveryVersion}`,
+        tone:
+          notification.kind === "grade_published"
+            ? "success"
+            : notification.outcome === "FAILED"
+              ? "error"
+              : notification.outcome === "CANCELLED"
+                ? "warning"
+                : "success",
+        durationMs: 7000,
+      });
+    });
+
+    // Auto-refresh workspace data when a new evaluation completes,
+    // so the student sees the latest report without manual navigation.
+    if (hasNewNotifications) {
+      void workspaceData.refresh();
+    }
+  }, [notifications, pushToast, workspaceData.refresh]);
+
+  // Auto-refresh when the monitored run reaches a terminal stage,
+  // so the report updates immediately without waiting for the next poll.
+  const prevStageRef = useRef(runMonitor.progress.stage);
+  useEffect(() => {
+    const prev = prevStageRef.current;
+    const curr = runMonitor.progress.stage;
+    prevStageRef.current = curr;
+
+    if (
+      prev !== curr &&
+      (curr === "completed" || curr === "failed") &&
+      prev !== "completed" &&
+      prev !== "failed"
+    ) {
+      void workspaceData.refresh();
+    }
+  }, [runMonitor.progress.stage, workspaceData.refresh]);
+
+  useEffect(() => {
+    mainHeadingRef.current?.focus();
+  }, [activeTab]);
+
+  const handleTabChange = (tab: StudentTab) => {
+    setSearchParams({ tab });
+  };
+
+  const handleViewReport = (_deliveryId: string) => {
+    void workspaceData.refresh();
+    handleTabChange("informes");
+  };
+
+  const navigation = [
+    { id: "resumen", label: "Resumen", icon: <RiPulseLine /> },
+    { id: "proyectos", label: "Mis proyectos", icon: <RiFolderOpenFill /> },
+    { id: "entregas", label: "Mis entregas", icon: <RiInboxArchiveFill /> },
+    { id: "subir", label: "Subir version", icon: <RiUploadCloud2Fill /> },
+    {
+      id: "informes",
+      label: "Mis informes",
+      icon: <RiFileTextFill />,
+      badge: hasUnread,
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
+      <a
+        href="#student-workspace-main"
+        className="sr-only rounded-full border border-brand-blue bg-white px-4 py-2 text-sm font-semibold text-brand-blue focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[150]"
+      >
+        Saltar al contenido principal
+      </a>
+
       <PageHeader
         title="Mi espacio"
-        subtitle="Un workspace académico para seguir tu práctica activa, revisar informes y preparar la siguiente versión sin perder el contexto."
+        subtitle="Un workspace academico para seguir tu practica activa, revisar informes y preparar la siguiente version sin perder el contexto."
         icon={<RiGraduationCapLine />}
-        badge={activeAssignment ? "Workspace activo" : "Pendiente de asignación"}
+        badge={activeAssignment ? "Workspace activo" : "Pendiente de asignacion"}
         actions={
           <>
             {hasUnread ? (
@@ -181,7 +231,7 @@ export function StudentWorkspacePanel({
               {workspaceData.assignments.length > 0 ? (
                 <>
                   <RiUploadCloud2Fill />
-                  Subir versión
+                  Subir version
                 </>
               ) : (
                 <>
@@ -194,86 +244,6 @@ export function StudentWorkspacePanel({
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-[1.15fr,1.85fr]">
-        <StudentSurface tone="accent" className="h-full">
-          <StudentSurfaceHeader
-            eyebrow="Contexto actual"
-            title={activeAssignment?.projectTitle ?? "Aún no tienes una práctica activa"}
-            description={
-              activeAssignment
-                ? "Este es tu foco principal ahora mismo. Desde aquí puedes entender el estado real de la práctica, cuánto margen te queda y a qué superficie conviene saltar."
-                : "Cuando tengas una asignación activa, aquí verás la práctica seleccionada, la última entrega y la siguiente acción prioritaria."
-            }
-            badge={
-              <span
-                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${activeWorkflow.badgeClassName}`}
-              >
-                {activeWorkflow.label}
-              </span>
-            }
-          />
-          <StudentKeyValueList
-            className="mt-6"
-            items={[
-              {
-                label: "Proyecto",
-                value: formatContextValue(activeAssignment?.projectTitle ?? null),
-              },
-              {
-                label: "Asignación",
-                value: formatContextValue(activeAssignment?.studentName ?? null),
-              },
-              {
-                label: "Última entrega",
-                value: activeDelivery ? `v${activeDelivery.version}` : "Sin entregas",
-              },
-              {
-                label: "Siguiente foco",
-                value: hasUnread
-                  ? "Revisar resultados recientes"
-                  : workspaceData.assignments.length > 0
-                    ? "Preparar próxima versión"
-                    : "Esperar asignaciones",
-              },
-            ]}
-          />
-        </StudentSurface>
-
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            label="Asignaciones activas"
-            value={insights.activeAssignments}
-            helper={`${insights.revokedAssignments} revocadas`}
-            icon={<RiBookOpenLine />}
-            variant="default"
-          />
-          <MetricCard
-            label="Entregas"
-            value={insights.totalDeliveries}
-            helper={`${insights.pendingEvaluations} en seguimiento`}
-            icon={<RiInboxArchiveFill />}
-            variant="info"
-          />
-          <MetricCard
-            label="Informes listos"
-            value={insights.reportsReady}
-            helper={`${insights.blockedReports} con bloqueos`}
-            icon={<RiFileTextFill />}
-            variant={insights.blockedReports > 0 ? "warning" : "success"}
-          />
-          <MetricCard
-            label="Notas oficiales"
-            value={insights.officialGrades}
-            helper={
-              insights.latestGrade !== null
-                ? `Última nota ${insights.latestGrade.toFixed(2)}`
-                : "Todavía sin nota"
-            }
-            icon={<RiAwardLine />}
-            variant={insights.latestGrade !== null ? "success" : "default"}
-          />
-        </div>
-      </div>
 
       <EvaluationNotificationBanner
         notifications={notifications}
@@ -303,38 +273,42 @@ export function StudentWorkspacePanel({
         onNavigate={handleTabChange}
       />
 
-      <main className="space-y-8">
-        {activeTab === "resumen" && (
+      <main id="student-workspace-main" className="space-y-8">
+        <h2 ref={mainHeadingRef} tabIndex={-1} className="sr-only">
+          Contenido principal del espacio del alumno: {activeTab}
+        </h2>
+
+        {activeTab === "resumen" ? (
           <StudentHomeSection
             session={session}
             data={workspaceData}
             onNavigate={handleTabChange}
           />
-        )}
-        {activeTab === "proyectos" && (
+        ) : null}
+        {activeTab === "proyectos" ? (
           <StudentAssignmentsSection
             session={session}
             data={workspaceData}
             onNavigate={handleTabChange}
           />
-        )}
-        {activeTab === "entregas" && (
+        ) : null}
+        {activeTab === "entregas" ? (
           <StudentDeliveriesSection
             session={session}
             data={workspaceData}
             onNavigate={handleTabChange}
           />
-        )}
-        {activeTab === "subir" && (
+        ) : null}
+        {activeTab === "subir" ? (
           <StudentSubmissionFlow
             session={session}
             data={workspaceData}
             onNavigate={handleTabChange}
           />
-        )}
-        {activeTab === "informes" && (
+        ) : null}
+        {activeTab === "informes" ? (
           <StudentReportsSection session={session} data={workspaceData} />
-        )}
+        ) : null}
       </main>
     </div>
   );

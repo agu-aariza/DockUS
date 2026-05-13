@@ -12,12 +12,15 @@ import {
   type EvaluationNotification,
 } from "../evaluationNotifications";
 
-const POLL_INTERVAL_MS = 15_000;
+const DEFAULT_POLL_INTERVAL_MS = 15_000;
 
-export function useEvaluationNotifications() {
+export function useEvaluationNotifications(options?: {
+  pollIntervalMs?: number;
+}) {
   const [notifications, setNotifications] = useState<EvaluationNotification[]>([]);
   const seenRunIdsRef = useRef(new Set<string>());
   const activeRef = useRef(true);
+  const pollIntervalMs = options?.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
 
   const checkForCompletedRuns = useCallback(async () => {
     try {
@@ -69,13 +72,13 @@ export function useEvaluationNotifications() {
       if (activeRef.current) {
         void checkForCompletedRuns();
       }
-    }, POLL_INTERVAL_MS);
+    }, pollIntervalMs);
 
     return () => {
       activeRef.current = false;
       clearInterval(interval);
     };
-  }, [checkForCompletedRuns]);
+  }, [checkForCompletedRuns, pollIntervalMs]);
 
   const dismissNotification = useCallback((notificationId: string) => {
     setNotifications((prev) =>
