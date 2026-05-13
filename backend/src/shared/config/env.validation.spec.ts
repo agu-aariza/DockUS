@@ -23,7 +23,10 @@ describe('envValidationSchema', () => {
     expect(error).toBeUndefined();
     expect(value.BUILDER_OLLAMA_BASE_URL).toBe('http://ollama:11434');
     expect(value.BUILDER_OLLAMA_QUALITY_MODEL).toBe('dockus-builder-quality');
-    expect(value.BUILDER_LLM_QUALITY_MAX_INPUT_CHARS).toBe(20000);
+    expect(value.EVAL_BASE_MODEL).toBe('deepseek-r1:8b');
+    expect(value.QUALITY_BASE_MODEL).toBe('deepseek-r1:8b');
+    expect(value.OLLAMA_NUM_CTX).toBe(16384);
+    expect(value.BUILDER_LLM_QUALITY_MAX_INPUT_CHARS).toBe(30000);
   });
 
   it('rejects invalid Ollama URLs before boot', () => {

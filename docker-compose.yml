@@ -68,7 +68,7 @@ services:
     ports:
       - "${OLLAMA_PORT:-11435}:11434"
     environment:
-      BUILDER_OLLAMA_MODEL: ${BUILDER_OLLAMA_MODEL:-deepseek-r1:7b}
+      BUILDER_OLLAMA_MODEL: ${BUILDER_OLLAMA_MODEL:-qwen2.5-coder:7b}
     deploy:
       resources:
         reservations:
@@ -100,10 +100,10 @@ services:
       PLAN_MODEL_NAME: ${BUILDER_OLLAMA_PLAN_MODEL:-dockus-builder-plan}
       EVAL_MODEL_NAME: ${BUILDER_OLLAMA_EVAL_MODEL:-dockus-builder-eval}
       QUALITY_MODEL_NAME: ${BUILDER_OLLAMA_QUALITY_MODEL:-dockus-builder-quality}
-      PLAN_BASE_MODEL: ${PLAN_BASE_MODEL:-qwen2.5-coder:1.5b}
-      EVAL_BASE_MODEL: ${EVAL_BASE_MODEL:-deepseek-r1:1.5b}
-      QUALITY_BASE_MODEL: ${QUALITY_BASE_MODEL:-deepseek-r1:1.5b}
-      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-65536}
+      PLAN_BASE_MODEL: ${PLAN_BASE_MODEL:-qwen2.5-coder:7b}
+      EVAL_BASE_MODEL: ${EVAL_BASE_MODEL:-deepseek-r1:8b}
+      QUALITY_BASE_MODEL: ${QUALITY_BASE_MODEL:-deepseek-r1:8b}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-16384}
     volumes:
       - ./backend:/app
     command: sh -c "node /app/scripts/ollama-bootstrap.mjs"

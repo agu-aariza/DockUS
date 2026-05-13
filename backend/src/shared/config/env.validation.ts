@@ -58,6 +58,10 @@ export const envValidationSchema = Joi.object({
   BUILDER_OLLAMA_PLAN_MODEL: Joi.string().default('dockus-builder-plan'),
   BUILDER_OLLAMA_EVAL_MODEL: Joi.string().default('dockus-builder-eval'),
   BUILDER_OLLAMA_QUALITY_MODEL: Joi.string().default('dockus-builder-quality'),
+  PLAN_BASE_MODEL: Joi.string().default('qwen2.5-coder:7b'),
+  EVAL_BASE_MODEL: Joi.string().default('deepseek-r1:8b'),
+  QUALITY_BASE_MODEL: Joi.string().default('deepseek-r1:8b'),
+  OLLAMA_NUM_CTX: Joi.number().integer().min(4096).default(16384),
   BUILDER_OLLAMA_TIMEOUT_MS: Joi.number().integer().min(1000).default(120000),
   BUILDER_LLM_ASSIST_ENABLED: Joi.boolean().default(true),
   BUILDER_SELF_HEAL_MAX_ATTEMPTS: Joi.number()
@@ -83,7 +87,7 @@ export const envValidationSchema = Joi.object({
   BUILDER_LLM_EVAL_MAX_INPUT_CHARS: Joi.number()
     .integer()
     .min(2000)
-    .default(15000),
+    .default(25000),
   BUILDER_LLM_REPAIR_MAX_INPUT_CHARS: Joi.number()
     .integer()
     .min(2000)
@@ -95,7 +99,7 @@ export const envValidationSchema = Joi.object({
   BUILDER_LLM_QUALITY_MAX_INPUT_CHARS: Joi.number()
     .integer()
     .min(2000)
-    .default(20000),
+    .default(30000),
   BUILDER_DOCKER_BUILD_TIMEOUT_MS: Joi.number()
     .integer()
     .min(10000)

@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import * as path from 'path';
 
 describe('Ollama builder assets', () => {
-  it('keeps the plan, eval and quality Modelfiles aligned with builder stages', () => {
+  it('keeps Modelfiles thin and focused on inference profile instead of business policy', () => {
     const planModelfile = readFileSync(
       path.resolve(__dirname, '../../../../scripts/ollama-plan.Modelfile'),
       'utf8',
@@ -16,24 +16,20 @@ describe('Ollama builder assets', () => {
       'utf8',
     );
 
-    expect(planModelfile).toContain('Python y C');
-    expect(planModelfile).toContain('Makefile');
-    expect(planModelfile).toContain('CMakeLists.txt');
-    expect(planModelfile).toContain('c99');
-    expect(planModelfile).toContain('c11');
-    expect(planModelfile).toContain('c17');
-    expect(planModelfile).toContain('gcc');
-
-    expect(evalModelfile).toContain('expectedOutput');
-    expect(evalModelfile).toContain('segfault');
-    expect(evalModelfile).toContain('memory leak');
-    expect(evalModelfile).toContain('undefined reference');
-    expect(evalModelfile).toContain('warnings de compilación');
-
-    expect(qualityModelfile).toContain('feedback técnico');
-    expect(qualityModelfile).toContain('seguridad');
-    expect(qualityModelfile).toContain('arquitectura');
-    expect(qualityModelfile).toContain('calidad');
+    for (const modelfile of [
+      planModelfile,
+      evalModelfile,
+      qualityModelfile,
+    ]) {
+      expect(modelfile).toContain('PARAMETER num_ctx');
+      expect(modelfile).toContain('PARAMETER temperature');
+      expect(modelfile).toContain('PARAMETER top_p');
+      expect(modelfile).toContain('PARAMETER repeat_penalty');
+      expect(modelfile).toContain('Runtime prompt instructions are the source of truth.');
+      expect(modelfile).not.toContain('Taxonomia estructural');
+      expect(modelfile).not.toContain('observedEvidence');
+      expect(modelfile).not.toContain('Capacidades');
+    }
   });
 
   it('loads explicit Modelfile templates during ollama bootstrap', () => {
@@ -48,7 +44,7 @@ describe('Ollama builder assets', () => {
     expect(bootstrapScript).toContain('readFile');
   });
 
-  it('keeps docker compose and bootstrap documentation aligned with the quality model contract', () => {
+  it('documents prompts as source of truth and keeps bootstrap contract aligned', () => {
     const compose = readFileSync(
       path.resolve(__dirname, '../../../../../docker-compose.yml'),
       'utf8',
@@ -62,12 +58,10 @@ describe('Ollama builder assets', () => {
       'QUALITY_MODEL_NAME: ${BUILDER_OLLAMA_QUALITY_MODEL:-dockus-builder-quality}',
     );
     expect(compose).toContain(
-      'QUALITY_BASE_MODEL: ${QUALITY_BASE_MODEL:-deepseek-r1:1.5b}',
+      'QUALITY_BASE_MODEL: ${QUALITY_BASE_MODEL:-deepseek-r1:8b}',
     );
-    expect(compose).not.toMatch(/\n\s+MODEL_NAME:/);
-
-    expect(readme).toContain('QUALITY_MODEL_NAME');
-    expect(readme).toContain('QUALITY_BASE_MODEL');
-    expect(readme).not.toMatch(/-\s+`MODEL_NAME`/);
+    expect(readme).toContain('source of truth');
+    expect(readme).toContain('prompts.json');
+    expect(readme).toContain('runtime profiles');
   });
 });
