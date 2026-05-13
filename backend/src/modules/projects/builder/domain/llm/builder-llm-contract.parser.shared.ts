@@ -332,6 +332,24 @@ export function assertPlanSemanticConsistency(
   }
 }
 
+const BUILD_SYSTEM_EXECUTABLES = new Set(['make', 'cmake', 'gcc', 'g++', 'cc']);
+
+/**
+ * Detects when recipe.run starts with a build-system executable
+ * (make, gcc, etc.) instead of the compiled program binary.
+ * Returns a warning message if detected, null otherwise.
+ */
+export function detectBuildSystemInRun(
+  recipe: BuilderRecipeV2,
+): string | null {
+  if (!recipe.run || recipe.run.length === 0) return null;
+  const runExecutable = recipe.run[0];
+  if (BUILD_SYSTEM_EXECUTABLES.has(runExecutable)) {
+    return `recipe.run[0] es '${runExecutable}', que es un compilador/build-system, no un ejecutable de programa.`;
+  }
+  return null;
+}
+
 export function assertEvaluationSemanticConsistency(
   capabilities: BuilderCapabilityMap,
   recipe: BuilderRecipeV2,

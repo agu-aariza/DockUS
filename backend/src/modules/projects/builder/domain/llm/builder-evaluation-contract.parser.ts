@@ -1,4 +1,9 @@
-import { BuilderEvaluationContractV2 } from '../builder.types';
+import {
+  BuilderEvaluationContractV2,
+  BuilderRecipeV2,
+  BuilderRuntimeDescriptorV2,
+  RubricGradeItem,
+} from '../builder.types';
 import {
   alignCapabilitiesWithRecipe,
   assertEvaluationSemanticConsistency,
@@ -45,8 +50,8 @@ export function parseBuilderEvaluationContractV2(
       object.externalRequirements,
       'externalRequirements',
     ),
-    runtime: normalizeRuntimeDescriptor(object.runtime, sourceName),
-    recipe: normalizeRecipe(object.recipe, sourceName),
+    runtime: safeNormalizeRuntimeDescriptor(object.runtime, sourceName),
+    recipe: safeNormalizeRecipe(object.recipe, sourceName),
     evidenceSummary: normalizeOptionalString(
       object.evidenceSummary,
       'evidenceSummary',
@@ -57,17 +62,127 @@ export function parseBuilderEvaluationContractV2(
       object.evaluationLimits,
       'evaluationLimits',
     ),
+    gradeBreakdown: normalizeGradeBreakdown(object.gradeBreakdown),
+    studentSummary: normalizeOptionalString(
+      object.studentSummary,
+      'studentSummary',
+      'No se genero resumen para el alumno.',
+    ),
+    teacherSummary: normalizeOptionalString(
+      object.teacherSummary,
+      'teacherSummary',
+      'No se genero resumen para el profesor.',
+    ),
   };
+
+  // Detect truncation: if runtime or recipe fell back to defaults,
+  // mark the contract so downstream code knows the eval was partial.
+  const wasTruncated =
+    contract.runtime.reason?.includes('truncamiento') ||
+    (contract.recipe.run === null &&
+      contract.recipe.install.length === 0 &&
+      object.recipe === undefined);
+
+  if (wasTruncated) {
+    contract.evaluationLimits = [
+      ...contract.evaluationLimits,
+      'TRUNCATED: La respuesta del evaluador fue truncada (posible loop de repetición). Los campos runtime/recipe/observedEvidence pueden estar incompletos.',
+    ];
+    contract.confidence = 'low';
+  }
 
   contract.capabilities = alignCapabilitiesWithRecipe(
     contract.capabilities,
     contract.recipe,
   );
 
-  assertEvaluationSemanticConsistency(
-    contract.capabilities,
-    contract.recipe,
-    contract.observedEvidence,
-  );
+  // Skip strict semantic consistency check if the response was truncated,
+  // since missing fields would cause false assertion failures.
+  if (!wasTruncated) {
+    assertEvaluationSemanticConsistency(
+      contract.capabilities,
+      contract.recipe,
+      contract.observedEvidence,
+    );
+  }
+
   return contract;
+}
+
+/**
+ * Eval JSON may be truncated when the LLM enters a repetition loop
+ * and exhausts numPredict before emitting runtime/recipe.
+ * Instead of crashing, fall back to sensible defaults so we can still
+ * surface the gradeBreakdown, studentSummary, etc. that were parsed.
+ */
+function safeNormalizeRuntimeDescriptor(
+  value: unknown,
+  sourceName: string,
+): BuilderRuntimeDescriptorV2 {
+  try {
+    return normalizeRuntimeDescriptor(value, sourceName);
+  } catch {
+    return {
+      family: 'unknown',
+      version: null,
+      supported: false,
+      reason:
+        'runtime ausente en respuesta del evaluador (posible truncamiento por agotamiento de tokens).',
+    };
+  }
+}
+
+function safeNormalizeRecipe(
+  value: unknown,
+  sourceName: string,
+): BuilderRecipeV2 {
+  try {
+    return normalizeRecipe(value, sourceName);
+  } catch {
+    return {
+      install: [],
+      run: null,
+      test: [],
+      systemPackages: [],
+      cwd: null,
+      environment: null,
+      service: null,
+    };
+  }
+}
+
+function normalizeGradeBreakdown(value: unknown): RubricGradeItem[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    return [];
+  }
+
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      return [];
+    }
+    const candidate = entry as Record<string, unknown>;
+    const criterion =
+      typeof candidate.criterion === 'string'
+        ? candidate.criterion.trim()
+        : '';
+    const maxPoints =
+      typeof candidate.maxPoints === 'number' ? candidate.maxPoints : 0;
+    const awarded =
+      typeof candidate.awarded === 'number' ? candidate.awarded : 0;
+    const justification =
+      typeof candidate.justification === 'string'
+        ? candidate.justification.trim()
+        : '';
+
+    if (!criterion) return [];
+
+    return [
+      {
+        criterion,
+        maxPoints: Math.max(0, maxPoints),
+        awarded: Math.max(0, Math.min(awarded, maxPoints || awarded)),
+        justification: justification || 'Sin justificación.',
+      },
+    ];
+  });
 }

@@ -48,6 +48,15 @@ export class CodeQualityFindingEntity {
   @Column({ type: 'int', nullable: true })
   line!: number | null;
 
+  @Column({ type: 'text', default: '' })
+  codeSnippet!: string;
+
+  @Column({ type: 'varchar', length: 16, default: 'basico' })
+  level!: string;
+
+  @Column({ type: 'text', default: '' })
+  conceptExplanation!: string;
+
   @CreateDateColumn()
   createdAt!: Date;
 }

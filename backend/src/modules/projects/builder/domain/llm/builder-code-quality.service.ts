@@ -5,19 +5,24 @@ import {
   BuilderCodeQualityContractV2,
   BuilderEvaluationContractV2,
   BuilderLlmStageErrorInfo,
+  BuilderLlmStagePromptSnapshot,
+  BuilderLlmStageTrace,
 } from '../builder.types';
 import {
   PromptId,
   PromptRegistryService,
 } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 import {
-  createOllamaConnectivityError,
-  createOllamaHttpError,
-  createOllamaInvalidResponseError,
-  createOllamaTimeoutError,
-  OllamaRequestError,
-} from '../../../../../shared/infrastructure/ai/ollama-request.util';
+  OllamaGenerationService,
+  OllamaModelProfile,
+} from '../../../../../shared/infrastructure/ai/ollama-generation.service';
+import { OllamaRequestError } from '../../../../../shared/infrastructure/ai/ollama-request.util';
 import { parseBuilderCodeQualityContractV2 } from './builder-code-quality-contract.parser';
+import { resolveBuilderModelProfile } from './builder-llm-model-profile';
+import {
+  ComposedPromptPayload,
+  composeQualityPrompt,
+} from './builder-prompt-composer';
 
 export interface CodeQualityInput {
   sourceCodePayload: string;
@@ -26,22 +31,9 @@ export interface CodeQualityInput {
   assessment: BuilderEvaluationContractV2;
 }
 
-export interface BuilderCodeQualityPromptSnapshot {
-  model: string;
-  systemPrompt: string | null;
-  prompt: string;
-  createdAt: string;
-}
-
-export interface BuilderCodeQualityTrace {
-  model: string;
-  systemPrompt: string | null;
-  prompt: string;
-  rawResponse: string | null;
-  parsedContract: BuilderCodeQualityContractV2 | null;
-  error: BuilderLlmStageErrorInfo | null;
-  createdAt: string;
-}
+export type BuilderCodeQualityPromptSnapshot = BuilderLlmStagePromptSnapshot;
+export type BuilderCodeQualityTrace =
+  BuilderLlmStageTrace<BuilderCodeQualityContractV2>;
 
 interface BuilderCodeQualityTraceHooks {
   onBeforeCall?: (
@@ -52,33 +44,26 @@ interface BuilderCodeQualityTraceHooks {
 @Injectable()
 export class BuilderCodeQualityService {
   private readonly logger = new Logger(BuilderCodeQualityService.name);
-  private readonly baseUrl: string;
-  private readonly model: string;
-  private readonly timeoutMs: number;
   private readonly maxInputChars: number;
   private readonly systemPrompt: string;
+  private readonly modelProfile: OllamaModelProfile;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly promptRegistry: PromptRegistryService,
+    private readonly ollamaGenerationService: OllamaGenerationService,
   ) {
-    this.baseUrl = this.configService.get<string>(
-      'BUILDER_OLLAMA_BASE_URL',
-      'http://ollama:11434',
-    );
-    this.model = this.configService.get<string>(
-      'BUILDER_OLLAMA_QUALITY_MODEL',
-      'dockus-builder-quality',
-    );
-    this.timeoutMs = this.configService.get<number>(
-      'BUILDER_OLLAMA_TIMEOUT_MS',
-      120000,
-    );
     this.maxInputChars = this.configService.get<number>(
       'BUILDER_LLM_QUALITY_MAX_INPUT_CHARS',
       20000,
     );
-    this.systemPrompt = this.promptRegistry.getPrompt(PromptId.TECHNICAL_FEEDBACK);
+    this.systemPrompt = this.promptRegistry.getPrompt(
+      PromptId.TECHNICAL_FEEDBACK,
+    );
+    this.modelProfile = resolveBuilderModelProfile(
+      'quality',
+      this.configService,
+    );
   }
 
   async analyze(input: CodeQualityInput): Promise<BuilderCodeQualityContractV2> {
@@ -100,39 +85,27 @@ export class BuilderCodeQualityService {
     input: CodeQualityInput,
     hooks?: BuilderCodeQualityTraceHooks,
   ): Promise<BuilderCodeQualityTrace> {
-    this.logStageStart();
-
-    const userPrompt = this.truncatePrompt(
-      `
-Tipo de proyecto esperado:
-${input.assignmentContext.expectedType ?? 'No especificado.'}
-
-Instrucciones de la rúbrica:
-${input.assignmentContext.rubricInstructions ?? 'No hay instrucciones adicionales.'}
-
-Evaluación académica actual:
-${JSON.stringify(input.assessment, null, 2)}
-
-Código fuente del alumno:
-${input.sourceCodePayload}
-
-Logs de ejecución/tests:
-${input.executionLogs || 'No hay logs adicionales.'}
-`,
+    const composedPrompt = composeQualityPrompt(
+      input.sourceCodePayload,
+      input.executionLogs || 'No execution logs were captured.',
+      input.assignmentContext,
+      input.assessment,
       this.maxInputChars,
     );
 
-    const snapshot = this.createPromptSnapshot(userPrompt);
+    const snapshot = this.createPromptSnapshot(composedPrompt);
     await hooks?.onBeforeCall?.(snapshot);
 
     let response: string | null = null;
 
     try {
-      response = await this.callSpecificModel(
-        this.model,
-        userPrompt,
-        this.systemPrompt,
-      );
+      response = await this.ollamaGenerationService.generate({
+        stage: 'quality',
+        promptId: PromptId.TECHNICAL_FEEDBACK,
+        prompt: composedPrompt.prompt,
+        systemPrompt: this.systemPrompt,
+        profile: this.modelProfile,
+      });
     } catch (error: unknown) {
       const serializedError = this.serializeError(error);
       this.logStageError(serializedError);
@@ -157,107 +130,33 @@ ${input.executionLogs || 'No hay logs adicionales.'}
     }
   }
 
-  private async callSpecificModel(
-    model: string,
-    prompt: string,
-    system?: string,
-  ): Promise<string> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
-
-    try {
-      const response = await fetch(`${this.baseUrl}/api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          stream: false,
-          prompt,
-          ...(system && { system }),
-          keep_alive: 300,
-          options: {
-            num_ctx: 32768,
-          },
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const details = await response.text();
-        throw createOllamaHttpError({
-          baseUrl: this.baseUrl,
-          target: model,
-          status: response.status,
-          details,
-        });
-      }
-
-      const payload = (await response.json()) as { response?: unknown };
-      if (typeof payload.response !== 'string') {
-        throw createOllamaInvalidResponseError(
-          'Respuesta de calidad LLM sin campo response string.',
-        );
-      }
-
-      return payload.response;
-    } catch (error) {
-      if (error instanceof OllamaRequestError) {
-        throw error;
-      }
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw createOllamaTimeoutError(
-          this.baseUrl,
-          'analizar calidad con LLM',
-        );
-      }
-      throw createOllamaConnectivityError(this.baseUrl, error);
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  private truncatePrompt(prompt: string, maxChars: number): string {
-    if (!prompt || prompt.length <= maxChars) {
-      return prompt;
-    }
-
-    const suffix = '\n...[truncated]';
-    const targetLength = Math.max(0, maxChars - suffix.length);
-    return `${prompt.slice(0, targetLength)}${suffix}`;
-  }
-
   private createPromptSnapshot(
-    prompt: string,
+    prompt: ComposedPromptPayload,
   ): BuilderCodeQualityPromptSnapshot {
     return {
-      model: this.model,
+      stage: 'quality',
+      promptId: PromptId.TECHNICAL_FEEDBACK,
+      model: this.modelProfile.model,
       systemPrompt: this.systemPrompt,
-      prompt,
+      prompt: prompt.prompt,
+      sections: prompt.sections,
+      modelProfile: this.modelProfile,
       createdAt: new Date().toISOString(),
     };
   }
 
-  private logStageStart(): void {
-    this.logger.log(
-      JSON.stringify({
-        event: 'builder_llm_stage_start',
-        stage: 'quality',
-        model: this.model,
-        baseUrl: this.baseUrl,
-        timeoutMs: this.timeoutMs,
-      }),
-    );
-  }
-
   private logStageError(error: BuilderLlmStageErrorInfo): void {
+    const runtime = this.ollamaGenerationService.getRuntimeConfig();
     this.logger.error(
       JSON.stringify({
         event: 'builder_llm_stage_error',
         stage: 'quality',
-        model: this.model,
-        baseUrl: this.baseUrl,
+        promptId: PromptId.TECHNICAL_FEEDBACK,
+        model: this.modelProfile.model,
+        baseModel: this.modelProfile.baseModel,
+        profileVersion: this.modelProfile.profileVersion,
+        baseUrl: runtime.baseUrl,
+        timeoutMs: runtime.timeoutMs,
         code: error.code ?? 'unknown',
         httpStatus: error.httpStatus ?? null,
         message: error.message,
@@ -272,6 +171,7 @@ ${input.executionLogs || 'No hay logs adicionales.'}
     parsedContract: BuilderCodeQualityContractV2 | null = null,
   ): BuilderCodeQualityTrace {
     return {
+      schemaVersion: 'builder-llm/v2',
       ...snapshot,
       rawResponse,
       parsedContract,

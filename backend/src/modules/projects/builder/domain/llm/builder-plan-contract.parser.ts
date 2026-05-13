@@ -2,6 +2,7 @@ import { BuilderPlanContractV2 } from '../builder.types';
 import {
   alignCapabilitiesWithRecipe,
   assertPlanSemanticConsistency,
+  detectBuildSystemInRun,
   normalizeCapabilities,
   normalizeConfidence,
   normalizeObservedEvidence,
@@ -61,5 +62,28 @@ export function parseBuilderPlanContractV2(raw: string): BuilderPlanContractV2 {
   );
 
   assertPlanSemanticConsistency(contract.capabilities, contract.recipe);
+
+  // Auto-correct: if recipe.run starts with a build-system executable
+  // (make, gcc, etc.), replace it with ./main since the actual binary
+  // is what should be executed, not the build system.
+  const buildSystemWarning = detectBuildSystemInRun(contract.recipe);
+  if (buildSystemWarning && contract.recipe.run) {
+    const installHasBuildSystem = contract.recipe.install.some(
+      (cmd) =>
+        cmd[0] === 'make' ||
+        cmd[0] === 'cmake' ||
+        cmd[0] === 'gcc' ||
+        cmd[0] === 'g++',
+    );
+    if (installHasBuildSystem) {
+      const originalRun = [...contract.recipe.run];
+      contract.recipe.run = ['./main'];
+      contract.evaluationLimits = [
+        ...contract.evaluationLimits,
+        `AUTO-CORRECTED: recipe.run era [${originalRun.map((t) => `'${t}'`).join(', ')}]. Cambiado a ['./main'] porque un build system no es un ejecutable de programa.`,
+      ];
+    }
+  }
+
   return contract;
 }

@@ -21,6 +21,7 @@ export interface ProjectAssignmentResponse {
   id: string;
   projectId: string;
   projectTitle: string;
+  projectExpectedType: string | null;
   maxDeliveriesPerStudent: number;
   sourceGroupIds: string[];
   studentId: string;
@@ -454,6 +455,7 @@ export class ProjectAssignmentsService {
         id: assignment.id,
         projectId: assignment.projectId,
         projectTitle: project?.title ?? 'Proyecto no disponible',
+        projectExpectedType: project?.expectedType ?? null,
         maxDeliveriesPerStudent,
         sourceGroupIds: assignment.sourceGroupIds ?? [],
         courseGroupId: primaryGroupId ?? null,

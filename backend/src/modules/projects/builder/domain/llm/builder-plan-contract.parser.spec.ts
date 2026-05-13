@@ -294,6 +294,67 @@ describe('parseBuilderPlanContractV2', () => {
     );
   });
 
+  it('auto-corrects recipe.run when it starts with a build system executable', () => {
+    const raw = JSON.stringify(
+      buildPlanPayload({
+        structuralType: 'T2',
+        capabilities: {
+          C1: { status: 'yes', rationale: 'Makefile presente.' },
+          C2: { status: 'yes', rationale: 'Binario compilable.' },
+          C3: { status: 'no', rationale: 'CLI sin servidor.' },
+          C4: { status: 'unknown', rationale: 'Sin tests.' },
+          C5: { status: 'no', rationale: 'Sin healthcheck.' },
+          C6: { status: 'unknown', rationale: 'Sin config.' },
+        },
+        runtime: {
+          family: 'c',
+          version: 'c11',
+        },
+        recipe: {
+          install: [['make']],
+          run: ['make', 'all'],
+          test: [],
+          systemPackages: [],
+          cwd: '/app',
+          environment: null,
+          service: null,
+        },
+      }),
+    );
+
+    const contract = parseBuilderPlanContractV2(raw);
+
+    expect(contract.recipe.run).toEqual(['./main']);
+    expect(contract.evaluationLimits.length).toBeGreaterThan(0);
+    expect(contract.evaluationLimits[0]).toContain('AUTO-CORRECTED');
+  });
+
+  it('does not auto-correct recipe.run when it is a valid local executable', () => {
+    const raw = JSON.stringify(
+      buildPlanPayload({
+        structuralType: 'T2',
+        runtime: {
+          family: 'c',
+          version: 'c11',
+        },
+        recipe: {
+          install: [['make']],
+          run: ['./main', '7', '8'],
+          test: [],
+          systemPackages: [],
+          cwd: '/app',
+          environment: null,
+          service: null,
+        },
+      }),
+    );
+
+    const contract = parseBuilderPlanContractV2(raw);
+
+    expect(contract.recipe.run).toEqual(['./main', '7', '8']);
+    expect(contract.evaluationLimits).toEqual([]);
+  });
+
   it('marks non-python runtimes as declared but unsupported', () => {
     const raw = JSON.stringify(
       buildPlanPayload({

@@ -76,6 +76,15 @@ function normalizeFinding(
     candidate.line,
     `${field}[${index}].line`,
   );
+  const codeSnippet = normalizeStringWithDefault(
+    candidate.codeSnippet,
+    '',
+  );
+  const level = normalizeLevel(candidate.level);
+  const conceptExplanation = normalizeStringWithDefault(
+    candidate.conceptExplanation,
+    '',
+  );
 
   return {
     title,
@@ -83,6 +92,9 @@ function normalizeFinding(
     severity,
     ...(file ? { file } : {}),
     ...(line !== undefined ? { line } : {}),
+    codeSnippet,
+    level,
+    conceptExplanation,
   };
 }
 
@@ -189,4 +201,24 @@ function readOptionalTrimmedString(value: unknown): string | undefined {
 
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : undefined;
+}
+
+const VALID_LEVELS = ['basico', 'intermedio', 'avanzado'] as const;
+type FindingLevel = (typeof VALID_LEVELS)[number];
+
+function normalizeStringWithDefault(value: unknown, fallback: string): string {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+  return fallback;
+}
+
+function normalizeLevel(value: unknown): FindingLevel {
+  if (
+    typeof value === 'string' &&
+    VALID_LEVELS.includes(value as FindingLevel)
+  ) {
+    return value as FindingLevel;
+  }
+  return 'basico';
 }

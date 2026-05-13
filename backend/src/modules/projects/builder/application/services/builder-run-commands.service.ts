@@ -197,6 +197,7 @@ export class BuilderRunCommandsService {
       eventType: 'RUN_STARTED',
       runStatus: BuildRunStatus.RUNNING,
       message: 'Ejecucion iniciada (Pipeline Efimero LLM)',
+      payload: { studentStage: 'building' },
     });
 
     try {
@@ -245,6 +246,7 @@ export class BuilderRunCommandsService {
         eventType: 'RUN_STATUS_CHANGED',
         runStatus: BuildRunStatus.RUNNING,
         message: 'Analizando arquitectura del proyecto con IA...',
+        payload: { studentStage: 'building' },
       });
 
       const planTrace = await this.builderLlmEvaluatorService.planWithTrace(
@@ -266,6 +268,7 @@ export class BuilderRunCommandsService {
         eventType: 'RUN_STATUS_CHANGED',
         runStatus: BuildRunStatus.RUNNING,
         message: `Plan generado: ${planAssessment.structuralType} (Confianza: ${planAssessment.confidence})`,
+        payload: { studentStage: 'building' },
       });
 
       run.llmReasoning = `[PLANNER THOUGHT]: ${planAssessment.thought}`;
@@ -401,6 +404,7 @@ export class BuilderRunCommandsService {
           eventType: 'RUN_STATUS_CHANGED',
           runStatus: BuildRunStatus.RUNNING,
           message: `Ejecutando orquestacion: ${recipe.servicePort ? 'Servicio + Healthcheck + Tests' : 'Batch Run + Tests'}`,
+          payload: { studentStage: 'executing' },
         });
 
         const cacheInfo =
@@ -426,6 +430,7 @@ export class BuilderRunCommandsService {
             eventType: 'RUN_STATUS_CHANGED',
             runStatus: BuildRunStatus.RUNNING,
             message: `Iniciando ejecucion del servicio (Puerto: ${recipe.servicePort || 'N/A'})...`,
+            payload: { studentStage: 'executing' },
           });
 
           let executionOutput = '';
@@ -460,7 +465,10 @@ export class BuilderRunCommandsService {
                     message: cleanEvidence
                       ? 'Prueba de vida: el servicio respondio correctamente.'
                       : 'Prueba de vida: servicio alcanzable.',
-                    payload: { evidence: cleanEvidence.slice(0, 300) },
+                    payload: {
+                      evidence: cleanEvidence.slice(0, 300),
+                      studentStage: 'executing',
+                    },
                   });
                 }
               }
@@ -505,6 +513,7 @@ export class BuilderRunCommandsService {
         eventType: 'LOG_CHUNK',
         runStatus: BuildRunStatus.RUNNING,
         message: 'Auditoria final del LLM...',
+        payload: { studentStage: 'evaluating' },
       });
 
       const evaluationTrace =
@@ -527,6 +536,7 @@ export class BuilderRunCommandsService {
         evaluationTrace,
         planAssessment,
         executionLogs,
+        assignmentContext.expectedOutput ?? null,
       );
 
       run.status = BuildRunStatus.SUCCESS;
@@ -546,6 +556,7 @@ export class BuilderRunCommandsService {
           eventType: 'LOG_CHUNK',
           runStatus: BuildRunStatus.SUCCESS,
           message: 'Realizando analisis profundo de calidad y seguridad...',
+          payload: { studentStage: 'analyzing' },
         });
 
         const qualityTrace =
@@ -615,6 +626,7 @@ export class BuilderRunCommandsService {
         eventType: 'RUN_COMPLETED',
         runStatus: BuildRunStatus.SUCCESS,
         message: 'Evaluacion completada con exito.',
+        payload: { studentStage: 'completed' },
       });
     } catch (error) {
       await this.builderRunSupportService.markRunAsFailed(
@@ -696,8 +708,31 @@ export class BuilderRunCommandsService {
     trace: BuilderLlmStageTrace<BuilderEvaluationContractV2>,
     planAssessment: BuilderPlanContractV2,
     executionLogs: string,
+    expectedOutput: string | null,
   ): BuilderEvaluationContractV2 {
     if (trace.parsedContract) {
+      const hallucinationWarning = this.detectOutputHallucination(
+        trace.parsedContract,
+        executionLogs,
+        expectedOutput,
+      );
+      if (hallucinationWarning) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'builder_eval_hallucination_detected',
+            warning: hallucinationWarning,
+            originalState: trace.parsedContract.evaluativeState,
+          }),
+        );
+        trace.parsedContract.evaluationLimits = [
+          ...trace.parsedContract.evaluationLimits,
+          hallucinationWarning,
+        ];
+        if (trace.parsedContract.evaluativeState === 'E1') {
+          trace.parsedContract.evaluativeState = 'E3';
+          trace.parsedContract.confidence = 'low';
+        }
+      }
       return trace.parsedContract;
     }
 
@@ -732,6 +767,11 @@ export class BuilderRunCommandsService {
       confidence: 'low',
       rationale: `El evaluador LLM devolvio un contrato invalido: ${errorMessage}`,
       recommendedGrade: undefined,
+      gradeBreakdown: [],
+      studentSummary:
+        'No se pudo generar un resumen porque el evaluador automatico fallo. Tu profesor revisara la entrega manualmente.',
+      teacherSummary:
+        `Evaluacion degradada. El evaluador LLM devolvio un contrato invalido: ${errorMessage}. Revision manual recomendada.`,
       externalRequirements: planAssessment.externalRequirements,
       runtime: planAssessment.runtime,
       recipe: planAssessment.recipe,
@@ -740,6 +780,72 @@ export class BuilderRunCommandsService {
       observedEvidence,
       evaluationLimits,
     };
+  }
+
+  /**
+   * Detects when the eval LLM likely hallucinated program output.
+   * Checks if execution logs only contain build artifacts (gcc, make)
+   * with no actual program output, yet the assessment claims success.
+   */
+  private detectOutputHallucination(
+    assessment: BuilderEvaluationContractV2,
+    executionLogs: string,
+    expectedOutput: string | null,
+  ): string | null {
+    if (!executionLogs) return null;
+
+    const BUILD_PATTERNS = [
+      /^gcc\s/i,
+      /^g\+\+\s/i,
+      /^make[\s:[]/i,
+      /^cc\s/i,
+      /^ld\s/i,
+      /nothing to be done/i,
+      /^STDOUT:\s*$/,
+      /^STDERR:\s*$/,
+      /^EXIT CODE:/i,
+    ];
+
+    const logLines = executionLogs.split('\n').filter((l) => l.trim());
+    const nonBuildLines = logLines.filter((line) => {
+      const stripped = line
+        .replace(/^(STDOUT:|STDERR:|EXIT CODE:)\s*/i, '')
+        .trim();
+      if (!stripped) return false;
+      return !BUILD_PATTERNS.some((p) => p.test(stripped));
+    });
+
+    // If there are no non-build lines but assessment claims E1 or E2
+    if (
+      nonBuildLines.length === 0 &&
+      assessment.evaluativeState !== 'E3' &&
+      assessment.evaluativeState !== 'E4'
+    ) {
+      return (
+        'GUARDRAIL: Los logs solo contienen mensajes de compilacion, sin salida de programa. ' +
+        `El evaluador reporto ${assessment.evaluativeState} — posible alucinacion de salida.`
+      );
+    }
+
+    // If expectedOutput has content but none of its lines appear in execution logs
+    if (expectedOutput?.trim() && assessment.evaluativeState === 'E1') {
+      const oracleLines = expectedOutput
+        .split('\n')
+        .filter((l) => l.trim().length > 5);
+      if (oracleLines.length > 0) {
+        const anyMatch = oracleLines.some((ol) =>
+          executionLogs.includes(ol.trim()),
+        );
+        if (!anyMatch) {
+          return (
+            'GUARDRAIL: Ninguna linea del expectedOutput aparece en los logs de ejecucion, ' +
+            'pero el evaluador reporto E1.'
+          );
+        }
+      }
+    }
+
+    return null;
   }
 
   private buildFallbackObservedEvidence(
@@ -918,6 +1024,9 @@ export class BuilderRunCommandsService {
           'Impacto: el sistema no pudo confirmar que la practica cumple lo esencial. ' +
           'Recomendacion: corrige la causa principal indicada en el informe y vuelve a ejecutar la entrega.',
         severity: 'high',
+        codeSnippet: '',
+        level: 'basico',
+        conceptExplanation: 'El sistema automatico no pudo confirmar que tu entrega cumple los requisitos minimos de la rubrica.',
       });
     }
 
@@ -995,6 +1104,9 @@ export class BuilderRunCommandsService {
           'Impacto: el sistema no pudo confirmar el comportamiento esperado. ' +
           'Recomendacion: corrige el bloqueo operativo o funcional antes de reenviar.',
         severity: 'high' as const,
+        codeSnippet: '',
+        level: 'basico' as const,
+        conceptExplanation: 'Este limite impide al sistema automatico validar tu entrega. Resuelvelo antes de reenviar.',
       }));
   }
 
@@ -1091,6 +1203,9 @@ export class BuilderRunCommandsService {
         severity: finding.severity,
         file: finding.file ?? null,
         line: finding.line ?? null,
+        codeSnippet: finding.codeSnippet ?? '',
+        level: finding.level ?? 'basico',
+        conceptExplanation: finding.conceptExplanation ?? '',
       })),
     );
 
@@ -1109,11 +1224,26 @@ export class BuilderRunCommandsService {
       snapshot.stage === 'plan'
         ? BuildRunArtifactType.LLM_PLAN_PROMPT
         : BuildRunArtifactType.LLM_EVAL_PROMPT;
+    const promptId = snapshot.promptId ?? `${snapshot.stage}-legacy`;
+    const model = snapshot.model ?? 'unknown';
+    const modelProfile = snapshot.modelProfile ?? null;
+    const sections = snapshot.sections ?? [];
+    const baseModel = modelProfile?.baseModel ?? 'unknown';
+    const profileVersion = modelProfile?.profileVersion ?? 'legacy';
 
     const renderedPrompt = [
       `stage: ${snapshot.stage}`,
-      `model: ${snapshot.model}`,
+      `promptId: ${promptId}`,
+      `model: ${model}`,
+      `baseModel: ${baseModel}`,
+      `profileVersion: ${profileVersion}`,
       `createdAt: ${snapshot.createdAt}`,
+      '',
+      '[MODEL PROFILE]',
+      JSON.stringify(modelProfile, null, 2),
+      '',
+      '[PROMPT SECTIONS]',
+      JSON.stringify(sections, null, 2),
       '',
       '[SYSTEM PROMPT]',
       snapshot.systemPrompt ?? '',
@@ -1135,10 +1265,26 @@ export class BuilderRunCommandsService {
     buildRunId: string,
     snapshot: BuilderCodeQualityPromptSnapshot,
   ): Promise<void> {
+    const promptId = snapshot.promptId ?? 'quality-legacy';
+    const model = snapshot.model ?? 'unknown';
+    const modelProfile = snapshot.modelProfile ?? null;
+    const sections = snapshot.sections ?? [];
+    const baseModel = modelProfile?.baseModel ?? 'unknown';
+    const profileVersion = modelProfile?.profileVersion ?? 'legacy';
+
     const renderedPrompt = [
       'stage: quality',
-      `model: ${snapshot.model}`,
+      `promptId: ${promptId}`,
+      `model: ${model}`,
+      `baseModel: ${baseModel}`,
+      `profileVersion: ${profileVersion}`,
       `createdAt: ${snapshot.createdAt}`,
+      '',
+      '[MODEL PROFILE]',
+      JSON.stringify(modelProfile, null, 2),
+      '',
+      '[PROMPT SECTIONS]',
+      JSON.stringify(sections, null, 2),
       '',
       '[SYSTEM PROMPT]',
       snapshot.systemPrompt ?? '',
@@ -1197,7 +1343,10 @@ export class BuilderRunCommandsService {
         artifactTypes.error,
         {
           stage: trace.stage,
-          model: trace.model,
+          promptId: trace.promptId ?? `${trace.stage}-legacy`,
+          model: trace.model ?? 'unknown',
+          modelProfile: trace.modelProfile ?? null,
+          sections: trace.sections ?? [],
           code: trace.error.code ?? null,
           httpStatus: trace.error.httpStatus ?? null,
           timestamp: trace.error.timestamp,
@@ -1237,7 +1386,10 @@ export class BuilderRunCommandsService {
         BuildRunArtifactType.LLM_QUALITY_ERROR,
         {
           stage: 'quality',
-          model: trace.model,
+          promptId: trace.promptId ?? 'quality-legacy',
+          model: trace.model ?? 'unknown',
+          modelProfile: trace.modelProfile ?? null,
+          sections: trace.sections ?? [],
           code: trace.error.code ?? null,
           httpStatus: trace.error.httpStatus ?? null,
           timestamp: trace.error.timestamp,

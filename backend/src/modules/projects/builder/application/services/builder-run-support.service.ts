@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { BuildRun, BuildRunStatus } from '../../domain/entities/build-run.entity';
 import { BuildRunEventType } from '../../domain/builder.types';
 import { BuilderRunEventsService } from '../../domain/events/builder-run-events.service';
@@ -28,7 +29,8 @@ export class BuilderRunSupportService {
       buildRunId,
       eventType: 'RUN_FAILED',
       runStatus: BuildRunStatus.FAILED,
-      message: `Ejecución fallida: ${errorMessage}`,
+      message: `Ejecucion fallida: ${errorMessage}`,
+      payload: { studentStage: 'failed' },
     });
   }
 
@@ -49,6 +51,6 @@ export class BuilderRunSupportService {
     if (error instanceof Error) {
       return error.message;
     }
-    return 'Error no tipado en ejecución de builder.';
+    return 'Error no tipado en ejecucion de builder.';
   }
 }

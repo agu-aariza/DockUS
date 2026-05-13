@@ -1,74 +1,115 @@
 import { readFileSync } from 'fs';
 import * as path from 'path';
 
+import { PromptBundle, renderPromptBundle } from './prompt.types';
+
 describe('prompts.json', () => {
-  it('avoids ambiguous scalar placeholders in builder plan/eval JSON examples', () => {
+  function loadManifest(): Record<string, PromptBundle> {
     const manifestPath = path.resolve(__dirname, 'prompts.json');
-    const manifest = JSON.parse(
-      readFileSync(manifestPath, 'utf8'),
-    ) as Record<string, string>;
+    return JSON.parse(readFileSync(manifestPath, 'utf8')) as Record<
+      string,
+      PromptBundle
+    >;
+  }
 
-    expect(manifest.plan).not.toContain('"structuralType": "T1..T8"');
-    expect(manifest.plan).not.toContain('"evaluativeState": "E1|E2|E3|E4"');
-    expect(manifest.plan).not.toContain('"family": "python|node|unknown"');
+  it('stores each builder prompt as a structured bundle with stable sections', () => {
+    const manifest = loadManifest();
 
-    expect(manifest.eval).not.toContain('"structuralType": "T1..T8"');
-    expect(manifest.eval).not.toContain('"evaluativeState": "E1|E2|E3|E4"');
-    expect(manifest.eval).not.toContain('"family": "python|node|unknown"');
+    for (const key of ['plan', 'eval', 'repair', 'technical-feedback']) {
+      expect(manifest[key]).toEqual(
+        expect.objectContaining({
+          role: expect.any(String),
+          task: expect.any(String),
+          hard_rules: expect.any(Array),
+          schema_contract: expect.any(String),
+          decision_policy: expect.any(Array),
+        }),
+      );
+      expect(manifest[key].hard_rules.length).toBeGreaterThan(2);
+      expect(manifest[key].decision_policy.length).toBeGreaterThan(1);
+    }
   });
 
-  it('guides CLI planner outputs to omit empty service metadata and invented manifests', () => {
-    const manifestPath = path.resolve(__dirname, 'prompts.json');
-    const manifest = JSON.parse(
-      readFileSync(manifestPath, 'utf8'),
-    ) as Record<string, string>;
+  it('renders bundles into canonical system prompts with named sections', () => {
+    const manifest = loadManifest();
 
-    expect(manifest.plan).toContain('Para scripts CLI o batch');
-    expect(manifest.plan).toContain('usa `\"service\": null`');
-    expect(manifest.plan).toContain('no inventes comandos de instalación');
-  });
-  it('documents the canonical C runtime contract for planner, evaluator and repair prompts', () => {
-    const manifestPath = path.resolve(__dirname, 'prompts.json');
-    const manifest = JSON.parse(
-      readFileSync(manifestPath, 'utf8'),
-    ) as Record<string, string>;
+    const renderedPlan = renderPromptBundle(manifest.plan);
+    const renderedEval = renderPromptBundle(manifest.eval);
 
-    expect(manifest.plan).toContain('`runtime.family` debe ser `python`, `node`, `c` o `unknown`');
-    expect(manifest.plan).toContain('`c99`, `c11`, `c17`');
-    expect(manifest.plan).toContain('gcc, g++, make, cmake, valgrind');
-    expect(manifest.plan).toContain('Makefile');
-    expect(manifest.plan).toContain('CMakeLists.txt');
+    expect(renderedPlan).toContain('ROLE');
+    expect(renderedPlan).toContain('HARD RULES');
+    expect(renderedPlan).toContain('SCHEMA CONTRACT');
+    expect(renderedPlan).toContain('DECISION POLICY');
 
-    expect(manifest.eval).toContain('stdout');
-    expect(manifest.eval).toContain('warnings de compilación');
-    expect(manifest.eval).toContain('segfault');
-    expect(manifest.eval).toContain('memory leak');
-    expect(manifest.eval).toContain('undefined reference');
-
-    expect(manifest.repair).toContain('-lm');
-    expect(manifest.repair).toContain('cabeceras .h faltantes');
-    expect(manifest.repair).toContain('build-essential');
+    expect(renderedEval).toContain('EXAMPLES');
+    expect(renderedEval).toContain('builder-llm/v2');
+    expect(renderedEval).toContain('expectedOutput');
   });
 
-  it('teaches the technical feedback prompt to review C quality and security patterns', () => {
-    const manifestPath = path.resolve(__dirname, 'prompts.json');
-    const manifest = JSON.parse(
-      readFileSync(manifestPath, 'utf8'),
-    ) as Record<string, string>;
+  it('documents anti-hallucination planning rules for CLI, C, and service inference', () => {
+    const manifest = loadManifest();
+    const hardRules = manifest.plan.hard_rules.join('\n');
+    const policy = manifest.plan.decision_policy.join('\n');
 
-    expect(manifest['technical-feedback']).toContain('malloc');
-    expect(manifest['technical-feedback']).toContain('free');
-    expect(manifest['technical-feedback']).toContain('switch');
-    expect(manifest['technical-feedback']).toContain('snake_case');
-    expect(manifest['technical-feedback']).toContain('header guards');
-    expect(manifest['technical-feedback']).toContain('sprintf');
-    expect(manifest['technical-feedback']).toContain('snprintf');
-    expect(manifest['technical-feedback']).toContain('gets');
-    expect(manifest['technical-feedback']).toContain('.h');
-    expect(manifest['technical-feedback']).toContain('.c');
-    expect(manifest['technical-feedback']).toContain('errores de compilacion');
-    expect(manifest['technical-feedback']).toContain('naming');
-    expect(manifest['technical-feedback']).toContain('for');
-    expect(manifest['technical-feedback']).toContain('impide aprobar');
+    expect(hardRules).toContain('Cada comando es un array de tokens');
+    expect(hardRules).toContain('Makefile');
+    expect(hardRules).toContain('.c');
+    expect(hardRules).toContain('service=null');
+    expect(hardRules).toContain('NUNCA pongas make, gcc');
+    expect(hardRules).toContain('recipe.install es el paso de COMPILACION');
+    expect(policy).toContain('Para C con Makefile');
+    expect(policy).toContain('run=null');
+    expect(policy).toContain('recipe segura');
+    expect(policy).toContain("recipe.run=['./TARGET']");
+    expect(policy).toContain('NUNCA uses make, gcc ni cmake en recipe.run');
+  });
+
+  it('documents evidence-first adjudication and pedagogical review priorities', () => {
+    const manifest = loadManifest();
+
+    expect(manifest.eval.hard_rules.join('\n')).toContain('observedEvidence');
+    expect(manifest.eval.hard_rules.join('\n')).toContain('undefined reference');
+    expect(manifest.eval.decision_policy.join('\n')).toContain(
+      'Primero decide si el runtime realmente corrio',
+    );
+
+    const qualityRules = manifest['technical-feedback'].hard_rules.join('\n');
+    const qualityPolicy =
+      manifest['technical-feedback'].decision_policy.join('\n');
+
+    expect(qualityRules).toContain('BUENA PRACTICA:');
+    expect(qualityRules).toContain('malloc sin free');
+    expect(qualityRules).toContain('off-by-one');
+    expect(qualityRules).toContain('impide aprobar');
+    expect(qualityRules).toContain('codeSnippet');
+    expect(qualityRules).toContain('conceptExplanation');
+    expect(qualityPolicy).toContain('Primero clasifica bloqueos de aprobacion');
+  });
+
+  it('documents anti-hallucination eval rules for fabricated output and vacuous truth', () => {
+    const manifest = loadManifest();
+    const evalRules = manifest.eval.hard_rules.join('\n');
+    const evalPolicy = manifest.eval.decision_policy.join('\n');
+
+    expect(evalRules).toContain('PROHIBIDO INVENTAR SALIDA');
+    expect(evalRules).toContain('DISTINGUE logs de compilacion de salida de programa');
+    expect(evalRules).toContain('nota maxima posible es 2/10');
+    expect(evalRules).toContain('VERDAD VACUA');
+    expect(evalRules).toContain('archivo vacio');
+    expect(evalPolicy).toContain('ANTES de evaluar criterios de rubrica');
+    expect(evalPolicy).toContain('evaluativeState=E3');
+    expect(evalRules).toContain('BREVEDAD OBLIGATORIA');
+    expect(evalRules).toContain('NUNCA repitas el mismo argumento');
+  });
+
+  it('documents minimum findings and mandatory good practices for quality analysis', () => {
+    const manifest = loadManifest();
+    const qualityRules = manifest['technical-feedback'].hard_rules.join('\n');
+    const qualityPolicy = manifest['technical-feedback'].decision_policy.join('\n');
+
+    expect(qualityRules).toContain('MINIMO de 3 hallazgos totales');
+    expect(qualityRules).toContain('BUENA PRACTICA: [descripcion]');
+    expect(qualityRules).toContain('buenas practicas son obligatorias');
+    expect(qualityPolicy).toContain('rubricCompliance vacio');
   });
 });

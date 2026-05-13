@@ -1,10 +1,21 @@
 import { BuildRunArtifactType } from './entities/build-run-artifact.entity';
+import type {
+  BuilderLlmPromptStage,
+  OllamaModelProfile,
+} from '../../../../shared/infrastructure/ai/ollama-generation.service';
+import type { PromptSectionTrace } from './llm/builder-prompt-composer';
 
 export const BUILDER_LLM_SCHEMA_VERSION = 'builder-llm/v2' as const;
 export type BuilderLlmSchemaVersion = typeof BUILDER_LLM_SCHEMA_VERSION;
 
 export const BUILDER_LLM_STAGES = ['plan', 'evaluation'] as const;
 export type BuilderLlmStage = (typeof BUILDER_LLM_STAGES)[number];
+export const BUILDER_LLM_PROMPT_STAGES = [
+  'plan',
+  'evaluation',
+  'quality',
+] as const;
+export type BuilderPromptStage = (typeof BUILDER_LLM_PROMPT_STAGES)[number];
 
 export type StructuralType = string;
 
@@ -87,6 +98,13 @@ export interface BuilderLlmContractV2Base {
   recommendedGrade?: number;
 }
 
+export interface RubricGradeItem {
+  criterion: string;
+  maxPoints: number;
+  awarded: number;
+  justification: string;
+}
+
 export interface BuilderPlanContractV2 extends BuilderLlmContractV2Base {
   stage: 'plan';
   recommendedGrade?: undefined;
@@ -96,6 +114,9 @@ export interface BuilderEvaluationContractV2
   extends BuilderLlmContractV2Base {
   stage: 'evaluation';
   recommendedGrade?: number;
+  gradeBreakdown: RubricGradeItem[];
+  studentSummary: string;
+  teacherSummary: string;
 }
 
 export type BuilderLlmContractV2 =
@@ -105,10 +126,13 @@ export type BuilderLlmContractV2 =
 export type BuilderLlmAssessment = BuilderEvaluationContractV2;
 
 export interface BuilderLlmStagePromptSnapshot {
-  stage: BuilderLlmStage;
+  stage: BuilderLlmPromptStage;
+  promptId: string;
   model: string;
   systemPrompt: string | null;
   prompt: string;
+  sections: PromptSectionTrace[];
+  modelProfile: OllamaModelProfile;
   createdAt: string;
 }
 
@@ -122,7 +146,7 @@ export interface BuilderLlmStageErrorInfo {
 }
 
 export interface BuilderLlmStageTrace<
-  TContract extends BuilderLlmContractV2 = BuilderLlmContractV2,
+  TContract = BuilderLlmContractV2,
 > extends BuilderLlmStagePromptSnapshot {
   schemaVersion: BuilderLlmSchemaVersion;
   rawResponse: string | null;
@@ -185,12 +209,18 @@ export type CodeQualityCategory = (typeof CODE_QUALITY_CATEGORIES)[number];
 
 export type FindingSeverity = 'low' | 'medium' | 'high';
 
+export const FINDING_LEVELS = ['basico', 'intermedio', 'avanzado'] as const;
+export type FindingLevel = (typeof FINDING_LEVELS)[number];
+
 export interface CodeQualityFinding {
   title: string;
   detail: string;
   severity: FindingSeverity;
   file?: string;
   line?: number;
+  codeSnippet: string;
+  level: FindingLevel;
+  conceptExplanation: string;
 }
 
 export const BUILDER_OUTCOMES = ['PASS', 'FAIL', 'PARTIAL', 'UNKNOWN'] as const;

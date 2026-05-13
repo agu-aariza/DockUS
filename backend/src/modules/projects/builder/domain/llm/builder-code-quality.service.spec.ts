@@ -1,5 +1,11 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PromptRegistryService } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
+import {
+  OllamaGenerationService,
+  OllamaModelProfile,
+} from '../../../../../shared/infrastructure/ai/ollama-generation.service';
+import { OllamaRequestError } from '../../../../../shared/infrastructure/ai/ollama-request.util';
 import { BuilderCodeQualityService } from './builder-code-quality.service';
 
 const validQualityResponse = JSON.stringify({
@@ -8,7 +14,7 @@ const validQualityResponse = JSON.stringify({
     {
       title: 'sprintf inseguro',
       detail:
-        'Observación: se usa sprintf. Impacto: riesgo de desbordamiento. Recomendación: usa snprintf.',
+        'Observacion: se usa sprintf. Impacto: riesgo de desbordamiento. Recomendacion: usa snprintf.',
       severity: 'high',
       file: 'main.c',
       line: 8,
@@ -19,45 +25,65 @@ const validQualityResponse = JSON.stringify({
   rubricCompliance: [],
 });
 
+function createQualityProfile(model: string): OllamaModelProfile {
+  return {
+    profileVersion: 'builder-llm-profile/v1',
+    stage: 'quality',
+    model,
+    baseModel: 'deepseek-r1:8b',
+    numCtx: 24576,
+    numPredict: -1,
+    temperature: 0.2,
+    topP: 0.9,
+    repeatPenalty: 1.1,
+    stopTokens: ['<|endoftext|>'],
+    keepAliveSeconds: 300,
+    timeoutMs: 180_000,
+  };
+}
+
 describe('BuilderCodeQualityService', () => {
-  const fetchMock = jest.fn();
   const promptRegistry = {
     getPrompt: jest.fn(() => 'TECHNICAL_FEEDBACK_PROMPT'),
   } as unknown as PromptRegistryService;
+
+  const ollamaGenerationService = {
+    generate: jest.fn(),
+    getRuntimeConfig: jest.fn(() => ({
+      baseUrl: 'http://ollama.test',
+      timeoutMs: 1000,
+    })),
+  } as unknown as OllamaGenerationService;
 
   let service: BuilderCodeQualityService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    fetchMock.mockReset();
-    global.fetch = fetchMock as unknown as typeof fetch;
 
     service = new BuilderCodeQualityService(
       {
         get: jest.fn((key: string, fallback?: unknown) => {
           switch (key) {
-            case 'BUILDER_OLLAMA_BASE_URL':
-              return 'http://ollama.test';
             case 'BUILDER_OLLAMA_QUALITY_MODEL':
               return 'quality-model';
-            case 'BUILDER_OLLAMA_TIMEOUT_MS':
-              return 1000;
             case 'BUILDER_LLM_QUALITY_MAX_INPUT_CHARS':
-              return 150;
+              return 240;
+            case 'OLLAMA_NUM_CTX':
+              return 24576;
             default:
               return fallback;
           }
         }),
       } as unknown as ConfigService,
       promptRegistry,
+      ollamaGenerationService,
     );
   });
 
-  it('captures prompt, raw response and parsed contract during code quality analysis', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ response: validQualityResponse }),
-    });
+  it('captures prompt sections, raw response, and parsed contract during analysis', async () => {
+    (ollamaGenerationService.generate as jest.Mock).mockResolvedValue(
+      validQualityResponse,
+    );
 
     const trace = await service.analyzeWithTrace(
       {
@@ -65,7 +91,7 @@ describe('BuilderCodeQualityService', () => {
         executionLogs: 'B'.repeat(2000),
         assignmentContext: {
           expectedType: 'C_CLI',
-          rubricInstructions: 'Evalúa mantenibilidad y seguridad.',
+          rubricInstructions: 'Evalua mantenibilidad y seguridad.',
           expectedOutput: null,
         },
         assessment: {
@@ -104,16 +130,33 @@ describe('BuilderCodeQualityService', () => {
           evidenceSummary: 'Todo correcto.',
           observedEvidence: [],
           evaluationLimits: [],
+          gradeBreakdown: [],
+          studentSummary: 'Test summary.',
+          teacherSummary: 'Test teacher summary.',
         },
       },
       {
-        onBeforeCall: ({ model, prompt }) => {
-          expect(model).toBe('quality-model');
-          expect(prompt.length).toBeLessThanOrEqual(150);
+        onBeforeCall: ({ modelProfile, sections, prompt }) => {
+          expect(modelProfile).toEqual(createQualityProfile('quality-model'));
+          expect(prompt.length).toBeLessThanOrEqual(240);
+          expect(sections.some((section) => section.label === 'CURRENT ACADEMIC ASSESSMENT')).toBe(true);
+          expect(sections.some((section) => section.label === 'SOURCE EXCERPTS')).toBe(true);
         },
       },
     );
 
+    expect(ollamaGenerationService.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stage: 'quality',
+        promptId: 'technical-feedback',
+        systemPrompt: 'TECHNICAL_FEEDBACK_PROMPT',
+        profile: expect.objectContaining({
+          model: 'quality-model',
+          stage: 'quality',
+          numCtx: 24576,
+        }),
+      }),
+    );
     expect(trace.rawResponse).toBe(validQualityResponse);
     expect(trace.parsedContract?.security[0]).toEqual(
       expect.objectContaining({
@@ -124,19 +167,24 @@ describe('BuilderCodeQualityService', () => {
     expect(trace.error).toBeNull();
   });
 
-  it('classifies missing quality models as model_not_found', async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 404,
-      text: async () => "model 'quality-model' not found",
-    });
+  it('serializes quality model errors with prompt id and profile metadata', async () => {
+    const errorSpy = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    (ollamaGenerationService.generate as jest.Mock).mockRejectedValue(
+      new OllamaRequestError({
+        code: 'model_not_found',
+        message: "El modelo 'quality-model' no esta disponible.",
+        httpStatus: 404,
+      }),
+    );
 
     const trace = await service.analyzeWithTrace({
       sourceCodePayload: 'int main(void) { return 0; }',
       executionLogs: 'ok',
       assignmentContext: {
         expectedType: 'C_CLI',
-        rubricInstructions: 'Evalúa mantenibilidad y seguridad.',
+        rubricInstructions: 'Evalua mantenibilidad y seguridad.',
         expectedOutput: null,
       },
       assessment: {
@@ -175,6 +223,9 @@ describe('BuilderCodeQualityService', () => {
         evidenceSummary: 'Todo correcto.',
         observedEvidence: [],
         evaluationLimits: [],
+        gradeBreakdown: [],
+        studentSummary: 'Test summary.',
+        teacherSummary: 'Test teacher summary.',
       },
     });
 
@@ -183,8 +234,13 @@ describe('BuilderCodeQualityService', () => {
       expect.objectContaining({
         code: 'model_not_found',
         httpStatus: 404,
-        message: expect.stringContaining('quality-model'),
       }),
+    );
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('"promptId":"technical-feedback"'),
+    );
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('"baseModel":"deepseek-r1:8b"'),
     );
   });
 });

@@ -97,7 +97,10 @@ export class BuilderPedagogicalService {
         `Observacion: ${feedback.explanation} ` +
         'Impacto: este problema impide validar correctamente la entrega. ' +
         `Recomendacion: ${feedback.advice}`,
-      severity: 'high',
+      severity: 'high' as const,
+      codeSnippet: '',
+      level: 'basico' as const,
+      conceptExplanation: feedback.explanation,
     }));
   }
 

@@ -296,6 +296,7 @@ export class BuilderController {
     @Query() query: ListBuildRunsDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<PaginatedBuildRunsResponseDto> {
+    console.log('[DEBUG] getRunsByDelivery query:', query);
     const response = await this.builderService.listRunsByDelivery(
       deliveryId,
       query,

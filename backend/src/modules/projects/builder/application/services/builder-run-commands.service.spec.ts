@@ -396,6 +396,25 @@ describe('BuilderRunCommandsService', () => {
       },
     });
 
+    expect(builderRunSupportService.emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'RUN_STATUS_CHANGED',
+        payload: expect.objectContaining({ studentStage: 'building' }),
+      }),
+    );
+    expect(builderRunSupportService.emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'LOG_CHUNK',
+        payload: expect.objectContaining({ studentStage: 'evaluating' }),
+      }),
+    );
+    expect(builderRunSupportService.emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'RUN_COMPLETED',
+        payload: expect.objectContaining({ studentStage: 'completed' }),
+      }),
+    );
+
     expect(evidenceService.persistTextArtifact).toHaveBeenCalledWith(
       run.id,
       BuildRunArtifactType.LLM_PLAN_PROMPT,

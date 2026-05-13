@@ -93,6 +93,9 @@ export class BuilderQualityAggregationService {
         severity: row.severity as CodeQualityFinding['severity'],
         ...(row.file ? { file: row.file } : {}),
         ...(row.line !== null ? { line: row.line } : {}),
+        codeSnippet: row.codeSnippet ?? '',
+        level: (row.level ?? 'basico') as CodeQualityFinding['level'],
+        conceptExplanation: row.conceptExplanation ?? '',
       });
     }
 
