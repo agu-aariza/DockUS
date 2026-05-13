@@ -181,6 +181,7 @@ export interface ProjectAssignmentEntity {
   id: string;
   projectId: string;
   projectTitle: string;
+  projectExpectedType: string | null;
   maxDeliveriesPerStudent: number;
   studentId: string;
   studentEmail: string;
@@ -293,7 +294,7 @@ export interface DownloadUrlResponse {
 
 export type BuildRunStatus =
   | "QUEUED"
-  | "ANALYZING"
+  | "RUNNING"
   | "SUCCESS"
   | "FAILED"
   | "CANCELLED";
@@ -343,6 +344,15 @@ export type BuildStage =
   | "CLEANUP";
 
 export type TechnicalFeedbackSeverity = "low" | "medium" | "high";
+export type TechnicalFeedbackLevel = "basico" | "intermedio" | "avanzado";
+export type BuilderRuntimeFamily = "python" | "node" | "c" | "unknown";
+
+export interface RubricGradeItem {
+  criterion: string;
+  maxPoints: number;
+  awarded: number;
+  justification: string;
+}
 
 export interface TechnicalFeedbackItem {
   title: string;
@@ -350,6 +360,9 @@ export interface TechnicalFeedbackItem {
   severity: TechnicalFeedbackSeverity;
   file: string | null;
   line: number | null;
+  codeSnippet: string;
+  level: TechnicalFeedbackLevel;
+  conceptExplanation: string;
 }
 
 export interface TechnicalFeedbackReport {
@@ -469,9 +482,18 @@ export interface BuildRunEntity {
     confidence?: string;
     rationale?: string;
     recommendedGrade?: number;
+    gradeBreakdown?: RubricGradeItem[];
+    studentSummary?: string;
+    teacherSummary?: string;
     evidenceSummary?: string;
     observedEvidence?: string[];
     evaluationLimits?: string[];
+    runtime?: {
+      family: BuilderRuntimeFamily;
+      version?: string | null;
+      supported?: boolean;
+      reason?: string | null;
+    };
     capabilities?: Record<
       string,
       {

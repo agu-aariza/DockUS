@@ -15,6 +15,11 @@ const tokenUpdateListeners = new Set<(access: string, refresh: string) => void>(
 export const http = axios.create({
   baseURL: apiBaseUrl,
   timeout: 30000,
+  headers: {
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+    Expires: "0",
+  },
 });
 
 export function setAccessToken(token: string | null): void {

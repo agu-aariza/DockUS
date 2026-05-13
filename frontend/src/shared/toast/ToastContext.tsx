@@ -132,7 +132,11 @@ export function ToastProvider({ children }: PropsWithChildren): JSX.Element {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed right-4 top-4 z-[140] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3">
+      <div
+        className="pointer-events-none fixed right-4 top-4 z-[140] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3"
+        aria-live="assertive"
+        aria-relevant="additions text"
+      >
         {toasts.map((toast) => {
           const config = TOAST_CONFIG[toast.tone];
           const Icon = config.icon;
@@ -140,6 +144,7 @@ export function ToastProvider({ children }: PropsWithChildren): JSX.Element {
           return (
             <section
               key={toast.id}
+              role={toast.tone === "error" ? "alert" : "status"}
               className={`pointer-events-auto overflow-hidden rounded-2xl border shadow-xl shadow-slate-900/10 backdrop-blur animate-in fade-in slide-in-from-top-2 duration-200 ${config.panel}`}
             >
               <div className="flex items-start gap-3 px-4 py-4">

@@ -88,6 +88,9 @@ export function useDeliveryManagement(
       lastFetchedAssignmentId.current = assignmentId;
       const response = await deliveriesApi.list({ assignmentId, page: 1, limit: 50, sortBy: "createdAt", sortOrder: "DESC" });
       setDeliveries(response);
+      // Invalidate the report cache so the next handleViewReport
+      // re-fetches the latest run (a new run may have completed).
+      lastReportDeliveryIdRef.current = null;
       setWorkspaceNotice({ text: "Entregas actualizadas.", tone: "info" });
       
       // Determine which delivery should be active
@@ -156,7 +159,9 @@ export function useDeliveryManagement(
   const handleViewReport = useCallback(async (deliveryId = selectedDeliveryId, { force = false }: { force?: boolean } = {}) => {
     if (!deliveryId || !canRead) return;
     if (reportInFlightRef.current) return;
-    if (!force && lastReportDeliveryIdRef.current === deliveryId) return;
+    // Only skip when the same delivery was JUST loaded (debounce rapid clicks).
+    // After a refreshDeliveries() call, the ref is cleared so we always re-fetch.
+    if (!force && lastReportDeliveryIdRef.current === deliveryId && reportRun?.deliveryId === deliveryId) return;
 
     reportAbortRef.current?.abort();
     const controller = new AbortController();
@@ -196,7 +201,7 @@ export function useDeliveryManagement(
         setReportLoading(false);
       }
     }
-  }, [selectedDeliveryId, canRead]);
+  }, [selectedDeliveryId, canRead, reportRun]);
 
   const handleGradingUpdate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

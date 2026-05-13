@@ -1,41 +1,99 @@
 import type {
+  BuilderRuntimeFamily,
   BuilderReportCoaching,
   TechnicalFeedbackItem,
 } from "../types";
 import {
   RiAlertLine,
+  RiAlarmWarningLine,
   RiCheckboxCircleLine,
+  RiInformationLine,
   RiListCheck3,
   RiLightbulbFlashLine,
   RiSparklingLine,
 } from "react-icons/ri";
+import { CodeSnippet } from "./CodeSnippet";
+import { MarkdownContent } from "./MarkdownContent";
+import { normalizeTechnicalFeedbackItem } from "../utils/technicalFeedback";
 
 interface CoachingSummaryProps {
   coaching: BuilderReportCoaching;
   mode?: "student" | "teacher";
   rubricItems?: TechnicalFeedbackItem[];
   variant?: "full" | "compact";
+  runtimeFamily?: BuilderRuntimeFamily;
 }
+
+const SEVERITY_UI = {
+  high: {
+    label: "Severidad alta",
+    icon: RiAlarmWarningLine,
+    badge: "border-rose-200 bg-rose-50 text-rose-700",
+  },
+  medium: {
+    label: "Severidad media",
+    icon: RiInformationLine,
+    badge: "border-amber-200 bg-amber-50 text-amber-700",
+  },
+  low: {
+    label: "Severidad baja",
+    icon: RiLightbulbFlashLine,
+    badge: "border-sky-200 bg-sky-50 text-sky-700",
+  },
+} as const;
 
 function FeedbackList({
   items,
+  runtimeFamily,
 }: {
   items: TechnicalFeedbackItem[];
+  runtimeFamily?: BuilderRuntimeFamily;
 }): JSX.Element {
+  const normalizedItems = items.map((item) => normalizeTechnicalFeedbackItem(item));
+
   return (
     <div className="space-y-3">
-      {items.map((item, index) => (
+      {normalizedItems.map((item, index) => (
         <article
           key={`${item.title}-${index}`}
           className="rounded-2xl border border-slate-200 bg-white p-4 text-sm"
         >
-          <div className="font-semibold text-slate-900">{item.title}</div>
-          <p className="mt-1 leading-relaxed text-slate-600">{item.detail}</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="font-semibold text-slate-900">{item.title}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${SEVERITY_UI[item.severity].badge}`}
+              >
+                {(() => {
+                  const Icon = SEVERITY_UI[item.severity].icon;
+                  return <Icon className="text-sm" aria-hidden="true" />;
+                })()}
+                {SEVERITY_UI[item.severity].label}
+              </span>
+              <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                {item.level}
+              </span>
+            </div>
+          </div>
+          <div className="mt-2 text-slate-700">
+            <MarkdownContent content={item.detail} />
+          </div>
           {item.file ? (
             <div className="mt-2 inline-block rounded bg-slate-50 px-2 py-1 font-mono text-xs text-slate-500">
               {item.file}
               {item.line ? `:${item.line}` : ""}
             </div>
+          ) : null}
+          <CodeSnippet code={item.codeSnippet} runtimeFamily={runtimeFamily} />
+          {item.conceptExplanation.trim() ? (
+            <details className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <summary className="cursor-pointer text-sm font-semibold text-brand-blue">
+                Aprende mas
+              </summary>
+              <div className="mt-3 text-slate-700">
+                <MarkdownContent content={item.conceptExplanation} />
+              </div>
+            </details>
           ) : null}
         </article>
       ))}
@@ -58,7 +116,9 @@ function Checklist({
           <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
             {index + 1}
           </span>
-          <span className="leading-relaxed">{entry}</span>
+          <div className="min-w-0 flex-1 leading-relaxed">
+            <MarkdownContent content={entry} />
+          </div>
         </li>
       ))}
     </ol>
@@ -70,6 +130,7 @@ export function CoachingSummary({
   mode = "student",
   rubricItems = [],
   variant = "full",
+  runtimeFamily,
 }: CoachingSummaryProps): JSX.Element | null {
   const hasContent =
     coaching.mustFix.length > 0 ||
@@ -104,7 +165,10 @@ export function CoachingSummary({
             <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">
               Debes corregir esto antes de pasar
             </div>
-            <FeedbackList items={coaching.mustFix.slice(0, 2)} />
+            <FeedbackList
+              items={coaching.mustFix.slice(0, 2)}
+              runtimeFamily={runtimeFamily}
+            />
           </div>
         ) : null}
 
@@ -113,7 +177,10 @@ export function CoachingSummary({
             <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
               Podrias mejorar tambien
             </div>
-            <FeedbackList items={coaching.shouldImprove.slice(0, 2)} />
+            <FeedbackList
+              items={coaching.shouldImprove.slice(0, 2)}
+              runtimeFamily={runtimeFamily}
+            />
           </div>
         ) : null}
       </section>
@@ -155,7 +222,7 @@ export function CoachingSummary({
             <RiAlertLine className="text-base" />
             Que debes corregir para pasar
           </div>
-          <FeedbackList items={coaching.mustFix} />
+          <FeedbackList items={coaching.mustFix} runtimeFamily={runtimeFamily} />
         </div>
       ) : null}
 
@@ -165,7 +232,10 @@ export function CoachingSummary({
             <RiLightbulbFlashLine className="text-base" />
             Que podrias mejorar aunque ya funcione
           </div>
-          <FeedbackList items={coaching.shouldImprove} />
+          <FeedbackList
+            items={coaching.shouldImprove}
+            runtimeFamily={runtimeFamily}
+          />
         </div>
       ) : null}
 
@@ -175,7 +245,7 @@ export function CoachingSummary({
             <RiSparklingLine className="text-base" />
             Que has hecho bien
           </div>
-          <FeedbackList items={coaching.strengths} />
+          <FeedbackList items={coaching.strengths} runtimeFamily={runtimeFamily} />
         </div>
       ) : null}
 
@@ -185,7 +255,7 @@ export function CoachingSummary({
             <RiCheckboxCircleLine className="text-base" />
             Cumplimiento de rubrica
           </div>
-          <FeedbackList items={rubricItems} />
+          <FeedbackList items={rubricItems} runtimeFamily={runtimeFamily} />
         </div>
       ) : null}
 
