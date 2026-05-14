@@ -23,7 +23,7 @@ import { useWorkspace } from "../shared/workspace/WorkspaceContext";
 import { EvaluationProgressCard } from "./components/EvaluationProgressCard";
 import { StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
-import { deriveStudentWorkspaceInsights, hasTechnicalReport, resolveStudentRunOutcome } from "./studentWorkspaceInsights";
+import { deriveStudentWorkspaceInsights, resolveStudentRunOutcome } from "./studentWorkspaceInsights";
 import { ReportView } from "../shared/components/ReportView";
 
 function computeMedianDurationMs(
@@ -368,12 +368,7 @@ export function StudentReportsSection({ session, data }: Props): JSX.Element {
   );
   const latestGradedDelivery =
     sortedDeliveries.find((delivery) => delivery.grade !== null) ?? null;
-  const highlightedDelivery =
-    selection.deliveryId
-      ? sortedDeliveries.find((delivery) => delivery.id === selection.deliveryId) ?? null
-      : sortedDeliveries.find((delivery) =>
-          hasTechnicalReport(latestRunByDeliveryId[delivery.id] ?? null),
-        ) ?? sortedDeliveries[0] ?? null;
+
 
   if (loading) {
     return (
@@ -466,26 +461,7 @@ export function StudentReportsSection({ session, data }: Props): JSX.Element {
         />
       ) : null}
 
-      {highlightedDelivery ? (
-        <StudentSurface>
-          <StudentSurfaceHeader
-            eyebrow="Informe destacado"
-            title={`${highlightedDelivery.projectTitle ?? "Proyecto"} · entrega v${highlightedDelivery.version}`}
-            description="Este expediente resume la version que tienes mas activa o la ultima que genero un informe tecnico con contexto suficiente para remediar."
-            badge={
-              <DeliveryStatusBadge
-                delivery={highlightedDelivery}
-                summaryRun={latestRunByDeliveryId[highlightedDelivery.id] ?? null}
-              />
-            }
-          />
-          <p className="mt-6 text-sm leading-6 text-academic-on-surface-variant">
-            Usa el acordeon inferior para abrir el informe completo. El expediente
-            combina resultado tecnico, coaching, evidencia observada y feedback
-            docente cuando exista.
-          </p>
-        </StudentSurface>
-      ) : null}
+
 
       <GradeTimeline deliveries={sortedDeliveries} />
 

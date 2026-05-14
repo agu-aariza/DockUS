@@ -265,23 +265,27 @@ export function TeacherDeliveriesPanel({
   };
 
   // 1. Sync Workspace Selection from URL (Immediate ID sync)
+  // We omit selection.* from dependencies to prevent infinite loops when local state updates the URL.
   useEffect(() => {
     if (requestedProjectId && selection.projectId !== requestedProjectId) {
       setProject(requestedProjectId);
     }
-  }, [requestedProjectId, selection.projectId, setProject]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedProjectId, setProject]);
 
   useEffect(() => {
     if (requestedAssignmentId && selection.assignmentId !== requestedAssignmentId) {
       setAssignment(requestedAssignmentId);
     }
-  }, [requestedAssignmentId, selection.assignmentId, setAssignment]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedAssignmentId, setAssignment]);
 
   useEffect(() => {
     if (requestedDeliveryId && selection.deliveryId !== requestedDeliveryId) {
       setDelivery(requestedDeliveryId);
     }
-  }, [requestedDeliveryId, selection.deliveryId, setDelivery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedDeliveryId, setDelivery]);
 
   // 2. Sync Tab from URL
   useEffect(() => {

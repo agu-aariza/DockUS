@@ -99,10 +99,9 @@ export function StudentDeliveriesSection({
   data,
   onNavigate,
 }: Props): JSX.Element {
-  const { selection, setDelivery, setAssignment, setProject } = useWorkspace();
+  const { setDelivery, setAssignment, setProject } = useWorkspace();
   const { deliveries, assignments, latestRunByDeliveryId, loading, error } = data;
 
-  const selectedAssignmentId = selection.assignmentId;
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
@@ -118,9 +117,7 @@ export function StudentDeliveriesSection({
   }, [deliveries]);
 
   const filteredDeliveries = useMemo(() => {
-    let list = selectedAssignmentId
-      ? deliveries.filter((delivery) => delivery.assignmentId === selectedAssignmentId)
-      : deliveries;
+    let list = deliveries;
 
     if (projectFilter !== "all") {
       list = list.filter(
@@ -133,13 +130,10 @@ export function StudentDeliveriesSection({
       const rightTime = new Date(right.createdAt).getTime();
       return sortOrder === "newest" ? rightTime - leftTime : leftTime - rightTime;
     });
-  }, [deliveries, projectFilter, selectedAssignmentId, sortOrder]);
+  }, [deliveries, projectFilter, sortOrder]);
 
-  const scopedAssignments = selectedAssignmentId
-    ? assignments.filter((assignment) => assignment.id === selectedAssignmentId)
-    : assignments;
   const scopedInsights = deriveStudentWorkspaceInsights(
-    scopedAssignments,
+    assignments,
     filteredDeliveries,
     latestRunByDeliveryId,
   );
@@ -197,29 +191,11 @@ export function StudentDeliveriesSection({
 
   return (
     <div className="space-y-6">
-      <StudentSurface tone="accent">
-        <StudentSurfaceHeader
-          eyebrow="Seguimiento académico"
-          title={
-            selectedAssignmentId
-              ? "Historial de entregas de la práctica"
-              : "Historial general de entregas"
-          }
-          description="Consulta versiones, resultado técnico, nota oficial y acceso directo al informe para decidir mejor tu siguiente versión."
-          actions={
-            <Button variant="primary" onClick={() => onNavigate("subir")}>
-              <RiUploadCloud2Line />
-              Subir nueva versión
-            </Button>
-          }
-        />
-      </StudentSurface>
-
       <div className="grid gap-4 md:grid-cols-4">
         <MetricCard
           label="Versiones"
           value={scopedInsights.totalDeliveries}
-          helper={selectedAssignmentId ? "Dentro de esta práctica" : "En todo tu workspace"}
+          helper={projectFilter !== "all" ? "Con filtro activo" : "En todo tu workspace"}
           icon={<RiInboxArchiveLine />}
           variant="default"
         />
@@ -246,7 +222,7 @@ export function StudentDeliveriesSection({
         />
       </div>
 
-      {!selectedAssignmentId && deliveries.length > 0 ? (
+      {deliveries.length > 0 && uniqueProjects.length > 1 ? (
         <StudentSurface tone="subtle" className="p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-2 text-sm font-medium text-academic-on-surface-variant">

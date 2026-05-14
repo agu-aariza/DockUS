@@ -56,7 +56,7 @@ export function MetricCard({
           <div className="text-xl">{icon}</div>
         </div>
       </div>
-      
+
       <div className="relative z-10">
         <div className="text-3xl font-black tracking-tight leading-none group-hover/metric:scale-[1.02] transition-transform duration-500 origin-left">
           {value}

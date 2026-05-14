@@ -605,61 +605,6 @@ export function StudentSubmissionFlow({
 
   return (
     <div className="space-y-6">
-      <StudentSurface tone="accent">
-        <StudentSurfaceHeader
-          eyebrow="Nueva version"
-          title="Prepara la siguiente entrega desde un unico flujo"
-          description="Selecciona la practica, revisa el estado real de la convocatoria y sube el archivo con el mismo contexto que luego veras en informes y entregas."
-          actions={
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button variant="secondary" onClick={() => onNavigate("entregas")}>
-                Ver historial
-              </Button>
-              <Button variant="primary" onClick={() => onNavigate("informes")}>
-                Consultar informes
-              </Button>
-            </div>
-          }
-        />
-
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <MetricCard
-            label="Practica activa"
-            value={activeAssignment?.projectTitle ?? "Sin seleccionar"}
-            helper={activeTimeline?.headline ?? "Elige una convocatoria"}
-            icon={<RiFolderOpenLine />}
-            variant="default"
-          />
-          <MetricCard
-            label="Intentos restantes"
-            value={activeAssignment?.remainingDeliveries ?? 0}
-            helper={`${activeAssignment?.deliveryCount ?? 0} entrega(s) registradas`}
-            icon={<RiInboxArchiveLine />}
-            variant={noRemainingDeliveries ? "warning" : "info"}
-          />
-          <MetricCard
-            label="Informes disponibles"
-            value={insights.reportsReady}
-            helper={`${insights.blockedReports} con bloqueos`}
-            icon={<RiFileList3Line />}
-            variant={insights.blockedReports > 0 ? "warning" : "success"}
-          />
-          <MetricCard
-            label="Estado actual"
-            value={workflow.label}
-            helper={workflow.description}
-            icon={<RiRocketLine />}
-            variant={
-              workflow.state === "REPORT_READY" || workflow.state === "GRADED"
-                ? "success"
-                : workflow.state === "BUILD_FAILED"
-                  ? "warning"
-                  : "default"
-            }
-          />
-        </div>
-      </StudentSurface>
-
       <div className="grid gap-6 xl:grid-cols-[1.02fr,1.45fr]">
         <div className="space-y-6">
           {activeAssignment && activeTimeline ? (

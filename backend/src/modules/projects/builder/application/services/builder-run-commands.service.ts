@@ -368,6 +368,25 @@ export class BuilderRunCommandsService {
           PYTHON_MODULE_EXECUTABLES.has(recipe.run[0])
             ? ['python', '-m', recipe.run[0], ...recipe.run.slice(1)].join(' ')
             : recipe.run.join(' ');
+
+        // Auto-detect test*.in / input*.in files for stdin redirection
+        const STDIN_FILE_PATTERN = /(?:^|\/)(?:test|input)[^/]*\.in$/i;
+        const stdinFile = workspace.runtimeFiles
+          .map((f) => f.relativePath)
+          .find((p) => STDIN_FILE_PATTERN.test(p));
+        const runCmdWithStdin = stdinFile
+          ? `${runCmd} < ${stdinFile}`
+          : runCmd;
+
+        if (stdinFile) {
+          await this.builderRunSupportService.emitEvent({
+            buildRunId: run.id,
+            eventType: 'LOG_CHUNK',
+            runStatus: BuildRunStatus.RUNNING,
+            message: `Auto-detectado stdin: ${stdinFile}`,
+          });
+        }
+
         const testCmd =
           recipe.test && recipe.test.length > 0
             ? recipe.test.map((cmd) => cmd.join(' ')).join(' && ')
@@ -392,7 +411,7 @@ export class BuilderRunCommandsService {
             .filter(Boolean)
             .join(' && ');
         } else {
-          orchestratedCmd = [fullInstallCmd, runCmd, testCmd]
+          orchestratedCmd = [fullInstallCmd, runCmdWithStdin, testCmd]
             .filter(Boolean)
             .join(' && ');
         }
@@ -728,7 +747,10 @@ export class BuilderRunCommandsService {
           ...trace.parsedContract.evaluationLimits,
           hallucinationWarning,
         ];
-        if (trace.parsedContract.evaluativeState === 'E1') {
+        if (
+          trace.parsedContract.evaluativeState === 'E1' ||
+          trace.parsedContract.evaluativeState === 'E2'
+        ) {
           trace.parsedContract.evaluativeState = 'E3';
           trace.parsedContract.confidence = 'low';
         }
@@ -841,6 +863,51 @@ export class BuilderRunCommandsService {
             'GUARDRAIL: Ninguna linea del expectedOutput aparece en los logs de ejecucion, ' +
             'pero el evaluador reporto E1.'
           );
+        }
+      }
+    }
+
+    // Check 3: Numeric value mismatch — output has same labels but different numbers
+    if (
+      expectedOutput?.trim() &&
+      (assessment.evaluativeState === 'E1' ||
+        assessment.evaluativeState === 'E2')
+    ) {
+      const stdoutMatch = executionLogs.match(
+        /STDOUT:\n([\s\S]*?)(?:\nSTDERR:|\nEXIT CODE:)/,
+      );
+      const actualStdout = stdoutMatch?.[1]?.trim() ?? '';
+
+      // Parse "Salida exacta esperada" section from expectedOutput
+      const oracleSalidaMatch = expectedOutput.match(
+        /[Ss]alida\s+exacta\s+esperada[^:]*:\s*\n([\s\S]+?)(?:\n\n|$)/,
+      );
+      const oracleSalida = oracleSalidaMatch?.[1]?.trim();
+
+      if (oracleSalida && actualStdout && oracleSalida !== actualStdout) {
+        const extractNumbers = (text: string): number[] =>
+          [...text.matchAll(/\b(\d+)\b/g)].map((m) => Number(m[1]));
+
+        const oracleNumbers = extractNumbers(oracleSalida);
+        const actualNumbers = extractNumbers(actualStdout);
+
+        if (
+          oracleNumbers.length > 0 &&
+          actualNumbers.length > 0 &&
+          oracleNumbers.length === actualNumbers.length
+        ) {
+          const allDifferent = oracleNumbers.every(
+            (n, i) => n !== actualNumbers[i],
+          );
+          const actualAllZero = actualNumbers.every((n) => n === 0);
+
+          if (allDifferent || actualAllZero) {
+            return (
+              'GUARDRAIL: La salida real tiene los mismos labels que el oraculo pero TODOS los valores numericos difieren. ' +
+              `Oraculo: [${oracleNumbers.join(', ')}]. Real: [${actualNumbers.join(', ')}]. ` +
+              'El evaluador reporto coincidencia — alucinacion confirmada.'
+            );
+          }
         }
       }
     }

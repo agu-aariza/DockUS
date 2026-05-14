@@ -159,19 +159,6 @@ export function StudentAssignmentsSection({
 
   return (
     <div className="space-y-6">
-      <StudentSurface tone="accent">
-        <StudentSurfaceHeader
-          eyebrow="Proyectos y convocatorias"
-          title="Mis asignaciones académicas"
-          description="Elige una práctica para entrar en su historial de entregas, revisar su ventana temporal y seguir la evolución del trabajo dentro de DockUS."
-          actions={
-            <Button variant="secondary" onClick={() => onNavigate("resumen")}>
-              Volver al resumen
-            </Button>
-          }
-        />
-      </StudentSurface>
-
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {sortedAssignments.map((assignment) => {
           const urgency = getUrgencyStyle(assignment, now);

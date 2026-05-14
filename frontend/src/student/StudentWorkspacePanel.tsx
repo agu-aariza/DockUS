@@ -21,7 +21,7 @@ import type { SessionRecord } from "../shared/types";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
 import { EvaluationNotificationBanner } from "./EvaluationNotificationBanner";
 import { StudentAssignmentsSection } from "./StudentAssignmentsSection";
-import { StudentDeadlineBanner } from "./StudentDeadlineBanner";
+
 import { StudentDeliveriesSection } from "./StudentDeliveriesSection";
 import { StudentHomeSection } from "./StudentHomeSection";
 import { StudentReportsSection } from "./StudentReportsSection";
@@ -268,10 +268,7 @@ export function StudentWorkspacePanel({
         </div>
       </div>
 
-      <StudentDeadlineBanner
-        assignments={workspaceData.assignments}
-        onNavigate={handleTabChange}
-      />
+
 
       <main id="student-workspace-main" className="space-y-8">
         <h2 ref={mainHeadingRef} tabIndex={-1} className="sr-only">

@@ -44,7 +44,7 @@ export class StorageUploadService {
     private readonly deliveriesRepository: Repository<Delivery>,
     private readonly minioStorageService: MinioStorageService,
     private readonly storageAccessService: StorageAccessService,
-  ) {}
+  ) { }
 
   async upload(
     dto: CreateStorageObjectDto,

@@ -126,7 +126,7 @@ function PreflightSummaryBlock({
 }): JSX.Element {
   const tone =
     preflight.compatibility === "SUPPORTED_AUTO" ||
-    preflight.compatibility === "SUPPORTED_WITH_MANIFEST"
+      preflight.compatibility === "SUPPORTED_WITH_MANIFEST"
       ? "border-emerald-200 bg-emerald-50 text-emerald-800"
       : preflight.compatibility === "PARTIAL"
         ? "border-amber-200 bg-amber-50 text-amber-800"
@@ -190,8 +190,8 @@ function PreflightSummaryBlock({
               Install:{" "}
               {preflight.resolvedCommands.install.length > 0
                 ? preflight.resolvedCommands.install
-                    .map((command) => command.join(" "))
-                    .join(" · ")
+                  .map((command) => command.join(" "))
+                  .join(" · ")
                 : "sin instalacion"}
             </li>
             <li>
@@ -515,7 +515,7 @@ export function ReportView({
                 <div className="mt-1 font-semibold text-slate-900">
                   {item.value ? (
                     item.label === "Tipo" ||
-                    item.label === "Estado evaluativo" ? (
+                      item.label === "Estado evaluativo" ? (
                       <GlossaryTerm term={item.value}>{item.value}</GlossaryTerm>
                     ) : (
                       item.value
@@ -547,11 +547,10 @@ export function ReportView({
           </h3>
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <span
-              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                selfHealing.recovered
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${selfHealing.recovered
                   ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                   : "border-amber-200 bg-amber-50 text-amber-700"
-              }`}
+                }`}
             >
               {selfHealing.recovered
                 ? "Recuperado"
