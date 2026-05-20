@@ -1,6 +1,8 @@
 import React from 'react';
 import {
-  RiLayoutGridFill, RiStackFill, RiPulseFill, RiDatabase2Fill, RiGroupFill, RiLogoutBoxLine, RiBookOpenLine, RiFolderOpenFill
+  RiLayoutGridFill, RiStackFill, RiPulseFill, RiDatabase2Fill, RiGroupFill,
+  RiLogoutBoxLine, RiBookOpenLine, RiFolderOpenFill, RiFileTextFill,
+  RiInboxArchiveFill, RiUploadCloud2Fill,
 } from 'react-icons/ri';
 
 interface SidebarProps {
@@ -9,10 +11,14 @@ interface SidebarProps {
   userRole?: string;
   userEmail?: string;
   onLogout: () => void;
+  activeStudentTab?: string;
+  onStudentTabChange?: (tab: string) => void;
+  studentHasUnread?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  activeTab, onTabChange, userRole, userEmail, onLogout
+  activeTab, onTabChange, userRole, userEmail, onLogout,
+  activeStudentTab, onStudentTabChange, studentHasUnread,
 }) => {
   const isStudent = userRole === 'STUDENT';
 
@@ -29,8 +35,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'users', label: 'Usuarios', icon: RiGroupFill },
   ];
 
-  const studentNavigation = [
-    { id: 'mi-espacio', label: 'Mi espacio', icon: RiBookOpenLine },
+  const studentTabNavigation = [
+    { id: 'resumen', label: 'Resumen', icon: RiBookOpenLine },
+    { id: 'proyectos', label: 'Mis proyectos', icon: RiFolderOpenFill },
+    { id: 'entregas', label: 'Mis entregas', icon: RiInboxArchiveFill },
+    { id: 'subir', label: 'Subir versión', icon: RiUploadCloud2Fill },
+    { id: 'informes', label: 'Mis informes', icon: RiFileTextFill },
   ];
 
   const NavItem = ({ item }: { item: { id: string, label: string, icon: any } }) => (
@@ -42,22 +52,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}
     >
       <item.icon
-        className={`text-lg transition-transform duration-300 ${activeTab === item.id ? "text-white scale-110" : "text-white/40 group-hover:text-white/70"
-          }`}
+        className={`text-lg transition-transform duration-300 ${activeTab === item.id ? "text-white scale-110" : "text-white/40"}`}
       />
       {item.label}
     </button>
   );
 
+  const StudentTabItem = ({ item }: { item: { id: string, label: string, icon: any } }) => {
+    const isActive = activeStudentTab === item.id;
+    const showBadge = item.id === 'informes' && studentHasUnread;
+    return (
+      <button
+        onClick={() => onStudentTabChange?.(item.id)}
+        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
+          isActive
+            ? "bg-gradient-to-r from-brand-gold-light to-brand-gold text-white shadow-lg shadow-brand-gold/25"
+            : "text-white/70 hover:bg-white/5 hover:text-white"
+        }`}
+      >
+        <item.icon className={`text-lg transition-transform duration-300 ${isActive ? "text-white scale-110" : "text-white/40"}`} />
+        <span className="flex-1 text-left">{item.label}</span>
+        {showBadge && <span className="h-2 w-2 shrink-0 rounded-full bg-rose-400" />}
+      </button>
+    );
+  };
+
   return (
-    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-brand-maroon-dark bg-gradient-to-b from-brand-maroon via-brand-maroon to-brand-maroon-dark xl:flex shadow-2xl">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-brand-maroon-dark bg-gradient-to-b from-brand-maroon via-brand-maroon to-brand-maroon-dark xl:flex shadow-2xl">
       <div className="border-b border-white/10 px-6 py-6">
         <div className="mb-2 flex items-center gap-3">
           <img src="/logos/Logo01.png" alt="DockUS" className="h-11 w-11 rounded-2xl border border-white/10 shadow-lg" />
           <div>
             <h1 className="text-lg font-bold tracking-tight text-white font-sans">DockUS</h1>
             <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-gold-light">
-              Centro de control
+              {isStudent ? 'Mi espacio' : 'Centro de control'}
             </span>
           </div>
         </div>
@@ -66,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {isStudent ? (
           <nav className="space-y-1.5">
-            {studentNavigation.map(item => <NavItem key={item.id} item={item} />)}
+            {studentTabNavigation.map(item => <StudentTabItem key={item.id} item={item} />)}
           </nav>
         ) : (
           <>

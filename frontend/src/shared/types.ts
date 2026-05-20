@@ -194,6 +194,7 @@ export interface ProjectAssignmentEntity {
   deliveryCount: number;
   remainingDeliveries: number;
   minimumRequirementMet: boolean;
+  rubricInstructions: string | null;
   courseGroupId: string | null;
   sourceGroupIds: string[];
 }

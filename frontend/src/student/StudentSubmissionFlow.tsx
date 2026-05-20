@@ -13,6 +13,7 @@ import {
   RiLoader4Line,
   RiRocketLine,
   RiUploadCloud2Line,
+  RiBookOpenLine,
 } from "react-icons/ri";
 
 import { builderApi } from "../shared/api/builderApi";
@@ -813,6 +814,23 @@ export function StudentSubmissionFlow({
                     );
                   })}
                 </div>
+
+                {activeAssignment?.rubricInstructions ? (
+                  <details className="group rounded-[1.5rem] border border-academic-surface-variant bg-academic-surface-container-lowest">
+                    <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 text-sm font-semibold text-academic-on-surface select-none">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-blue/10 text-brand-blue">
+                        <RiBookOpenLine className="text-base" />
+                      </div>
+                      <span className="flex-1">¿Qué se evaluará? Ver criterios de la rúbrica</span>
+                      <span className="text-academic-outline transition-transform group-open:rotate-180">▾</span>
+                    </summary>
+                    <div className="border-t border-academic-surface-variant px-5 pb-5 pt-4">
+                      <p className="whitespace-pre-wrap text-sm leading-6 text-academic-on-surface-variant">
+                        {activeAssignment.rubricInstructions}
+                      </p>
+                    </div>
+                  </details>
+                ) : null}
 
                 <div className="flex justify-end pt-2">
                   <Button

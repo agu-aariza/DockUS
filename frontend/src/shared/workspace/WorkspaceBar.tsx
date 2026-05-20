@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  RiStackFill, 
-  RiLayoutGridFill, 
-  RiPulseFill, 
-  RiCloseCircleFill, 
+import {
+  RiStackFill,
+  RiLayoutGridFill,
+  RiPulseFill,
+  RiCloseCircleFill,
   RiArrowRightSLine,
   RiSearch2Line,
   RiCheckLine,
@@ -15,11 +15,28 @@ import { projectsApi, assignmentsApi, deliveriesApi, builderApi } from "../api/s
 import type { ProjectEntity, ProjectAssignmentEntity, DeliveryEntity, BuildRunEntity } from "../types";
 
 type PickerType = 'project' | 'assignment' | 'delivery' | 'run' | null;
+type PickerOption = ProjectEntity | ProjectAssignmentEntity | DeliveryEntity | BuildRunEntity;
+
+const STATUS_COLORS: Record<string, string> = {
+  ACTIVE: 'text-emerald-400',
+  SUCCESS: 'text-emerald-400',
+  EVALUATED: 'text-emerald-400',
+  DRAFT: 'text-amber-400',
+  IN_PROGRESS: 'text-amber-400',
+  IN_REVIEW: 'text-amber-400',
+  PENDING: 'text-amber-400',
+  ARCHIVED: 'text-rose-400',
+  FAILED: 'text-rose-400',
+};
+
+function statusColor(status: string): string {
+  return STATUS_COLORS[status.toUpperCase()] ?? 'text-slate-400';
+}
 
 export function WorkspaceBar(): JSX.Element | null {
   const { selection, clearWorkspace, setProject, setAssignment, setDelivery, setRun } = useWorkspace();
   const navigate = useNavigate();
-  
+
   const [openPicker, setOpenPicker] = useState<PickerType>(null);
   const [projects, setProjects] = useState<ProjectEntity[]>([]);
   const [assignments, setAssignments] = useState<ProjectAssignmentEntity[]>([]);
@@ -41,6 +58,14 @@ export function WorkspaceBar(): JSX.Element | null {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Close picker on ESC
+  useEffect(() => {
+    if (!openPicker) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenPicker(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [openPicker]);
+
   // Reset search when picker changes
   useEffect(() => {
     setSearch("");
@@ -60,7 +85,7 @@ export function WorkspaceBar(): JSX.Element | null {
           const res = await assignmentsApi.listByProject(selection.projectId);
           setAssignments(res);
         } else if (openPicker === 'delivery' && selection.projectId) {
-          const res = await deliveriesApi.list({ 
+          const res = await deliveriesApi.list({
             projectId: selection.projectId,
             assignmentId: selection.assignmentId || undefined
           });
@@ -79,26 +104,27 @@ export function WorkspaceBar(): JSX.Element | null {
     fetchData();
   }, [openPicker, selection.projectId, selection.assignmentId]);
 
-  const filteredOptions = useMemo(() => {
+  const filteredOptions = useMemo((): PickerOption[] => {
     const q = search.toLowerCase().trim();
     if (openPicker === 'project') {
       return projects.filter(p => p.title.toLowerCase().includes(q));
     }
     if (openPicker === 'assignment') {
-      return assignments.filter(a => 
-        a.studentEmail.toLowerCase().includes(q) || 
+      return assignments.filter(a =>
+        a.studentEmail.toLowerCase().includes(q) ||
         a.studentName.toLowerCase().includes(q)
       );
     }
     if (openPicker === 'delivery') {
-      return deliveries.filter(d => 
+      return deliveries.filter(d =>
         new Date(d.createdAt).toLocaleString().toLowerCase().includes(q) ||
-        d.status.toLowerCase().includes(q)
+        d.status.toLowerCase().includes(q) ||
+        (d.studentName?.toLowerCase().includes(q) ?? false)
       );
     }
     if (openPicker === 'run') {
-      return runs.filter(r => 
-        r.id.toLowerCase().includes(q) || 
+      return runs.filter(r =>
+        r.id.toLowerCase().includes(q) ||
         r.status.toLowerCase().includes(q)
       );
     }
@@ -116,11 +142,11 @@ export function WorkspaceBar(): JSX.Element | null {
   return (
     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-500 max-w-[95%] sm:max-w-none" ref={pickerRef}>
       <div className="flex items-center gap-1 bg-slate-900/90 backdrop-blur-3xl border border-white/10 p-1.5 rounded-full shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)]">
-        
+
         {/* Project Context */}
         {selection.projectId && (
           <div className="relative flex items-center">
-            <button 
+            <button
               onClick={() => togglePicker('project')}
               className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-all text-xs font-black group ${
                 openPicker === 'project' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
@@ -129,15 +155,13 @@ export function WorkspaceBar(): JSX.Element | null {
               <RiStackFill className="text-brand-primary text-base group-hover:scale-110 transition-transform" />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">{selection.projectTitle || "Proyecto"}</span>
             </button>
-            {!selection.assignmentId && (
-              <button 
-                onClick={() => clearWorkspace()} 
-                className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
-                title="Limpiar contexto"
-              >
-                <RiCloseCircleFill className="text-lg" />
-              </button>
-            )}
+            <button
+              onClick={() => clearWorkspace()}
+              className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
+              title="Limpiar contexto"
+            >
+              <RiCloseCircleFill className="text-lg" />
+            </button>
           </div>
         )}
 
@@ -145,7 +169,7 @@ export function WorkspaceBar(): JSX.Element | null {
         {selection.assignmentId && (
           <div className="relative flex items-center">
             <RiArrowRightSLine className="text-slate-700 text-lg mx-0.5" />
-            <button 
+            <button
               onClick={() => togglePicker('assignment')}
               className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-all text-xs font-black group ${
                 openPicker === 'assignment' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
@@ -154,15 +178,13 @@ export function WorkspaceBar(): JSX.Element | null {
               <RiLayoutGridFill className="text-brand-gold text-base group-hover:scale-110 transition-transform" />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">{selection.assignmentLabel || "Alumno"}</span>
             </button>
-            {!selection.deliveryId && (
-              <button 
-                onClick={() => setProject(selection.projectId!, selection.projectTitle ?? undefined)} 
-                className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
-                title="Cerrar alumno"
-              >
-                <RiCloseCircleFill className="text-lg" />
-              </button>
-            )}
+            <button
+              onClick={() => setProject(selection.projectId!, selection.projectTitle ?? undefined)}
+              className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
+              title="Cerrar alumno"
+            >
+              <RiCloseCircleFill className="text-lg" />
+            </button>
           </div>
         )}
 
@@ -170,7 +192,7 @@ export function WorkspaceBar(): JSX.Element | null {
         {selection.deliveryId && (
           <div className="relative flex items-center">
             <RiArrowRightSLine className="text-slate-700 text-lg mx-0.5" />
-            <button 
+            <button
               onClick={() => togglePicker('delivery')}
               className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-all text-xs font-black group ${
                 openPicker === 'delivery' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
@@ -179,15 +201,13 @@ export function WorkspaceBar(): JSX.Element | null {
               <RiPulseFill className="text-brand-tertiary text-base group-hover:scale-110 transition-transform" />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">{selection.deliveryLabel || "Entrega"}</span>
             </button>
-            {!selection.lastRunId && (
-              <button 
-                onClick={() => setAssignment(selection.assignmentId!, selection.assignmentLabel ?? undefined)} 
-                className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
-                title="Cerrar entrega"
-              >
-                <RiCloseCircleFill className="text-lg" />
-              </button>
-            )}
+            <button
+              onClick={() => setAssignment(selection.assignmentId!, selection.assignmentLabel ?? undefined)}
+              className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
+              title="Cerrar entrega"
+            >
+              <RiCloseCircleFill className="text-lg" />
+            </button>
           </div>
         )}
 
@@ -195,7 +215,7 @@ export function WorkspaceBar(): JSX.Element | null {
         {selection.lastRunId && (
           <div className="relative flex items-center">
             <RiArrowRightSLine className="text-slate-700 text-lg mx-0.5" />
-            <button 
+            <button
               onClick={() => togglePicker('run')}
               className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-all text-xs font-black group ${
                 openPicker === 'run' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
@@ -204,8 +224,8 @@ export function WorkspaceBar(): JSX.Element | null {
               <RiLoader4Line className={`text-sky-400 text-base group-hover:scale-110 transition-transform ${selection.lastRunId ? '' : 'animate-spin'}`} />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">Run #{selection.lastRunId.slice(-4)}</span>
             </button>
-            <button 
-              onClick={() => setDelivery(selection.deliveryId!, selection.deliveryLabel ?? undefined)} 
+            <button
+              onClick={() => setDelivery(selection.deliveryId!, selection.deliveryLabel ?? undefined)}
               className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
               title="Cerrar ejecución"
             >
@@ -217,7 +237,8 @@ export function WorkspaceBar(): JSX.Element | null {
 
       {/* Popover List */}
       {openPicker && (
-        <div className="absolute top-full left-0 right-0 mt-3 max-h-[350px] flex flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/95 backdrop-blur-2xl shadow-[0_30px_70px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300">          {/* Search */}
+        <div className="absolute top-full left-0 right-0 mt-3 max-h-[350px] flex flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/95 backdrop-blur-2xl shadow-[0_30px_70px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300">
+          {/* Search */}
           <div className="p-3 border-b border-white/5 bg-white/5">
             <div className="relative">
               <RiSearch2Line className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -231,46 +252,56 @@ export function WorkspaceBar(): JSX.Element | null {
               {loading && <RiLoader4Line className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-gold animate-spin" />}
             </div>
           </div>
- 
+
           {/* List */}
           <div className="flex-1 overflow-y-auto no-scrollbar p-2">
             {filteredOptions.length > 0 ? (
-              filteredOptions.map((opt: any) => {
-                let id = opt.id;
+              filteredOptions.map((opt: PickerOption) => {
+                const id = opt.id;
                 let label = "";
                 let sub = "";
+                let subStatus = "";
                 let active = false;
                 let icon = <RiStackFill />;
- 
+
                 if (openPicker === 'project') {
-                  label = opt.title;
-                  sub = opt.status;
+                  const p = opt as ProjectEntity;
+                  label = p.title;
+                  subStatus = p.status;
                   active = selection.projectId === id;
                   icon = <RiStackFill className="text-brand-primary" />;
                 } else if (openPicker === 'assignment') {
-                  label = opt.studentName;
-                  sub = opt.studentEmail;
+                  const a = opt as ProjectAssignmentEntity;
+                  label = a.studentName;
+                  sub = a.studentEmail;
                   active = selection.assignmentId === id;
                   icon = <RiLayoutGridFill className="text-brand-gold" />;
                 } else if (openPicker === 'delivery') {
-                  label = `Entrega v${opt.version || 1}`;
-                  sub = new Date(opt.createdAt).toLocaleString();
+                  const d = opt as DeliveryEntity;
+                  label = d.studentName
+                    ? `v${d.version || 1} · ${d.studentName}`
+                    : `Entrega v${d.version || 1}`;
+                  sub = new Date(d.createdAt).toLocaleDateString();
+                  subStatus = d.status;
                   active = selection.deliveryId === id;
                   icon = <RiPulseFill className="text-brand-tertiary" />;
                 } else if (openPicker === 'run') {
+                  const r = opt as BuildRunEntity;
                   label = `Ejecución #${id.slice(-6)}`;
-                  sub = opt.status;
+                  subStatus = r.status;
                   active = selection.lastRunId === id;
                   icon = <RiLoader4Line className="text-sky-400" />;
                 }
- 
+
                 return (
                   <button
                     key={id}
                     onClick={() => {
                       if (openPicker === 'project') setProject(id, label);
                       else if (openPicker === 'assignment') setAssignment(id, label);
-                      else if (openPicker === 'delivery') setDelivery(id, label);
+                      else if (openPicker === 'delivery') {
+                        setDelivery(id, label);
+                      }
                       else if (openPicker === 'run') setRun(id);
                       setOpenPicker(null);
                     }}
@@ -286,8 +317,17 @@ export function WorkspaceBar(): JSX.Element | null {
                         <div className={`text-[11px] font-black uppercase tracking-wider ${active ? 'text-brand-gold' : 'text-white'}`}>
                           {label}
                         </div>
-                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
-                          {sub}
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {sub && (
+                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                              {sub}
+                            </span>
+                          )}
+                          {subStatus && (
+                            <span className={`text-[9px] font-black uppercase tracking-widest ${statusColor(subStatus)}`}>
+                              {sub ? `· ${subStatus}` : subStatus}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -305,9 +345,13 @@ export function WorkspaceBar(): JSX.Element | null {
 
           {/* Global Actions */}
           <div className="p-2 bg-white/5 border-t border-white/5">
-             <button 
+             <button
                onClick={() => {
-                 navigate(openPicker === 'project' ? '/projects' : openPicker === 'assignment' ? '/deliveries' : '/runtime');
+                 navigate(
+                   openPicker === 'project' ? '/projects' :
+                   openPicker === 'assignment' || openPicker === 'delivery' ? '/deliveries' :
+                   '/runtime'
+                 );
                  setOpenPicker(null);
                }}
                className="w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 transition-all text-center"

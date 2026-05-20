@@ -46,6 +46,7 @@ import {
   RiFolderUploadLine,
 } from "react-icons/ri";
 import { EmptyState } from "../shared/components/EmptyState";
+import { SkeletonCard } from "../shared/components/Skeleton";
 import {
   ProjectAssignmentManager,
 } from "./components/ProjectSubPanels";
@@ -404,7 +405,13 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
           </div>
 
           <div className="mt-8 flex-1 overflow-y-auto space-y-3 pr-1 -mr-1 custom-scrollbar">
-            {visibleProjects.length === 0 ? (
+            {pc.loadingProjects ? (
+              <>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </>
+            ) : visibleProjects.length === 0 ? (
               <div className="rounded-[2rem] border-2 border-dashed border-academic-outline-variant/20 bg-academic-surface-container/30 px-4 py-12 text-center">
                 <RiFoldersLine className="mx-auto text-3xl text-academic-outline/40 mb-3" />
                 <p className="text-xs font-medium text-academic-outline italic">No se encontraron proyectos</p>
@@ -835,9 +842,28 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
 
               {activeSubTab === "config" ? (
                 <div className="space-y-8 animate-fade-in">
+                  <nav className="sticky top-0 z-10 -mx-1 flex flex-wrap gap-2 rounded-[1.5rem] border border-academic-surface-variant bg-white/90 px-4 py-3 shadow-sm backdrop-blur-sm">
+                    {[
+                      { id: "section-settings", label: "Ajustes" },
+                      { id: "section-plazos", label: "Plazos" },
+                      { id: "section-profesores", label: "Profesores" },
+                      { id: "section-suite", label: "Suite" },
+                    ].map(({ id, label }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() =>
+                          document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        }
+                        className="rounded-full border border-academic-surface-variant bg-academic-surface-container-lowest px-4 py-1.5 text-xs font-semibold text-academic-on-surface-variant transition-colors hover:border-brand-blue/40 hover:bg-brand-blue/5 hover:text-brand-blue"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </nav>
                   <form className="space-y-8" onSubmit={pc.handleUpdate}>
                     {/* Tarjeta: Ajustes Generales */}
-                    <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white p-8 shadow-academic">
+                    <div id="section-settings" className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white p-8 shadow-academic scroll-mt-20">
                       <div className="flex items-center gap-4 mb-8">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-maroon/5 text-brand-maroon text-xl">
                           <RiSettings4Line />
@@ -912,7 +938,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     </div>
 
                     {/* Tarjeta: Plazos y Evaluación */}
-                    <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white p-8 shadow-academic">
+                    <div id="section-plazos" className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white p-8 shadow-academic scroll-mt-20">
                       <div className="flex items-center gap-4 mb-8">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 text-xl">
                           <RiCalendarScheduleLine />
@@ -955,7 +981,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     </div>
 
                     {/* Tarjeta: Equipo Docente */}
-                    <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic">
+                    <div id="section-profesores" className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic scroll-mt-20">
                       <div className="bg-white px-8 pt-8">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-blue/5 text-brand-blue">
@@ -1033,7 +1059,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     </div>
 
                     {/* Tarjeta: Suite Docente */}
-                    <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic">
+                    <div id="section-suite" className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic scroll-mt-20">
                       <div className="bg-academic-primary p-8 text-academic-on-primary">
                         <div className="flex items-center gap-4">
                           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white text-xl">

@@ -35,6 +35,7 @@ export interface ProjectAssignmentResponse {
   deliveryCount: number;
   remainingDeliveries: number;
   minimumRequirementMet: boolean;
+  rubricInstructions: string | null;
   courseGroupId: string | null;
   courseGroup: {
     id: string;
@@ -471,6 +472,7 @@ export class ProjectAssignmentsService {
         deliveryCount,
         remainingDeliveries,
         minimumRequirementMet: deliveryCount >= 1,
+        rubricInstructions: project?.rubricInstructions ?? null,
       };
     });
   }

@@ -127,6 +127,9 @@ describe('builder prompt composer', () => {
         evidenceSummary: '',
         observedEvidence: [],
         evaluationLimits: [],
+        gradeBreakdown: [],
+        studentSummary: '',
+        teacherSummary: '',
       },
       360,
     );

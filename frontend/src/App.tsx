@@ -242,7 +242,7 @@ export function App(): JSX.Element {
 
       {/* Sidebar Container */}
       <div className={`fixed inset-y-0 left-0 z-50 transform xl:relative xl:translate-x-0 transition-transform duration-300 ease-in-out ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <Sidebar 
+        <Sidebar
           activeTab={activeTab}
           onTabChange={(tab) => {
             navigate(`/${tab}`);
@@ -251,6 +251,8 @@ export function App(): JSX.Element {
           userRole={activeSession?.role}
           userEmail={activeSession?.email}
           onLogout={() => activeSessionId && removeSession(activeSessionId)}
+          activeStudentTab={isStudent ? (new URLSearchParams(location.search).get('tab') || 'resumen') : undefined}
+          onStudentTabChange={isStudent ? (tab) => navigate(`/mi-espacio?tab=${tab}`) : undefined}
         />
         {/* Mobile close button inside drawer */}
         <button 

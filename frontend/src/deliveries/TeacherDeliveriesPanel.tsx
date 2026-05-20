@@ -21,6 +21,7 @@ import {
 } from "react-icons/ri";
 import { ReportView } from "../shared/components/ReportView";
 import { EmptyState } from "../shared/components/EmptyState";
+import { SkeletonTable } from "../shared/components/Skeleton";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";
 import { TeacherGradingStudio } from "../shared/components/TeacherGradingStudio";
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
@@ -87,12 +88,27 @@ function DeliveryListItem({
   active,
   onSelect,
   onOpenReport,
+  onQuickGrade,
 }: {
   delivery: DeliveryEntity;
   active: boolean;
   onSelect: () => void;
   onOpenReport: () => void;
+  onQuickGrade: (grade: number) => void;
 }) {
+  const [inlineGrade, setInlineGrade] = useState(
+    delivery.grade !== null ? String(delivery.grade) : "",
+  );
+  const canInlineGrade =
+    delivery.status === "IN_REVIEW" || delivery.status === "EVALUATED";
+
+  const commitGrade = () => {
+    const parsed = parseFloat(inlineGrade);
+    if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 10) {
+      onQuickGrade(parsed);
+    }
+  };
+
   return (
     <article
       className={`group w-full rounded-lg border p-5 text-left transition-all duration-300 relative overflow-hidden ${
@@ -133,16 +149,45 @@ function DeliveryListItem({
           </div>
           <div className="flex items-center gap-1.5">
             <RiFileChartLine className="text-sm opacity-60" />
-            <span className={active ? "text-white" : "text-slate-900 font-semibold"}>
-              {delivery.grade !== null ? `Nota: ${delivery.grade.toFixed(2)}` : "Nota pendiente"}
-            </span>
-            <span className="opacity-40">|</span>
             <span className={delivery.isLate ? "text-rose-500 font-medium" : "text-emerald-500 font-medium"}>
               {delivery.isLate ? "Retrasada" : "En plazo"}
             </span>
           </div>
         </div>
       </button>
+
+      {canInlineGrade ? (
+        <div
+          className="mt-3 flex items-center gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <RiFileChartLine className={`text-sm ${active ? "text-white/60" : "text-slate-400"}`} />
+          <input
+            type="number"
+            min={0}
+            max={10}
+            step={0.5}
+            value={inlineGrade}
+            onChange={(e) => setInlineGrade(e.target.value)}
+            onBlur={commitGrade}
+            onKeyDown={(e) => e.key === "Enter" && commitGrade()}
+            placeholder="0–10"
+            className={`w-20 rounded-lg border px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-brand-blue ${
+              active
+                ? "border-white/20 bg-white/10 text-white placeholder-white/40"
+                : "border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400"
+            }`}
+          />
+          <span className={`text-xs ${active ? "text-white/60" : "text-slate-400"}`}>/ 10</span>
+        </div>
+      ) : (
+        <div className={`mt-3 flex items-center gap-1.5 ui-label ${active ? "text-slate-300" : "text-slate-500"}`}>
+          <RiFileChartLine className="text-sm opacity-60" />
+          <span className={active ? "text-white" : "text-slate-900 font-semibold"}>
+            {delivery.grade !== null ? `Nota: ${delivery.grade.toFixed(2)}` : "Nota pendiente"}
+          </span>
+        </div>
+      )}
 
       <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
         <div className={`flex items-center gap-1 ui-label ${active ? "text-slate-400" : "text-slate-400"}`}>
@@ -195,6 +240,7 @@ export function TeacherDeliveriesPanel({
   );
   const [deliverySearch, setDeliverySearch] = useState("");
   const deferredDeliverySearch = useDeferredValue(deliverySearch);
+  const [quickFilterKey, setQuickFilterKey] = useState<"all" | "late" | "ungraded" | "fail" | "pass">("all");
   const { pushToast } = useToast();
 
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -225,19 +271,38 @@ export function TeacherDeliveriesPanel({
   );
 
   const normalizedSearch = deferredDeliverySearch.trim().toLowerCase();
-  const visibleDeliveries = normalizedSearch
-    ? deliveries.filter((delivery) =>
-        [
-          delivery.studentEmail,
-          delivery.studentName,
-          delivery.projectTitle,
-          delivery.status,
-          `v${delivery.version}`,
-        ]
-          .filter(Boolean)
-          .some((value) => value.toLowerCase().includes(normalizedSearch)),
-      )
-    : deliveries;
+  const quickFilterFn = (delivery: DeliveryEntity): boolean => {
+    if (quickFilterKey === "late") return delivery.isLate === true;
+    if (quickFilterKey === "ungraded") return delivery.grade === null && delivery.status === "EVALUATED";
+    if (quickFilterKey === "fail") return delivery.grade !== null && delivery.grade < 5;
+    if (quickFilterKey === "pass") return delivery.grade !== null && delivery.grade >= 5;
+    return true;
+  };
+  const visibleDeliveries = deliveries
+    .filter(quickFilterFn)
+    .filter((delivery) =>
+      normalizedSearch
+        ? [
+            delivery.studentEmail,
+            delivery.studentName,
+            delivery.projectTitle,
+            delivery.status,
+            `v${delivery.version}`,
+          ]
+            .filter(Boolean)
+            .some((value) => value.toLowerCase().includes(normalizedSearch))
+        : true,
+    );
+
+  const handleQuickGrade = async (deliveryId: string, grade: number) => {
+    try {
+      await deliveriesApi.updateGrading(deliveryId, { grade, graderNotes: undefined });
+      pushToast({ title: "Nota guardada", description: `${grade.toFixed(2)} / 10`, tone: "success" });
+      await dc.refreshDeliveries();
+    } catch (error) {
+      pushToast({ title: "Error al guardar la nota", description: getErrorMessage(error), tone: "error" });
+    }
+  };
 
   const selectedAssignment = dc.assignments.find(
     (assignment) => assignment.id === dc.selectedAssignmentId,
@@ -442,7 +507,11 @@ export function TeacherDeliveriesPanel({
               <VisualPicker
                 options={projectOptions}
                 value={dc.selectedProjectId}
-                onSelect={(id, label) => setProject(id, label)}
+                onSelect={(id) => {
+                  const next = new URLSearchParams();
+                  next.set("projectId", id);
+                  setSearchParams(next, { replace: true });
+                }}
                 placeholder="Selecciona proyecto..."
                 searchPlaceholder="Buscar por título..."
               />
@@ -468,6 +537,31 @@ export function TeacherDeliveriesPanel({
                 onChange={(event) => setDeliverySearch(event.target.value)}
                 placeholder="Buscar por alumno, proyecto o estado"
               />
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  { key: "all", label: "Todas" },
+                  { key: "late", label: "Tardías" },
+                  { key: "ungraded", label: "Sin nota" },
+                  { key: "fail", label: "Suspensas" },
+                  { key: "pass", label: "Aprobadas" },
+                ] as const
+              ).map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setQuickFilterKey(key)}
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-all ${
+                    quickFilterKey === key
+                      ? "bg-academic-primary text-white shadow-sm"
+                      : "border border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -510,7 +604,9 @@ export function TeacherDeliveriesPanel({
             </div>
 
             <div className="mt-4 space-y-3">
-              {visibleDeliveries.length === 0 ? (
+              {dc.loadingDeliveries ? (
+                <SkeletonTable rows={4} />
+              ) : visibleDeliveries.length === 0 ? (
                 <div className="rounded-[1.6rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
                   {!dc.selectedAssignmentId
                     ? "Selecciona una asignación para cargar entregas."
@@ -527,6 +623,7 @@ export function TeacherDeliveriesPanel({
                       openDelivery(delivery.id, "report");
                       void dc.handleViewReport(delivery.id);
                     }}
+                    onQuickGrade={(grade) => void handleQuickGrade(delivery.id, grade)}
                   />
                 ))
               )}

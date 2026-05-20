@@ -223,6 +223,67 @@ function PreflightSummaryBlock({
   );
 }
 
+function FindingCard({
+  item,
+  title,
+  index,
+  runtimeFamily,
+}: {
+  item: ReturnType<typeof normalizeTechnicalFeedbackItem>;
+  title: string;
+  index: number;
+  runtimeFamily?: BuilderRuntimeFamily;
+}): JSX.Element {
+  const severity = SEVERITY_STYLE[item.severity];
+  const SeverityIcon = severity.icon;
+
+  return (
+    <article
+      key={`${title}-${index}`}
+      className="rounded-2xl border border-academic-outline-variant/30 bg-academic-surface-container-lowest/50 p-4 text-sm"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <span className="font-semibold text-academic-on-surface">{item.title}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${severity.badge}`}
+          >
+            <SeverityIcon className="text-sm" aria-hidden="true" />
+            {severity.label}
+          </span>
+          <span className="inline-flex rounded-full border border-academic-outline-variant/20 bg-academic-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-academic-on-surface-variant">
+            {item.level}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-2 text-academic-on-surface-variant">
+        <MarkdownContent content={item.detail} />
+      </div>
+
+      {item.file ? (
+        <div className="mt-2 inline-block rounded bg-academic-surface-container/60 px-2 py-1 font-mono text-xs text-academic-outline">
+          {item.file}
+          {item.line ? `:${item.line}` : ""}
+        </div>
+      ) : null}
+
+      <CodeSnippet code={item.codeSnippet} runtimeFamily={runtimeFamily} />
+
+      {item.conceptExplanation.trim() ? (
+        <details className="mt-4 rounded-2xl border border-academic-outline-variant/20 bg-academic-surface-container/30 px-4 py-3">
+          <summary className="cursor-pointer text-sm font-semibold text-brand-blue">
+            Aprende mas
+          </summary>
+          <div className="mt-3 text-academic-on-surface-variant">
+            <MarkdownContent content={item.conceptExplanation} />
+          </div>
+        </details>
+      ) : null}
+    </article>
+  );
+}
+
 function FeedbackAxis({
   title,
   items,
@@ -239,6 +300,9 @@ function FeedbackAxis({
   const AxisIcon = AXIS_ICON[title] ?? RiInformationLine;
   const normalizedItems = items.map((item) => normalizeTechnicalFeedbackItem(item));
 
+  const highItems = normalizedItems.filter((i) => i.severity === "high");
+  const lowerItems = normalizedItems.filter((i) => i.severity !== "high");
+
   return (
     <div className="mt-6">
       <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-academic-outline">
@@ -246,56 +310,33 @@ function FeedbackAxis({
         {title}
       </h4>
       <div className="space-y-3">
-        {normalizedItems.map((item, index) => {
-          const severity = SEVERITY_STYLE[item.severity];
-          const SeverityIcon = severity.icon;
-
-          return (
-            <article
-              key={`${title}-${index}`}
-              className="rounded-2xl border border-academic-outline-variant/30 bg-academic-surface-container-lowest/50 p-4 text-sm"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <span className="font-semibold text-academic-on-surface">{item.title}</span>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${severity.badge}`}
-                  >
-                    <SeverityIcon className="text-sm" aria-hidden="true" />
-                    {severity.label}
-                  </span>
-                  <span className="inline-flex rounded-full border border-academic-outline-variant/20 bg-academic-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-academic-on-surface-variant">
-                    {item.level}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-2 text-academic-on-surface-variant">
-                <MarkdownContent content={item.detail} />
-              </div>
-
-              {item.file ? (
-                <div className="mt-2 inline-block rounded bg-academic-surface-container/60 px-2 py-1 font-mono text-xs text-academic-outline">
-                  {item.file}
-                  {item.line ? `:${item.line}` : ""}
-                </div>
-              ) : null}
-
-              <CodeSnippet code={item.codeSnippet} runtimeFamily={runtimeFamily} />
-
-              {item.conceptExplanation.trim() ? (
-                <details className="mt-4 rounded-2xl border border-academic-outline-variant/20 bg-academic-surface-container/30 px-4 py-3">
-                  <summary className="cursor-pointer text-sm font-semibold text-brand-blue">
-                    Aprende mas
-                  </summary>
-                  <div className="mt-3 text-academic-on-surface-variant">
-                    <MarkdownContent content={item.conceptExplanation} />
-                  </div>
-                </details>
-              ) : null}
-            </article>
-          );
-        })}
+        {highItems.map((item, index) => (
+          <FindingCard
+            key={`high-${index}`}
+            item={item}
+            title={title}
+            index={index}
+            runtimeFamily={runtimeFamily}
+          />
+        ))}
+        {lowerItems.length > 0 ? (
+          <details className="rounded-2xl border border-academic-outline-variant/30">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-academic-on-surface-variant hover:text-academic-on-surface">
+              {lowerItems.length} observaci{lowerItems.length === 1 ? "ón" : "ones"} de prioridad media/baja
+            </summary>
+            <div className="space-y-3 px-2 pb-3 pt-1">
+              {lowerItems.map((item, index) => (
+                <FindingCard
+                  key={`lower-${index}`}
+                  item={item}
+                  title={title}
+                  index={index}
+                  runtimeFamily={runtimeFamily}
+                />
+              ))}
+            </div>
+          </details>
+        ) : null}
       </div>
     </div>
   );
@@ -411,8 +452,47 @@ export function ReportView({
     { id: "logs", label: "Logs de Ejecución", icon: RiTerminalBoxLine },
   ] as const;
 
+  const priorityBlockItems = coaching
+    ? [
+        ...coaching.mustFix.slice(0, 3).map((item) => ({ text: item.title || item.detail, kind: "blocker" as const })),
+        ...coaching.shouldImprove.slice(0, 2).map((item) => ({ text: item.title || item.detail, kind: "improve" as const })),
+        ...coaching.strengths.slice(0, 2).map((item) => ({ text: item.title || item.detail, kind: "strength" as const })),
+      ]
+    : [];
+
   return (
     <div className="space-y-6">
+      {/* Priority Action Block — student only, shown before tabs */}
+      {mode === "student" && priorityBlockItems.length > 0 ? (
+        <section className="rounded-3xl border border-academic-outline-variant/30 bg-white p-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-academic-outline">
+            Por dónde empezar
+          </p>
+          <h3 className="mt-2 text-lg font-semibold tracking-tight text-academic-on-surface">
+            Resumen de prioridades de esta entrega
+          </h3>
+          <ul className="mt-4 space-y-2">
+            {priorityBlockItems.map((item, i) => (
+              <li
+                key={i}
+                className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm ${
+                  item.kind === "blocker"
+                    ? "border-rose-100 bg-rose-50/70 text-rose-800"
+                    : item.kind === "improve"
+                      ? "border-amber-100 bg-amber-50/70 text-amber-800"
+                      : "border-emerald-100 bg-emerald-50/70 text-emerald-800"
+                }`}
+              >
+                <span className="mt-0.5 text-base leading-none" aria-hidden="true">
+                  {item.kind === "blocker" ? "🔴" : item.kind === "improve" ? "🟡" : "✅"}
+                </span>
+                <span>{item.text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {/* Final Outcome Banner */}
       <div className={`rounded-3xl border ${config.border} ${config.bg} p-6 shadow-sm`}>
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
