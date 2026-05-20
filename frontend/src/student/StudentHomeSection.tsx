@@ -57,27 +57,27 @@ function formatOutcome(outcome: ReturnType<typeof resolveStudentRunOutcome>): {
       return {
         label: "Apto",
         className:
-          "border-emerald-200 bg-emerald-50 text-emerald-700",
+          "border-emerald-200 bg-emerald-50/70 text-emerald-700 font-semibold",
       };
     case "FAIL":
       return {
         label: "No apto",
-        className: "border-rose-200 bg-rose-50 text-rose-700",
+        className: "border-rose-200 bg-rose-50/70 text-rose-700 font-semibold",
       };
     case "PARTIAL":
       return {
         label: "Parcial",
-        className: "border-amber-200 bg-amber-50 text-amber-700",
+        className: "border-amber-200 bg-amber-50/70 text-amber-700 font-semibold",
       };
     case "UNKNOWN":
       return {
         label: "Sin resolver",
-        className: "border-slate-200 bg-slate-100 text-slate-700",
+        className: "border-academic-outline-variant/30 bg-academic-surface-container text-academic-on-surface-variant font-semibold",
       };
     default:
       return {
         label: "Sin run",
-        className: "border-slate-200 bg-slate-100 text-slate-500",
+        className: "border-academic-outline-variant/20 bg-academic-surface-container/80 text-academic-on-surface-variant/80",
       };
   }
 }
@@ -91,11 +91,11 @@ function gradeColor(grade: number): string {
 function timelineStyle(state: string): string {
   switch (state) {
     case "late":
-      return "border-rose-200 bg-rose-50 text-rose-800";
+      return "border-rose-200 bg-rose-50/70 text-rose-700 font-semibold shadow-academic-sm";
     case "upcoming":
-      return "border-sky-200 bg-sky-50 text-sky-800";
+      return "border-brand-blue/20 bg-brand-blue/5 text-brand-blue font-semibold shadow-academic-sm";
     default:
-      return "border-emerald-200 bg-emerald-50 text-emerald-800";
+      return "border-emerald-100 bg-emerald-50/70 text-emerald-700 font-semibold shadow-academic-sm";
   }
 }
 
@@ -155,20 +155,20 @@ export function StudentHomeSection({
   if (loading) {
     return (
       <div className="grid gap-6 lg:grid-cols-[1.55fr,0.95fr]">
-        <div className="rounded-[2rem] border border-academic-surface-variant bg-white p-8 shadow-sm">
-          <div className="h-5 w-28 animate-pulse rounded bg-slate-200" />
-          <div className="mt-5 h-12 w-3/4 animate-pulse rounded bg-slate-100" />
-          <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-100" />
-          <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-slate-100" />
+        <div className="rounded-[2rem] border border-academic-surface-variant bg-white p-8 shadow-academic">
+          <div className="h-5 w-28 animate-pulse rounded bg-academic-outline-variant/30" />
+          <div className="mt-5 h-12 w-3/4 animate-pulse rounded bg-academic-surface-container/60" />
+          <div className="mt-4 h-4 w-full animate-pulse rounded bg-academic-surface-container/60" />
+          <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-academic-surface-container/60" />
         </div>
         <div className="grid gap-4">
           {[1, 2, 3].map((index) => (
             <div
               key={index}
-              className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-sm"
+              className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-academic"
             >
-              <div className="h-4 w-28 animate-pulse rounded bg-slate-200" />
-              <div className="mt-4 h-8 w-2/3 animate-pulse rounded bg-slate-100" />
+              <div className="h-4 w-28 animate-pulse rounded bg-academic-outline-variant/30" />
+              <div className="mt-4 h-8 w-2/3 animate-pulse rounded bg-academic-surface-container/60" />
             </div>
           ))}
         </div>
@@ -208,7 +208,7 @@ export function StudentHomeSection({
               </div>
 
               {activeAssignment ? (
-                <div className="rounded-[1.5rem] border border-brand-blue/10 bg-white/80 px-4 py-3 shadow-sm">
+                <div className="rounded-[1.5rem] border border-academic-outline-variant/20 bg-white/95 px-4 py-3 shadow-academic-sm">
                   <div className="ui-label text-brand-blue">Práctica activa</div>
                   <div className="mt-2 text-sm font-semibold text-academic-on-surface">
                     {activeAssignment.projectTitle}
@@ -239,7 +239,7 @@ export function StudentHomeSection({
             ) : null}
 
             {hasAssignments ? (
-              <div className="rounded-[1.5rem] border border-academic-surface-variant bg-white/80 px-5 py-4 shadow-sm">
+              <div className="rounded-[1.5rem] border border-academic-outline-variant/30 bg-white/85 px-5 py-4 shadow-academic">
                 <div className="ui-label text-academic-outline">Pipeline de evaluación</div>
                 <div className="mt-4">
                   <PipelineStepper

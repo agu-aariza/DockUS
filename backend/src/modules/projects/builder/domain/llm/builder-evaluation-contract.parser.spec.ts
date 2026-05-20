@@ -144,4 +144,35 @@ describe('parseBuilderEvaluationContractV2', () => {
       'La salida del evaluador LLM no es JSON válido.',
     );
   });
+
+  it('overrides recommendedGrade with the gradeBreakdown sum when they differ', () => {
+    const raw = JSON.stringify(
+      buildEvaluationPayload({
+        recommendedGrade: 9,
+        gradeBreakdown: [
+          { criterion: 'Compilación', maxPoints: 3, awarded: 3, justification: 'Sin warnings.' },
+          { criterion: 'Casos de prueba', maxPoints: 5, awarded: 5, justification: 'Todos superados.' },
+          { criterion: 'Gestión de memoria', maxPoints: 2, awarded: 0, justification: 'No evaluable.' },
+        ],
+      }),
+    );
+
+    const contract = parseBuilderEvaluationContractV2(raw);
+
+    expect(contract.recommendedGrade).toBe(8);
+    expect(contract.gradeBreakdown).toHaveLength(3);
+  });
+
+  it('preserves recommendedGrade when gradeBreakdown is empty', () => {
+    const raw = JSON.stringify(
+      buildEvaluationPayload({
+        recommendedGrade: 7.5,
+        gradeBreakdown: [],
+      }),
+    );
+
+    const contract = parseBuilderEvaluationContractV2(raw);
+
+    expect(contract.recommendedGrade).toBe(7.5);
+  });
 });

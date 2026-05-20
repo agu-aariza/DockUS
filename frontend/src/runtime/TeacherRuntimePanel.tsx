@@ -8,6 +8,7 @@ import {
   RiStackFill,
   RiStopLine,
   RiUser3Fill,
+  RiSettings3Line,
 } from "react-icons/ri";
 import { useState, useEffect, useMemo } from "react";
 import { BuilderLiveRunPane } from "../builder/components/BuilderLiveRunPane";
@@ -31,10 +32,10 @@ interface TeacherRuntimePanelProps {
 }
 
 const RUNTIME_STATUS_STYLES: Record<ProjectRuntimeEnvironmentStatus, string> = {
-  ABSENT: "border-slate-200 bg-slate-50 text-slate-500",
+  ABSENT: "border-academic-outline-variant/30 bg-academic-surface-container text-academic-outline",
   PROVISIONING: "border-brand-blue/20 bg-brand-blue/5 text-brand-blue-dark",
   READY: "border-brand-gold/20 bg-brand-gold/5 text-brand-gold-dark",
-  ERROR: "border-rose-200 bg-rose-50 text-rose-700",
+  ERROR: "border-rose-100 bg-rose-50/70 text-rose-700",
   DELETING: "border-amber-200 bg-amber-50 text-amber-700",
 };
 
@@ -166,7 +167,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
           icon={<RiPulseFill />}
           badge={rc.projectOptions.length.toString()}
         />
-        <section className="rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white p-6 shadow-academic sm:p-8">
           <ProjectSelectionHub
             projects={hubProjects}
             onSelect={(id) => rc.setSelectedProjectId(id)}
@@ -242,16 +243,16 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
       </div>
 
       {activeTab === "control" ? (
-        <section className="rounded-[2.5rem] border border-slate-200 bg-white shadow-sm overflow-hidden animate-fade-in">
-          <div className="bg-brand-maroon p-8 text-white">
+        <section className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white shadow-academic overflow-hidden animate-fade-in">
+          <div className="bg-brand-maroon p-8 text-academic-on-primary">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-gold/20 text-brand-gold-light text-xl">
                   <RiPlayLine />
                 </div>
                 <div>
-                  <h4 className="text-xl font-bold tracking-tight">Evaluación Integral</h4>
-                  <p className="text-sm text-slate-400">Ejecución efímera de código y evaluación por LLM en tiempo real.</p>
+                  <h4 className="text-xl font-bold tracking-tight text-white">Evaluación Integral</h4>
+                  <p className="text-sm text-academic-on-primary/70">Ejecución efímera de código y evaluación por LLM en tiempo real.</p>
                 </div>
               </div>
               <span className={`rounded-full border px-4 py-1.5 text-xs font-bold ${runtimeStyle}`}>
@@ -297,32 +298,32 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <div className="rounded-3xl border border-slate-100 bg-slate-50/50 p-6">
+              <div className="rounded-3xl border border-academic-outline-variant/20 bg-academic-surface-container/30 p-6">
                 <div className="eyebrow mb-3">Contexto Académico</div>
-                <div className="text-base font-bold tracking-tight text-slate-900 mb-2">
+                <div className="text-base font-bold tracking-tight text-academic-on-surface mb-2">
                   {selectedProject?.title ?? "Sin proyecto seleccionado"}
                 </div>
-                <p className="text-sm leading-relaxed text-slate-600">
+                <p className="text-sm leading-relaxed text-academic-on-surface-variant">
                   {selectedProject?.contextAcademico ??
                     "El contexto académico del proyecto define los objetivos y restricciones de la ejecución."}
                 </p>
               </div>
 
-              <div className="rounded-3xl border border-slate-100 bg-slate-50/50 p-6">
+              <div className="rounded-3xl border border-academic-outline-variant/20 bg-academic-surface-container/30 p-6">
                 <div className="eyebrow mb-3">Resumen de Destino</div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-500">Modo Ejecución:</span>
+                    <span className="font-medium text-academic-outline">Modo Ejecución:</span>
                     <span className="font-bold text-emerald-600">Efímero / Aislado</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-500">Alumno:</span>
-                    <span className="font-bold text-slate-900 truncate max-w-[200px]">
+                    <span className="font-medium text-academic-outline">Alumno:</span>
+                    <span className="font-bold text-academic-on-surface truncate max-w-[200px]">
                       {formatStudentName(selectedAssignment?.studentName, selectedAssignment?.studentEmail)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-500">Entrega:</span>
+                    <span className="font-medium text-academic-outline">Entrega:</span>
                     <span className="font-bold text-brand-maroon">
                       {selectedDelivery ? `v${selectedDelivery.version} (${selectedDelivery.status})` : "n/a"}
                     </span>
@@ -331,7 +332,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-between gap-6 pt-8 border-t border-slate-100 sm:flex-row">
+            <div className="flex flex-col items-center justify-between gap-6 pt-8 border-t border-academic-outline-variant/20 sm:flex-row">
               <div className="flex flex-wrap gap-3 w-full sm:w-auto">
                 <Button
                   className="px-10 flex-1 sm:flex-none"
@@ -387,10 +388,10 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
       {activeTab === "history" ? (
         <section className="animate-fade-in">
           <div className="mb-6 px-2">
-            <h3 className="text-xl font-bold tracking-tight text-slate-950">Historial de Ejecuciones</h3>
-            <p className="text-sm text-slate-500">Registros históricos de todos los runs realizados para esta entrega.</p>
+            <h3 className="text-xl font-bold tracking-tight text-academic-on-surface">Historial de Ejecuciones</h3>
+            <p className="text-sm text-academic-on-surface-variant">Registros históricos de todos los runs realizados para esta entrega.</p>
           </div>
-          <div className="rounded-[2.5rem] border border-slate-200 bg-white overflow-hidden shadow-sm">
+          <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic">
             <BuilderRunsTable
               runs={runs}
               busyAction={rc.busyAction}
@@ -408,8 +409,8 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
         <section className="animate-fade-in">
           <div className="mb-6 px-2 flex items-center justify-between">
             <div>
-              <h3 className="text-xl font-bold tracking-tight text-slate-950">Ejecución en Vivo</h3>
-              <p className="text-sm text-slate-500">Monitorización en tiempo real vía SSE.</p>
+              <h3 className="text-xl font-bold tracking-tight text-academic-on-surface">Ejecución en Vivo</h3>
+              <p className="text-sm text-academic-on-surface-variant">Monitorización en tiempo real vía SSE.</p>
             </div>
             {rc.selectedRunId && (
                <div className="text-xs font-bold text-brand-maroon bg-brand-maroon/5 px-3 py-1.5 rounded-xl border border-brand-maroon/10">
@@ -417,7 +418,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                </div>
             )}
           </div>
-          <div className="rounded-[2.5rem] border border-slate-200 bg-white overflow-hidden shadow-sm min-h-[500px]">
+          <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic min-h-[500px]">
             <BuilderLiveRunPane
               selectedRun={rc.selectedRun}
               liveEvents={rc.liveEvents}

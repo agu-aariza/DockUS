@@ -14,23 +14,23 @@ export function StatsOverview({ stats }: { stats: StatCardProps[] }): JSX.Elemen
       {stats.map((stat, i) => (
         <div
           key={i}
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300"
+          className="rounded-2xl border border-academic-outline/10 bg-white p-5 shadow-academic transition-all hover:border-academic-outline/30 hover:shadow-academic-lg hover:-translate-y-0.5 duration-300"
         >
           <div className="mb-4 flex items-center justify-between">
-            <span className="rounded-xl bg-slate-100 p-2 text-slate-600">
+            <span className="rounded-xl bg-academic-surface-container p-2.5 text-academic-on-surface-variant shadow-sm">
               {stat.icon}
             </span>
             {stat.trend && (
-              <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+              <span className="rounded-full border border-emerald-500/10 bg-emerald-500/5 px-2.5 py-1 text-xs font-bold text-emerald-700 uppercase tracking-wider">
                 {stat.trend}
               </span>
             )}
           </div>
           <div>
-            <span className="mb-1 block text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+            <span className="mb-1 block text-xs font-mono font-bold uppercase tracking-[0.16em] text-academic-on-surface-variant">
               {stat.label}
             </span>
-            <div className="text-2xl font-semibold tracking-tight text-slate-950">
+            <div className="text-3xl font-bold tracking-tight text-academic-on-surface">
               {stat.value}
             </div>
           </div>

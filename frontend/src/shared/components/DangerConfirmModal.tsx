@@ -72,23 +72,23 @@ export function DangerConfirmModal({
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+        className="absolute inset-0 bg-brand-maroon/20 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={() => { if (!loading) onCancel(); }}
       />
 
       {/* Card */}
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-academic-outline-variant/30 bg-white shadow-academic animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-start gap-4 border-b border-slate-100 px-6 py-5">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-rose-100">
+        <div className="flex items-start gap-4 border-b border-academic-outline-variant/20 px-6 py-5">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-rose-50 border border-rose-100">
             <RiAlertFill className="text-xl text-rose-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-            <p className="mt-1 text-sm text-slate-500 leading-relaxed">{description}</p>
+            <h3 className="text-lg font-bold text-academic-on-surface">{title}</h3>
+            <p className="mt-1 text-sm text-academic-on-surface-variant leading-relaxed">{description}</p>
           </div>
           <button
-            className="flex-shrink-0 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            className="flex-shrink-0 rounded-lg p-1 text-academic-outline transition hover:bg-academic-surface-container/60 hover:text-academic-on-surface"
             onClick={onCancel}
             disabled={loading}
             aria-label="Cerrar"
@@ -99,15 +99,15 @@ export function DangerConfirmModal({
 
         {/* Confirm input */}
         <div className="px-6 py-5 space-y-4">
-          <p className="text-sm text-slate-700">
-            Escribe <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-rose-600">{confirmWord}</code> para confirmar:
+          <p className="text-sm text-academic-on-surface-variant">
+            Escribe <code className="rounded bg-rose-50 border border-rose-100/50 px-1.5 py-0.5 text-xs font-bold text-rose-600">{confirmWord}</code> para confirmar:
           </p>
           <input
             type="text"
             value={typed}
             onChange={(event) => setTyped(event.target.value)}
             placeholder={confirmWord}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100"
+            className="w-full rounded-lg border border-academic-outline bg-white px-3 py-2.5 text-sm text-academic-on-surface transition placeholder:text-academic-outline/60 focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-100/50"
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter' && canConfirm) void handleConfirm();
@@ -116,7 +116,7 @@ export function DangerConfirmModal({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4 bg-slate-50/50 rounded-b-2xl">
+        <div className="flex items-center justify-end gap-3 border-t border-academic-outline-variant/20 px-6 py-4 bg-academic-surface-container/30 rounded-b-2xl">
           <button
             type="button"
             className="btn-secondary"

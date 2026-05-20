@@ -164,18 +164,18 @@ export function BuilderLiveRunPane({
         </div>
       }
     >
-      <div className="mb-4 flex items-center gap-4 border-b border-slate-100 py-2">
+      <div className="mb-4 flex items-center gap-4 border-b border-academic-surface-variant/40 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <span className="text-[10px] font-black uppercase tracking-widest text-academic-outline">
             Contexto
           </span>
-          <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-900">
+          <span className="rounded-md bg-academic-surface-container px-2 py-0.5 text-xs font-bold text-academic-on-surface-variant">
             {selectedRun?.runKind}
           </span>
         </div>
-        <div className="h-4 w-px bg-slate-200" />
+        <div className="h-4 w-px bg-academic-surface-variant/40" />
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <span className="text-[10px] font-black uppercase tracking-widest text-academic-outline">
             Arquitectura
           </span>
           <span className="rounded-md bg-brand-maroon/5 px-2 py-0.5 text-xs font-bold text-brand-maroon">
@@ -194,11 +194,11 @@ export function BuilderLiveRunPane({
           ) : null}
 
           <div className="mb-6 grid gap-4 md:grid-cols-3">
-            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md">
-              <div className="absolute right-0 top-0 p-3 text-4xl text-slate-900 opacity-10">
+            <div className="relative overflow-hidden rounded-2xl border border-academic-surface-variant/60 bg-white p-5 shadow-academic">
+              <div className="absolute right-0 top-0 p-3 text-4xl text-academic-on-surface opacity-10">
                 <RiPulseFill />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-academic-outline">
                 Estado Ejecucion
               </div>
               <div className="mt-2 flex items-center gap-3">
@@ -212,11 +212,11 @@ export function BuilderLiveRunPane({
                         : "bg-brand-blue animate-bounce",
                   )}
                 />
-                <span className="text-2xl font-black tracking-tighter text-slate-900">
+                <span className="text-2xl font-black tracking-tighter text-academic-on-surface">
                   {selectedRun.status}
                 </span>
               </div>
-              <div className="mt-2 text-xs font-bold text-slate-500">
+              <div className="mt-2 text-xs font-bold text-academic-outline">
                 Etapa:{" "}
                 <span className="text-brand-maroon">
                   {selectedRun.activeStage ?? "Orquestando"}
@@ -224,22 +224,22 @@ export function BuilderLiveRunPane({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md">
-              <div className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <div className="rounded-2xl border border-academic-surface-variant/60 bg-white p-5 shadow-academic">
+              <div className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-academic-outline">
                 Infraestructura
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-slate-400">
+                  <span className="text-[10px] font-bold uppercase text-academic-outline">
                     Network
                   </span>
-                  <span className="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[10px] font-mono font-bold text-slate-600">
+                  <span className="rounded border border-academic-surface-variant/40 bg-academic-surface px-2 py-0.5 text-[10px] font-mono font-bold text-academic-on-surface-variant">
                     {selectedRun.runtimeTarget?.executionNetworkName?.slice(0, 16) ??
                       "pending"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-slate-400">
+                  <span className="text-[10px] font-bold uppercase text-academic-outline">
                     Container
                   </span>
                   <span className="rounded border border-brand-blue/10 bg-brand-blue/5 px-2 py-0.5 text-[10px] font-mono font-bold text-brand-blue">
@@ -250,7 +250,7 @@ export function BuilderLiveRunPane({
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-brand-gold/20 bg-brand-gold/[0.03] p-5 shadow-sm transition-all hover:shadow-md">
+            <div className="relative overflow-hidden rounded-2xl border border-brand-gold/30 bg-brand-gold/[0.03] p-5 shadow-academic">
               <div className="absolute right-0 top-0 p-3 text-4xl text-brand-gold opacity-20">
                 <RiRefreshLine
                   className={cn(
@@ -273,7 +273,7 @@ export function BuilderLiveRunPane({
                         ? "text-emerald-600"
                         : selectedRun.llmAssessment?.evaluativeState === "E2"
                           ? "text-brand-gold-dark"
-                          : "text-slate-400",
+                          : "text-academic-outline",
                     )}
                   >
                     {selectedRun.llmAssessment?.evaluativeState ?? "--"}
@@ -327,7 +327,7 @@ export function BuilderLiveRunPane({
           </div>
 
           {selectedRun.llmAssessment ? (
-            <section className="rounded-2xl border border-brand-maroon/10 bg-brand-maroon/[0.02] p-6">
+            <section className="rounded-2xl border border-brand-maroon/10 bg-brand-maroon/[0.02] p-6 mb-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="mb-2 flex items-center gap-2">
@@ -340,16 +340,16 @@ export function BuilderLiveRunPane({
                           ? "bg-emerald-100 text-emerald-700"
                           : selectedRun.llmAssessment.confidence === "medium"
                             ? "bg-amber-100 text-amber-700"
-                            : "bg-slate-100 text-slate-700"
+                            : "bg-academic-surface text-academic-outline"
                       }`}
                     >
                       Confianza: {selectedRun.llmAssessment.confidence}
                     </span>
                   </div>
-                  <h4 className="text-xl font-bold tracking-tight text-slate-900">
+                  <h4 className="text-xl font-bold tracking-tight text-academic-on-surface">
                     {selectedRun.llmAssessment.structuralType}
                   </h4>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                  <p className="mt-2 text-sm leading-6 text-academic-on-surface-variant">
                     {selectedRun.llmAssessment.rationale}
                   </p>
                 </div>
@@ -368,11 +368,11 @@ export function BuilderLiveRunPane({
                   >
                     {selectedRun.llmAssessment.evaluativeState}
                   </div>
-                  <span className="ui-label text-slate-400">Score de Calidad</span>
+                  <span className="ui-label text-academic-outline">Score de Calidad</span>
                 </div>
 
                 {selectedRun.llmAssessment.recommendedGrade !== undefined ? (
-                  <div className="h-12 w-px bg-slate-200" />
+                  <div className="h-12 w-px bg-academic-surface-variant/40" />
                 ) : null}
 
                 {selectedRun.llmAssessment.recommendedGrade !== undefined ? (
@@ -389,30 +389,30 @@ export function BuilderLiveRunPane({
                     >
                       {selectedRun.llmAssessment.recommendedGrade.toFixed(2)}
                     </div>
-                    <span className="ui-label text-slate-400">Nota Final</span>
+                    <span className="ui-label text-academic-outline">Nota Final</span>
                   </div>
                 ) : null}
               </div>
 
               {selectedRun.llmAssessment.evidenceSummary ? (
-                <div className="mt-6 border-t border-slate-200/60 pt-4">
-                  <div className="ui-label mb-2 text-slate-500">
+                <div className="mt-6 border-t border-academic-surface-variant/40 pt-4">
+                  <div className="ui-label mb-2 text-academic-outline">
                     Evidencia Observada
                   </div>
-                  <p className="text-xs italic leading-5 text-slate-500">
+                  <p className="text-xs italic leading-5 text-academic-outline">
                     {selectedRun.llmAssessment.evidenceSummary}
                   </p>
                 </div>
               ) : null}
 
               {showAssessmentContext ? (
-                <div className="mt-6 grid gap-4 border-t border-slate-200/60 pt-4 lg:grid-cols-2">
+                <div className="mt-6 grid gap-4 border-t border-academic-surface-variant/40 pt-4 lg:grid-cols-2">
                   {observedEvidence.length > 0 ? (
                     <article className="rounded-2xl border border-emerald-200 bg-white/80 p-4">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
                         Que observo el sistema
                       </div>
-                      <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                      <ul className="mt-3 space-y-2 text-sm leading-6 text-academic-on-surface-variant">
                         {observedEvidence.map((item) => (
                           <li
                             key={item}
@@ -430,7 +430,7 @@ export function BuilderLiveRunPane({
                       <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
                         Lo que no pudo validar
                       </div>
-                      <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                      <ul className="mt-3 space-y-2 text-sm leading-6 text-academic-on-surface-variant">
                         {evaluationLimits.map((item) => (
                           <li
                             key={item}
@@ -448,16 +448,16 @@ export function BuilderLiveRunPane({
           ) : null}
 
           {selectedRun.preflightSummary ? (
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 opacity-75 grayscale-[0.5]">
+            <section className="rounded-2xl border border-academic-surface-variant bg-academic-surface p-4 opacity-75 grayscale-[0.5] mb-6">
               <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                  <div className="text-xs font-medium uppercase tracking-[0.16em] text-academic-outline">
                     Legacy Preflight (Auto-detect)
                   </div>
-                  <div className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+                  <div className="mt-2 text-lg font-semibold tracking-tight text-academic-on-surface">
                     {selectedRun.preflightSummary.supportedProjectType}
                   </div>
-                  <div className="mt-1 text-sm text-slate-600">
+                  <div className="mt-1 text-sm text-academic-on-surface-variant">
                     {PREFLIGHT_COMPATIBILITY_LABEL[
                       selectedRun.preflightSummary.compatibility
                     ] ?? selectedRun.preflightSummary.compatibility}
@@ -468,13 +468,13 @@ export function BuilderLiveRunPane({
                   </div>
                 </div>
               </div>
-              <div className="mt-4 grid gap-2 text-sm text-slate-600">
+              <div className="mt-4 grid gap-2 text-sm text-academic-on-surface-variant">
                 <div>
-                  <span className="font-semibold text-slate-900">Working dir</span>
+                  <span className="font-semibold text-academic-on-surface">Working dir</span>
                   : {selectedRun.preflightSummary.workingDirectory}
                 </div>
                 <div>
-                  <span className="font-semibold text-slate-900">Run</span>:{" "}
+                  <span className="font-semibold text-academic-on-surface">Run</span>:{" "}
                   {selectedRun.preflightSummary.resolvedCommands.run
                     ? selectedRun.preflightSummary.resolvedCommands.run.join(" ")
                     : "sin comando"}
@@ -483,13 +483,13 @@ export function BuilderLiveRunPane({
             </section>
           ) : null}
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <section className="rounded-2xl border border-academic-surface-variant bg-white p-4 shadow-academic mb-6">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="text-sm font-medium text-slate-950">
+                <div className="text-sm font-medium text-academic-on-surface">
                   Evidencias del run
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-academic-outline">
                   Artefactos persistidos y descargables para auditoria del
                   profesorado.
                 </div>
@@ -502,7 +502,7 @@ export function BuilderLiveRunPane({
             </div>
 
             {evidenceLoading ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+              <div className="mt-4 rounded-2xl border border-dashed border-academic-surface-variant bg-academic-surface px-4 py-8 text-center text-sm text-academic-outline">
                 Cargando evidencias disponibles...
               </div>
             ) : evidenceError ? (
@@ -510,7 +510,7 @@ export function BuilderLiveRunPane({
                 No se pudo cargar la lista de evidencias: {evidenceError}
               </div>
             ) : evidenceArtifacts.length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+              <div className="mt-4 rounded-2xl border border-dashed border-academic-surface-variant bg-academic-surface px-4 py-8 text-center text-sm text-academic-outline">
                 {evidenceEmptyMessage}
               </div>
             ) : (
@@ -518,14 +518,14 @@ export function BuilderLiveRunPane({
                 {evidenceArtifacts.map((artifact) => (
                   <article
                     key={artifact.id}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    className="rounded-2xl border border-academic-surface-variant bg-academic-surface p-4"
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold text-slate-900">
+                        <div className="text-sm font-semibold text-academic-on-surface">
                           {formatArtifactLabel(artifact.type)}
                         </div>
-                        <div className="mt-1 text-xs font-mono text-slate-500">
+                        <div className="mt-1 text-xs font-mono text-academic-outline">
                           {artifact.type}
                         </div>
                       </div>
@@ -544,17 +544,17 @@ export function BuilderLiveRunPane({
                       </Button>
                     </div>
 
-                    <div className="mt-4 grid gap-2 text-xs text-slate-500 sm:grid-cols-3">
+                    <div className="mt-4 grid gap-2 text-xs text-academic-outline sm:grid-cols-3">
                       <div>
-                        <span className="font-semibold text-slate-700">Tipo</span>
+                        <span className="font-semibold text-academic-on-surface-variant">Tipo</span>
                         <div>{artifact.contentType}</div>
                       </div>
                       <div>
-                        <span className="font-semibold text-slate-700">Tamano</span>
+                        <span className="font-semibold text-academic-on-surface-variant">Tamano</span>
                         <div>{formatBytes(artifact.sizeBytes)}</div>
                       </div>
                       <div>
-                        <span className="font-semibold text-slate-700">Creado</span>
+                        <span className="font-semibold text-academic-on-surface-variant">Creado</span>
                         <div>{formatDate(artifact.createdAt)}</div>
                       </div>
                     </div>
@@ -564,8 +564,8 @@ export function BuilderLiveRunPane({
             )}
           </section>
 
-          <div className="grid gap-4 2xl:grid-cols-[0.95fr_1.05fr]">
-            <section className="min-w-0 rounded-2xl border border-slate-200 bg-slate-950 p-4 shadow-2xl">
+          <div className="grid gap-6 2xl:grid-cols-[0.95fr_1.05fr]">
+            <section className="min-w-0 rounded-2xl border border-academic-surface-variant/40 bg-slate-955 p-4 shadow-academic">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
@@ -574,10 +574,10 @@ export function BuilderLiveRunPane({
                     />
                   </div>
                   <div>
-                    <div className="text-sm font-bold tracking-tight text-slate-100">
+                    <div className="font-display text-sm font-bold tracking-tight text-slate-100">
                       Consola en vivo
                     </div>
-                    <div className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
+                    <div className="text-[10px] font-medium uppercase tracking-widest text-academic-outline">
                       Build & Runtime Logs
                     </div>
                   </div>
@@ -595,7 +595,7 @@ export function BuilderLiveRunPane({
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-20 transition-opacity group-hover:opacity-30" />
                 <pre className="custom-scrollbar max-h-[460px] max-w-full overflow-y-auto whitespace-pre-wrap break-all p-2 font-mono text-[11px] leading-6 text-emerald-300/90 selection:bg-emerald-500/30">
                   {consoleOutput || (
-                    <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-600">
+                    <div className="flex flex-col items-center justify-center gap-3 py-20 text-academic-outline">
                       <RiLoader4Line className="text-3xl animate-spin" />
                       <span className="text-xs font-medium italic">
                         Esperando rafaga de logs del orquestador...
@@ -606,19 +606,19 @@ export function BuilderLiveRunPane({
               </div>
             </section>
 
-            <section className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <section className="min-w-0 rounded-2xl border border-academic-surface-variant/60 bg-academic-surface p-4 shadow-academic">
               <div className="mb-3">
-                <div className="text-sm font-medium text-slate-950">
+                <div className="text-sm font-medium text-academic-on-surface">
                   Linea temporal de la ejecucion
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-academic-outline">
                   Eventos persistidos fuera del stream de consola
                 </div>
               </div>
 
               <div className="custom-scrollbar max-h-[520px] space-y-3 overflow-y-auto pr-2">
                 {timelineEvents.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+                  <div className="rounded-2xl border border-dashed border-academic-surface-variant bg-white px-4 py-8 text-center text-sm text-academic-outline">
                     Aun no hay eventos visibles para este run.
                   </div>
                 ) : (
@@ -647,9 +647,9 @@ export function BuilderLiveRunPane({
                     const isIA =
                       event.message?.includes("IA") || event.message?.includes("LLM");
 
-                    let sidebarColor = "bg-slate-300";
+                    let sidebarColor = "bg-academic-outline";
                     let icon = <RiStackFill />;
-                    let iconBg = "bg-slate-100 text-slate-500";
+                    let iconBg = "bg-academic-surface text-academic-outline";
 
                     if (isEvidence) {
                       sidebarColor = "bg-emerald-500";
@@ -681,7 +681,7 @@ export function BuilderLiveRunPane({
                             ? "border-emerald-200 bg-emerald-50/30 ring-1 ring-emerald-100"
                             : isError
                               ? "border-rose-100 bg-rose-50/30"
-                              : "border-slate-200 bg-white"
+                              : "border-academic-surface-variant/40 bg-white"
                         }`}
                       >
                         <div
@@ -703,7 +703,7 @@ export function BuilderLiveRunPane({
                                       ? "text-emerald-700"
                                       : isError
                                         ? "text-rose-700"
-                                        : "text-slate-900"
+                                        : "text-academic-on-surface"
                                   }`}
                                 >
                                   {isEvidence ? "Proof of Life Verified" : event.eventType}
@@ -720,14 +720,14 @@ export function BuilderLiveRunPane({
                                     ? "font-bold text-emerald-900"
                                     : isError
                                       ? "text-rose-900"
-                                      : "text-slate-600"
+                                      : "text-academic-on-surface-variant"
                                 }`}
                               >
                                 {cleanMessage}
                               </p>
                             </div>
                           </div>
-                          <span className="whitespace-nowrap rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400">
+                          <span className="whitespace-nowrap rounded-lg bg-academic-surface px-2 py-1 text-[10px] font-bold text-academic-outline">
                             {formatDate(event.createdAt)}
                           </span>
                         </div>
@@ -751,10 +751,10 @@ export function BuilderLiveRunPane({
 
                         {event.payload && !isEvidence ? (
                           <div className="mt-3 ml-11">
-                            <div className="mb-1 ml-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            <div className="mb-1 ml-1 text-[10px] font-bold uppercase tracking-widest text-academic-outline">
                               Payload Data
                             </div>
-                            <pre className="max-w-full overflow-x-auto rounded-xl border border-white/5 bg-slate-900 p-3 text-[10px] text-slate-300 shadow-inner">
+                            <pre className="max-w-full overflow-x-auto rounded-xl border border-academic-surface-variant/40 bg-slate-955 p-3 text-[10px] text-academic-on-surface-variant shadow-inner">
                               {pretty(event.payload)}
                             </pre>
                           </div>
@@ -768,7 +768,7 @@ export function BuilderLiveRunPane({
           </div>
         </>
       ) : (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+        <div className="rounded-2xl border border-dashed border-academic-surface-variant bg-academic-surface px-4 py-10 text-center text-sm text-academic-outline">
           Selecciona una ejecucion del historial para abrir la consola y la
           linea temporal.
         </div>

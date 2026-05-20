@@ -36,13 +36,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const NavItem = ({ item }: { item: { id: string, label: string, icon: any } }) => (
     <button
       onClick={() => onTabChange(item.id)}
-      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-all ${activeTab === item.id
-          ? "bg-brand-gold text-white shadow-lg shadow-brand-gold/20"
+      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${activeTab === item.id
+          ? "bg-gradient-to-r from-brand-gold-light to-brand-gold text-white shadow-lg shadow-brand-gold/25"
           : "text-white/70 hover:bg-white/5 hover:text-white"
         }`}
     >
       <item.icon
-        className={`text-lg ${activeTab === item.id ? "text-white" : "text-white/40"
+        className={`text-lg transition-transform duration-300 ${activeTab === item.id ? "text-white scale-110" : "text-white/40 group-hover:text-white/70"
           }`}
       />
       {item.label}
@@ -50,13 +50,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   );
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-brand-maroon-dark bg-brand-maroon xl:flex shadow-2xl">
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-brand-maroon-dark bg-gradient-to-b from-brand-maroon via-brand-maroon to-brand-maroon-dark xl:flex shadow-2xl">
       <div className="border-b border-white/10 px-6 py-6">
         <div className="mb-2 flex items-center gap-3">
-          <img src="/logos/Logo01.png" alt="DockUS" className="h-11 w-11 rounded-2xl border border-white/10" />
+          <img src="/logos/Logo01.png" alt="DockUS" className="h-11 w-11 rounded-2xl border border-white/10 shadow-lg" />
           <div>
-            <h1 className="text-lg font-bold tracking-tight text-white">DockUS</h1>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold">
+            <h1 className="text-lg font-bold tracking-tight text-white font-sans">DockUS</h1>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-gold-light">
               Centro de control
             </span>
           </div>

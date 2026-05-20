@@ -36,7 +36,7 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
   }, [pushToast, uc.message, uc.setMessage]);
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-700">
       <PageHeader 
         title="Directorio de Usuarios"
         subtitle="Gestión avanzada de identidades, roles y permisos de seguridad para el ecosistema DockUS."
@@ -58,20 +58,20 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
           {/* Filters Column */}
           <div className="xl:col-span-1">
-            <div className="flex flex-col h-full rounded-lg border border-academic-surface-variant bg-white p-6 shadow-academic overflow-hidden sticky top-32">
+            <div className="flex flex-col h-full rounded-2xl border border-academic-surface-variant/60 bg-white p-6 shadow-academic overflow-hidden sticky top-32">
               <div className="flex items-center justify-between gap-3 mb-6">
                 <div>
                   <p className="eyebrow !mb-1">Filtros Inteligentes</p>
-                  <h3 className="text-xl font-bold tracking-tight text-slate-950">
+                  <h3 className="font-display text-xl font-bold tracking-tight text-academic-on-surface">
                     Criterios
                   </h3>
                 </div>
               </div>
-              <div className="space-y-8">
+              <div className="space-y-6">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">Nivel de Acceso</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider mb-2 block text-academic-outline">Nivel de Acceso</label>
                   <select 
-                    className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-brand-blue/20 transition-all cursor-pointer"
+                    className="w-full bg-white border border-academic-outline-variant/30 rounded-xl px-4 py-2.5 text-sm font-bold text-academic-on-surface-variant focus:outline-none focus:border-academic-secondary transition-all cursor-pointer"
                     value={uc.query.role} 
                     onChange={e => uc.setQuery(p => ({ ...p, role: e.target.value }))}
                   >
@@ -80,9 +80,9 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">Estado de Cuenta</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider mb-2 block text-academic-outline">Estado de Cuenta</label>
                   <select 
-                    className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-brand-blue/20 transition-all cursor-pointer"
+                    className="w-full bg-white border border-academic-outline-variant/30 rounded-xl px-4 py-2.5 text-sm font-bold text-academic-on-surface-variant focus:outline-none focus:border-academic-secondary transition-all cursor-pointer"
                     value={uc.query.status} 
                     onChange={e => uc.setQuery(p => ({ ...p, status: e.target.value }))}
                   >
@@ -91,11 +91,11 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">Identidad</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider mb-2 block text-academic-outline">Identidad</label>
                   <div className="relative group">
-                    <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-blue transition-colors" />
+                    <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline group-focus-within:text-brand-blue transition-colors" />
                     <input 
-                      className="w-full bg-slate-50 border-slate-200 rounded-xl pl-11 pr-4 py-3 text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-brand-blue/20 transition-all"
+                      className="w-full bg-white border border-academic-outline-variant/30 rounded-xl pl-11 pr-4 py-2.5 text-sm font-bold text-academic-on-surface-variant placeholder:text-academic-outline focus:outline-none focus:border-academic-secondary transition-all"
                       placeholder="Nombre o email..." 
                       value={uc.query.search} 
                       onChange={e => uc.setQuery(p => ({ ...p, search: e.target.value }))} 
@@ -103,7 +103,7 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
                   </div>
                 </div>
                 <Button 
-                  className="w-full py-4 rounded-xl"
+                  className="w-full py-3 rounded-xl"
                   onClick={() => void uc.handleList()} 
                   disabled={!uc.canList}
                   variant="primary"
@@ -116,59 +116,59 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
 
           {/* Table Column */}
           <div className="xl:col-span-3">
-            <div className="bg-white border border-academic-surface-variant rounded-lg shadow-academic overflow-hidden">
-              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Registros Encontrados</h3>
+            <div className="bg-white border border-academic-surface-variant/60 rounded-2xl shadow-academic overflow-hidden">
+              <div className="p-6 border-b border-academic-surface-variant/40 flex items-center justify-between bg-academic-surface-container-lowest/40">
+                <h3 className="ui-label">Registros Encontrados</h3>
               </div>
               
               {uc.listResponse ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">
-                        <th className="px-8 py-5">Perfil de Operador</th>
-                        <th className="px-8 py-5">Seguridad / Rol</th>
-                        <th className="px-8 py-5 text-right">Acciones</th>
+                      <tr className="text-[10px] font-black text-academic-outline uppercase tracking-[0.2em] border-b border-academic-surface-variant/40 bg-academic-surface-container-lowest/20">
+                        <th className="px-6 py-4">Perfil de Operador</th>
+                        <th className="px-6 py-4">Seguridad / Rol</th>
+                        <th className="px-6 py-4 text-right">Acciones</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-academic-surface-variant/40">
                       {uc.listResponse.data.map((user) => (
-                        <tr key={user.id} className="group hover:bg-slate-50 transition-all duration-300">
-                          <td className="px-8 py-6">
+                        <tr key={user.id} className="group hover:bg-academic-surface transition-all duration-300">
+                          <td className="px-6 py-5">
                             <div className="flex items-center gap-4">
-                              <div className="h-10 w-10 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-black text-xs border border-brand-primary/20">
+                              <div className="h-10 w-10 rounded-full bg-academic-primary/10 flex items-center justify-center text-academic-primary font-bold text-xs border border-academic-primary/20 shrink-0">
                                 {user.firstName[0]}{user.lastName[0]}
                               </div>
-                              <div>
-                                <div className="text-sm font-black text-slate-900 group-hover:text-brand-primary transition-colors">
+                              <div className="min-w-0">
+                                <div className="text-sm font-bold text-academic-on-surface group-hover:text-academic-primary transition-colors truncate">
                                   {user.firstName} {user.lastName}
                                 </div>
-                                <div className="text-xs font-medium text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                <div className="text-xs font-medium text-academic-outline flex items-center gap-1.5 mt-0.5 truncate">
                                   <RiMailFill className="text-[10px]" />
                                   {user.email}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-8 py-6">
+                          <td className="px-6 py-5">
                             <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black text-white bg-slate-900 uppercase tracking-wider shadow-lg shadow-slate-900/10">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black text-white bg-academic-on-surface uppercase tracking-wider">
                                 <RiShieldUserFill />
                                 {user.role}
                               </span>
                               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
                                 user.status === 'ACTIVE' 
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                                  : 'bg-slate-100 text-slate-500 border-slate-200'
+                                  : 'bg-academic-surface-container text-academic-outline border-academic-surface-variant/40'
                               }`}>
-                                <div className={`h-1.5 w-1.5 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                                <div className={`h-1.5 w-1.5 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-academic-outline'}`} />
                                 {user.status}
                               </span>
                             </div>
                           </td>
-                          <td className="px-8 py-6 text-right">
+                          <td className="px-6 py-5 text-right">
                             <button 
-                              className="p-2.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                              className="p-2 text-academic-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                               title="Revocar acceso"
                               onClick={() => { uc.setDeleteId(user.id); uc.setConfirmOpen(true); }} 
                               disabled={!uc.canAdmin}
@@ -182,46 +182,46 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
                   </table>
                 </div>
               ) : (
-                <div className="p-24 text-center">
-                  <div className="h-16 w-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
-                    <RiSearchLine className="text-2xl text-slate-300" />
+                <div className="p-20 text-center">
+                  <div className="h-16 w-16 bg-academic-surface rounded-3xl flex items-center justify-center mx-auto mb-4 border border-academic-surface-variant/40">
+                    <RiSearchLine className="text-2xl text-academic-outline/60" />
                   </div>
-                  <p className="text-slate-400 text-sm font-medium italic">Configura los filtros para cargar el personal del sistema.</p>
+                  <p className="text-academic-outline text-sm font-medium italic">Configura los filtros para cargar el personal del sistema.</p>
                 </div>
               )}
             </div>
           </div>
         </div>
       ) : (
-        <div className="max-w-4xl">
-          <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 overflow-hidden">
-            <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+        <div className="max-w-3xl">
+          <div className="card card-top-accent-primary">
+            <div className="p-8 border-b border-academic-surface-variant/40 flex items-center justify-between bg-academic-surface-container-lowest/40">
               <div>
-                <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-brand-primary text-white flex items-center justify-center shadow-lg shadow-brand-primary/20">
+                <h3 className="font-display text-xl font-bold tracking-tight text-academic-on-surface flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-academic-primary text-white flex items-center justify-center shadow-academic">
                     <RiUserAddFill />
                   </div>
                   Alta de Nuevo Operador
                 </h3>
-                <p className="text-slate-400 text-xs font-medium mt-1">Crea una nueva identidad con acceso controlado a la plataforma.</p>
+                <p className="text-academic-outline text-xs font-medium mt-1">Crea una nueva identidad con acceso controlado a la plataforma.</p>
               </div>
             </div>
             
-            <form className="p-10 space-y-10" onSubmit={uc.handleCreate}>
-              <div className="grid grid-cols-1 gap-10 sm:grid-cols-2">
+            <form className="p-8 space-y-6" onSubmit={uc.handleCreate}>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] mb-3 block">Información de Perfil</label>
+                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Información de Perfil</label>
                   <div className="space-y-4">
                     <input 
                       required 
-                      className="w-full bg-slate-50 border-slate-200 rounded-xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-brand-blue/5 transition-all placeholder:text-slate-400" 
+                      className="input-field" 
                       placeholder="Nombre completo"
                       value={uc.createForm.firstName} 
                       onChange={e => uc.setCreateForm(p => ({ ...p, firstName: e.target.value }))} 
                     />
                     <input 
                       required 
-                      className="w-full bg-slate-50 border-slate-200 rounded-xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-brand-blue/5 transition-all placeholder:text-slate-400" 
+                      className="input-field" 
                       placeholder="Apellidos"
                       value={uc.createForm.lastName} 
                       onChange={e => uc.setCreateForm(p => ({ ...p, lastName: e.target.value }))} 
@@ -229,13 +229,13 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] mb-3 block">Seguridad y Credenciales</label>
+                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Seguridad y Credenciales</label>
                   <div className="space-y-4">
                     <div className="relative">
-                      <RiMailFill className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                      <RiMailFill className="absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline" />
                       <input 
                         required 
-                        className="w-full bg-slate-50 border-slate-200 rounded-xl pl-12 pr-5 py-4 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-brand-blue/5 transition-all placeholder:text-slate-400" 
+                        className="input-field pl-11" 
                         type="email" 
                         placeholder="email@dockus.pro"
                         value={uc.createForm.email} 
@@ -243,10 +243,10 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
                       />
                     </div>
                     <div className="relative">
-                      <RiLockPasswordFill className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                      <RiLockPasswordFill className="absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline" />
                       <input 
                         required 
-                        className="w-full bg-slate-50 border-slate-200 rounded-xl pl-12 pr-5 py-4 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-brand-blue/5 transition-all placeholder:text-slate-400" 
+                        className="input-field pl-11" 
                         type="password" 
                         placeholder="Establecer contraseña"
                         value={uc.createForm.password} 
@@ -258,30 +258,30 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
               </div>
 
               <div>
-                <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] mb-4 block">Nivel de Autorización</label>
+                <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-3 block">Nivel de Autorización</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {USER_ROLES.map(role => (
                     <button
                       key={role}
                       type="button"
                       onClick={() => uc.setCreateForm(p => ({ ...p, role }))}
-                      className={`flex flex-col items-center gap-3 p-5 rounded-[1.5rem] border-2 transition-all ${
+                      className={`flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all ${
                         uc.createForm.role === role
-                          ? 'border-brand-primary bg-brand-primary/5 text-brand-primary shadow-lg shadow-brand-primary/5'
-                          : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                          ? 'border-academic-primary bg-academic-primary/5 text-academic-primary shadow-academic'
+                          : 'border-academic-surface-variant bg-white text-academic-outline hover:border-academic-outline'
                       }`}
                     >
-                      <RiShieldCheckFill className={`text-xl ${uc.createForm.role === role ? 'text-brand-primary' : 'text-slate-200'}`} />
+                      <RiShieldCheckFill className={`text-xl ${uc.createForm.role === role ? 'text-academic-primary' : 'text-academic-surface-variant'}`} />
                       <span className="text-[10px] font-black uppercase tracking-widest">{role}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-4 pt-8 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-4 pt-6 border-t border-academic-surface-variant/40">
                 <Button 
                   type="submit" 
-                  className="px-10 py-4 rounded-2xl"
+                  className="px-8 py-3 rounded-xl"
                   disabled={!uc.canAdmin || !uc.createForm.password}
                   variant="primary"
                 >
@@ -304,4 +304,3 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
     </div>
   );
 }
-

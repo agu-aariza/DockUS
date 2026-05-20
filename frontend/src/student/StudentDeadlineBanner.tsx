@@ -30,9 +30,9 @@ const toneClasses = {
     icon: "text-emerald-600",
   },
   "open-no-deadline": {
-    panel: "border-slate-200 bg-slate-50",
-    badge: "bg-white text-slate-700",
-    icon: "text-slate-600",
+    panel: "border-academic-outline-variant/30 bg-academic-surface-container/20",
+    badge: "bg-white text-academic-on-surface border border-academic-outline-variant/30",
+    icon: "text-academic-outline",
   },
   late: {
     panel: "border-amber-200 bg-amber-50",
@@ -61,25 +61,25 @@ export function StudentDeadlineBanner({
 
   return (
     <section
-      className={`rounded-3xl border p-5 shadow-sm ${tone.panel}`}
+      className={`rounded-3xl border p-5 shadow-academic ${tone.panel}`}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-academic-outline">
             Plazo de entrega
           </div>
           <div className="mt-2 flex items-start gap-3">
-            <div className={`rounded-2xl bg-white/80 p-3 ${tone.icon}`}>
+            <div className={`rounded-2xl bg-white/85 p-3 ${tone.icon}`}>
               <RiCalendarEventLine className="text-2xl" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-slate-950">
+              <h3 className="text-lg font-bold text-academic-on-surface font-display">
                 {activeAssignment.projectTitle}
               </h3>
-              <p className="mt-1 text-sm font-medium text-slate-800">
+              <p className="mt-1 text-sm font-semibold text-academic-on-surface/90">
                 {timeline.headline}
               </p>
-              <p className="mt-1 text-sm text-slate-600">{timeline.detail}</p>
+              <p className="mt-1 text-sm text-academic-on-surface-variant">{timeline.detail}</p>
             </div>
           </div>
         </div>
@@ -102,19 +102,19 @@ export function StudentDeadlineBanner({
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-sm text-slate-700">
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+        <div className="rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-sm text-academic-on-surface/80">
+          <div className="text-xs font-black uppercase tracking-[0.12em] text-academic-outline">
             Apertura
           </div>
-          <div className="mt-1 font-semibold text-slate-900">
+          <div className="mt-1 font-semibold text-academic-on-surface">
             {formatAssignmentDate(activeAssignment.opensAt)}
           </div>
         </div>
-        <div className="rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-sm text-slate-700">
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+        <div className="rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-sm text-academic-on-surface/80">
+          <div className="text-xs font-black uppercase tracking-[0.12em] text-academic-outline">
             Fin de entrega
           </div>
-          <div className="mt-1 font-semibold text-slate-900">
+          <div className="mt-1 font-semibold text-academic-on-surface">
             {formatAssignmentDate(activeAssignment.closesAt)}
           </div>
         </div>

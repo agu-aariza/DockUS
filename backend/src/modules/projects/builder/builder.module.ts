@@ -34,7 +34,9 @@ import { BuildRunArtifact } from './domain/entities/build-run-artifact.entity';
 import { BuildRunEventEntity } from './domain/entities/build-run-event.entity';
 import { BuildRun } from './domain/entities/build-run.entity';
 import { CodeQualityFindingEntity } from './domain/entities/code-quality-finding.entity';
+import { BuildRunChatMessage } from './domain/entities/build-run-chat-message.entity';
 import { BuilderLlmEvaluatorService } from './domain/llm/builder-llm-evaluator.service';
+import { BuilderLlmChatService } from './domain/llm/builder-llm-chat.service';
 import { BuilderRunEventsService } from './domain/events/builder-run-events.service';
 import { EvidenceService } from './infrastructure/evidence/evidence.service';
 import { BuilderLogTrimmer } from './infrastructure/utils/builder-log-trimmer.util';
@@ -60,6 +62,7 @@ import { BuilderQualityAggregationService } from './application/services/builder
       BuildRunArtifact,
       BuildRunEventEntity,
       CodeQualityFindingEntity,
+      BuildRunChatMessage,
     ]),
     StorageInfrastructureModule,
   ],
@@ -73,6 +76,7 @@ import { BuilderQualityAggregationService } from './application/services/builder
     BuilderRunSupportService,
     BuilderProcessor,
     BuilderLlmEvaluatorService,
+    BuilderLlmChatService,
     BuilderRunEventsService,
     EvidenceService,
     BuilderLogTrimmer,

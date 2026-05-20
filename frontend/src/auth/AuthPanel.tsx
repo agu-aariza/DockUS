@@ -49,23 +49,23 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-academic-surface">
       <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-5 py-10 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm sm:p-10">
+        <div className="w-full max-w-md rounded-[2rem] border border-academic-outline/25 bg-white p-8 shadow-academic-lg sm:p-10 animate-in fade-in zoom-in-95 duration-500">
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-academic-outline-variant bg-academic-surface-container">
               <img
                 src="/logos/Logo01.png"
                 alt="DockUS"
-                className="h-9 w-9 rounded-xl"
+                className="h-9 w-9 rounded-xl shadow-sm"
               />
             </div>
-            <div className="flex justify-center space-x-1 mb-6 p-1 bg-slate-50 rounded-xl border border-slate-200 w-fit mx-auto">
+            <div className="flex justify-center space-x-1 mb-6 p-1 bg-academic-surface-container rounded-2xl border border-academic-outline-variant/30 w-fit mx-auto shadow-inner">
               <button
                 type="button"
                 onClick={() => { setMode('LOGIN'); setMessage(''); }}
-                className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                  mode === 'LOGIN' ? 'bg-white text-slate-950 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'
+                className={`px-4 py-1.5 text-sm font-bold rounded-xl transition-all ${
+                  mode === 'LOGIN' ? 'bg-white text-academic-primary shadow-sm border border-academic-outline-variant/20' : 'text-academic-on-surface-variant hover:text-academic-on-surface'
                 }`}
               >
                 Entrar
@@ -73,18 +73,18 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
               <button
                 type="button"
                 onClick={() => { setMode('REGISTER'); setMessage(''); }}
-                className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                  mode === 'REGISTER' ? 'bg-white text-slate-950 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'
+                className={`px-4 py-1.5 text-sm font-bold rounded-xl transition-all ${
+                  mode === 'REGISTER' ? 'bg-white text-academic-primary shadow-sm border border-academic-outline-variant/20' : 'text-academic-on-surface-variant hover:text-academic-on-surface'
                 }`}
               >
                 Registro
               </button>
             </div>
             <p className="eyebrow">{mode === 'LOGIN' ? 'Acceso' : 'Bienvenida'}</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-academic-on-surface font-display">
               {mode === 'LOGIN' ? 'Inicia sesión en DockUS' : 'Crea tu cuenta'}
             </h1>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
+            <p className="mt-3 text-sm leading-relaxed text-academic-on-surface-variant">
               {mode === 'LOGIN' 
                 ? 'Acceso a la consola de proyectos, entregas y runtime.' 
                 : 'Únete a la plataforma para gestionar tus entregas y proyectos académicos.'}
@@ -152,7 +152,7 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
               />
             </div>
 
-            <button className="btn-primary w-full" type="submit" disabled={loading === 'AUTH'}>
+            <button className="btn-primary w-full shadow-lg hover:shadow-brand-maroon/20" type="submit" disabled={loading === 'AUTH'}>
               {loading === 'AUTH' 
                 ? (mode === 'LOGIN' ? 'Validando acceso...' : 'Creando cuenta...') 
                 : (mode === 'LOGIN' ? 'Entrar' : 'Registrarse')}
@@ -161,17 +161,17 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
 
           {message && (
             <div
-              className={`mt-5 rounded-2xl border px-4 py-3 text-sm ${
-                message.toLowerCase().includes('error') || message.toLowerCase().includes('inválid')
-                  ? 'border-rose-200 bg-rose-50 text-rose-700'
-                  : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              className={`mt-5 rounded-2xl border px-4 py-3 text-sm font-semibold ${
+                message.toLowerCase().includes('error') || message.toLowerCase().includes('inválid') || message.toLowerCase().includes('incorrect')
+                  ? 'border-rose-600/10 bg-rose-50 text-rose-700'
+                  : 'border-emerald-600/10 bg-emerald-50 text-emerald-700'
               }`}
             >
               {message}
             </div>
           )}
 
-          <div className="mt-8 border-t border-slate-200 pt-5 text-center text-xs text-slate-500">
+          <div className="mt-8 border-t border-academic-outline/10 pt-5 text-center text-xs text-academic-on-surface-variant/70">
             {mode === 'LOGIN' 
               ? 'Uso interno. Accede con una cuenta autorizada.' 
               : 'Al registrarte, aceptas las políticas de uso académico de DockUS.'}

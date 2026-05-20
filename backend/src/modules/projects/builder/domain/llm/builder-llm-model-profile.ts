@@ -10,30 +10,35 @@ const DEFAULT_NUM_CTX: Record<BuilderLlmPromptStage, number> = {
   plan: 8192,
   evaluation: 16384,
   quality: 16384,
+  chat: 16384,
 };
 
 const DEFAULT_TEMPERATURE: Record<BuilderLlmPromptStage, number> = {
   plan: 0.1,
   evaluation: 0.2,
-  quality: 0.2,
+  quality: 0.3,
+  chat: 0.5,
 };
 
 const DEFAULT_TOP_P: Record<BuilderLlmPromptStage, number> = {
   plan: 0.9,
   evaluation: 0.9,
   quality: 0.9,
+  chat: 0.9,
 };
 
 const DEFAULT_REPEAT_PENALTY: Record<BuilderLlmPromptStage, number> = {
   plan: 1.1,
   evaluation: 1.1,
   quality: 1.1,
+  chat: 1.1,
 };
 
 const DEFAULT_NUM_PREDICT: Record<BuilderLlmPromptStage, number> = {
   plan: 4096,
-  evaluation: 6144,
-  quality: 6144,
+  evaluation: 8192,
+  quality: 8192,
+  chat: 8192,
 };
 
 const DEFAULT_KEEP_ALIVE_SECONDS = 300;
@@ -43,6 +48,7 @@ const DEFAULT_TIMEOUT_MS: Record<BuilderLlmPromptStage, number> = {
   plan: 120_000,
   evaluation: 300_000,
   quality: 300_000,
+  chat: 300_000,
 };
 
 export function resolveBuilderModelProfile(
@@ -94,6 +100,29 @@ export function resolveBuilderModelProfile(
       stopTokens: DEFAULT_STOP_TOKENS,
       keepAliveSeconds: DEFAULT_KEEP_ALIVE_SECONDS,
       timeoutMs: DEFAULT_TIMEOUT_MS.evaluation,
+    };
+  }
+
+  if (stage === 'chat') {
+    return {
+      profileVersion: PROFILE_VERSION,
+      stage,
+      model: configService.get<string>(
+        'BUILDER_OLLAMA_CHAT_MODEL',
+        'dockus-builder-chat',
+      ),
+      baseModel: configService.get<string>(
+        'CHAT_BASE_MODEL',
+        'qwen2.5-coder:7b',
+      ),
+      numCtx: Math.max(sharedNumCtx ?? DEFAULT_NUM_CTX.chat, DEFAULT_NUM_CTX.chat),
+      numPredict: DEFAULT_NUM_PREDICT.chat,
+      temperature: DEFAULT_TEMPERATURE.chat,
+      topP: DEFAULT_TOP_P.chat,
+      repeatPenalty: DEFAULT_REPEAT_PENALTY.chat,
+      stopTokens: DEFAULT_STOP_TOKENS,
+      keepAliveSeconds: DEFAULT_KEEP_ALIVE_SECONDS,
+      timeoutMs: DEFAULT_TIMEOUT_MS.chat,
     };
   }
 

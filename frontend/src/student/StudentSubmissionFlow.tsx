@@ -442,7 +442,7 @@ export function StudentSubmissionFlow({
           />
         </StudentSurface>
         <EmptyState
-          icon={<RiFolderOpenLine className="text-4xl text-slate-400" />}
+          icon={<RiFolderOpenLine className="text-4xl text-academic-outline/40" />}
           title="Sin convocatorias activas"
           description="No hay ninguna practica disponible para subir en este momento. Revisa el resumen o espera a nuevas asignaciones."
         />
@@ -767,7 +767,7 @@ export function StudentSubmissionFlow({
                         key={assignment.id}
                         className={`flex cursor-pointer items-start gap-4 rounded-[1.5rem] border p-5 transition-all ${
                           disabled
-                            ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-70"
+                            ? "cursor-not-allowed border-academic-outline-variant/30 bg-academic-surface-container/20 opacity-70"
                             : selectedAssignmentId === assignment.id
                               ? "border-brand-blue bg-brand-blue/5 shadow-sm"
                               : "border-academic-surface-variant bg-white hover:-translate-y-0.5 hover:shadow-sm"
@@ -924,7 +924,7 @@ export function StudentSubmissionFlow({
                 ) : null}
 
                 {previousPreviewError ? (
-                  <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  <div className="rounded-[1.5rem] border border-academic-outline-variant/30 bg-academic-surface-container px-4 py-3 text-sm text-academic-on-surface-variant">
                     No pudimos comparar esta version con la entrega anterior: {previousPreviewError}
                   </div>
                 ) : null}
@@ -1012,8 +1012,8 @@ export function StudentSubmissionFlow({
                 </div>
 
                 {previewFiles.length > 0 ? (
-                  <div className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700">
-                    <div className="font-semibold text-slate-900">
+                  <div className="rounded-[1.5rem] border border-academic-outline-variant/30 bg-white px-4 py-4 text-sm text-academic-on-surface-variant">
+                    <div className="font-bold text-academic-on-surface">
                       Resumen de la comparacion con tu ultima version
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">

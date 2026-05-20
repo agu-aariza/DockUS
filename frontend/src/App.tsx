@@ -29,7 +29,7 @@ const StudentWorkspacePanel = lazy(() => import("./student/StudentWorkspacePanel
 
 const SuspenseLoader = () => (
   <div className="flex-1 flex items-center justify-center min-h-[400px]">
-    <div className="flex flex-col items-center gap-3 text-slate-400">
+    <div className="flex flex-col items-center gap-3 text-academic-outline">
       <RiLoader4Line className="text-3xl animate-spin text-brand-blue" />
       <span className="text-sm font-medium">Cargando módulo...</span>
     </div>
@@ -80,10 +80,10 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (res: AuthResponse) =
       {/* Toggle Button */}
       <button
         onClick={() => setOpen(!open)}
-        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold shadow-lg border transition-all ${
+        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold shadow-academic border transition-all ${
           open
-            ? "bg-slate-800 text-white border-slate-600"
-            : "bg-slate-900/80 text-slate-300 border-slate-700 backdrop-blur hover:bg-slate-800"
+            ? "bg-academic-primary text-white border-academic-primary-container"
+            : "bg-white text-academic-on-surface-variant border-academic-surface-variant hover:bg-academic-surface"
         }`}
       >
         <RiSpyLine className="text-base" />
@@ -92,35 +92,35 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (res: AuthResponse) =
 
       {/* Panel */}
       {open && (
-        <div className="absolute bottom-12 right-0 w-72 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-4 space-y-4 animate-in fade-in slide-in-from-bottom-2">
+        <div className="absolute bottom-12 right-0 w-72 bg-white border border-academic-surface-variant rounded-2xl shadow-academic p-4 space-y-4 animate-in fade-in slide-in-from-bottom-2">
           {/* Existing Sessions */}
           <div>
-            <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+            <div className="ui-label mb-2">
               Sesiones activas
             </div>
             {sessions.length === 0 ? (
-              <p className="text-xs text-slate-500 italic">No hay sesiones.</p>
+              <p className="text-xs text-academic-outline italic">No hay sesiones.</p>
             ) : (
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {sessions.map(s => (
                   <div
                     key={s.id}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs transition cursor-pointer ${
+                    className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs transition border cursor-pointer ${
                       s.id === activeSessionId
-                        ? "bg-brand-blue/20 border border-brand-blue/30 text-brand-blue-light"
-                        : "bg-slate-800 border border-slate-700 text-slate-300 hover:border-slate-500"
+                        ? "bg-brand-blue/5 border-brand-blue/30 text-brand-blue"
+                        : "bg-white border-academic-surface-variant text-academic-on-surface hover:bg-academic-surface"
                     }`}
                     onClick={() => handleSwitch(s.id)}
                   >
                     <div className="min-w-0">
                       <div className="font-semibold truncate">{s.email}</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
+                      <div className="text-[10px] text-academic-outline mt-0.5">
                         {s.role} {s.id === activeSessionId && "· activa"}
                       </div>
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); removeSession(s.id); }}
-                      className="text-slate-500 hover:text-rose-400 text-base ml-2 shrink-0"
+                      className="text-academic-outline hover:text-rose-600 text-base ml-2 shrink-0"
                       title="Eliminar sesión"
                     >
                       ×
@@ -132,8 +132,8 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (res: AuthResponse) =
           </div>
 
           {/* Quick Login */}
-          <form onSubmit={handleQuickLogin} className="border-t border-slate-700 pt-3 space-y-2">
-            <div className="text-xs font-bold uppercase tracking-widest text-slate-500">
+          <form onSubmit={handleQuickLogin} className="border-t border-academic-surface-variant pt-3 space-y-2">
+            <div className="ui-label">
               Añadir sesión
             </div>
             <input
@@ -141,20 +141,20 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (res: AuthResponse) =
               placeholder="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-brand-blue/40"
+              className="w-full rounded-xl bg-white border border-academic-outline-variant/30 px-3 py-1.5 text-xs text-academic-on-surface placeholder:text-academic-outline focus:outline-none focus:border-brand-blue/40"
             />
             <input
               type="password"
               placeholder="contraseña"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-brand-blue/40"
+              className="w-full rounded-xl bg-white border border-academic-outline-variant/30 px-3 py-1.5 text-xs text-academic-on-surface placeholder:text-academic-outline focus:outline-none focus:border-brand-blue/40"
             />
-            {error && <div className="text-[10px] text-rose-400">{error}</div>}
+            {error && <div className="text-[10px] text-rose-600">{error}</div>}
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="w-full rounded-lg bg-brand-blue hover:bg-brand-blue/80 disabled:opacity-50 px-3 py-1.5 text-xs font-bold text-white transition-colors"
+              className="w-full rounded-xl bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 px-3 py-1.5 text-xs font-bold text-white transition-all shadow-sm"
             >
               {loading ? "Entrando..." : "Login rápido"}
             </button>
@@ -165,7 +165,7 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (res: AuthResponse) =
   );
 }
 
-export default function App(): JSX.Element {
+export function App(): JSX.Element {
   const {
     activeSession,
     activeSessionId,
@@ -229,13 +229,13 @@ export default function App(): JSX.Element {
   const isStudent = activeSession?.role === 'STUDENT';
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans">
+    <div className="flex min-h-screen bg-academic-surface font-sans">
       <DebugSwitcher onAuthSuccess={handleAuthSuccess} />
       
       {/* Mobile Drawer Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm xl:hidden"
+          className="fixed inset-0 z-40 bg-academic-on-surface/40 backdrop-blur-sm xl:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -254,7 +254,7 @@ export default function App(): JSX.Element {
         />
         {/* Mobile close button inside drawer */}
         <button 
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 xl:hidden"
+          className="absolute top-4 right-4 p-2 text-academic-outline hover:text-academic-on-surface xl:hidden"
           onClick={() => setMobileMenuOpen(false)}
         >
           <RiCloseLine className="text-2xl" />
@@ -263,24 +263,24 @@ export default function App(): JSX.Element {
 
       <main className="relative min-w-0 flex-1 flex flex-col h-screen overflow-hidden">
         {/* Mobile Top Bar */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 xl:hidden shrink-0">
+        <div className="flex items-center justify-between border-b border-academic-surface-variant bg-white px-4 py-3 xl:hidden shrink-0">
           <div className="flex items-center gap-3">
             <button 
-              className="p-2 -ml-2 text-slate-600 hover:text-slate-900"
+              className="p-2 -ml-2 text-academic-on-surface-variant hover:text-academic-on-surface"
               onClick={() => setMobileMenuOpen(true)}
             >
               <RiMenuLine className="text-2xl" />
             </button>
             <div className="flex items-center gap-2">
-              <img src="/logos/Logo01.png" alt="DockUS" className="h-8 w-8 rounded-lg border border-slate-200" />
-              <span className="font-semibold tracking-tight text-slate-950">DockUS</span>
+              <img src="/logos/Logo01.png" alt="DockUS" className="h-8 w-8 rounded-lg border border-academic-surface-variant" />
+              <span className="font-semibold tracking-tight text-academic-on-surface">DockUS</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden sm:block text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
+            <div className="hidden sm:block text-xs font-medium text-academic-on-surface-variant bg-academic-surface-container px-3 py-1.5 rounded-full">
               {activeSession?.email}
             </div>
-            <button className="text-xs font-bold text-rose-600 uppercase tracking-widest hover:text-rose-700" onClick={() => activeSessionId && removeSession(activeSessionId)}>
+            <button className="text-xs font-bold text-academic-primary uppercase tracking-widest hover:text-academic-primary-container" onClick={() => activeSessionId && removeSession(activeSessionId)}>
               Salir
             </button>
           </div>
@@ -336,3 +336,5 @@ export default function App(): JSX.Element {
     </div>
   );
 }
+
+export default App;

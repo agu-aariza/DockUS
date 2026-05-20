@@ -165,20 +165,20 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
           <div className="flex items-center justify-between gap-3 mb-6">
             <div>
               <p className="eyebrow !mb-1">Catálogo</p>
-              <h3 className="text-xl font-bold tracking-tight text-slate-950">
+              <h3 className="text-xl font-bold tracking-tight text-academic-on-surface">
                 Grupos
               </h3>
             </div>
-            <span className="flex h-8 min-w-[2rem] items-center justify-center rounded-full bg-slate-900 px-2 text-[11px] font-bold text-white shadow-lg shadow-slate-900/10">
+            <span className="flex h-8 min-w-[2rem] items-center justify-center rounded-full bg-brand-maroon px-2 text-[11px] font-bold text-academic-on-primary shadow-sm">
               {groups.length}
             </span>
           </div>
 
           <div className="space-y-4">
             <div className="group relative">
-              <RiSearchLine className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg transition-colors group-focus-within:text-brand-maroon" />
+              <RiSearchLine className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline text-lg transition-colors group-focus-within:text-brand-maroon" />
               <input
-                className="input-field pl-11 h-12 bg-slate-50 border-transparent focus:bg-white focus:border-brand-maroon/30 focus:ring-4 focus:ring-brand-maroon/5 transition-all"
+                className="input-field pl-11 h-12 bg-academic-surface-container border-academic-outline-variant/20 focus:bg-white focus:border-brand-maroon/25 focus:ring-2 focus:ring-brand-maroon/10 transition-all"
                 placeholder="Buscar grupo..."
                 value={groupSearch}
                 onChange={(e) => setGroupSearch(e.target.value)}
@@ -212,11 +212,11 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                           {group.name}
                         </span>
                       </div>
-                      <div className={`ui-label leading-relaxed line-clamp-1 ${isSelected ? "text-slate-400" : "text-slate-500"}`}>
+                      <div className={`ui-label leading-relaxed line-clamp-1 ${isSelected ? "text-white/60" : "text-academic-on-surface-variant"}`}>
                         {group.code || 'DOC'}
                       </div>
                     </div>
-                    <RiArrowRightSLine className={`text-lg transition-transform ${isSelected ? "text-white/40 translate-x-1" : "text-slate-200 group-hover:text-slate-400"}`} />
+                    <RiArrowRightSLine className={`text-lg transition-transform ${isSelected ? "text-white/40 translate-x-1" : "text-academic-outline group-hover:text-academic-outline-variant"}`} />
                   </div>
 
                   <div className="mt-5 flex items-center justify-between relative">
@@ -224,7 +224,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                       <span
                         className={`rounded-full px-3 py-1 ui-label ${isSelected
                           ? "bg-white/10 text-white/90 border border-white/10"
-                          : "bg-slate-100 text-slate-500"
+                          : "bg-academic-surface-container text-academic-outline"
                           }`}
                       >
                         {group.studentCount} ALUMNOS
@@ -236,9 +236,9 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
             })}
             
             {filteredGroups.length === 0 && !loading && (
-               <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-[3rem] bg-slate-50/50 animate-in fade-in zoom-in-95">
-                  <RiGroupLine className="mx-auto text-5xl text-slate-100 mb-4" />
-                  <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">No hay resultados</p>
+               <div className="py-20 text-center border-2 border-dashed border-academic-outline-variant/20 rounded-[3rem] bg-academic-surface-container/30 animate-in fade-in zoom-in-95">
+                  <RiGroupLine className="mx-auto text-5xl text-academic-outline/40 mb-4" />
+                  <p className="text-sm text-academic-outline font-bold uppercase tracking-widest">No hay resultados</p>
                   <button 
                     onClick={() => { setGroupSearch(""); setIsCreating(true); }}
                     className="mt-4 text-xs font-bold text-brand-maroon uppercase tracking-widest hover:text-brand-maroon-dark hover:underline"
@@ -255,23 +255,23 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
           {focusedGroup ? (
             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
               {/* Focused Group Header Card */}
-              <div className="relative overflow-hidden p-8 sm:p-10 rounded-[3rem] bg-white border border-slate-200 shadow-sm">
-                <div className="absolute top-0 right-0 p-12 opacity-[0.03] text-[15rem] text-slate-900 pointer-events-none rotate-12">
+              <div className="relative overflow-hidden p-8 sm:p-10 rounded-[3rem] bg-white border border-academic-outline-variant/30 shadow-academic">
+                <div className="absolute top-0 right-0 p-12 opacity-[0.03] text-[15rem] text-academic-on-surface pointer-events-none rotate-12">
                    <RiGroupLine />
                 </div>
                 
                 <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
                   <div>
                     <span className="eyebrow text-brand-gold mb-4 block">Perfil Operativo del Grupo</span>
-                    <h3 className="text-4xl font-bold text-slate-900 tracking-tight">{focusedGroup.name}</h3>
-                    <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-500 font-medium">
+                    <h3 className="text-4xl font-bold text-academic-on-surface tracking-tight">{focusedGroup.name}</h3>
+                    <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-academic-on-surface-variant font-medium">
                       <div className="flex items-center gap-1.5">
-                        <RiInformationFill className="text-slate-400" />
-                        Código: <span className="text-slate-900">{focusedGroup.code || "No asignado"}</span>
+                        <RiInformationFill className="text-academic-outline" />
+                        Código: <span className="text-academic-on-surface">{focusedGroup.code || "No asignado"}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <RiUser3Fill className="text-slate-400" />
-                        Matriculados: <span className="text-slate-900">{focusedGroup.studentCount}</span>
+                        <RiUser3Fill className="text-academic-outline" />
+                        Matriculados: <span className="text-academic-on-surface">{focusedGroup.studentCount}</span>
                       </div>
                     </div>
                   </div>
@@ -286,7 +286,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                         Configuración
                      </Button>
                      <button 
-                       className="w-12 h-12 rounded-xl flex items-center justify-center bg-white text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-100 hover:border-red-100 transition-all shadow-sm"
+                       className="w-12 h-12 rounded-xl flex items-center justify-center bg-rose-50/70 text-rose-600 hover:text-rose-700 hover:bg-rose-100/60 border border-rose-100 hover:border-rose-200 transition-all shadow-sm"
                        title="Eliminar Grupo"
                        onClick={() => {
                          if (window.confirm("¿Estás seguro de que deseas eliminar este grupo? Esta acción no se puede deshacer.")) {
@@ -308,9 +308,9 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                     
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline" />
                         <input 
-                          className="h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:border-brand-maroon focus:ring-4 focus:ring-brand-maroon/5 transition-all w-full sm:w-64"
+                          className="h-10 pl-10 pr-4 rounded-xl border border-academic-outline bg-white text-xs font-medium focus:border-brand-maroon focus:ring-2 focus:ring-brand-maroon/10 transition-all w-full sm:w-64"
                           placeholder="Buscar por nombre o email..."
                           value={studentSearch}
                           onChange={(e) => setStudentSearch(e.target.value)}
@@ -352,7 +352,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                         return (
                           <div className="py-20 text-center">
                             <RiRefreshLine className="mx-auto text-4xl text-brand-maroon animate-spin mb-4" />
-                            <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Cargando alumnos...</p>
+                            <p className="text-sm text-academic-outline font-bold uppercase tracking-widest">Cargando alumnos...</p>
                           </div>
                         );
                       }
@@ -362,8 +362,8 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                           <EmptyState 
                             title={studentSearch ? "No hay coincidencias" : "No hay alumnos registrados"}
                             description={studentSearch ? "Intenta con otro nombre o correo." : "Utiliza el panel de la derecha para matricular alumnos masivamente."}
-                            icon={<RiUser3Fill className="text-6xl text-slate-100" />}
-                            className="py-20 bg-slate-50/30 border-2 border-dashed border-slate-100 rounded-[3rem]"
+                            icon={<RiUser3Fill className="text-6xl text-academic-outline/40" />}
+                            className="py-20 bg-academic-surface-container/20 border-2 border-dashed border-academic-outline-variant/30 rounded-[3rem]"
                           />
                         );
                       }
@@ -377,22 +377,22 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                           <div 
                             key={student.id}
                             className={`group flex items-center justify-between p-5 rounded-3xl border transition-all duration-300 ${
-                              isEnrolled ? 'border-brand-blue/10 bg-brand-blue/5' : 'border-slate-100 bg-white hover:border-slate-200'
+                              isEnrolled ? 'border-brand-blue/20 bg-brand-blue/5' : 'border-academic-outline bg-white hover:border-academic-outline-variant hover:shadow-academic'
                             }`}
                           >
                             <div className="flex items-center gap-4">
                               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg transition-all duration-500 ${
                                 isEnrolled 
                                   ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' 
-                                  : 'bg-slate-100 text-slate-400 group-hover:bg-brand-blue/10 group-hover:text-brand-blue'
+                                  : 'bg-academic-surface-container text-academic-outline group-hover:bg-brand-blue/10 group-hover:text-brand-blue'
                               }`}>
                                 {isEnrolled ? <RiCheckFill /> : <RiUser3Fill />}
                               </div>
                               <div>
-                                <h5 className="font-bold text-slate-900 leading-none mb-1">
+                                <h5 className="font-bold text-academic-on-surface leading-none mb-1">
                                   {student.lastName}, {student.firstName}
                                 </h5>
-                                <p className="text-xs text-slate-500 font-medium">{student.email}</p>
+                                <p className="text-xs text-academic-on-surface-variant font-medium">{student.email}</p>
                               </div>
                             </div>
 
@@ -405,7 +405,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                                 <button
                                   onClick={() => handleToggleEnrollment(student.id, !!isEnrolled)}
                                   className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-maroon focus:ring-offset-2 ${
-                                    isEnrolled ? 'bg-emerald-500' : 'bg-slate-200'
+                                    isEnrolled ? 'bg-emerald-500' : 'bg-academic-surface-container'
                                   }`}
                                 >
                                   <span
@@ -428,19 +428,19 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                 {/* Enrollment Card */}
                 <div className="space-y-4 sticky top-8">
                   <h4 className="eyebrow px-4">Ingesta de Alumnos</h4>
-                  <div className="p-8 rounded-[3rem] bg-brand-maroon text-white shadow-2xl relative overflow-hidden border border-brand-maroon-dark">
+                  <div className="p-8 rounded-[3rem] bg-brand-maroon text-academic-on-primary shadow-academic relative overflow-hidden border border-brand-maroon/20">
                      <div className="absolute -right-10 -bottom-10 p-12 opacity-[0.05] text-[12rem] text-white pointer-events-none rotate-12">
                         <RiUser3Fill />
                      </div>
                      
                      <div className="relative z-10 space-y-6">
                         <div className="space-y-3">
-                           <h5 className="font-bold text-lg">Añadir Estudiantes</h5>
-                           <p className="text-xs text-slate-400 leading-relaxed">
+                           <h5 className="font-bold text-lg text-white">Añadir Estudiantes</h5>
+                           <p className="text-xs text-academic-on-primary/70 leading-relaxed">
                              Pega una lista de <strong>Nombres y Apellidos</strong> (ej: "García López, Juan") o correos electrónicos, uno por línea.
                            </p>
                            <textarea 
-                             className="w-full bg-white/5 border border-white/10 rounded-[2rem] p-5 text-sm text-white focus:outline-none focus:ring-4 focus:ring-brand-gold/20 min-h-[220px] placeholder:text-white/20 transition-all"
+                             className="w-full bg-white/5 border border-white/10 rounded-[2rem] p-5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-gold/20 min-h-[220px] placeholder:text-white/20 transition-all"
                              placeholder="Apellidos, Nombre&#10;García, Juan&#10;estudiante@dockus.io..."
                              value={bulkInput}
                              onChange={(e) => setBulkInput(e.target.value)}
@@ -466,9 +466,9 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4">
                 <h4 className="eyebrow">Listado General de Alumnos</h4>
                 <div className="relative">
-                  <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline" />
                   <input 
-                    className="h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:border-brand-maroon focus:ring-4 focus:ring-brand-maroon/5 transition-all w-full sm:w-64"
+                    className="h-10 pl-10 pr-4 rounded-xl border border-academic-outline bg-white text-xs font-medium focus:border-brand-maroon focus:ring-2 focus:ring-brand-maroon/10 transition-all w-full sm:w-64"
                     placeholder="Busca alumnos para gestionar..."
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
@@ -490,24 +490,24 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                       <EmptyState 
                         title="No se encontraron alumnos"
                         description="Prueba con otros criterios de búsqueda."
-                        icon={<RiUser3Fill className="text-6xl text-slate-100" />}
-                        className="py-20 bg-slate-50/30 border-2 border-dashed border-slate-100 rounded-[3rem]"
+                        icon={<RiUser3Fill className="text-6xl text-academic-outline/40" />}
+                        className="py-20 bg-academic-surface-container/20 border-2 border-dashed border-academic-outline-variant/30 rounded-[3rem]"
                       />
                     );
                   }
 
                   return filteredStudents.map(student => (
-                    <div key={student.id} className="flex items-center justify-between p-5 rounded-3xl border border-slate-100 bg-white/50 opacity-60">
+                    <div key={student.id} className="flex items-center justify-between p-5 rounded-3xl border border-academic-outline bg-white/50 opacity-60">
                       <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-slate-200 text-slate-500 flex items-center justify-center text-xs font-bold uppercase">
+                        <div className="h-12 w-12 rounded-2xl bg-academic-surface-container text-academic-outline flex items-center justify-center text-xs font-bold uppercase">
                           {student.firstName[0]}{student.lastName[0]}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-400">{student.lastName}, {student.firstName}</p>
-                          <p className="text-[11px] text-slate-400 font-medium">{student.email}</p>
+                          <p className="text-sm font-bold text-academic-outline">{student.lastName}, {student.firstName}</p>
+                          <p className="text-[11px] text-academic-outline font-medium">{student.email}</p>
                         </div>
                       </div>
-                      <div className="ui-label text-slate-400 bg-slate-50 rounded-lg">
+                      <div className="ui-label text-academic-outline bg-academic-surface-container rounded-lg">
                         Selecciona un grupo
                       </div>
                     </div>
@@ -521,16 +521,16 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
 
       {/* Modal overlays */}
       {isEditing && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-          <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-academic border border-academic-outline-variant/20 overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8 border-b border-academic-outline-variant/20 flex items-center justify-between">
               <div>
-                <h4 className="text-xl font-bold text-slate-900">Configuración de Grupo</h4>
-                <p className="text-sm text-slate-500 mt-1">Modifica los detalles del grupo docente.</p>
+                <h4 className="text-xl font-bold text-academic-on-surface">Configuración de Grupo</h4>
+                <p className="text-sm text-academic-on-surface-variant mt-1">Modifica los detalles del grupo docente.</p>
               </div>
               <button 
                 onClick={() => setIsEditing(false)}
-                className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-slate-50 text-slate-400 transition-colors"
+                className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-academic-surface-container text-academic-outline transition-colors"
               >
                 ×
               </button>
@@ -538,34 +538,34 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
             
             <div className="p-8 space-y-5">
               <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Nombre del Grupo</label>
+                <label className="ui-label ml-1">Nombre del Grupo</label>
                 <input 
-                  className="w-full h-14 px-5 rounded-2xl bg-slate-50 border border-slate-100 focus:border-brand-maroon focus:ring-4 focus:ring-brand-maroon/5 transition-all text-sm font-bold" 
+                  className="w-full h-14 px-5 rounded-2xl bg-academic-surface-container border border-academic-outline-variant/30 focus:border-brand-maroon focus:ring-2 focus:ring-brand-maroon/10 transition-all text-sm font-bold" 
                   value={editForm.name}
                   onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
                 />
               </div>
               
               <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Código Identificador</label>
+                <label className="ui-label ml-1">Código Identificador</label>
                 <input 
-                  className="w-full h-14 px-5 rounded-2xl bg-slate-50 border border-slate-100 focus:border-brand-maroon focus:ring-4 focus:ring-brand-maroon/5 transition-all text-sm font-bold" 
+                  className="w-full h-14 px-5 rounded-2xl bg-academic-surface-container border border-academic-outline-variant/30 focus:border-brand-maroon focus:ring-2 focus:ring-brand-maroon/10 transition-all text-sm font-bold" 
                   value={editForm.code}
                   onChange={(e) => setEditForm(prev => ({ ...prev, code: e.target.value }))}
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Descripción (Opcional)</label>
+                <label className="ui-label ml-1">Descripción (Opcional)</label>
                 <textarea 
-                  className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:border-brand-maroon focus:ring-4 focus:ring-brand-maroon/5 transition-all text-sm font-medium min-h-[100px]" 
+                  className="w-full px-5 py-4 rounded-2xl bg-academic-surface-container border border-academic-outline-variant/30 focus:border-brand-maroon focus:ring-2 focus:ring-brand-maroon/10 transition-all text-sm font-medium min-h-[100px]" 
                   value={editForm.description}
                   onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
                 />
               </div>
             </div>
 
-            <div className="p-8 bg-slate-50/50 flex gap-3">
+            <div className="p-8 bg-academic-surface-container/30 border-t border-academic-outline-variant/20 flex gap-3">
               <Button 
                 variant="secondary"
                 className="flex-1 !h-14"
@@ -593,4 +593,3 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
     </div>
   );
 }
-

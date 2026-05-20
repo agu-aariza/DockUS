@@ -50,7 +50,7 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
   }, [sc.listResponse]);
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-700">
       <PageHeader 
         title="Bóveda de Artefactos"
         subtitle="Repositorio centralizado de objetos persistidos, binarios y evidencias de compilación del ecosistema DockUS."
@@ -73,126 +73,121 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
 
       {activeTab === 'subida' ? (
         <div>
-          <div>
-            <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 overflow-hidden">
-              <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+          <div className="card card-top-accent-primary">
+            <div className="p-8 border-b border-academic-surface-variant/40 flex items-center justify-between bg-academic-surface-container-lowest/40">
+              <div>
+                <h3 className="font-display text-xl font-bold tracking-tight text-academic-on-surface flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-academic-primary text-white flex items-center justify-center shadow-academic">
+                    <RiUploadCloud2Fill />
+                  </div>
+                  Ingesta de Artefactos
+                </h3>
+                <p className="text-academic-outline text-xs font-medium mt-1">Sube archivos y asócialos a entregas específicas del proyecto.</p>
+              </div>
+            </div>
+            
+            <form className="p-8 space-y-6" onSubmit={sc.handleUpload}>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">ID de Entrega (UUID)</label>
+                    <input 
+                      required 
+                      className="input-field" 
+                      placeholder="00000000-0000-0000-0000-000000000000"
+                      value={sc.uploadForm.deliveryId} 
+                      onChange={e => sc.setUploadForm(p => ({ ...p, deliveryId: e.target.value }))} 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Nombre Lógico</label>
+                    <input 
+                      required 
+                      className="input-field" 
+                      placeholder="ej: build_v1.zip"
+                      value={sc.uploadForm.logicalName} 
+                      onChange={e => sc.setUploadForm(p => ({ ...p, logicalName: e.target.value }))} 
+                    />
+                  </div>
+                </div>
+                
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-2xl bg-brand-primary text-white flex items-center justify-center shadow-lg shadow-brand-primary/20">
-                      <RiUploadCloud2Fill />
+                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Selección de Binario</label>
+                  <div className={`relative border-2 border-dashed rounded-2xl p-8 transition-all flex flex-col items-center justify-center text-center cursor-pointer ${sc.file ? 'border-academic-primary bg-academic-primary/5' : 'border-academic-surface-variant bg-academic-surface hover:border-academic-outline'}`}>
+                    <input 
+                      type="file" 
+                      className="absolute inset-0 opacity-0 cursor-pointer" 
+                      required 
+                      onChange={e => sc.handleFileChange(e.target.files?.[0] ?? null)} 
+                    />
+                    <RiCloudFill className={`text-4xl mb-2 ${sc.file ? 'text-academic-primary' : 'text-academic-outline'}`} />
+                    <div className="text-xs font-bold text-academic-on-surface truncate max-w-full">
+                      {sc.file ? sc.file.name : 'Click o arrastra archivo'}
                     </div>
-                    Ingesta de Artefactos
-                  </h3>
-                  <p className="text-slate-400 text-xs font-medium mt-1">Sube archivos y asócialos a entregas específicas del proyecto.</p>
+                    {sc.file && (
+                      <div className="text-[10px] text-academic-primary font-bold mt-1 uppercase tracking-widest">
+                        {(sc.file.size / 1024).toFixed(1)} KB detectados
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              
-              <form className="p-10 space-y-8" onSubmit={sc.handleUpload}>
-                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-                  <div className="space-y-6">
-                    <div>
-                      <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] mb-3 block">ID de Entrega (UUID)</label>
-                      <input 
-                        required 
-                        className="w-full bg-slate-50 border-slate-200 rounded-xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-brand-primary/5 transition-all placeholder:text-slate-400" 
-                        placeholder="00000000-0000-0000-0000-000000000000"
-                        value={sc.uploadForm.deliveryId} 
-                        onChange={e => sc.setUploadForm(p => ({ ...p, deliveryId: e.target.value }))} 
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] mb-3 block">Nombre Lógico</label>
-                      <input 
-                        required 
-                        className="w-full bg-slate-50 border-slate-200 rounded-xl px-5 py-4 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-brand-primary/5 transition-all placeholder:text-slate-400" 
-                        placeholder="ej: build_v1.zip"
-                        value={sc.uploadForm.logicalName} 
-                        onChange={e => sc.setUploadForm(p => ({ ...p, logicalName: e.target.value }))} 
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] mb-3 block">Selección de Binario</label>
-                      <div className={`relative border-2 border-dashed rounded-2xl p-8 transition-all flex flex-col items-center justify-center text-center cursor-pointer ${sc.file ? 'border-brand-primary bg-brand-primary/5' : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'}`}>
-                        <input 
-                          type="file" 
-                          className="absolute inset-0 opacity-0 cursor-pointer" 
-                          required 
-                          onChange={e => sc.handleFileChange(e.target.files?.[0] ?? null)} 
-                        />
-                        <RiCloudFill className={`text-4xl mb-2 ${sc.file ? 'text-brand-primary' : 'text-slate-200'}`} />
-                        <div className="text-xs font-black text-slate-900 truncate max-w-full">
-                          {sc.file ? sc.file.name : 'Click o arrastra archivo'}
-                        </div>
-                        {sc.file && (
-                          <div className="text-[10px] text-brand-primary font-bold mt-1 uppercase tracking-widest">
-                            {(sc.file.size / 1024).toFixed(1)} KB detectados
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-end gap-4 pt-10 border-t border-slate-100">
-                  <Button 
-                    type="submit" 
-                    className="px-10 py-4 rounded-2xl"
-                    disabled={!sc.canUpload || !sc.file}
-                    variant="primary"
-                  >
-                    Publicar en Bóveda
-                  </Button>
-                </div>
-              </form>
-            </div>
+              <div className="flex items-center justify-end gap-4 pt-6 border-t border-academic-surface-variant/40">
+                <Button 
+                  type="submit" 
+                  className="px-8 py-3 rounded-xl"
+                  disabled={!sc.canUpload || !sc.file}
+                  variant="primary"
+                >
+                  Publicar en Bóveda
+                </Button>
+              </div>
+            </form>
           </div>
-
         </div>
       ) : null}
 
       {activeTab === 'consulta' ? (
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white border border-slate-200 rounded-[3rem] shadow-2xl shadow-slate-200/50 p-12 text-center">
-            <div className="h-24 w-24 bg-brand-primary/5 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-brand-primary/10">
-              <RiSearch2Line className="text-4xl text-brand-primary" />
+        <div className="max-w-3xl mx-auto">
+          <div className="card p-8 text-center border-t-2 border-t-academic-secondary">
+            <div className="h-16 w-16 bg-academic-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-academic-secondary/20">
+              <RiSearch2Line className="text-3xl text-academic-secondary" />
             </div>
-            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-widest mb-4">Motor de Búsqueda de Objetos</h3>
-            <p className="text-slate-500 text-sm font-medium mb-12 max-w-lg mx-auto">Consulta el registro global de artefactos filtrando por identificador de entrega o metadatos de subida.</p>
+            <h3 className="font-display text-xl font-bold tracking-tight text-academic-on-surface mb-2">Motor de Búsqueda de Objetos</h3>
+            <p className="text-academic-on-surface-variant text-sm font-medium mb-8 max-w-lg mx-auto">Consulta el registro global de artefactos filtrando por identificador de entrega o metadatos de subida.</p>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left mb-8">
               <div className="space-y-4">
                 <div>
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 block">ID Entrega (Opcional)</label>
-                  <input className="input-field py-4" placeholder="Introduce UUID..." value={sc.query.deliveryId} onChange={e => sc.setQuery(p => ({ ...p, deliveryId: e.target.value }))} />
+                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">ID Entrega (Opcional)</label>
+                  <input className="input-field" placeholder="Introduce UUID..." value={sc.query.deliveryId} onChange={e => sc.setQuery(p => ({ ...p, deliveryId: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Subido Desde</label>
-                  <input type="date" className="input-field py-4" value={sc.query.createdFrom} onChange={e => sc.setQuery(p => ({ ...p, createdFrom: e.target.value }))} />
+                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Subido Desde</label>
+                  <input type="date" className="input-field" value={sc.query.createdFrom} onChange={e => sc.setQuery(p => ({ ...p, createdFrom: e.target.value }))} />
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Página</label>
-                    <input type="number" className="input-field py-4" value={sc.query.page} onChange={e => sc.setQuery(p => ({ ...p, page: e.target.value }))} />
+                    <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Página</label>
+                    <input type="number" className="input-field" value={sc.query.page} onChange={e => sc.setQuery(p => ({ ...p, page: e.target.value }))} />
                   </div>
                   <div>
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Límite</label>
-                    <input type="number" className="input-field py-4" value={sc.query.limit} onChange={e => sc.setQuery(p => ({ ...p, limit: e.target.value }))} />
+                    <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Límite</label>
+                    <input type="number" className="input-field" value={sc.query.limit} onChange={e => sc.setQuery(p => ({ ...p, limit: e.target.value }))} />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Subido Hasta</label>
-                  <input type="date" className="input-field py-4" value={sc.query.createdTo} onChange={e => sc.setQuery(p => ({ ...p, createdTo: e.target.value }))} />
+                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Subido Hasta</label>
+                  <input type="date" className="input-field" value={sc.query.createdTo} onChange={e => sc.setQuery(p => ({ ...p, createdTo: e.target.value }))} />
                 </div>
               </div>
             </div>
 
             <Button 
-              className="px-12 py-5 rounded-[2rem]"
+              className="px-8 py-3 rounded-xl"
               onClick={() => { void sc.handleList(); setActiveTab('inventario'); }} 
               disabled={!sc.canRead}
               variant="primary"
@@ -204,52 +199,52 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
       ) : null}
 
       {activeTab === 'inventario' ? (
-        <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-xl shadow-slate-200/40 overflow-hidden">
-          <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Objetos Persistidos</h3>
+        <div className="card">
+          <div className="p-6 border-b border-academic-surface-variant/40 flex items-center justify-between bg-academic-surface-container-lowest/40">
+            <h3 className="ui-label">Objetos Persistidos</h3>
           </div>
           
           {sc.listResponse ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">
-                    <th className="px-10 py-6">Ficha Técnica</th>
-                    <th className="px-10 py-6">Dimensiones</th>
-                    <th className="px-10 py-6 text-right">Acciones</th>
+                  <tr className="text-[10px] font-black text-academic-outline uppercase tracking-[0.2em] border-b border-academic-surface-variant/40 bg-academic-surface-container-lowest/20">
+                    <th className="px-6 py-4">Ficha Técnica</th>
+                    <th className="px-6 py-4">Dimensiones</th>
+                    <th className="px-6 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-academic-surface-variant/40">
                   {sc.listResponse.data.map((item) => (
-                    <tr key={item.id} className="group hover:bg-slate-50 transition-all duration-300">
-                      <td className="px-10 py-8">
+                    <tr key={item.id} className="group hover:bg-academic-surface transition-all duration-300">
+                      <td className="px-6 py-5">
                         <div className="flex items-center gap-5">
-                          <div className="h-12 w-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary text-xl border border-brand-primary/10 group-hover:scale-110 transition-transform">
+                          <div className="h-10 w-10 rounded-xl bg-academic-primary/10 flex items-center justify-center text-academic-primary text-lg border border-academic-primary/10 shrink-0 group-hover:scale-105 transition-transform">
                             <RiDatabase2Fill />
                           </div>
-                          <div>
-                            <div className="text-sm font-black text-slate-900 group-hover:text-brand-primary transition-colors">
+                          <div className="min-w-0">
+                            <div className="text-sm font-bold text-academic-on-surface group-hover:text-academic-primary transition-colors truncate">
                               {item.logicalName}
                             </div>
-                            <div className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-tighter">
+                            <div className="text-[10px] font-mono text-academic-outline mt-1 uppercase tracking-tighter truncate">
                               UUID: {item.id}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-10 py-8">
+                      <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
-                          <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-academic-surface text-academic-on-surface-variant text-[10px] font-black uppercase tracking-widest border border-academic-surface-variant/60">
                             {item.sizeBytes > 1024 * 1024 ? `${(item.sizeBytes / (1024 * 1024)).toFixed(2)} MB` : `${(item.sizeBytes / 1024).toFixed(1)} KB`}
                           </span>
                         </div>
                       </td>
-                      <td className="px-10 py-8 text-right">
+                      <td className="px-6 py-5 text-right">
                         <button 
-                          className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all opacity-0 group-hover:opacity-100"
+                          className="p-2 text-academic-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                           onClick={() => { sc.setActionId(item.id); sc.setDangerAction('DELETE'); sc.setConfirmOpen(true); }}
                         >
-                          <RiDeleteBin7Line className="text-xl" />
+                          <RiDeleteBin7Line className="text-lg" />
                         </button>
                       </td>
                     </tr>
@@ -258,11 +253,11 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
               </table>
             </div>
           ) : (
-            <div className="p-32 text-center">
-              <div className="h-20 w-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                <RiDatabase2Fill className="text-3xl text-slate-200" />
+            <div className="p-20 text-center">
+              <div className="h-16 w-16 bg-academic-surface rounded-3xl flex items-center justify-center mx-auto mb-4 border border-academic-surface-variant/40">
+                <RiDatabase2Fill className="text-2xl text-academic-outline/60" />
               </div>
-              <p className="text-slate-400 text-sm font-medium italic">Inicia una búsqueda global para visualizar el inventario.</p>
+              <p className="text-academic-outline text-sm font-medium italic">Inicia una búsqueda global para visualizar el inventario.</p>
             </div>
           )}
         </div>

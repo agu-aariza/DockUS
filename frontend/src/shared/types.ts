@@ -683,3 +683,11 @@ export interface ProjectRuntimeStatusResponse {
   activeRuns: ProjectRuntimeActiveRunSummary[];
   networks: ProjectRuntimeNetworkSummary[];
 }
+
+export interface BuildRunChatMessage {
+  id: string;
+  buildRunId: string;
+  sender: "user" | "assistant";
+  message: string;
+  createdAt: string;
+}

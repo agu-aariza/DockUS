@@ -9,6 +9,7 @@
  */
 
 import {
+  Body,
   Controller,
   DefaultValuePipe,
   Get,
@@ -54,6 +55,8 @@ import {
   toBuildRunResponseDto,
 } from './dto/build-run-response.dto';
 import { ListBuildRunsDto } from './dto/list-build-runs.dto';
+import { PostChatMessageDto } from './dto/chat-message.dto';
+import { BuildRunChatMessage } from '../domain/entities/build-run-chat-message.entity';
 
 const DELIVERY_ID_PARAM = {
   name: 'deliveryId',
@@ -388,6 +391,39 @@ export class BuilderController {
   ) {
     return this.builderService.getAssignmentQualityInsights(
       assignmentId,
+      request.user,
+    );
+  }
+
+  @ApiOperation({
+    summary: 'Obtener historial de mensajes del Tutor IA',
+    description: 'Lista todos los mensajes intercambiados con el Tutor IA para este run.',
+  })
+  @ApiParam(BUILD_RUN_ID_PARAM)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Get('runs/:buildRunId/chat/messages')
+  async getChatMessages(
+    @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BuildRunChatMessage[]> {
+    return this.builderService.getChatMessages(buildRunId, request.user);
+  }
+
+  @ApiOperation({
+    summary: 'Enviar pregunta al Tutor IA',
+    description: 'Envía una consulta sobre los resultados del run y recibe la respuesta del tutor.',
+  })
+  @ApiParam(BUILD_RUN_ID_PARAM)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Post('runs/:buildRunId/chat')
+  async postChatMessage(
+    @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
+    @Body() body: PostChatMessageDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BuildRunChatMessage> {
+    return this.builderService.postChatMessage(
+      buildRunId,
+      body.message,
       request.user,
     );
   }

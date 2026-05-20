@@ -6,6 +6,7 @@ import type {
   EvidenceArtifactDto,
   EnqueueBuildRunResponse,
   PaginatedResponse,
+  BuildRunChatMessage,
 } from "../types";
 
 function toParams(
@@ -106,6 +107,24 @@ export const builderApi = {
   }> {
     const { data } = await http.get(
       `/builder/assignments/${assignmentId}/quality-insights`,
+    );
+    return data;
+  },
+
+  async getChatMessages(buildRunId: string): Promise<BuildRunChatMessage[]> {
+    const { data } = await http.get<BuildRunChatMessage[]>(
+      `/builder/runs/${buildRunId}/chat/messages`,
+    );
+    return data;
+  },
+
+  async sendChatMessage(
+    buildRunId: string,
+    message: string,
+  ): Promise<BuildRunChatMessage> {
+    const { data } = await http.post<BuildRunChatMessage>(
+      `/builder/runs/${buildRunId}/chat`,
+      { message },
     );
     return data;
   },

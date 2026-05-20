@@ -17,7 +17,7 @@ export function PageHeader({ title, subtitle, icon, actions, badge }: PageHeader
     <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
       <div className="flex items-start gap-5">
         {icon && (
-          <div className="hidden sm:flex h-16 w-16 rounded-3xl bg-white border border-brand-blue-light/10 items-center justify-center text-brand-blue text-3xl shadow-xl shadow-brand-blue/5 group-hover:scale-105 transition-transform duration-500">
+          <div className="hidden sm:flex h-16 w-16 rounded-3xl bg-academic-surface-container-low border border-academic-outline-variant/30 items-center justify-center text-brand-blue text-3xl shadow-academic group-hover:scale-105 transition-transform duration-500">
             <div className="bg-brand-blue/5 rounded-2xl p-3 text-brand-blue">
               {icon}
             </div>
@@ -25,7 +25,7 @@ export function PageHeader({ title, subtitle, icon, actions, badge }: PageHeader
         )}
         <div className="space-y-1.5">
           <div className="flex items-center gap-4 flex-wrap">
-            <h2 className="font-display text-3xl font-black text-slate-900 tracking-tight sm:text-4xl lg:text-5xl uppercase">
+            <h2 className="font-display text-3xl font-black text-academic-on-surface tracking-tight sm:text-4xl lg:text-5xl uppercase">
               {title}
             </h2>
             {badge && (
@@ -35,7 +35,7 @@ export function PageHeader({ title, subtitle, icon, actions, badge }: PageHeader
             )}
           </div>
           {subtitle && (
-            <p className="text-slate-500 text-sm sm:text-base font-medium leading-relaxed max-w-3xl">
+            <p className="text-academic-on-surface-variant text-sm sm:text-base font-medium leading-relaxed max-w-3xl">
               {subtitle}
             </p>
           )}

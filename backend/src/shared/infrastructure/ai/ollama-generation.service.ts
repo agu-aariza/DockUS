@@ -8,7 +8,7 @@ import {
   OllamaRequestError,
 } from './ollama-request.util';
 
-export type BuilderLlmPromptStage = 'plan' | 'evaluation' | 'quality';
+export type BuilderLlmPromptStage = 'plan' | 'evaluation' | 'quality' | 'chat';
 
 export interface OllamaModelProfile {
   profileVersion: string;
@@ -32,6 +32,7 @@ export interface OllamaGenerateRequest {
   profile: OllamaModelProfile;
   promptId: string;
   timeoutMs?: number;
+  format?: 'json';
 }
 
 @Injectable()
@@ -79,6 +80,8 @@ export class OllamaGenerationService {
       }),
     );
 
+    const requestFormat = request.format ?? (request.stage === 'chat' ? undefined : 'json');
+
     try {
       const response = await fetch(`${this.baseUrl}/api/generate`, {
         method: 'POST',
@@ -88,7 +91,7 @@ export class OllamaGenerationService {
         body: JSON.stringify({
           model: request.profile.model,
           stream: false,
-          format: 'json',
+          ...(requestFormat ? { format: requestFormat } : {}),
           prompt: request.prompt,
           ...(request.systemPrompt ? { system: request.systemPrompt } : {}),
           keep_alive: request.profile.keepAliveSeconds,

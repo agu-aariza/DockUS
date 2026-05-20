@@ -83,14 +83,16 @@ export default {
       fontFamily: {
         sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         display: ['Newsreader', 'serif'],
-        mono: ['Inter', 'ui-monospace', 'monospace'],
+        mono: ['JetBrains Mono', 'Fira Code', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
-        sm: '0.125rem',
-        DEFAULT: '0.25rem',
-        md: '0.375rem',
-        lg: '0.5rem',
-        xl: '0.75rem',
+        sm: '0.375rem',
+        DEFAULT: '0.5rem',
+        md: '0.75rem',
+        lg: '1rem',
+        xl: '1.25rem',
+        '2xl': '1.75rem',
+        '3xl': '2.25rem',
         full: '9999px',
       },
       spacing: {

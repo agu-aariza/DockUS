@@ -8,10 +8,13 @@ const QUALITY_MODEL_NAME = process.env.QUALITY_MODEL_NAME || 'dockus-builder-qua
 const PLAN_BASE_MODEL = process.env.PLAN_BASE_MODEL || 'qwen2.5-coder:7b';
 const EVAL_BASE_MODEL = process.env.EVAL_BASE_MODEL || 'deepseek-r1:8b';
 const QUALITY_BASE_MODEL = process.env.QUALITY_BASE_MODEL || EVAL_BASE_MODEL;
+const CHAT_MODEL_NAME = process.env.CHAT_MODEL_NAME || 'dockus-builder-chat';
+const CHAT_BASE_MODEL = process.env.CHAT_BASE_MODEL || 'qwen2.5-coder:7b';
 const OLLAMA_NUM_CTX = process.env.OLLAMA_NUM_CTX || 16384;
 const PLAN_MODELFILE_URL = new URL('./ollama-plan.Modelfile', import.meta.url);
 const EVAL_MODELFILE_URL = new URL('./ollama-eval.Modelfile', import.meta.url);
 const QUALITY_MODELFILE_URL = new URL('./ollama-quality.Modelfile', import.meta.url);
+const CHAT_MODELFILE_URL = new URL('./ollama-chat.Modelfile', import.meta.url);
 
 async function loadModelfileTemplate(fileUrl, fromModel) {
   const template = await readFile(fileUrl, 'utf8');
@@ -26,7 +29,7 @@ async function bootstrap() {
 
   try {
     // 1. Pull Base Models
-    for (const model of [...new Set([PLAN_BASE_MODEL, EVAL_BASE_MODEL, QUALITY_BASE_MODEL])]) {
+    for (const model of [...new Set([PLAN_BASE_MODEL, EVAL_BASE_MODEL, QUALITY_BASE_MODEL, CHAT_BASE_MODEL])]) {
       console.log(`[BOOTSTRAP] Asegurando modelo base: ${model}...`);
       const pullRes = await fetch(`${OLLAMA_HOST}/api/pull`, {
         method: 'POST',
@@ -52,6 +55,11 @@ async function bootstrap() {
         name: QUALITY_MODEL_NAME,
         from: QUALITY_BASE_MODEL,
         modelfileUrl: QUALITY_MODELFILE_URL,
+      },
+      {
+        name: CHAT_MODEL_NAME,
+        from: CHAT_BASE_MODEL,
+        modelfileUrl: CHAT_MODELFILE_URL,
       },
     ];
 

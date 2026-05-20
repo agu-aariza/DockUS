@@ -32,13 +32,13 @@ function createQualityProfile(model: string): OllamaModelProfile {
     model,
     baseModel: 'deepseek-r1:8b',
     numCtx: 24576,
-    numPredict: -1,
-    temperature: 0.2,
+    numPredict: 8192,
+    temperature: 0.3,
     topP: 0.9,
     repeatPenalty: 1.1,
     stopTokens: ['<|endoftext|>'],
     keepAliveSeconds: 300,
-    timeoutMs: 180_000,
+    timeoutMs: 300_000,
   };
 }
 

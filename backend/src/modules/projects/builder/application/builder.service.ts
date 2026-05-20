@@ -15,6 +15,8 @@ import { EvidenceArtifactPublic } from '../domain/builder.types';
 import { ListBuildRunsDto } from '../presentation/dto/list-build-runs.dto';
 import { BuilderRunCommandsService } from './services/builder-run-commands.service';
 import { BuilderRunQueriesService } from './services/builder-run-queries.service';
+import { BuilderLlmChatService } from '../domain/llm/builder-llm-chat.service';
+import { BuildRunChatMessage } from '../domain/entities/build-run-chat-message.entity';
 import type {
   EnqueueBuildRunResponse,
   ExecuteBuildRunJobData,
@@ -32,6 +34,7 @@ export class BuilderService {
   constructor(
     private readonly builderRunCommandsService: BuilderRunCommandsService,
     private readonly builderRunQueriesService: BuilderRunQueriesService,
+    private readonly builderLlmChatService: BuilderLlmChatService,
   ) {}
 
   /**
@@ -133,5 +136,22 @@ export class BuilderService {
       assignmentId,
       actor,
     );
+  }
+
+  async getChatMessages(
+    buildRunId: string,
+    actor: AuthenticatedUser,
+  ): Promise<BuildRunChatMessage[]> {
+    await this.builderRunQueriesService.getRunById(buildRunId, actor);
+    return this.builderLlmChatService.getChatMessages(buildRunId);
+  }
+
+  async postChatMessage(
+    buildRunId: string,
+    messageText: string,
+    actor: AuthenticatedUser,
+  ): Promise<BuildRunChatMessage> {
+    await this.builderRunQueriesService.getRunById(buildRunId, actor);
+    return this.builderLlmChatService.postChatMessage(buildRunId, messageText);
   }
 }

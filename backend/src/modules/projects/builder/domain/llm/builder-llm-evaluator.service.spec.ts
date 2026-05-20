@@ -95,7 +95,7 @@ function createProfile(
     baseModel:
       stage === 'plan' ? 'qwen2.5-coder:7b' : 'deepseek-r1:8b',
     numCtx: 24576,
-    numPredict: -1,
+    numPredict: stage === 'plan' ? 4096 : 8192,
     temperature: stage === 'quality' ? 0.2 : 0.1,
     topP: 0.9,
     repeatPenalty: 1.1,

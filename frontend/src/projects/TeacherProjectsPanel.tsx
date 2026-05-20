@@ -154,39 +154,39 @@ function ProjectOverview({
                 <h4 className="eyebrow">
                   Operaciones de Gestión
                 </h4>
-                <h3 className="mt-2 text-xl font-bold text-slate-900">Control Operativo</h3>
+                <h3 className="mt-2 text-xl font-bold text-academic-on-surface">Control Operativo</h3>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-2xl text-slate-300">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-academic-surface-container text-2xl text-academic-outline">
                 <RiSettings4Line />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <button
-                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-maroon/20 hover:text-brand-maroon hover:shadow-md transition-all"
+                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-academic-surface-container/50 border border-academic-outline-variant/20 text-sm font-bold text-academic-on-surface-variant hover:bg-white hover:border-brand-maroon/25 hover:text-brand-maroon hover:shadow-academic transition-all"
                 onClick={onRefreshAssignments}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-maroon group-hover/btn:border-brand-maroon/10 shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-academic-outline-variant/30 text-academic-outline group-hover/btn:text-brand-maroon group-hover/btn:border-brand-maroon/10 shadow-sm">
                   <RiRefreshLine className="text-lg" />
                 </div>
                 <span>Sincronizar asignaciones</span>
               </button>
 
               <button
-                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-blue/20 hover:text-brand-blue hover:shadow-md transition-all"
+                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-academic-surface-container/50 border border-academic-outline-variant/20 text-sm font-bold text-academic-on-surface-variant hover:bg-white hover:border-brand-blue/25 hover:text-brand-blue hover:shadow-academic transition-all"
                 onClick={onFetchTestSuite}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-blue group-hover/btn:border-brand-blue/10 shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-academic-outline-variant/30 text-academic-outline group-hover/btn:text-brand-blue group-hover/btn:border-brand-blue/10 shadow-sm">
                   <RiTestTubeLine className="text-lg" />
                 </div>
                 <span>Recuperar suite docente</span>
               </button>
 
               <button
-                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-700 hover:bg-white hover:border-brand-blue/20 hover:text-brand-blue hover:shadow-md transition-all"
+                className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-academic-surface-container/50 border border-academic-outline-variant/20 text-sm font-bold text-academic-on-surface-variant hover:bg-white hover:border-brand-blue/25 hover:text-brand-blue hover:shadow-academic transition-all"
                 onClick={onOpenMonitoring}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 group-hover/btn:text-brand-blue group-hover/btn:border-brand-blue/10 shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-academic-outline-variant/30 text-academic-outline group-hover/btn:text-brand-blue group-hover/btn:border-brand-blue/10 shadow-sm">
                   <RiBarChart2Line className="text-lg" />
                 </div>
                 <span>Ver seguimiento</span>
@@ -195,9 +195,9 @@ function ProjectOverview({
           </div>
 
           {/* Right Side: Danger actions */}
-          <div className="xl:w-[240px] shrink-0 xl:border-l xl:border-slate-100 xl:pl-8 flex items-end">
+          <div className="xl:w-[240px] shrink-0 xl:border-l xl:border-academic-outline-variant/20 xl:pl-8 flex items-end">
             <button
-              className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-rose-50 border border-rose-100 text-sm font-bold text-rose-600 hover:bg-rose-600 hover:text-white hover:shadow-lg hover:shadow-rose-500/20 transition-all"
+              className="group/btn flex items-center gap-3 w-full p-4 rounded-2xl bg-rose-50/70 border border-rose-100 text-sm font-bold text-rose-600 hover:bg-rose-600 hover:text-white hover:shadow-academic transition-all"
               onClick={onDelete}
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-rose-500 shadow-sm group-hover/btn:bg-white/20 group-hover/btn:text-white transition-colors">
@@ -373,20 +373,20 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
           <div className="flex items-center justify-between gap-3 mb-6">
             <div>
               <p className="eyebrow !mb-1">Catálogo</p>
-              <h3 className="text-xl font-bold tracking-tight text-slate-950">
+              <h3 className="text-xl font-bold tracking-tight text-academic-on-surface">
                 Proyectos
               </h3>
             </div>
-            <span className="flex h-8 min-w-[2rem] items-center justify-center rounded-full bg-slate-900 px-2 text-[11px] font-bold text-white shadow-lg shadow-slate-900/10">
+            <span className="flex h-8 min-w-[2rem] items-center justify-center rounded-full bg-brand-maroon px-2 text-[11px] font-bold text-academic-on-primary shadow-sm">
               {projects.length}
             </span>
           </div>
 
           <div className="space-y-4">
             <div className="group relative">
-              <RiSearchLine className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg transition-colors group-focus-within:text-brand-maroon" />
+              <RiSearchLine className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline text-lg transition-colors group-focus-within:text-brand-maroon" />
               <input
-                className="input-field pl-11 h-12 bg-slate-50 border-transparent focus:bg-white focus:border-brand-maroon/30 focus:ring-4 focus:ring-brand-maroon/5 transition-all"
+                className="input-field pl-11 h-12 bg-academic-surface-container border-academic-outline-variant/20 focus:bg-white focus:border-brand-maroon/25 focus:ring-2 focus:ring-brand-maroon/10 transition-all"
                 placeholder="Buscar proyecto..."
                 value={projectSearch}
                 onChange={(event) => setProjectSearch(event.target.value)}
@@ -405,9 +405,9 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
 
           <div className="mt-8 flex-1 overflow-y-auto space-y-3 pr-1 -mr-1 custom-scrollbar">
             {visibleProjects.length === 0 ? (
-              <div className="rounded-[2rem] border-2 border-dashed border-slate-100 bg-slate-50/50 px-4 py-12 text-center">
-                <RiFoldersLine className="mx-auto text-3xl text-slate-200 mb-3" />
-                <p className="text-xs font-medium text-slate-400 italic">No se encontraron proyectos</p>
+              <div className="rounded-[2rem] border-2 border-dashed border-academic-outline-variant/20 bg-academic-surface-container/30 px-4 py-12 text-center">
+                <RiFoldersLine className="mx-auto text-3xl text-academic-outline/40 mb-3" />
+                <p className="text-xs font-medium text-academic-outline italic">No se encontraron proyectos</p>
               </div>
             ) : (
               visibleProjects.map((project) => {
@@ -498,13 +498,13 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
         <section className="min-w-0 space-y-5">
           {detailMode === "new-project" ? (
             <div className="rounded-lg border border-academic-surface-variant bg-white p-8 shadow-academic">
-              <div className="flex flex-col gap-3 border-b border-slate-100 pb-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 border-b border-academic-outline-variant/20 pb-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="eyebrow">Definición de Proyecto</p>
-                  <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                  <h3 className="mt-2 text-2xl font-semibold tracking-tight text-academic-on-surface">
                     Parametrización de Práctica Académica
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                  <p className="mt-2 text-sm leading-6 text-academic-on-surface-variant">
                     Define el contrato académico, la ventana temporal y el tipo esperado para que el builder y el seguimiento sean coherentes desde el primer momento.
                   </p>
                 </div>
@@ -612,11 +612,11 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                   />
                 </div>
 
-                <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 pt-6 border-t border-slate-100">
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 pt-6 border-t border-academic-outline-variant/20">
                   {/* Grupos Académicos */}
                   <div className="space-y-4">
                     <label className="label-text">Asignar Grupos Académicos</label>
-                    <p className="text-xs text-slate-500 mb-3">Los alumnos de los grupos seleccionados serán matriculados automáticamente.</p>
+                    <p className="text-xs text-academic-on-surface-variant mb-3">Los alumnos de los grupos seleccionados serán matriculados automáticamente.</p>
                     <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-2">
                       {pc.groups.map((group) => {
                         const isSelected = pc.createForm.assignedGroupIds.includes(group.id);
@@ -632,17 +632,17 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                             }}
                             className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${isSelected
                                 ? "bg-brand-maroon/5 border-brand-maroon shadow-sm"
-                                : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                                : "bg-white border-academic-outline hover:border-academic-outline-variant hover:bg-academic-surface-container/60"
                               }`}
                           >
                             <div className="flex items-center gap-4">
-                              <div className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${isSelected ? "bg-brand-maroon text-white" : "bg-slate-100 text-slate-500"
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${isSelected ? "bg-brand-maroon text-white" : "bg-academic-surface-container text-academic-outline"
                                 }`}>
                                 <RiGroupLine className="text-lg" />
                               </div>
                               <div>
-                                <p className={`font-bold text-sm ${isSelected ? "text-brand-maroon" : "text-slate-900"}`}>{group.name}</p>
-                                <p className="text-xs text-slate-500">{group.code || 'Sin código'}</p>
+                                <p className={`font-bold text-sm ${isSelected ? "text-brand-maroon" : "text-academic-on-surface"}`}>{group.name}</p>
+                                <p className="text-xs text-academic-on-surface-variant">{group.code || 'Sin código'}</p>
                               </div>
                             </div>
                             {isSelected && <RiCheckFill className="text-brand-maroon text-xl" />}
@@ -650,9 +650,9 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         );
                       })}
                       {pc.groups.length === 0 && (
-                        <div className="p-8 text-center rounded-2xl bg-slate-50 border border-slate-100">
-                          <RiGroupLine className="mx-auto text-3xl text-slate-300 mb-3" />
-                          <p className="text-sm text-slate-500">No hay grupos creados todavía.</p>
+                        <div className="p-8 text-center rounded-2xl bg-academic-surface-container/40 border border-academic-outline-variant/20">
+                          <RiGroupLine className="mx-auto text-3xl text-academic-outline mb-3" />
+                          <p className="text-sm text-academic-on-surface-variant">No hay grupos creados todavía.</p>
                         </div>
                       )}
                     </div>
@@ -661,12 +661,12 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                   {/* Suite de Evaluación */}
                   <div className="space-y-4">
                     <label className="label-text">Suite de Evaluación Inicial</label>
-                    <p className="text-xs text-slate-500 mb-3">Sube el archivo .zip con los tests docentes para este proyecto.</p>
+                    <p className="text-xs text-academic-on-surface-variant mb-3">Sube el archivo .zip con los tests docentes para este proyecto.</p>
 
                     <div
                       className={`relative flex flex-col items-center justify-center rounded-3xl border-2 border-dashed p-8 text-center transition-all h-[300px] ${pc.createForm.suiteFile
                           ? "bg-emerald-50 border-emerald-200 shadow-sm"
-                          : "bg-slate-50/50 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                          : "bg-academic-surface-container/30 border-academic-outline hover:bg-academic-surface-container/50 hover:border-academic-outline-variant"
                         }`}
                     >
                       <input
@@ -680,7 +680,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         }}
                       />
 
-                      <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm transition-colors ${pc.createForm.suiteFile ? "bg-emerald-500 text-white" : "bg-white text-slate-400"
+                      <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm transition-colors ${pc.createForm.suiteFile ? "bg-emerald-500 text-white" : "bg-academic-surface-container-lowest text-academic-outline"
                         }`}>
                         {pc.createForm.suiteFile ? <RiCheckFill className="text-3xl" /> : <RiFolderUploadLine className="text-3xl" />}
                       </div>
@@ -699,8 +699,8 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         </>
                       ) : (
                         <>
-                          <h5 className="text-sm font-bold text-slate-900">Seleccionar Suite (.zip)</h5>
-                          <p className="mt-1 text-xs text-slate-500">Haz clic para buscar en tu equipo</p>
+                          <h5 className="text-sm font-bold text-academic-on-surface">Seleccionar Suite (.zip)</h5>
+                          <p className="mt-1 text-xs text-academic-outline">Haz clic para buscar en tu equipo</p>
                           <button
                             type="button"
                             className="mt-6 btn-secondary !py-2"
@@ -714,7 +714,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
+                <div className="flex flex-wrap items-center gap-3 border-t border-academic-outline-variant/20 pt-5">
                   <Button type="submit" variant="primary">
                     <RiFolderAddLine />
                     Crear proyecto
@@ -748,11 +748,11 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                       </span>
                     </div>
 
-                    <h3 className="truncate text-3xl font-bold tracking-tight text-slate-950">
+                    <h3 className="truncate text-3xl font-bold tracking-tight text-academic-on-surface">
                       {selectedCanvasProject.title}
                     </h3>
 
-                    <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600 line-clamp-2">
+                    <p className="mt-2 max-w-3xl text-sm leading-relaxed text-academic-on-surface-variant line-clamp-2">
                       {selectedCanvasProject.contextAcademico || "Sin contexto académico definido."}
                     </p>
                   </div>
@@ -824,7 +824,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
 
 
               {activeSubTab === "monitoring" ? (
-                <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+                <div className="rounded-[2rem] border border-academic-outline-variant/30 bg-white p-8 shadow-academic">
                   <ProgressDashboard
                     session={session}
                     selectedProjectId={selectedCanvasProject.id}
@@ -837,14 +837,14 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 <div className="space-y-8 animate-fade-in">
                   <form className="space-y-8" onSubmit={pc.handleUpdate}>
                     {/* Tarjeta: Ajustes Generales */}
-                    <div className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm">
+                    <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white p-8 shadow-academic">
                       <div className="flex items-center gap-4 mb-8">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-maroon/5 text-brand-maroon text-xl">
                           <RiSettings4Line />
                         </div>
                         <div>
-                          <h4 className="text-xl font-bold tracking-tight text-slate-950">Ajustes Generales</h4>
-                          <p className="text-sm text-slate-500">Identidad, estado y contexto técnico del proyecto.</p>
+                          <h4 className="text-xl font-bold tracking-tight text-academic-on-surface">Ajustes Generales</h4>
+                          <p className="text-sm text-academic-on-surface-variant">Identidad, estado y contexto técnico del proyecto.</p>
                         </div>
                       </div>
 
@@ -911,21 +911,21 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                       </div>
                     </div>
 
-                    {/* Tarjeta: Ventana Temporal y Rúbrica */}
-                    <div className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm">
+                    {/* Tarjeta: Plazos y Evaluación */}
+                    <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white p-8 shadow-academic">
                       <div className="flex items-center gap-4 mb-8">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 text-xl">
                           <RiCalendarScheduleLine />
                         </div>
                         <div>
-                          <h4 className="text-xl font-bold tracking-tight text-slate-950">Plazos y Evaluación</h4>
-                          <p className="text-sm text-slate-500">Define cuándo se entrega y bajo qué criterios se califica.</p>
+                          <h4 className="text-xl font-bold tracking-tight text-academic-on-surface">Plazos y Evaluación</h4>
+                          <p className="text-sm text-academic-on-surface-variant">Define cuándo se entrega y bajo qué criterios se califica.</p>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                         <div className="space-y-2">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Apertura de entregas</label>
+                          <label className="ui-label">Apertura de entregas</label>
                           <input
                             type="datetime-local"
                             className="input-field h-12"
@@ -934,7 +934,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Cierre de entregas</label>
+                          <label className="ui-label">Cierre de entregas</label>
                           <input
                             type="datetime-local"
                             className="input-field h-12"
@@ -943,7 +943,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                           />
                         </div>
                         <div className="space-y-2 lg:col-span-2">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Instrucciones de la rúbrica</label>
+                          <label className="ui-label">Instrucciones de la rúbrica</label>
                           <textarea
                             className="input-field min-h-[140px] py-4"
                             placeholder="Criterios de evaluación, penalizaciones, etc."
@@ -955,15 +955,15 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     </div>
 
                     {/* Tarjeta: Equipo Docente */}
-                    <div className="rounded-[2.5rem] border border-slate-200 bg-white overflow-hidden shadow-sm">
+                    <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic">
                       <div className="bg-white px-8 pt-8">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-blue/5 text-brand-blue">
                             <RiTeamFill className="text-xl" />
                           </div>
                           <div>
-                            <h4 className="text-lg font-bold text-slate-900">Equipo Docente</h4>
-                            <p className="text-xs text-slate-500">Profesores con permisos administrativos.</p>
+                            <h4 className="text-lg font-bold text-academic-on-surface">Equipo Docente</h4>
+                            <p className="text-xs text-academic-on-surface-variant">Profesores con permisos administrativos.</p>
                           </div>
                         </div>
                       </div>
@@ -973,7 +973,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                           {/* Add Teacher Selection */}
                           <div className="flex flex-col md:flex-row gap-4 items-end">
                             <div className="flex-1 w-full">
-                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">
+                              <label className="ui-label mb-2 block">
                                 Añadir Colaborador
                               </label>
                               <VisualPicker
@@ -983,7 +983,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                                     id: teacher.id,
                                     label: `${teacher.firstName} ${teacher.lastName}`,
                                     description: teacher.email,
-                                    icon: <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">
+                                    icon: <div className="h-6 w-6 rounded-full bg-academic-surface-container flex items-center justify-center text-[10px] font-bold text-academic-outline uppercase">
                                       {teacher.firstName[0]}{teacher.lastName[0]}
                                     </div>
                                   }))
@@ -1004,22 +1004,22 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                             {selectedCanvasProject.teachers?.map((teacher) => (
                               <div
                                 key={teacher.id}
-                                className="group flex items-center justify-between p-4 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-brand-blue/10 hover:shadow-md transition-all duration-300"
+                                className="group flex items-center justify-between p-4 rounded-3xl border border-academic-outline-variant/20 bg-academic-surface-container/30 hover:bg-white hover:border-brand-blue/10 hover:shadow-academic transition-all duration-300"
                               >
                                 <div className="flex items-center gap-3">
                                   <div className="h-10 w-10 rounded-2xl bg-brand-blue/10 flex items-center justify-center text-xs font-bold text-brand-blue shadow-sm group-hover:scale-110 transition-transform">
                                     {teacher.firstName[0]}{teacher.lastName[0]}
                                   </div>
                                   <div>
-                                    <p className="text-sm font-bold text-slate-800">{teacher.firstName} {teacher.lastName}</p>
-                                    <p className="text-[11px] text-slate-400">{teacher.email}</p>
+                                    <p className="text-sm font-bold text-academic-on-surface">{teacher.firstName} {teacher.lastName}</p>
+                                    <p className="text-[11px] text-academic-on-surface-variant">{teacher.email}</p>
                                   </div>
                                 </div>
 
                                 {selectedCanvasProject.teachers!.length > 1 && (
                                   <button
                                     onClick={() => pc.handleRemoveTeacher(selectedCanvasProject.id, teacher.id)}
-                                    className="p-2 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
+                                    className="p-2 rounded-xl text-academic-outline hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
                                     title="Eliminar del equipo"
                                   >
                                     <RiCloseLine size={20} />
@@ -1033,15 +1033,15 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     </div>
 
                     {/* Tarjeta: Suite Docente */}
-                    <div className="rounded-[2.5rem] border border-slate-200 bg-white overflow-hidden shadow-sm">
-                      <div className="bg-slate-900 p-8 text-white">
+                    <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic">
+                      <div className="bg-academic-primary p-8 text-academic-on-primary">
                         <div className="flex items-center gap-4">
                           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white text-xl">
                             <RiTestTubeLine />
                           </div>
                           <div>
                             <h4 className="text-xl font-bold tracking-tight">Suite de Evaluación Técnica</h4>
-                            <p className="text-sm text-slate-400">Tests automáticos para validar las entregas.</p>
+                            <p className="text-sm text-academic-on-primary/70">Tests automáticos para validar las entregas.</p>
                           </div>
                         </div>
                       </div>
@@ -1054,13 +1054,12 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                                 <RiCheckFill className="text-4xl" />
                               </div>
                               <div className="space-y-1">
-                                <p className="text-lg font-bold text-slate-900">{pc.testSuiteResult.logicalName}</p>
-                                <div className="flex items-center gap-3 text-sm text-slate-500">
+                                <p className="text-lg font-bold text-academic-on-surface">{pc.testSuiteResult.logicalName}</p>
+                                <div className="flex items-center gap-3 text-sm text-academic-on-surface-variant">
                                   <span>{formatBytes(pc.testSuiteResult.sizeBytes)}</span>
-                                  <span className="h-1 w-1 rounded-full bg-slate-300" />
+                                  <span className="h-1 w-1 rounded-full bg-academic-outline-variant/30" />
                                   <span>Subido el {new Date(pc.testSuiteResult.createdAt).toLocaleDateString()}</span>
                                 </div>
-
                               </div>
                             </div>
 
@@ -1081,7 +1080,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                                 <RiFileDownloadLine className="text-xl" />
                                 Descargar
                               </button>
-                              <div className="h-8 w-px bg-slate-100 mx-2 hidden md:block" />
+                              <div className="h-8 w-px bg-academic-outline-variant/20 mx-2 hidden md:block" />
                               <button
                                 type="button"
                                 className="btn-primary"
@@ -1094,13 +1093,13 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                             </div>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-slate-200 bg-slate-50/50 py-16 px-6 text-center">
-                            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white text-slate-300 shadow-sm">
+                          <div className="flex flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-academic-outline-variant/30 bg-academic-surface-container/30 py-16 px-6 text-center">
+                            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white text-academic-outline shadow-sm">
                               <RiFolderUploadLine className="text-4xl" />
                             </div>
-                            <h5 className="text-lg font-bold text-slate-950">No hay suite técnica configurada</h5>
-                            <p className="mt-2 mb-8 max-w-sm text-sm text-slate-500">
-                              Para evaluar automáticamente las entregas, sube una suite de tests compatible con <span className="font-bold text-slate-700">pytest</span>.
+                            <h5 className="text-lg font-bold text-academic-on-surface">No hay suite técnica configurada</h5>
+                            <p className="mt-2 mb-8 max-w-sm text-sm text-academic-on-surface-variant">
+                              Para evaluar automáticamente las entregas, sube una suite de tests compatible con <span className="font-bold text-academic-on-surface">pytest</span>.
                             </p>
                             <button
                               type="button"
@@ -1117,7 +1116,6 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                             </button>
                           </div>
                         )}
-
                         <input
                           type="file"
                           id="suite-upload"
@@ -1129,9 +1127,9 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     </div>
 
                     {/* Acciones de Guardado Final */}
-                    <div className="flex flex-col items-center justify-between gap-6 pt-10 border-t border-slate-100 sm:flex-row">
-                      <div className="text-sm text-slate-500">
-                        Última modificación detectada: <span className="font-bold text-slate-700">Hace unos momentos</span>
+                    <div className="flex flex-col items-center justify-between gap-6 pt-10 border-t border-academic-outline-variant/20 sm:flex-row">
+                      <div className="text-sm text-academic-on-surface-variant">
+                        Última modificación detectada: <span className="font-bold text-academic-on-surface">Hace unos momentos</span>
                       </div>
                       <div className="flex flex-wrap gap-4 w-full sm:w-auto">
                         <button
@@ -1162,12 +1160,12 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
             </>
           ) : (
             <EmptyState
-              icon={<RiStackFill className="text-5xl text-slate-300" />}
+              icon={<RiStackFill className="text-5xl text-academic-outline/40" />}
               title="Selecciona un proyecto o crea uno nuevo"
-              description="El detalle aparece aquí con el resumen, los alumnos, el seguimiento y los ajustes. Mientras tanto, mantenemos el lienzo limpio para evitar mensajes de contexto roto."
+              description="El detalle aparece aquí con el resumen, los alumnos, el seguimiento y los ajustes. Mientras tanto, mantenemos el lienzo limpio para evitar de contexto roto."
               actionLabel="Crear proyecto"
               onAction={openNewProject}
-              className="min-h-[420px] border-slate-200 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.08),_transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.98))]"
+              className="min-h-[420px] border-academic-outline-variant/20 bg-[radial-gradient(circle_at_top,_rgba(128,0,32,0.06),_transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(254,253,251,0.98))]"
             />
           )}
         </section>

@@ -100,9 +100,11 @@ services:
       PLAN_MODEL_NAME: ${BUILDER_OLLAMA_PLAN_MODEL:-dockus-builder-plan}
       EVAL_MODEL_NAME: ${BUILDER_OLLAMA_EVAL_MODEL:-dockus-builder-eval}
       QUALITY_MODEL_NAME: ${BUILDER_OLLAMA_QUALITY_MODEL:-dockus-builder-quality}
+      CHAT_MODEL_NAME: ${BUILDER_OLLAMA_CHAT_MODEL:-dockus-builder-chat}
       PLAN_BASE_MODEL: ${PLAN_BASE_MODEL:-qwen2.5-coder:7b}
       EVAL_BASE_MODEL: ${EVAL_BASE_MODEL:-deepseek-r1:8b}
       QUALITY_BASE_MODEL: ${QUALITY_BASE_MODEL:-deepseek-r1:8b}
+      CHAT_BASE_MODEL: ${CHAT_BASE_MODEL:-qwen2.5-coder:7b}
       OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-16384}
     volumes:
       - ./backend:/app

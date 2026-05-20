@@ -217,22 +217,21 @@ export function WorkspaceBar(): JSX.Element | null {
 
       {/* Popover List */}
       {openPicker && (
-        <div className="absolute top-full left-0 right-0 mt-3 max-h-[350px] flex flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/95 backdrop-blur-2xl shadow-[0_30px_70px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300">
-          {/* Search */}
+        <div className="absolute top-full left-0 right-0 mt-3 max-h-[350px] flex flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/95 backdrop-blur-2xl shadow-[0_30px_70px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300">          {/* Search */}
           <div className="p-3 border-b border-white/5 bg-white/5">
             <div className="relative">
               <RiSearch2Line className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 autoFocus
-                className="w-full rounded-xl border-none bg-slate-800/50 py-2 pl-9 pr-4 text-xs font-bold text-white placeholder:text-slate-500 focus:ring-1 focus:ring-brand-blue"
+                className="w-full rounded-xl border-none bg-slate-800/50 py-2 pl-9 pr-4 text-xs font-bold text-white placeholder:text-slate-500 focus:ring-1 focus:ring-brand-gold"
                 placeholder={`Buscar ${openPicker === 'project' ? 'proyecto' : openPicker === 'assignment' ? 'alumno' : 'entrega'}...`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              {loading && <RiLoader4Line className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-blue animate-spin" />}
+              {loading && <RiLoader4Line className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-gold animate-spin" />}
             </div>
           </div>
-
+ 
           {/* List */}
           <div className="flex-1 overflow-y-auto no-scrollbar p-2">
             {filteredOptions.length > 0 ? (
@@ -242,7 +241,7 @@ export function WorkspaceBar(): JSX.Element | null {
                 let sub = "";
                 let active = false;
                 let icon = <RiStackFill />;
-
+ 
                 if (openPicker === 'project') {
                   label = opt.title;
                   sub = opt.status;
@@ -264,7 +263,7 @@ export function WorkspaceBar(): JSX.Element | null {
                   active = selection.lastRunId === id;
                   icon = <RiLoader4Line className="text-sky-400" />;
                 }
-
+ 
                 return (
                   <button
                     key={id}
@@ -284,7 +283,7 @@ export function WorkspaceBar(): JSX.Element | null {
                         {icon}
                       </div>
                       <div className="truncate">
-                        <div className={`text-[11px] font-black uppercase tracking-wider ${active ? 'text-brand-primary' : 'text-white'}`}>
+                        <div className={`text-[11px] font-black uppercase tracking-wider ${active ? 'text-brand-gold' : 'text-white'}`}>
                           {label}
                         </div>
                         <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
@@ -292,7 +291,7 @@ export function WorkspaceBar(): JSX.Element | null {
                         </div>
                       </div>
                     </div>
-                    {active && <RiCheckLine className="text-brand-primary" />}
+                    {active && <RiCheckLine className="text-brand-gold" />}
                   </button>
                 );
               })

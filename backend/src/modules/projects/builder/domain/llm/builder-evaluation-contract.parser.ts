@@ -91,6 +91,17 @@ export function parseBuilderEvaluationContractV2(
     contract.confidence = 'low';
   }
 
+  // gradeBreakdown is the auditable source of truth.
+  // Override recommendedGrade with its sum to correct LLM arithmetic errors.
+  if (contract.gradeBreakdown.length > 0) {
+    const computed = contract.gradeBreakdown.reduce(
+      (sum, item) => sum + item.awarded,
+      0,
+    );
+    contract.recommendedGrade =
+      Math.round(Math.min(10, Math.max(0, computed)) * 100) / 100;
+  }
+
   contract.capabilities = alignCapabilitiesWithRecipe(
     contract.capabilities,
     contract.recipe,

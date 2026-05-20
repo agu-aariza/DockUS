@@ -2,8 +2,8 @@ export interface PromptBundle {
   role: string;
   task: string;
   hard_rules: string[];
-  schema_contract: string;
-  decision_policy: string[];
+  schema_contract?: string;
+  decision_policy?: string[];
   examples?: string[];
   json_examples?: string[];
 }
@@ -28,11 +28,13 @@ export function renderPromptBundle(bundle: PromptBundle): string {
   return sections.join('\n\n').trim();
 }
 
-function renderSection(title: string, content: string): string {
+function renderSection(title: string, content: string | undefined | null): string | null {
+  if (!content) return null;
   return `${title}\n${content.trim()}`;
 }
 
-function renderListSection(title: string, entries: string[]): string {
+function renderListSection(title: string, entries: string[] | undefined | null): string | null {
+  if (!entries || entries.length === 0) return null;
   const lines = entries
     .map((entry, index) => `${index + 1}. ${entry.trim()}`)
     .join('\n');
@@ -43,7 +45,7 @@ function renderJsonExamplesSection(jsonExamples: string[]): string {
   const blocks = jsonExamples
     .map((example, index) => `--- EXAMPLE ${index + 1} ---\n${example.trim()}`)
     .join('\n\n');
-  return `FEW-SHOT JSON EXAMPLES\nImita la estructura, profundidad y nivel de detalle de estos ejemplos reales. Tu respuesta debe tener al menos la misma longitud y riqueza en cada campo.\n\n${blocks}`;
+  return `FEW-SHOT JSON EXAMPLES\nEstudia estos ejemplos reales de respuestas correctas. Tu respuesta DEBE igualar o superar su nivel de detalle, extensión y especificidad en cada campo. Replica la estructura exacta del JSON, no omitas campos, y asegúrate de que el contenido sea original y específico al proyecto que estás analizando.\n\n${blocks}`;
 }
 
 export function interpolatePromptBundle(
@@ -56,8 +58,10 @@ export function interpolatePromptBundle(
     hard_rules: bundle.hard_rules.map((entry) =>
       interpolateString(entry, variables),
     ),
-    schema_contract: interpolateString(bundle.schema_contract, variables),
-    decision_policy: bundle.decision_policy.map((entry) =>
+    schema_contract: bundle.schema_contract
+      ? interpolateString(bundle.schema_contract, variables)
+      : undefined,
+    decision_policy: bundle.decision_policy?.map((entry) =>
       interpolateString(entry, variables),
     ),
     examples: bundle.examples?.map((entry) =>

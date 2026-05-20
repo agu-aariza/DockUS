@@ -252,7 +252,7 @@ export function StudentWorkspacePanel({
         onViewReport={handleViewReport}
       />
 
-      <div className="overflow-hidden rounded-[2rem] border border-academic-surface-variant bg-white shadow-sm">
+      <div className="overflow-hidden rounded-[2rem] border border-academic-surface-variant bg-white shadow-academic">
         <div className="overflow-x-auto">
           <Tabs
             tabs={navigation.map((tab) => ({

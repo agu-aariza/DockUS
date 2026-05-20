@@ -26,10 +26,10 @@ function getUrgencyStyle(
 ): { border: string; iconBg: string; iconColor: string; chip: string } {
   if (assignment.revokedAt) {
     return {
-      border: "border-slate-200 opacity-70",
-      iconBg: "bg-slate-100",
-      iconColor: "text-slate-400",
-      chip: "bg-slate-100 text-slate-600 border-slate-200",
+      border: "border-academic-outline-variant/30 opacity-75 bg-academic-surface-container/20",
+      iconBg: "bg-academic-surface-container",
+      iconColor: "text-academic-outline",
+      chip: "bg-academic-surface-container text-academic-on-surface-variant border-academic-outline-variant/20",
     };
   }
 
@@ -39,19 +39,19 @@ function getUrgencyStyle(
 
   if (closesAt && closesAt < now) {
     return {
-      border: "border-rose-200",
+      border: "border-rose-100 bg-rose-50/10",
       iconBg: "bg-rose-50",
-      iconColor: "text-rose-500",
-      chip: "bg-rose-50 text-rose-700 border-rose-200",
+      iconColor: "text-rose-600",
+      chip: "bg-rose-50 text-rose-700 border-rose-100",
     };
   }
 
   if (closesAt && closesAt - now < 48 * 60 * 60 * 1000) {
     return {
-      border: "border-amber-200",
+      border: "border-amber-100 bg-amber-50/10",
       iconBg: "bg-amber-50",
       iconColor: "text-amber-600",
-      chip: "bg-amber-50 text-amber-700 border-amber-200",
+      chip: "bg-amber-50 text-amber-700 border-amber-100",
     };
   }
 
@@ -116,20 +116,20 @@ export function StudentAssignmentsSection({
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-sm">
-          <div className="h-5 w-40 animate-pulse rounded bg-slate-200" />
-          <div className="mt-4 h-4 w-3/4 animate-pulse rounded bg-slate-100" />
+        <div className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-academic">
+          <div className="h-5 w-40 animate-pulse rounded bg-academic-surface-container" />
+          <div className="mt-4 h-4 w-3/4 animate-pulse rounded bg-academic-surface-container/60" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((index) => (
             <div
               key={index}
-              className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-sm"
+              className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-academic"
             >
-              <Skeleton type="rounded" className="h-12 w-12" />
-              <div className="mt-6 h-5 w-3/4 animate-pulse rounded bg-slate-100" />
-              <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-100" />
-              <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-slate-100" />
+              <Skeleton type="rounded" className="h-12 w-12 bg-academic-surface-container" />
+              <div className="mt-6 h-5 w-3/4 animate-pulse rounded bg-academic-surface-container/60" />
+              <div className="mt-4 h-4 w-full animate-pulse rounded bg-academic-surface-container/60" />
+              <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-academic-surface-container/60" />
             </div>
           ))}
         </div>
@@ -148,7 +148,7 @@ export function StudentAssignmentsSection({
   if (assignments.length === 0) {
     return (
       <EmptyState
-        icon={<RiFolderOpenLine className="text-4xl text-slate-400" />}
+        icon={<RiFolderOpenLine className="text-4xl text-academic-outline/40" />}
         title="Sin proyectos asignados"
         description="Aún no tienes ningún proyecto asignado. Contacta con tu profesor si crees que es un error o espera a que se abran nuevas convocatorias."
       />
@@ -167,7 +167,7 @@ export function StudentAssignmentsSection({
           return (
             <article
               key={assignment.id}
-              className={`group flex h-full cursor-pointer flex-col rounded-[2rem] border bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-academic ${urgency.border}`}
+              className={`group flex h-full cursor-pointer flex-col rounded-[2rem] border bg-white p-6 shadow-academic transition-all duration-300 hover:-translate-y-1 hover:shadow-academic-lg ${urgency.border}`}
               onClick={() => handleSelect(assignment)}
             >
               <div className="flex items-start justify-between gap-4">
@@ -184,7 +184,7 @@ export function StudentAssignmentsSection({
               </div>
 
               <div className="mt-6 flex-1">
-                <h4 className="font-display text-2xl font-semibold tracking-tight text-academic-on-surface">
+                <h4 className="font-display text-2xl font-bold tracking-tight text-academic-on-surface">
                   {assignment.projectTitle}
                 </h4>
                 <p className="mt-3 text-sm leading-6 text-academic-on-surface-variant">

@@ -28,13 +28,13 @@ interface StudentKeyValueListProps {
 
 const SURFACE_TONE: Record<NonNullable<StudentSurfaceProps["tone"]>, string> = {
   default:
-    "border-academic-surface-variant bg-white shadow-sm",
+    "border-academic-surface-variant bg-white shadow-academic",
   accent:
     "border-brand-blue/10 bg-gradient-to-br from-white via-white to-brand-blue/5 shadow-academic",
   subtle:
-    "border-academic-surface-variant bg-academic-surface-container-lowest shadow-sm",
+    "border-academic-surface-variant bg-academic-surface-container-lowest shadow-academic",
   warm:
-    "border-academic-surface-variant bg-gradient-to-br from-white via-white to-academic-surface-container-low shadow-sm",
+    "border-academic-surface-variant bg-gradient-to-br from-white via-white to-academic-surface-container-low shadow-academic",
 };
 
 export function StudentSurface({

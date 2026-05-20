@@ -39,7 +39,7 @@ export function EvaluationProgressCard({
 
   return (
     <section
-      className="rounded-3xl border border-brand-blue/20 bg-brand-blue/5 p-6 shadow-sm"
+      className="rounded-3xl border border-brand-blue/20 bg-brand-blue/5 p-6 shadow-academic"
       aria-live="polite"
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -95,7 +95,7 @@ export function EvaluationProgressCard({
                   ? "border-brand-blue bg-white text-brand-blue-dark"
                   : reached
                     ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    : "border-white/70 bg-white/70 text-slate-500"
+                    : "border-white/70 bg-white/70 text-academic-outline"
               }`}
             >
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em]">

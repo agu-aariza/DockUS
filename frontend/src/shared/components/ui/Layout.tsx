@@ -9,11 +9,11 @@ interface CardProps {
 
 export function Card({ children, className = "", title, headerAction }: CardProps) {
   return (
-    <article className={`rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}>
+    <article className={`rounded-2xl border border-academic-outline/20 bg-white shadow-academic ${className}`}>
       {(title || headerAction) && (
-        <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-academic-outline/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           {title && (
-            <h4 className="text-sm font-semibold tracking-tight text-slate-900">
+            <h4 className="text-sm font-semibold tracking-tight text-academic-on-surface">
               {title}
             </h4>
           )}
@@ -31,16 +31,16 @@ interface BadgeProps {
 }
 
 const BADGE_STYLES = {
-  idle: "border-slate-200 bg-slate-100 text-slate-700",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  warning: "border-amber-200 bg-amber-50 text-amber-700",
-  danger: "border-rose-200 bg-rose-50 text-rose-700",
+  idle: "border-academic-outline-variant bg-academic-surface-container-low text-academic-on-surface-variant",
+  success: "border-emerald-600/20 bg-emerald-50 text-emerald-700",
+  warning: "border-amber-600/20 bg-amber-50 text-amber-700",
+  danger: "border-academic-error/20 bg-academic-error-container/40 text-academic-on-error-container",
 } as const;
 
 export function Badge({ children, variant = "idle" }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${BADGE_STYLES[variant]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-mono uppercase font-bold tracking-wider ${BADGE_STYLES[variant]}`}
     >
       {children}
     </span>

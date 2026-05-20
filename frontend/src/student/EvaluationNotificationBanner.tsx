@@ -75,7 +75,7 @@ export function EvaluationNotificationBanner({
       {notifications.length > 1 ? (
         <div className="flex justify-end">
           <button
-            className="text-xs font-medium text-slate-500 transition hover:text-slate-700"
+            className="text-xs font-semibold text-academic-outline transition hover:text-academic-on-surface"
             onClick={onDismissAll}
           >
             Descartar todas
@@ -90,10 +90,10 @@ export function EvaluationNotificationBanner({
         return (
           <div
             key={notification.id}
-            className={`relative rounded-2xl border p-4 shadow-sm transition-all ${config.bg} animate-in fade-in slide-in-from-top-2 duration-200`}
+            className={`relative rounded-2xl border p-4 shadow-academic-sm transition-all ${config.bg} animate-in fade-in slide-in-from-top-2 duration-200`}
           >
             <button
-              className="absolute right-3 top-3 text-slate-400 transition hover:text-slate-600"
+              className="absolute right-3 top-3 text-academic-outline transition hover:text-academic-on-surface-variant"
               onClick={() => onDismiss(notification.id)}
               aria-label="Descartar notificación"
             >
@@ -103,15 +103,15 @@ export function EvaluationNotificationBanner({
             <div className="flex items-start gap-3 pr-8">
               <Icon className={`mt-0.5 flex-shrink-0 text-2xl ${config.iconColor}`} />
               <div className="min-w-0 flex-1">
-                <h4 className="text-sm font-semibold text-slate-900">
+                <h4 className="text-sm font-bold text-academic-on-surface">
                   {config.label}
                 </h4>
-                <p className="mt-0.5 text-xs text-slate-600">
+                <p className="mt-0.5 text-xs text-academic-on-surface-variant">
                   <strong>v{notification.deliveryVersion}</strong> · {notification.projectTitle}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">{config.description}</p>
+                <p className="mt-1 text-xs text-academic-outline">{config.description}</p>
                 <button
-                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-indigo-600 transition hover:text-indigo-800"
+                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-brand-blue transition hover:text-brand-blue-dark"
                   onClick={() => onViewReport(notification.deliveryId)}
                 >
                   <RiFileTextLine />

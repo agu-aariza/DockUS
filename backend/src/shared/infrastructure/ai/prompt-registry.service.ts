@@ -13,6 +13,7 @@ export enum PromptId {
   EVAL = 'eval',
   REPAIR = 'repair',
   TECHNICAL_FEEDBACK = 'technical-feedback',
+  CHAT = 'chat',
 }
 
 @Injectable()

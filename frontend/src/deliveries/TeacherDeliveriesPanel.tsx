@@ -22,6 +22,7 @@ import {
 import { ReportView } from "../shared/components/ReportView";
 import { EmptyState } from "../shared/components/EmptyState";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";
+import { TeacherGradingStudio } from "../shared/components/TeacherGradingStudio";
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
 import { VisualPicker, type VisualPickerOption } from "../shared/components/ui/VisualPicker";
@@ -906,14 +907,48 @@ export function TeacherDeliveriesPanel({
           )}
         </section>
       </div>
-      <CodePreviewModal
-        isOpen={isPreviewModalOpen}
-        onClose={() => setIsPreviewModalOpen(false)}
-        title="Explorador de Entrega"
-        subtitle={`v${selectedDelivery?.version} — ${selectedDelivery?.studentName}`}
-        isLoading={isLoadingPreview}
-        files={previewFiles}
-      />
+      {dc.canWrite && selectedDelivery ? (
+        <TeacherGradingStudio
+          isOpen={isPreviewModalOpen}
+          onClose={() => setIsPreviewModalOpen(false)}
+          delivery={selectedDelivery}
+          reportRun={dc.reportRun}
+          files={previewFiles}
+          isLoadingFiles={isLoadingPreview}
+          onSubmitGrading={async (grade, graderNotes) => {
+            try {
+              await deliveriesApi.updateGrading(selectedDelivery.id, {
+                grade: grade.trim() ? Number(grade) : null,
+                graderNotes: graderNotes,
+              });
+              pushToast({
+                title: "Calificación guardada",
+                description: "La nota oficial ha sido consolidada.",
+                tone: "success",
+              });
+              setIsPreviewModalOpen(false);
+              await dc.refreshDeliveries();
+            } catch (error) {
+              pushToast({
+                title: "Error al calificar",
+                description: getErrorMessage(error),
+                tone: "error",
+              });
+            }
+          }}
+          initialGrade={dc.gradingForm.grade}
+          initialNotes={dc.gradingForm.graderNotes}
+        />
+      ) : (
+        <CodePreviewModal
+          isOpen={isPreviewModalOpen}
+          onClose={() => setIsPreviewModalOpen(false)}
+          title="Explorador de Entrega"
+          subtitle={`v${selectedDelivery?.version} — ${selectedDelivery?.studentName}`}
+          isLoading={isLoadingPreview}
+          files={previewFiles}
+        />
+      )}
     </div>
   );
 }

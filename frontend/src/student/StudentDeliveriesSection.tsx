@@ -30,7 +30,7 @@ interface Props {
 function renderGradeBadge(grade: number | null): JSX.Element {
   if (grade === null) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-sm italic text-slate-400">
+      <span className="inline-flex items-center gap-1.5 text-sm italic text-academic-outline">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
@@ -63,7 +63,7 @@ function renderGradeBadge(grade: number | null): JSX.Element {
 function renderOutcomeBadge(outcome: ReturnType<typeof resolveStudentRunOutcome>): JSX.Element {
   if (!outcome) {
     return (
-      <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">
+      <span className="inline-flex rounded-full border border-academic-outline-variant/30 bg-academic-surface-container px-2.5 py-0.5 text-xs font-semibold text-academic-outline">
         Sin run
       </span>
     );
@@ -76,7 +76,7 @@ function renderOutcomeBadge(outcome: ReturnType<typeof resolveStudentRunOutcome>
         ? "border-rose-200 bg-rose-50 text-rose-700"
         : outcome === "PARTIAL"
           ? "border-amber-200 bg-amber-50 text-amber-700"
-          : "border-slate-200 bg-slate-100 text-slate-700";
+          : "border-academic-outline-variant/30 bg-academic-surface-container text-academic-on-surface-variant";
 
   const label =
     outcome === "PASS"
@@ -168,6 +168,7 @@ export function StudentDeliveriesSection({
     );
   }
 
+  // Row derivation helper
   function deriveRow(delivery: DeliveryEntity) {
     const assignment =
       assignments.find((candidate) => candidate.id === delivery.assignmentId) ?? null;
@@ -260,12 +261,12 @@ export function StudentDeliveriesSection({
       ) : null}
 
       {filteredDeliveries.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
-          <RiInboxArchiveLine className="mx-auto text-4xl text-slate-400" />
-          <h3 className="mt-4 text-lg font-medium text-slate-900">
+        <div className="rounded-3xl border border-dashed border-academic-outline-variant/30 bg-academic-surface-container/20 px-6 py-12 text-center">
+          <RiInboxArchiveLine className="mx-auto text-4xl text-academic-outline/40" />
+          <h3 className="mt-4 text-lg font-bold text-academic-on-surface">
             Aún no hay entregas
           </h3>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-academic-on-surface-variant">
             No has realizado ninguna entrega para este proyecto.
           </p>
         </div>
@@ -295,7 +296,7 @@ export function StudentDeliveriesSection({
                     </span>
                     {renderOutcomeBadge(outcome)}
                     {delivery.isLate ? (
-                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                      <span className="inline-flex rounded-full border border-amber-100 bg-amber-50/70 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
                         Fuera de plazo
                       </span>
                     ) : null}
@@ -337,7 +338,7 @@ export function StudentDeliveriesSection({
             })}
           </div>
 
-          <div className="hidden overflow-hidden rounded-[2rem] border border-academic-surface-variant bg-white shadow-sm md:block">
+          <div className="hidden overflow-hidden rounded-[2rem] border border-academic-surface-variant bg-white shadow-academic md:block">
             <table className="min-w-full border-collapse text-left">
               <thead className="bg-academic-surface-container-lowest">
                 <tr className="border-b border-academic-surface-variant">
@@ -356,7 +357,7 @@ export function StudentDeliveriesSection({
                   const { workflow, retryAction, outcome } = deriveRow(delivery);
 
                   return (
-                    <tr key={delivery.id} className="align-top transition hover:bg-academic-surface-container-lowest">
+                    <tr key={delivery.id} className="align-top transition hover:bg-academic-surface-container/20">
                       <td className="px-5 py-5">
                         <div className="font-semibold text-academic-on-surface">
                           v{delivery.version}
