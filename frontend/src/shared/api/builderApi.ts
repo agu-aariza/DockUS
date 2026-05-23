@@ -101,6 +101,28 @@ export const builderApi = {
     return data;
   },
 
+  async getEvidenceContent(
+    buildRunId: string,
+    artifactId: string,
+  ): Promise<string> {
+    const { data } = await http.get<string>(
+      `/builder/runs/${buildRunId}/evidence/${artifactId}/content`,
+      { responseType: 'text' },
+    );
+    return data;
+  },
+
+  async getEvidenceContentAsBlob(
+    buildRunId: string,
+    artifactId: string,
+  ): Promise<Blob> {
+    const { data } = await http.get<Blob>(
+      `/builder/runs/${buildRunId}/evidence/${artifactId}/content`,
+      { responseType: 'blob' },
+    );
+    return data;
+  },
+
   async getQualityInsights(assignmentId: string): Promise<{
     totalDeliveriesAnalyzed: number;
     insights: Array<{ title: string; count: number; category: string }>;

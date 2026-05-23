@@ -9,7 +9,10 @@
     "test": "npm run test:compile && node ./scripts/run-node-tests.mjs",
     "test:compile": "tsc -p tsconfig.tests.json",
     "typecheck": "tsc -b",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src",
+    "knip": "knip",
+    "ts-pruner": "ts-pruner"
   },
   "dependencies": {
     "axios": "^1.8.2",
@@ -17,8 +20,8 @@
     "prism-react-renderer": "^2.4.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-markdown": "^10.1.0",
     "react-icons": "^5.6.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.14.0",
     "remark-gfm": "^4.0.1"
   },
@@ -31,8 +34,10 @@
     "autoprefixer": "^10.5.0",
     "eslint": "^9.18.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
+    "knip": "^5.88.1",
     "postcss": "^8.5.10",
     "tailwindcss": "^3.4.19",
+    "ts-pruner": "^1.2.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.10"
   }

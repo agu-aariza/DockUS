@@ -15,6 +15,9 @@ import {
   RiStackFill,
   RiStopLine,
   RiPlayLine,
+  RiEyeLine,
+  RiEyeOffLine,
+  RiDownloadLine,
 } from "react-icons/ri";
 
 const cn = (...classes: (string | boolean | undefined)[]) =>
@@ -65,10 +68,30 @@ interface BuilderLiveRunPaneProps {
   evidenceLoading?: boolean;
   evidenceError?: string | null;
   downloadingArtifactId?: string | null;
+  previewingArtifact?: {
+    id: string;
+    type: string;
+    contentType: string;
+    content: string;
+  } | null;
+  previewLoading?: string | null;
+  onPreviewArtifact?: (artifactId: string) => void;
+  onClosePreview?: () => void;
   onDownloadArtifact?: (artifactId: string) => void;
   onRefresh: () => void;
   onCancel: () => void;
   busyAction: string | null;
+}
+
+const PREVIEWABLE_CONTENT_TYPES = new Set([
+  "text/plain",
+  "text/plain; charset=utf-8",
+  "application/json",
+  "application/json; charset=utf-8",
+]);
+
+function isPreviewable(contentType: string): boolean {
+  return PREVIEWABLE_CONTENT_TYPES.has(contentType.toLowerCase());
 }
 
 function normalizeItems(values?: string[]): string[] {
@@ -106,6 +129,10 @@ export function BuilderLiveRunPane({
   evidenceLoading = false,
   evidenceError = null,
   downloadingArtifactId = null,
+  previewingArtifact = null,
+  previewLoading = null,
+  onPreviewArtifact,
+  onClosePreview,
   onDownloadArtifact,
   onRefresh,
   onCancel,
@@ -490,8 +517,8 @@ export function BuilderLiveRunPane({
                   Evidencias del run
                 </div>
                 <div className="text-xs text-academic-outline">
-                  Artefactos persistidos y descargables para auditoria del
-                  profesorado.
+                  Artefactos persistidos para auditoria del profesorado. Haz
+                  clic en "Ver" para inspeccionar en línea.
                 </div>
               </div>
               {selectedRun.isTerminal ? (
@@ -514,58 +541,138 @@ export function BuilderLiveRunPane({
                 {evidenceEmptyMessage}
               </div>
             ) : (
-              <div className="mt-4 grid gap-3 xl:grid-cols-2">
-                {evidenceArtifacts.map((artifact) => (
-                  <article
-                    key={artifact.id}
-                    className="rounded-2xl border border-academic-surface-variant bg-academic-surface p-4"
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-academic-on-surface">
-                          {formatArtifactLabel(artifact.type)}
-                        </div>
-                        <div className="mt-1 text-xs font-mono text-academic-outline">
-                          {artifact.type}
-                        </div>
-                      </div>
-                      <Button
-                        variant="secondary"
-                        className="px-4 py-2 text-xs"
-                        disabled={
-                          downloadingArtifactId === artifact.id ||
-                          typeof onDownloadArtifact !== "function"
-                        }
-                        onClick={() => onDownloadArtifact?.(artifact.id)}
-                      >
-                        {downloadingArtifactId === artifact.id
-                          ? "Preparando..."
-                          : "Descargar"}
-                      </Button>
-                    </div>
+              <>
+                <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                  {evidenceArtifacts.map((artifact) => {
+                    const previewing = previewingArtifact?.id === artifact.id;
+                    const loading = previewLoading === artifact.id;
+                    const canPreview = isPreviewable(artifact.contentType);
 
-                    <div className="mt-4 grid gap-2 text-xs text-academic-outline sm:grid-cols-3">
-                      <div>
-                        <span className="font-semibold text-academic-on-surface-variant">Tipo</span>
-                        <div>{artifact.contentType}</div>
+                    return (
+                      <article
+                        key={artifact.id}
+                        className={cn(
+                          "rounded-2xl border p-4 transition-all duration-200",
+                          previewing
+                            ? "border-brand-blue/40 bg-brand-blue/[0.03] ring-1 ring-brand-blue/20"
+                            : "border-academic-surface-variant bg-academic-surface hover:border-academic-outline-variant",
+                        )}
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-academic-on-surface">
+                              {formatArtifactLabel(artifact.type)}
+                            </div>
+                            <div className="mt-1 text-xs font-mono text-academic-outline">
+                              {artifact.type}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {canPreview ? (
+                              <Button
+                                variant={previewing ? "primary" : "secondary"}
+                                className="px-3 py-1.5 text-xs"
+                                disabled={loading}
+                                onClick={() => onPreviewArtifact?.(artifact.id)}
+                              >
+                                {loading ? (
+                                  <RiLoader4Line className="animate-spin" />
+                                ) : previewing ? (
+                                  <RiEyeOffLine />
+                                ) : (
+                                  <RiEyeLine />
+                                )}
+                                {loading
+                                  ? "Cargando..."
+                                  : previewing
+                                    ? "Ocultar"
+                                    : "Ver"}
+                              </Button>
+                            ) : null}
+                            <Button
+                              variant="ghost"
+                              className="px-3 py-1.5 text-xs"
+                              disabled={
+                                downloadingArtifactId === artifact.id ||
+                                typeof onDownloadArtifact !== "function"
+                              }
+                              onClick={() => onDownloadArtifact?.(artifact.id)}
+                            >
+                              <RiDownloadLine />
+                              {downloadingArtifactId === artifact.id
+                                ? "..."
+                                : "Descargar"}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid gap-2 text-xs text-academic-outline sm:grid-cols-3">
+                          <div>
+                            <span className="font-semibold text-academic-on-surface-variant">Tipo</span>
+                            <div>{artifact.contentType}</div>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-academic-on-surface-variant">Tamano</span>
+                            <div>{formatBytes(artifact.sizeBytes)}</div>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-academic-on-surface-variant">Creado</span>
+                            <div>{formatDate(artifact.createdAt)}</div>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {previewingArtifact ? (
+                  <div className="mt-4 animate-fade-in overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-xl">
+                    <div className="flex items-center justify-between border-b border-white/10 bg-slate-900/80 px-4 py-2.5">
+                      <div className="flex items-center gap-3">
+                        <div className="flex gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded-full bg-rose-500/80" />
+                          <div className="h-2.5 w-2.5 rounded-full bg-amber-500/80" />
+                          <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          {formatArtifactLabel(previewingArtifact.type)}
+                        </span>
+                        <span className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono text-slate-500">
+                          {previewingArtifact.contentType}
+                        </span>
                       </div>
-                      <div>
-                        <span className="font-semibold text-academic-on-surface-variant">Tamano</span>
-                        <div>{formatBytes(artifact.sizeBytes)}</div>
-                      </div>
-                      <div>
-                        <span className="font-semibold text-academic-on-surface-variant">Creado</span>
-                        <div>{formatDate(artifact.createdAt)}</div>
-                      </div>
+                      <button
+                        onClick={onClosePreview}
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-800 hover:text-white"
+                      >
+                        ×
+                      </button>
                     </div>
-                  </article>
-                ))}
-              </div>
+                    <pre className="custom-scrollbar max-h-[500px] overflow-auto p-4 font-mono text-[11px] leading-6 text-slate-300 selection:bg-brand-blue/30">
+                      <code>
+                        {previewingArtifact.contentType.includes("json")
+                          ? (() => {
+                              try {
+                                return JSON.stringify(
+                                  JSON.parse(previewingArtifact.content),
+                                  null,
+                                  2,
+                                );
+                              } catch {
+                                return previewingArtifact.content;
+                              }
+                            })()
+                          : previewingArtifact.content}
+                      </code>
+                    </pre>
+                  </div>
+                ) : null}
+              </>
             )}
           </section>
 
           <div className="grid gap-6 2xl:grid-cols-[0.95fr_1.05fr]">
-            <section className="min-w-0 rounded-2xl border border-academic-surface-variant/40 bg-slate-955 p-4 shadow-academic">
+            <section className="min-w-0 rounded-2xl border border-academic-surface-variant/40 bg-slate-950 p-4 shadow-academic">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
@@ -754,7 +861,7 @@ export function BuilderLiveRunPane({
                             <div className="mb-1 ml-1 text-[10px] font-bold uppercase tracking-widest text-academic-outline">
                               Payload Data
                             </div>
-                            <pre className="max-w-full overflow-x-auto rounded-xl border border-academic-surface-variant/40 bg-slate-955 p-3 text-[10px] text-academic-on-surface-variant shadow-inner">
+                            <pre className="max-w-full overflow-x-auto rounded-xl border border-academic-surface-variant/40 bg-slate-950 p-3 text-[10px] text-slate-300 shadow-inner">
                               {pretty(event.payload)}
                             </pre>
                           </div>

@@ -272,7 +272,7 @@ export function TeacherGradingStudio({
               </div>
             </header>
 
-            <div className="relative flex-1 overflow-auto bg-slate-955 custom-scrollbar">
+            <div className="relative flex-1 overflow-auto bg-slate-950 custom-scrollbar">
               {selectedFile ? (
                 <div className="flex min-h-full">
                   {/* Line Numbers */}

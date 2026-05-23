@@ -4,7 +4,7 @@ export interface GlossaryEntry {
   description: string;
 }
 
-export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
+const GLOSSARY_ENTRIES: GlossaryEntry[] = [
   {
     term: "E1",
     title: "Estado evaluativo 1",

@@ -112,6 +112,18 @@ export class BuilderService {
     );
   }
 
+  getEvidenceArtifactContent(
+    buildRunId: string,
+    artifactId: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ content: Buffer; contentType: string }> {
+    return this.builderRunQueriesService.getEvidenceArtifactContent(
+      buildRunId,
+      artifactId,
+      actor,
+    );
+  }
+
   createEvidenceDownloadUrl(
     buildRunId: string,
     artifactId: string,

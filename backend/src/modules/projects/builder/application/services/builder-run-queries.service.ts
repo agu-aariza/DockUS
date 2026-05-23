@@ -111,6 +111,22 @@ export class BuilderRunQueriesService {
     return this.filterArtifactsForActor(artifacts, actor);
   }
 
+  async getEvidenceArtifactContent(
+    buildRunId: string,
+    artifactId: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ content: Buffer; contentType: string }> {
+    await this.getRunById(buildRunId, actor);
+    const visibleArtifacts = this.filterArtifactsForActor(
+      await this.evidenceService.listArtifacts(buildRunId),
+      actor,
+    );
+    if (!visibleArtifacts.some((artifact) => artifact.id === artifactId)) {
+      throw new NotFoundException('Artefacto de evidencia no encontrado.');
+    }
+    return this.evidenceService.getArtifactContent(buildRunId, artifactId);
+  }
+
   async createEvidenceDownloadUrl(
     buildRunId: string,
     artifactId: string,

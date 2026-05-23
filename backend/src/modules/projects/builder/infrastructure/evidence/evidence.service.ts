@@ -54,6 +54,25 @@ export class EvidenceService {
     return artifacts.map((artifact) => this.toPublicArtifact(artifact));
   }
 
+  async getArtifactContent(
+    buildRunId: string,
+    artifactId: string,
+  ): Promise<{ content: Buffer; contentType: string }> {
+    const artifact = await this.artifactsRepository.findOne({
+      where: { id: artifactId, buildRunId },
+    });
+    if (!artifact) {
+      throw new NotFoundException('Artefacto de evidencia no encontrado.');
+    }
+
+    const content = await this.minioStorageService.getObjectBuffer(
+      artifact.bucket,
+      artifact.objectKey,
+    );
+
+    return { content, contentType: artifact.contentType };
+  }
+
   async createArtifactDownloadUrl(
     buildRunId: string,
     artifactId: string,

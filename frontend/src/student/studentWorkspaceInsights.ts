@@ -19,7 +19,7 @@ export interface StudentWorkspaceInsights {
 
 const ACTIVE_BUILD_STATUSES = new Set(["QUEUED", "RUNNING"]);
 
-export function hasTechnicalReport(
+function hasTechnicalReport(
   run: BuildRunEntity | null | undefined,
 ): boolean {
   return Boolean(run?.report || run?.llmAssessment);

@@ -44,7 +44,7 @@ function detectFamily(expectedType?: string | null): "python" | "c" | "generic" 
   return "generic";
 }
 
-export function buildSubmissionDiff(
+function buildSubmissionDiff(
   currentFiles: SubmissionPreviewFile[],
   previousFiles: Array<{ path: string }>,
 ): SubmissionPreviewDiff {

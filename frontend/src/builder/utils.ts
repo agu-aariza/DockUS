@@ -1,4 +1,4 @@
-import type { BuildRunEntity, BuildRunEvent } from "../shared/types";
+import type { BuildRunEvent } from "../shared/types";
 
 export function mergeEvents(
   current: BuildRunEvent[],
@@ -17,16 +17,3 @@ export function formatDate(value?: string | null): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-export function summarizeRun(run: BuildRunEntity | null): string {
-  if (!run) return "Sin run seleccionado.";
-  const assessment = run.llmAssessment;
-  return [
-    run.runKind,
-    run.status,
-    assessment?.structuralType ? `tipo ${assessment.structuralType}` : null,
-    assessment?.evaluativeState ? `estado ${assessment.evaluativeState}` : null,
-    run.activeStage ? `etapa ${run.activeStage}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}

@@ -393,19 +393,37 @@ export function TeacherDeliveriesPanel({
   }, [deliveries, requestedDeliveryId, selection.deliveryLabel, setDelivery, detailTab]);
 
   useEffect(() => {
-    if (!dc.selectedProjectId || !dc.selectedAssignmentId) {
+    // If the URL has values that don't match the current selection state,
+    // we are in the middle of syncing the URL to the selection state.
+    // Skip syncing back to avoid race conditions.
+    if (requestedProjectId && requestedProjectId !== dc.selectedProjectId) {
+      return;
+    }
+    if (requestedAssignmentId && requestedAssignmentId !== dc.selectedAssignmentId) {
+      return;
+    }
+    if (requestedDeliveryId && requestedDeliveryId !== dc.selectedDeliveryId) {
+      return;
+    }
+
+    if (!dc.selectedProjectId) {
       return;
     }
 
     const next = new URLSearchParams(searchParams);
     next.set("projectId", dc.selectedProjectId);
-    next.set("assignmentId", dc.selectedAssignmentId);
 
-    if (dc.selectedDeliveryId) {
-      next.set("deliveryId", dc.selectedDeliveryId);
-      next.set("tab", detailTab);
-    } else if (!requestedDeliveryId) {
-      // Only clear if neither local state nor URL has it
+    if (dc.selectedAssignmentId) {
+      next.set("assignmentId", dc.selectedAssignmentId);
+      if (dc.selectedDeliveryId) {
+        next.set("deliveryId", dc.selectedDeliveryId);
+        next.set("tab", detailTab);
+      } else {
+        next.delete("deliveryId");
+        next.delete("tab");
+      }
+    } else {
+      next.delete("assignmentId");
       next.delete("deliveryId");
       next.delete("tab");
     }
@@ -419,6 +437,8 @@ export function TeacherDeliveriesPanel({
     dc.selectedProjectId,
     detailTab,
     requestedDeliveryId,
+    requestedProjectId,
+    requestedAssignmentId,
     searchParams,
     setSearchParams,
   ]);

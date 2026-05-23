@@ -43,6 +43,13 @@ export function useRuntimeManagement(session: SessionRecord | null) {
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [evidenceError, setEvidenceError] = useState<string | null>(null);
   const [downloadingArtifactId, setDownloadingArtifactId] = useState<string | null>(null);
+  const [previewingArtifact, setPreviewingArtifact] = useState<{
+    id: string;
+    type: string;
+    contentType: string;
+    content: string;
+  } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState<string | null>(null);
   
   const [message, setMessage] = useState<NoticeState | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -211,24 +218,59 @@ export function useRuntimeManagement(session: SessionRecord | null) {
   }, [selectedRun?.isTerminal, selectedRunId]);
 
   const handleDownloadArtifact = async (artifactId: string) => {
-    if (!selectedRunId) {
-      return;
-    }
+    if (!selectedRunId) return;
 
     setDownloadingArtifactId(artifactId);
     try {
-      const { downloadUrl } = await builderApi.getEvidenceDownloadUrl(
+      const blob = await builderApi.getEvidenceContentAsBlob(
         selectedRunId,
         artifactId,
       );
+      const artifact = evidenceArtifacts.find((a) => a.id === artifactId);
+      const ext = artifact?.contentType?.includes("json") ? "json" : "txt";
+      const filename = `${artifact?.type ?? "artifact"}-${artifactId.slice(0, 8)}.${ext}`;
 
-      if (typeof window !== "undefined") {
-        window.open(downloadUrl, "_blank", "noopener,noreferrer");
-      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (e) {
       setMessage({ text: getErrorMessage(e), tone: "warning" });
     } finally {
       setDownloadingArtifactId(null);
+    }
+  };
+
+  const handlePreviewArtifact = async (artifactId: string) => {
+    if (!selectedRunId) return;
+
+    // Toggle off if already previewing this artifact
+    if (previewingArtifact?.id === artifactId) {
+      setPreviewingArtifact(null);
+      return;
+    }
+
+    setPreviewLoading(artifactId);
+    try {
+      const content = await builderApi.getEvidenceContent(
+        selectedRunId,
+        artifactId,
+      );
+      const artifact = evidenceArtifacts.find((a) => a.id === artifactId);
+      setPreviewingArtifact({
+        id: artifactId,
+        type: artifact?.type ?? "UNKNOWN",
+        contentType: artifact?.contentType ?? "text/plain",
+        content,
+      });
+    } catch (e) {
+      setMessage({ text: getErrorMessage(e), tone: "warning" });
+    } finally {
+      setPreviewLoading(null);
     }
   };
 
@@ -278,9 +320,10 @@ export function useRuntimeManagement(session: SessionRecord | null) {
     selectedDeliveryId, setSelectedDeliveryId,
     runtimeStatus, runsResponse, selectedRunId, setSelectedRunId, selectedRun, setSelectedRun,
     evidenceArtifacts, evidenceLoading, evidenceError, downloadingArtifactId,
+    previewingArtifact, setPreviewingArtifact, previewLoading,
     message, setMessage, busyAction, setBusyAction,
     streamState, latestSequence, streamError, liveEvents,
     handleStartRun, handleCancelRun, handleReconcile, loadRuns, refreshRuntimeStatus,
-    handleDownloadArtifact,
+    handleDownloadArtifact, handlePreviewArtifact,
   };
 }

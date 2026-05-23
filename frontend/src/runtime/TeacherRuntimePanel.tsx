@@ -1,5 +1,6 @@
 import {
   RiArrowRightUpLine,
+  RiCodeSSlashLine,
   RiLoader4Line,
   RiPlayLine,
   RiPulseFill,
@@ -13,13 +14,17 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import { BuilderLiveRunPane } from "../builder/components/BuilderLiveRunPane";
 import { BuilderRunsTable } from "../builder/components/BuilderRunsTable";
+import { CodePreviewModal } from "../shared/components/CodePreviewModal";
 import type {
   ProjectRuntimeEnvironmentStatus,
   SessionRecord,
 } from "../shared/types";
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
+import { useToast } from "../shared/toast/ToastContext";
 import { useRuntimeManagement } from "./hooks/useRuntimeManagement";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
+import { deliveriesApi } from "../shared/api/services";
+import { getErrorMessage } from "../shared/utils/errors";
 import { MetricCard } from "../shared/components/MetricCard";
 import { VisualPicker, type VisualPickerOption } from "../shared/components/ui/VisualPicker";
 import { ProjectSelectionHub, type ProjectHubOption } from "../shared/components/ui/ProjectSelectionHub";
@@ -50,6 +55,31 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
   const rc = useRuntimeManagement(session);
   const { selection, setProject, setAssignment, setDelivery, setRun } = useWorkspace();
   const [activeTab, setActiveTab] = useState<RuntimeTab>("control");
+  const { pushToast } = useToast();
+
+  // Code preview state
+  const [isCodePreviewOpen, setIsCodePreviewOpen] = useState(false);
+  const [codePreviewFiles, setCodePreviewFiles] = useState<Array<{ path: string; content: string }>>([]);
+  const [isLoadingCodePreview, setIsLoadingCodePreview] = useState(false);
+
+  const handleOpenCodePreview = async () => {
+    if (!rc.selectedDeliveryId) return;
+    setIsLoadingCodePreview(true);
+    setIsCodePreviewOpen(true);
+    try {
+      const files = await deliveriesApi.preview(rc.selectedDeliveryId);
+      setCodePreviewFiles(files);
+    } catch (error) {
+      pushToast({
+        title: "Error previsualizando código",
+        description: getErrorMessage(error),
+        tone: "error",
+      });
+      setIsCodePreviewOpen(false);
+    } finally {
+      setIsLoadingCodePreview(false);
+    }
+  };
 
   useNoticeToasts([rc.message], "Runtime");
 
@@ -407,16 +437,33 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
 
       {activeTab === "live" ? (
         <section className="animate-fade-in">
-          <div className="mb-6 px-2 flex items-center justify-between">
+           <div className="mb-6 px-2 flex items-center justify-between">
             <div>
               <h3 className="text-xl font-bold tracking-tight text-academic-on-surface">Ejecución en Vivo</h3>
               <p className="text-sm text-academic-on-surface-variant">Monitorización en tiempo real vía SSE.</p>
             </div>
-            {rc.selectedRunId && (
-               <div className="text-xs font-bold text-brand-maroon bg-brand-maroon/5 px-3 py-1.5 rounded-xl border border-brand-maroon/10">
-                 Run: {rc.selectedRunId.slice(0, 12)}
-               </div>
-            )}
+            <div className="flex items-center gap-3">
+              {rc.selectedDeliveryId && (
+                <Button
+                  variant="secondary"
+                  className="!h-9 px-4 text-xs"
+                  onClick={() => void handleOpenCodePreview()}
+                  disabled={isLoadingCodePreview}
+                >
+                  {isLoadingCodePreview ? (
+                    <RiLoader4Line className="animate-spin" />
+                  ) : (
+                    <RiCodeSSlashLine />
+                  )}
+                  Ver código
+                </Button>
+              )}
+              {rc.selectedRunId && (
+                <div className="text-xs font-bold text-brand-maroon bg-brand-maroon/5 px-3 py-1.5 rounded-xl border border-brand-maroon/10">
+                  Run: {rc.selectedRunId.slice(0, 12)}
+                </div>
+              )}
+            </div>
           </div>
           <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic min-h-[500px]">
             <BuilderLiveRunPane
@@ -428,6 +475,12 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
               evidenceLoading={rc.evidenceLoading}
               evidenceError={rc.evidenceError}
               downloadingArtifactId={rc.downloadingArtifactId}
+              previewingArtifact={rc.previewingArtifact}
+              previewLoading={rc.previewLoading}
+              onPreviewArtifact={(artifactId) =>
+                void rc.handlePreviewArtifact(artifactId)
+              }
+              onClosePreview={() => rc.setPreviewingArtifact(null)}
               onDownloadArtifact={(artifactId) =>
                 void rc.handleDownloadArtifact(artifactId)
               }
@@ -438,6 +491,15 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
           </div>
         </section>
       ) : null}
+
+      <CodePreviewModal
+        isOpen={isCodePreviewOpen}
+        onClose={() => setIsCodePreviewOpen(false)}
+        title="Código de la Entrega"
+        subtitle={`v${selectedDelivery?.version ?? "?"} — ${selectedDelivery?.studentEmail ?? "Selecciona una entrega"}`}
+        isLoading={isLoadingCodePreview}
+        files={codePreviewFiles}
+      />
     </div>
   );
 }

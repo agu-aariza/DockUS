@@ -188,7 +188,7 @@ export function composeQualityPrompt(
   );
 }
 
-export function composePromptSections(
+function composePromptSections(
   sections: PromptSectionInput[],
   maxChars: number,
 ): ComposedPromptPayload {

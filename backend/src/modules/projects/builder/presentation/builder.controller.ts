@@ -379,6 +379,40 @@ export class BuilderController {
   }
 
   @ApiOperation({
+    summary: 'Obtener contenido de un artefacto de evidencia',
+    description: 'Devuelve el contenido del artefacto directamente (proxy sobre MinIO). Evita exponer URLs internas al navegador.',
+  })
+  @ApiParam(BUILD_RUN_ID_PARAM)
+  @ApiParam({
+    name: 'artifactId',
+    description: 'UUID del artefacto de evidencia.',
+    example: '550e8400-e29b-41d4-a716-446655440001',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contenido del artefacto devuelto correctamente.',
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Get('runs/:buildRunId/evidence/:artifactId/content')
+  async getEvidenceContent(
+    @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
+    @Param('artifactId', ParseUUIDPipe) artifactId: string,
+    @Req() request: AuthenticatedRequest,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { content, contentType } =
+      await this.builderService.getEvidenceArtifactContent(
+        buildRunId,
+        artifactId,
+        request.user,
+      );
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', content.length);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(content);
+  }
+
+  @ApiOperation({
     summary: 'Obtener insights de calidad por assignment',
     description: 'Agrega patrones de calidad de todos los alumnos de un assignment.',
   })

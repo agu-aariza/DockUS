@@ -10,12 +10,6 @@ export type BuilderLlmSchemaVersion = typeof BUILDER_LLM_SCHEMA_VERSION;
 
 export const BUILDER_LLM_STAGES = ['plan', 'evaluation'] as const;
 export type BuilderLlmStage = (typeof BUILDER_LLM_STAGES)[number];
-export const BUILDER_LLM_PROMPT_STAGES = [
-  'plan',
-  'evaluation',
-  'quality',
-] as const;
-export type BuilderPromptStage = (typeof BUILDER_LLM_PROMPT_STAGES)[number];
 
 export type StructuralType = string;
 
@@ -209,7 +203,7 @@ export type CodeQualityCategory = (typeof CODE_QUALITY_CATEGORIES)[number];
 
 export type FindingSeverity = 'low' | 'medium' | 'high';
 
-export const FINDING_LEVELS = ['basico', 'intermedio', 'avanzado'] as const;
+const FINDING_LEVELS = ['basico', 'intermedio', 'avanzado'] as const;
 export type FindingLevel = (typeof FINDING_LEVELS)[number];
 
 export interface CodeQualityFinding {
