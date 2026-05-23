@@ -1,265 +1,145 @@
-# DockUS Frontend
+# DockUS — Frontend
 
-El frontend de DockUS es una consola React/Vite orientada a operación académica. No está planteado hoy como un portal de marketing ni como una aplicación pública generalista, sino como una superficie de trabajo para profesorado, administración y alumnado autenticado.
-
-## Objetivo del frontend
-
-La aplicación prioriza tres tareas:
-
-- navegar el dominio académico sin depender de UUIDs manuales;
-- lanzar y revisar runs del builder desde una experiencia guiada;
-- mantener herramientas técnicas auxiliares visibles para soporte y depuración.
+SPA (Single Page Application) construida con React 18 y Vite 5. Ofrece dos experiencias diferenciadas: una consola de trabajo para profesorado y administración, y un espacio personal para el alumnado con seguimiento en tiempo real del pipeline de evaluación.
 
 ## Stack
 
-| Área | Tecnología |
-| --- | --- |
-| UI | React 18 |
-| Bundler | Vite 5 |
-| Routing | `react-router-dom` |
-| Cliente HTTP | `axios` |
-| Lenguaje | TypeScript |
+| Tecnología | Rol |
+|-----------|-----|
+| React 18 + TypeScript 5.6 | UI y tipado |
+| Vite 5.4 | Bundler, HMR, code splitting |
+| React Router DOM 7 | Navegación client-side |
+| Axios 1.8 | Cliente HTTP con interceptores |
+| Tailwind CSS 3.4 | Estilos utility-first |
+| React Markdown 10 | Renderizado de informes LLM |
 
-## Rutas actuales
+## Rutas
 
-La shell principal vive en [`src/App.tsx`](./src/App.tsx) y expone estas rutas:
+### Alumno
 
-| Ruta | Propósito |
-| --- | --- |
-| `/auth` | Registro, login y cambio de sesión activa. |
-| `/projects` | Gestión de proyectos, asignaciones y suite docente. |
-| `/deliveries` | Flujo guiado de entregas e informe final. |
-| `/builder` | Historial, lanzamiento y seguimiento técnico de runs. |
-| `/users` | Herramienta operativa para administración de usuarios. |
-| `/storage` | Herramienta avanzada para inspección y subida de artefactos. |
+| Ruta | Panel |
+|------|-------|
+| `/mi-espacio` | Espacio personal: asignaciones, entregas, envío de código e informes |
 
-Si no hay sesión activa, la navegación queda bloqueada para módulos autenticados y el usuario es redirigido a `/auth`.
+### Profesor / Administrador
 
-## Modelo de sesión
+| Ruta | Panel |
+|------|-------|
+| `/resumen` | Dashboard con métricas de cohorte |
+| `/projects` | Gestión de proyectos, asignaciones y suite docente |
+| `/deliveries` | Revisión de entregas, calificación asistida por IA e informes |
+| `/runtime` | Lanzamiento y seguimiento del pipeline builder en tiempo real |
+| `/groups` | Gestión de grupos de curso y matrículas |
+| `/users` | Administración de usuarios *(solo ADMIN)* |
+| `/storage` | Inspección de objetos almacenados *(solo ADMIN)* |
 
-La aplicación soporta varias sesiones abiertas en paralelo dentro del navegador.
+La ruta `/` es el login. Sin sesión activa, el acceso a cualquier ruta autenticada redirige a `/`.
 
-Características:
+## Gestión de estado
 
-- persistencia de sesiones en cliente;
-- selección explícita de sesión activa;
-- cierre individual o masivo de sesiones;
-- aviso centralizado si el backend responde `401` o `403`.
+El frontend usa **Context API + hooks personalizados**, sin Redux ni Zustand:
 
-Esto es útil para validar distintos roles (`ADMIN`, `TEACHER`, `STUDENT`) sin reiniciar la app.
+| Contexto | Responsabilidad |
+|---------|----------------|
+| `SessionContext` | Sesiones múltiples, tokens JWT, auto-refresh de access token |
+| `WorkspaceContext` | Selección jerárquica Proyecto → Asignación → Entrega → Run |
+| `ToastContext` | Cola de notificaciones con deduplicación por fingerprint |
 
-## Experiencia funcional actual
+### Modelo de sesión
 
-### Proyectos
+La aplicación admite varias sesiones abiertas en paralelo dentro del mismo navegador (útil para validar distintos roles sin reiniciar):
 
-El panel de proyectos permite:
+- Persistencia en `localStorage`.
+- Selección de sesión activa en cualquier momento.
+- El interceptor de Axios renueva el `accessToken` automáticamente ante respuestas `401`, encolando las peticiones concurrentes hasta completar el refresco.
 
-- listar proyectos;
-- crear y editar metadatos;
-- cambiar estado funcional;
-- asignar estudiantes;
-- consultar progreso agregado;
-- subir o reemplazar la suite docente.
+## Capa de API
 
-### Entregas
+Ningún componente llama a Axios directamente. Todas las peticiones pasan por fachadas tipadas:
 
-El panel de entregas ofrece una ruta guiada:
+| Fachada | Endpoints cubiertos |
+|--------|-------------------|
+| `authApi` | `/auth/*` — login, registro, refresh |
+| `usersApi` | `/users/*` — CRUD y gestión de estado |
+| `projectsApi` | `/projects/*` — proyectos, runtime, insights |
+| `assignmentsApi` | `/assignments/*` — asignaciones individuales y bulk |
+| `deliveriesApi` | `/deliveries/*` — entregas, preview de código, calificación |
+| `builderApi` | `/builder/*` — runs, eventos, artefactos, cancelación |
 
-- proyecto -> asignación -> entrega;
-- creación y edición de entregas;
-- cambio de estado;
-- restauración y borrado lógico;
-- carga del informe final del último run disponible.
+Configuración del cliente HTTP: `src/shared/api/http.ts`  
+Fachadas de dominio: `src/shared/api/services.ts` y `src/shared/api/builderApi.ts`
 
-### Builder
+### Variable de entorno
 
-El panel builder está pensado como superficie técnica:
+```bash
+VITE_API_BASE_URL=http://localhost:3000/api   # valor por defecto
+```
 
-- selección guiada de proyecto, asignación y entrega;
-- lanzamiento de runs;
-- cancelación de runs activos;
-- histórico paginado por entrega;
-- timeline de eventos del run;
-- visualización del detalle persistido del run.
+## Streaming de eventos en tiempo real
 
-### Herramientas avanzadas
+El hook `useBuilderRunStream` sigue el progreso de un `BuildRun` con dos modos de transporte:
 
-- `Users`: administración y consulta de usuarios.
-- `Storage`: acceso operativo a objetos almacenados.
-- `JsonResult`: panel de depuración para ver payloads sin abstraerlos.
+1. **SSE (primario)** — `EventSource` sobre `/api/builder/runs/{id}/stream`
+2. **Polling (fallback)** — cada 3 segundos si el stream se interrumpe
 
-## Integración con la API
-
-### Base URL
-
-La aplicación usa:
-
-- `VITE_API_BASE_URL`
-
-Por defecto apunta a:
-
-- `http://localhost:3000/api`
-
-La configuración del cliente está en [`src/shared/api/http.ts`](./src/shared/api/http.ts).
-
-### Autenticación
-
-El token JWT se inyecta en cada petición mediante interceptor de Axios.
-
-Comportamiento relevante:
-
-- si la API devuelve `401` o `403`, el cliente emite una advertencia global de autenticación;
-- la UI no intenta refrescar tokens automáticamente;
-- la sesión activa se controla desde la shell principal.
-
-### Builder y eventos
-
-El frontend consume:
-
-- detalle de runs;
-- listado de runs por entrega;
-- backlog incremental de eventos.
-
-El hook [`src/builder/hooks/useBuilderRunStream.ts`](./src/builder/hooks/useBuilderRunStream.ts):
-
-- intenta abrir un stream SSE si el backend lo ofrece;
-- si no está disponible, cae a polling incremental sobre eventos.
-
-Eso permite mantener la UI funcional incluso cuando el backend sólo soporta el contrato de eventos paginados.
+Los eventos se dedupliclan por `id` y se ordenan por `sequence` antes de renderizarse en el timeline. Los estudiantes ven el progreso mapeado a etapas pedagógicas (`building`, `executing`, `evaluating`, `completed`…).
 
 ## Estructura del código
 
-```text
-frontend/
-├── src/
-│   ├── auth/
-│   ├── builder/
-│   │   ├── components/
-│   │   └── hooks/
-│   ├── deliveries/
-│   ├── projects/
-│   ├── shared/
-│   │   ├── api/
-│   │   ├── components/
-│   │   ├── session/
-│   │   └── utils/
-│   ├── storage/
-│   ├── users/
-│   ├── App.tsx
-│   └── main.tsx
-└── package.json
 ```
-
-## Directorios más importantes
-
-### `src/shared/`
-
-Contiene la base transversal del frontend:
-
-- tipos compartidos con el backend;
-- cliente HTTP;
-- gestión de sesión;
-- utilidades de errores y permisos;
-- componentes reutilizables.
-
-### `src/projects/`
-
-Panel de gestión de proyectos y tablero de progreso.
-
-### `src/deliveries/`
-
-Flujo guiado de entregas e informe final.
-
-### `src/builder/`
-
-Superficie técnica del builder:
-
-- control de runs,
-- tabla de histórico,
-- timeline en vivo,
-- hooks de eventos.
+frontend/src/
+├── shared/
+│   ├── api/             # Cliente HTTP y fachadas de API
+│   ├── session/         # SessionContext, sessionStore
+│   ├── workspace/       # WorkspaceContext
+│   ├── toast/           # ToastContext
+│   ├── components/      # Componentes reutilizables y primitivas UI
+│   ├── data/            # Glosario pedagógico (E1-E4, C1-C6, T1-T4)
+│   └── types.ts         # Tipos de dominio compartidos con el backend
+├── builder/
+│   ├── components/      # BuilderLiveRunPane (timeline + consola + artefactos)
+│   └── hooks/           # useBuilderRunStream
+├── projects/            # Panel de gestión de proyectos
+├── deliveries/          # Panel de entregas y calificación
+├── runtime/             # Panel de ejecución (TeacherRuntimePanel)
+├── student/             # Espacio del alumno, hooks y validación de entregas
+├── App.tsx              # Router principal + layout
+└── main.tsx             # Entry point
+```
 
 ## Desarrollo local
 
-### Instalar dependencias
+### Requisitos
+
+- Node.js 22, npm 10+
+- Backend de DockUS accesible en `VITE_API_BASE_URL`
+
+### Comandos
 
 ```bash
-cd frontend
+# Instalar dependencias
 npm install
-```
 
-### Ejecutar en desarrollo
-
-```bash
+# Servidor de desarrollo (puerto 5173)
 npm run dev
-```
 
-### Construcción de producción
-
-```bash
+# Build de producción (typecheck + bundle)
 npm run build
-```
 
-### Preview local
-
-```bash
+# Preview de la build generada
 npm run preview
+
+# Comprobación de tipos sin generar ficheros
+npm run typecheck
+
+# Linting
+npm run lint
 ```
 
-## Scripts disponibles
+Lo más cómodo para un entorno completo es ejecutar el `docker compose` de la raíz del repositorio.
 
-| Script | Propósito |
-| --- | --- |
-| `npm run dev` | Arranca Vite en desarrollo. |
-| `npm run build` | Ejecuta `tsc -b` y luego `vite build`. |
-| `npm run preview` | Sirve localmente la build generada. |
+## Convenciones
 
-## Requisitos
-
-- Node.js 22
-- npm 10+
-- backend de DockUS accesible
-
-Para un entorno completo, lo más cómodo es ejecutar el `docker compose` de la raíz del repositorio.
-
-## Convenciones operativas
-
-- La aplicación usa TypeScript estricto suficiente para el uso actual, pero no hay un sistema de tests frontend todavía.
-- La validación principal del frontend hoy es la build de Vite/TypeScript.
-- Los tipos del builder en [`src/shared/types.ts`](./src/shared/types.ts) deben mantenerse alineados con los DTOs del backend.
-- Cuando cambien contratos de API, revisa a la vez:
-  - `src/shared/types.ts`,
-  - `src/shared/api/`,
-  - componentes que consumen el módulo afectado.
-
-## Estado actual y límites
-
-- El frontend está optimizado para escritorio y operación técnica interna.
-- La navegación actual sigue siendo una consola de trabajo; no pretende ocultar toda la complejidad del backend.
-- Algunas pantallas exponen payloads JSON de depuración a propósito para acelerar validación funcional.
-- La ruta `/builder` sigue siendo el centro técnico del seguimiento de runs; `Entregas` consume el informe final y no duplica toda la telemetría.
-
-## Relación con el backend
-
-El frontend depende especialmente de estos contratos:
-
-- `/api/auth/*`
-- `/api/projects/*`
-- `/api/deliveries/*`
-- `/api/storage/*`
-- `/api/builder/*`
-- `/api/users/*`
-- `/api/health/*`
-
-Swagger del backend:
-
-- [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
-
-## Recomendación de trabajo
-
-Si vas a tocar esta app de forma seria:
-
-1. arranca primero backend y frontend;
-2. valida el flujo con al menos un usuario `TEACHER` y uno `STUDENT`;
-3. confirma la build final con `npm run build`;
-4. si cambias contratos del builder, verifica también el panel de entregas y el panel builder.
+- Los tipos en `src/shared/types.ts` deben mantenerse alineados con los DTOs del backend. Cuando cambie un contrato de API, revisar a la vez los tipos, la fachada correspondiente y los componentes consumidores.
+- La validación principal es la propia build de TypeScript + Vite. No hay suite de tests de componentes todavía.
+- La aplicación está optimizada para escritorio (≥ 1280 px). El layout es responsivo con sidebar en drawer en móvil.

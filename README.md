@@ -1,227 +1,145 @@
 # DockUS
 
-DockUS es una plataforma académica para gestionar proyectos, asignaciones, entregas y evaluación automática desde una consola orientada a profesorado. El repositorio contiene un backend en NestJS, un frontend en React/Vite y una infraestructura local basada en PostgreSQL, Redis, MinIO, Ollama y ejecución aislada del builder sobre Docker.
-
-La iteración actual está enfocada en un flujo `teacher-first`: preparar el proyecto, asignar alumnado, recibir entregas, lanzar runs del builder y leer un informe técnico estructurado sin salir de la aplicación.
-
-## Estado actual
-
-- Backend HTTP en NestJS 11 con JWT, RBAC, TypeORM, BullMQ y OpenAPI.
-- Frontend React 18 + Vite con rutas operativas para `Projects`, `Deliveries`, `Builder`, `Users` y `Storage`.
-- Builder Python-first con:
-  - planificación asistida por LLM,
-  - autocorrección limitada de build/deploy,
-  - análisis estático con `ruff` y `bandit`,
-  - informe final con feedback técnico estructurado.
-- Persistencia de código y suites docentes en MinIO.
-- Ejecución asíncrona de runs mediante Redis + BullMQ.
-- CI con build de frontend y build + tests de backend.
+Plataforma académica de evaluación automática de proyectos de programación. Permite a profesores crear proyectos, asignar estudiantes, recibir entregas y obtener informes de evaluación generados mediante un pipeline LLM que combina análisis estático, ejecución aislada en Docker y evaluación con modelos de lenguaje locales (Ollama).
 
 ## Arquitectura de alto nivel
 
 ```mermaid
 graph TD
-    UI["Frontend React / Vite"]
-    API["Backend NestJS"]
+    UI["Frontend — React 18 / Vite 5"]
+    API["Backend — NestJS 11"]
     DB["PostgreSQL"]
     RQ["Redis + BullMQ"]
     S3["MinIO"]
-    LLM["Ollama"]
-    RT["Docker runtime"]
+    LLM["Ollama (Qwen / DeepSeek)"]
+    RT["Docker Engine"]
 
-    UI -->|HTTP / JWT| API
+    UI -->|REST / JWT| API
     API --> DB
     API --> RQ
     API --> S3
     API --> LLM
     API --> RT
-    RQ -->|jobs builder| API
+    RQ -->|jobs asíncronos| API
 ```
 
 ## Componentes del repositorio
 
-| Componente | Propósito |
-| --- | --- |
-| [`backend/`](./backend/README.md) | API, dominio, colas, builder, storage y observabilidad. |
-| [`frontend/`](./frontend/README.md) | Consola operativa para profesorado y alumnado. |
-| [`docker-compose.yml`](./docker-compose.yml) | Stack local completo para desarrollo y pruebas manuales. |
-| [`.github/workflows/backend-ci.yml`](./.github/workflows/backend-ci.yml) | Workflow de CI para build y test básicos. |
-
-## Modelo funcional actual
-
-### Dominio
-
-- `Project`: define el proyecto académico, su estado y el máximo de entregas por alumno.
-- `ProjectAssignment`: vincula proyecto y estudiante.
-- `Delivery`: representa una entrega versionada de una asignación.
-- `StorageObject`: guarda artefactos en MinIO, principalmente código de alumno y suite docente.
-- `BuildRun`: registra una ejecución del builder asociada a una entrega.
-
-### Flujo principal
-
-1. Un profesor crea un proyecto.
-2. Asigna estudiantes al proyecto.
-3. Sube la suite docente de tests al proyecto.
-4. El alumnado crea una entrega y sube su código.
-5. Profesor o alumno lanza un `BuildRun` sobre la entrega.
-6. El builder analiza, construye, ejecuta, valida y limpia.
-7. El informe final queda embebido en el detalle del run.
-
-## Builder: comportamiento real hoy
-
-El builder no crea clústeres ni namespaces. En el estado actual:
-
-- usa una `workspace network` persistente por proyecto,
-- crea una `execution network` efímera por run,
-- ejecuta contenedores batch, de servicio, healthchecks y tests sobre Docker,
-- aplica limpieza inmediata al final del run y recolección de residuos etiquetados,
-- persiste evidencias y reporte al final del run.
-
-Además:
-
-- si el build o el arranque fallan por dependencias faltantes de entorno, intenta reparar la receta con un bucle acotado de self-healing;
-- la revisión estática alimenta al evaluador con hallazgos de `ruff`, `bandit` y heurísticas propias;
-- el frontend consume historial y detalle de runs, y sigue el timeline mediante eventos incrementales.
+| Componente | Descripción |
+|-----------|-------------|
+| [`backend/`](./backend/README.md) | API NestJS: dominio académico, pipeline builder, colas BullMQ, almacenamiento MinIO |
+| [`frontend/`](./frontend/README.md) | SPA React: consola de trabajo para profesorado, administración y alumnado |
+| [`docker-compose.yml`](./docker-compose.yml) | Stack local completo para desarrollo |
+| [`docker-compose.gpu.yml`](./docker-compose.gpu.yml) | Override para aceleración GPU (NVIDIA) en Ollama |
+| [`.github/workflows/`](./.github/workflows/) | CI: build y tests de frontend y backend |
 
 ## Requisitos
 
-### Requisitos mínimos
+| Requisito | Versión mínima |
+|-----------|---------------|
+| Docker + docker compose | Reciente estable |
+| Node.js (desarrollo fuera de Docker) | 22 |
+| npm | 10+ |
 
-- Docker y `docker compose`
-- Node.js 22 si se quiere ejecutar backend o frontend fuera de contenedores
-- npm 10+
+Para usar el builder fuera de Docker Compose se necesita además: Docker daemon accesible, `python3`, `pip`, `ruff` y `bandit`.
 
-### Requisitos adicionales para usar el builder fuera de Docker Compose
-
-- Docker daemon accesible desde el proceso backend
-- `python3`
-- `pip`
-- `ruff`
-- `bandit`
-
-En la práctica, el camino más sencillo para arrancar todo el entorno es `docker compose`.
-
-## Arranque rápido con Docker Compose
-
-1. Copia la configuración base:
+## Inicio rápido
 
 ```bash
+# 1. Configurar entorno
 cp .env.example .env
-```
 
-2. Arranca la plataforma:
-
-```bash
+# 2. Levantar el stack completo
 docker compose up --build
 ```
 
-3. Abre los servicios principales:
+| Servicio | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:3000/api |
+| Swagger UI | http://localhost:3000/api/docs |
+| MinIO Console | http://localhost:9001 |
+| Ollama | http://localhost:11435 |
 
-- Frontend: [http://localhost:5173](http://localhost:5173)
-- Backend API: [http://localhost:3000/api](http://localhost:3000/api)
-- Swagger: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
-- MinIO Console: [http://localhost:9001](http://localhost:9001)
-- Ollama expuesto al host: `http://localhost:11435`
+> La primera subida puede tardar varios minutos: `ollama-bootstrap` descarga el modelo base y genera los modelos derivados de planificación y evaluación.
 
-### Qué levanta el compose
-
-- `postgres`
-- `redis`
-- `minio`
-- `ollama`
-- `ollama-bootstrap`
-- `backend`
-- `frontend`
-
-La primera subida puede tardar más porque `ollama-bootstrap` descarga el modelo base y crea los modelos derivados para planificación y evaluación.
-
-### Arranque con GPU para Ollama
-
-Si tu host tiene GPU NVIDIA y quieres que DockUS ejecute Ollama usando VRAM, arranca Compose con el override GPU:
+### Aceleración GPU (NVIDIA)
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 ```
 
-Requisitos adicionales para este modo:
+Requiere drivers NVIDIA, `nvidia-smi` operativo y NVIDIA Container Toolkit instalado para Docker.
 
-- drivers NVIDIA funcionales en el host;
-- `nvidia-smi` operativo en el host;
-- NVIDIA Container Toolkit instalado para Docker.
-
-El archivo [`docker-compose.gpu.yml`](./docker-compose.gpu.yml) expone la GPU al servicio `ollama` mediante reservas de dispositivo de Docker Compose. El resto de servicios no cambian.
-
-## Ejecución manual por separado
-
-### Backend
+## Ejecución en desarrollo (sin Docker)
 
 ```bash
-cd backend
-npm install
-npm run start:dev
+# Backend
+cd backend && npm install && npm run start:dev
+
+# Frontend (en otra terminal)
+cd frontend && npm install && npm run dev
 ```
 
-### Frontend
+Asegúrate de que PostgreSQL, Redis, MinIO y Ollama estén disponibles y alineados con las variables del `.env`.
+
+## Verificación
 
 ```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Si no usas Docker Compose, asegúrate de que PostgreSQL, Redis, MinIO y el tooling del builder estén disponibles y alineados con el `.env`.
-
-## Verificación recomendada
-
-```bash
-cd backend && npm run build
-cd backend && npm test -- --runInBand
+cd backend  && npm run build
+cd backend  && npm test -- --runInBand
 cd frontend && npm run build
 ```
 
-El backend compila a `backend/dist`. Los tests del backend usan un wrapper que fija temporales y caché en `/tmp` en Linux para evitar problemas por rutas del host.
-
-Si vienes de una configuración antigua y al arrancar fuera de Docker ves errores tipo `EACCES` sobre `backend/dist`, detén los contenedores y limpia los artefactos generados legacy antes de recompilar:
+Si aparecen errores `EACCES` sobre `backend/dist` al ejecutar fuera de Docker tras haberlo ejecutado dentro, elimina los artefactos generados por los contenedores:
 
 ```bash
 docker compose down
 rm -rf backend/dist backend/compiled-output backend/compiled backend/build
 ```
 
-Esas carpetas contienen solo salida generada y se regeneran automáticamente.
+## Flujo principal
+
+```
+Profesor crea proyecto  →  Asigna estudiantes  →  Sube suite de tests
+        ↓
+Alumno sube entrega (ZIP)
+        ↓
+Profesor / Alumno lanza BuildRun
+        ↓
+Pipeline builder (asíncrono, BullMQ):
+  1. Planificación LLM   — analiza código, infiere receta Docker
+  2. Ejecución Docker    — instala dependencias, lanza tests
+  3. Evaluación LLM      — genera informe con nota recomendada
+  4. Calidad de código   — ruff, bandit + análisis LLM
+        ↓
+Informe pedagógico disponible en el panel de entregas
+```
 
 ## CI
 
-El workflow actual valida:
+El workflow valida en cada push:
 
-- `frontend`: `npm ci` + `npm run build`
-- `backend`: `npm ci` + `npm run build` + `npm test -- --runInBand`
-
-Archivo relevante:
-
-- [`.github/workflows/backend-ci.yml`](./.github/workflows/backend-ci.yml)
+- **frontend**: `npm ci` + `npm run build`
+- **backend**: `npm ci` + `npm run build` + `npm test -- --runInBand`
 
 ## Estructura del repositorio
 
-```text
+```
 DockUS/
-├── backend/                # API y dominio
-├── frontend/               # Consola React/Vite
-├── .github/workflows/      # CI
+├── backend/                # API NestJS y pipeline builder
+├── frontend/               # SPA React/Vite
+├── fixtures/               # Proyectos de ejemplo para tests
+├── .github/workflows/      # Pipelines de CI
 ├── docker-compose.yml      # Stack local completo
-└── .env.example            # Configuración base
+├── docker-compose.gpu.yml  # Override GPU para Ollama
+└── .env.example            # Plantilla de configuración
 ```
 
-## Documentación por componente
+## Notas
 
-- [Backend README](./backend/README.md)
-- [Frontend README](./frontend/README.md)
-
-## Notas importantes
-
-- El backend aplica prefijo global `/api`.
-- Swagger se expone fuera de producción.
-- El builder actual está optimizado para proyectos Python.
-- La aceleración GPU de Ollama está soportada a través de [`docker-compose.gpu.yml`](./docker-compose.gpu.yml) y está pensada para hosts Linux con NVIDIA.
-- El reporte final se obtiene desde el detalle del run; no existe un endpoint separado de informe.
-- La infraestructura descrita en el repositorio es la realmente soportada hoy; cualquier evolución hacia runtime por proyecto, clúster dedicado o streaming SSE completo debe considerarse trabajo futuro hasta que el código lo implemente.
+- El backend aplica el prefijo global `/api` a todos los endpoints.
+- Swagger (`/api/docs`) solo se expone fuera de producción.
+- El builder está optimizado para proyectos Python; soporte para C y Node.js en curso.
+- Los informes finales se obtienen desde el detalle del `BuildRun`; no existe un endpoint de informe independiente.
+- En producción se recomienda `BUILDER_DOCKER_RUNTIME=runsc` (gVisor) para mayor aislamiento.
