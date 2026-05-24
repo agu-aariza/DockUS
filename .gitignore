@@ -26,3 +26,14 @@ docs/
 
 # Casos de uso
 fixtures/*
+graphify-out/*
+.agents/*
+.codex/*
+AGENTS.md
+academic-project-bank/*
+results/*
+dockus-test-kit/*
+.claude/*
+CLAUDE.md   
+fixtures-error/*
+academic_proyects/*
