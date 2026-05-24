@@ -155,20 +155,58 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
               <RiSearch2Line className="text-3xl text-academic-secondary" />
             </div>
             <h3 className="font-display text-xl font-bold tracking-tight text-academic-on-surface mb-2">Motor de Búsqueda de Objetos</h3>
-            <p className="text-academic-on-surface-variant text-sm font-medium mb-8 max-w-lg mx-auto">Consulta el registro global de artefactos filtrando por identificador de entrega o metadatos de subida.</p>
+            <p className="text-academic-on-surface-variant text-sm font-medium mb-8 max-w-lg mx-auto">Consulta el registro global de artefactos filtrando por proyecto, entrega o ejecución.</p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left mb-8">
-              <div className="space-y-4">
+              <div className="space-y-4 col-span-2 sm:col-span-1">
                 <div>
-                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">ID Entrega (Opcional)</label>
-                  <input className="input-field" placeholder="Introduce UUID..." value={sc.query.deliveryId} onChange={e => sc.setQuery(p => ({ ...p, deliveryId: e.target.value }))} />
+                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Proyecto</label>
+                  <select 
+                    className="input-field" 
+                    value={sc.query.projectId} 
+                    onChange={e => sc.setQuery(p => ({ ...p, projectId: e.target.value }))}
+                  >
+                    <option value="">-- Todos los Proyectos --</option>
+                    {sc.projectsList.map(p => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Subido Desde</label>
-                  <input type="date" className="input-field" value={sc.query.createdFrom} onChange={e => sc.setQuery(p => ({ ...p, createdFrom: e.target.value }))} />
+                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Entrega (Versión / Alumno)</label>
+                  <select 
+                    className="input-field" 
+                    value={sc.query.deliveryId} 
+                    disabled={!sc.query.projectId}
+                    onChange={e => sc.setQuery(p => ({ ...p, deliveryId: e.target.value }))}
+                  >
+                    <option value="">-- Todas las Entregas --</option>
+                    {sc.deliveriesList.map(d => (
+                      <option key={d.id} value={d.id}>
+                        V{d.version} - {d.studentName || ''} ({d.status})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Ejecución (Run / Estado)</label>
+                  <select 
+                    className="input-field" 
+                    value={sc.query.runId} 
+                    disabled={!sc.query.deliveryId}
+                    onChange={e => sc.setQuery(p => ({ ...p, runId: e.target.value }))}
+                  >
+                    <option value="">-- Todos los Runs --</option>
+                    {sc.runsList.map(r => (
+                      <option key={r.id} value={r.id}>
+                        Run {r.id.substring(0,8)} - {r.status} ({new Date(r.createdAt).toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
-              <div className="space-y-4">
+              
+              <div className="space-y-4 col-span-2 sm:col-span-1">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Página</label>
@@ -178,6 +216,10 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
                     <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Límite</label>
                     <input type="number" className="input-field" value={sc.query.limit} onChange={e => sc.setQuery(p => ({ ...p, limit: e.target.value }))} />
                   </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Subido Desde</label>
+                  <input type="date" className="input-field" value={sc.query.createdFrom} onChange={e => sc.setQuery(p => ({ ...p, createdFrom: e.target.value }))} />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Subido Hasta</label>
@@ -204,51 +246,103 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
             <h3 className="ui-label">Objetos Persistidos</h3>
           </div>
           
-          {sc.listResponse ? (
+          {sc.unifiedItems && sc.unifiedItems.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-[10px] font-black text-academic-outline uppercase tracking-[0.2em] border-b border-academic-surface-variant/40 bg-academic-surface-container-lowest/20">
                     <th className="px-6 py-4">Ficha Técnica</th>
-                    <th className="px-6 py-4">Dimensiones</th>
+                    <th className="px-6 py-4">Asociación</th>
+                    <th className="px-6 py-4">Tamaño / Tipo</th>
                     <th className="px-6 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-academic-surface-variant/40">
-                  {sc.listResponse.data.map((item) => (
-                    <tr key={item.id} className="group hover:bg-academic-surface transition-all duration-300">
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-5">
-                          <div className="h-10 w-10 rounded-xl bg-academic-primary/10 flex items-center justify-center text-academic-primary text-lg border border-academic-primary/10 shrink-0 group-hover:scale-105 transition-transform">
-                            <RiDatabase2Fill />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-sm font-bold text-academic-on-surface group-hover:text-academic-primary transition-colors truncate">
-                              {item.logicalName}
+                  {sc.unifiedItems.map((item) => {
+                    const isRunArtifact = item.itemType === 'run_artifact';
+                    return (
+                      <tr key={`${item.itemType}-${item.id}`} className="group hover:bg-academic-surface transition-all duration-300">
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-5">
+                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-lg border shrink-0 group-hover:scale-105 transition-transform ${
+                              isRunArtifact 
+                                ? 'bg-academic-secondary/10 text-academic-secondary border-academic-secondary/15'
+                                : item.contentType.includes('zip')
+                                  ? 'bg-academic-primary/10 text-academic-primary border-academic-primary/15'
+                                  : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/15'
+                            }`}>
+                              {isRunArtifact ? <RiFileList3Fill /> : <RiDatabase2Fill />}
                             </div>
-                            <div className="text-[10px] font-mono text-academic-outline mt-1 uppercase tracking-tighter truncate">
-                              UUID: {item.id}
+                            <div className="min-w-0">
+                              <div className="text-sm font-bold text-academic-on-surface group-hover:text-academic-primary transition-colors truncate">
+                                {item.logicalName}
+                              </div>
+                              <div className="text-[10px] font-mono text-academic-outline mt-1 uppercase tracking-tighter truncate flex gap-2">
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold tracking-widest ${
+                                  isRunArtifact ? 'bg-academic-secondary/10 text-academic-secondary' : 'bg-academic-primary/10 text-academic-primary'
+                                }`}>
+                                  {isRunArtifact ? 'LOG/REPORT' : 'SOURCE'}
+                                </span>
+                                <span>ID: {item.id.substring(0, 16)}...</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-3">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-academic-surface text-academic-on-surface-variant text-[10px] font-black uppercase tracking-widest border border-academic-surface-variant/60">
-                            {item.sizeBytes > 1024 * 1024 ? `${(item.sizeBytes / (1024 * 1024)).toFixed(2)} MB` : `${(item.sizeBytes / 1024).toFixed(1)} KB`}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 text-right">
-                        <button 
-                          className="p-2 text-academic-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                          onClick={() => { sc.setActionId(item.id); sc.setDangerAction('DELETE'); sc.setConfirmOpen(true); }}
-                        >
-                          <RiDeleteBin7Line className="text-lg" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="text-xs space-y-1">
+                            {item.projectName && (
+                              <div className="font-semibold text-academic-on-surface">{item.projectName}</div>
+                            )}
+                            {item.deliveryVersion !== undefined && (
+                              <div className="text-[10px] text-academic-outline">
+                                Entrega V{item.deliveryVersion} 
+                                {item.studentName ? ` • ${item.studentName}` : ''}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex flex-col gap-1">
+                            <span className="inline-flex items-center w-fit px-2 py-0.5 rounded-full bg-academic-surface text-academic-on-surface-variant text-[10px] font-bold border border-academic-surface-variant/60">
+                              {item.sizeBytes > 1024 * 1024 ? `${(item.sizeBytes / (1024 * 1024)).toFixed(2)} MB` : `${(item.sizeBytes / 1024).toFixed(1)} KB`}
+                            </span>
+                            <span className="text-[9px] font-mono text-academic-outline max-w-[150px] truncate">
+                              {item.contentType}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Vista Previa Button */}
+                            <button
+                              className="px-3 py-1.5 text-[11px] font-bold text-academic-primary hover:bg-academic-primary/10 rounded-lg transition-all"
+                              onClick={() => { void sc.handlePreview(item); }}
+                            >
+                              Vista Previa
+                            </button>
+
+                            {/* Download Button */}
+                            <button
+                              className="px-3 py-1.5 text-[11px] font-bold text-academic-on-surface hover:bg-academic-surface-variant/40 rounded-lg transition-all"
+                              onClick={() => { void sc.handleDownloadItem(item); }}
+                            >
+                              Descargar
+                            </button>
+
+                            {/* Delete Button (Only for storage objects and authorized roles) */}
+                            {!isRunArtifact && sc.canSoftDelete && (
+                              <button 
+                                className="p-2 text-academic-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                onClick={() => { sc.setActionId(item.id); sc.setDangerAction('DELETE'); sc.setConfirmOpen(true); }}
+                              >
+                                <RiDeleteBin7Line className="text-lg" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -262,6 +356,76 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
           )}
         </div>
       ) : null}
+
+      {/* Vista Previa Modal */}
+      {sc.previewTitle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="card w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 bg-academic-surface-container-lowest">
+            <div className="p-6 border-b border-academic-surface-variant/40 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-academic-primary uppercase tracking-widest">Previsualizador de Artefactos</span>
+                <h3 className="font-display text-lg font-bold text-academic-on-surface mt-0.5">{sc.previewTitle}</h3>
+              </div>
+              <button 
+                onClick={() => { sc.setPreviewTitle(''); sc.setPreviewContent(null); }}
+                className="p-2 hover:bg-academic-surface-variant/40 rounded-xl transition-colors font-bold text-academic-outline"
+              >
+                Cerrar
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 font-mono text-xs text-academic-on-surface bg-academic-surface-container-lowest/30">
+              {sc.previewLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <div className="animate-spin rounded-full h-10 w-10 border-2 border-academic-primary border-t-transparent" />
+                  <div className="text-xs font-bold text-academic-outline">Procesando y extrayendo contenido...</div>
+                </div>
+              ) : sc.previewContent === null ? (
+                <div className="text-center py-20 text-academic-outline italic">No se pudo cargar la vista previa.</div>
+              ) : typeof sc.previewContent === 'string' ? (
+                <pre className="whitespace-pre-wrap bg-academic-surface/40 p-4 rounded-xl border border-academic-surface-variant/30 overflow-x-auto max-h-[50vh] text-left leading-relaxed">
+                  {sc.previewContent}
+                </pre>
+              ) : Array.isArray(sc.previewContent) ? (
+                <div className="space-y-6">
+                  <div className="text-[10px] font-black uppercase text-academic-outline tracking-wider">Archivos contenidos en el paquete ZIP ({sc.previewContent.length}):</div>
+                  <div className="space-y-4">
+                    {sc.previewContent.map((file, i) => (
+                      <details key={i} className="group border border-academic-surface-variant/30 rounded-xl bg-academic-surface/20 overflow-hidden transition-all">
+                        <summary className="p-4 font-bold text-xs text-academic-on-surface hover:bg-academic-surface-variant/20 cursor-pointer flex items-center justify-between list-none">
+                          <span className="flex items-center gap-2">
+                            <RiFileList3Fill className="text-academic-primary" />
+                            {file.path}
+                          </span>
+                          <span className="text-[10px] text-academic-primary font-black uppercase tracking-wider group-open:hidden">Desplegar</span>
+                          <span className="text-[10px] text-academic-outline font-black uppercase tracking-wider hidden group-open:inline">Contraer</span>
+                        </summary>
+                        <div className="p-4 border-t border-academic-surface-variant/30 bg-academic-surface-container-lowest">
+                          <pre className="whitespace-pre-wrap overflow-x-auto text-left leading-relaxed text-[11px] max-h-[40vh]">
+                            {file.content || <span className="italic text-academic-outline">[Archivo vacío]</span>}
+                          </pre>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-20 text-academic-outline italic">Formato de vista previa no soportado.</div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-academic-surface-variant/40 flex items-center justify-end bg-academic-surface-container-lowest/40">
+              <Button 
+                variant="primary"
+                onClick={() => { sc.setPreviewTitle(''); sc.setPreviewContent(null); }}
+                className="px-6 py-2 rounded-xl"
+              >
+                Cerrar Vista Previa
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DangerConfirmModal
         open={sc.confirmOpen}

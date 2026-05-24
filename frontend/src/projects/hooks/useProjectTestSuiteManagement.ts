@@ -32,15 +32,17 @@ export function useProjectTestSuiteManagement({
     }
   };
 
-  const handleFetchTestSuite = async (silent = false) => {
+  const handleFetchTestSuite = async (silent = false, signal?: AbortSignal) => {
     if (!canWrite || !selectedProjectId) return;
     try {
-      const response = await projectsApi.getTestSuite(selectedProjectId);
+      const response = await projectsApi.getTestSuite(selectedProjectId, signal);
+      if (signal?.aborted) return;
       setTestSuiteResult(response);
       if (!silent) {
         setSuiteNotice({ text: "Suite docente recuperada.", tone: "info" });
       }
     } catch (error) {
+      if (signal?.aborted) return;
       if (!silent) {
         setSuiteNotice({ text: getErrorMessage(error), tone: "warning" });
       }
@@ -59,11 +61,13 @@ export function useProjectTestSuiteManagement({
   };
 
   useEffect(() => {
-    if (selectedProjectId) {
-      handleFetchTestSuite(true);
-    } else {
+    if (!selectedProjectId) {
       setTestSuiteResult(null);
+      return;
     }
+    const controller = new AbortController();
+    handleFetchTestSuite(true, controller.signal);
+    return () => controller.abort();
   }, [selectedProjectId]);
 
   useEffect(() => {

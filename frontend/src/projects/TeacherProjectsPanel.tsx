@@ -234,24 +234,21 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
   );
 
   useEffect(() => {
-    if (selection.projectId && pc.projects?.data) {
-      if (pc.selectedProjectId !== selection.projectId) {
-        const exists = pc.projects.data.some(p => p.id === selection.projectId);
-        if (exists) {
-          pc.setSelectedProjectId(selection.projectId);
-        }
+    if (!selection.projectId) {
+      if (pc.selectedProjectId) {
+        pc.setSelectedProjectId("");
+      }
+      if (detailMode !== "selected-project") {
+        setDetailMode("selected-project");
+      }
+    } else if (pc.projects?.data) {
+      const exists = pc.projects.data.some(p => p.id === selection.projectId);
+      if (exists && pc.selectedProjectId !== selection.projectId) {
+        pc.setSelectedProjectId(selection.projectId);
+        setDetailMode("selected-project");
       }
     }
-  }, [selection.projectId, pc.projects?.data]);
-
-  useEffect(() => {
-    if (pc.selectedProject && pc.selectedProject.id !== selection.projectId) {
-      setProject(pc.selectedProject.id, pc.selectedProject.title);
-    }
-    if (!pc.selectedProject && detailMode !== "new-project" && selection.projectId) {
-      clearWorkspace();
-    }
-  }, [clearWorkspace, detailMode, pc.selectedProject, selection.projectId, setProject]);
+  }, [selection.projectId, pc.projects?.data, pc.selectedProjectId, detailMode]);
 
   useEffect(() => {
     setAssignmentSearch("");
@@ -303,6 +300,10 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
     pc.setSelectedProjectId(projectId);
     setDetailMode("selected-project");
     setActiveSubTab(nextTab);
+    const proj = pc.projects?.data.find(p => p.id === projectId);
+    if (proj) {
+      setProject(proj.id, proj.title);
+    }
   };
 
   const handleDownloadSuite = async () => {

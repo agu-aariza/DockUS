@@ -8,7 +8,9 @@ import {
   RiArrowRightSLine,
   RiSearch2Line,
   RiCheckLine,
-  RiLoader4Line
+  RiLoader4Line,
+  RiSubtractLine,
+  RiCloseLine
 } from "react-icons/ri";
 import { useWorkspace } from "./WorkspaceContext";
 import { projectsApi, assignmentsApi, deliveriesApi, builderApi } from "../api/services";
@@ -34,8 +36,12 @@ function statusColor(status: string): string {
 }
 
 export function WorkspaceBar(): JSX.Element | null {
-  const { selection, clearWorkspace, setProject, setAssignment, setDelivery, setRun } = useWorkspace();
+  const { selection, clearWorkspace, setProject, setAssignment, setDelivery, setRun, isMinimized, setIsMinimized } = useWorkspace();
   const navigate = useNavigate();
+
+  const handleMinimizeToggle = () => {
+    setIsMinimized(!isMinimized);
+  };
 
   const [openPicker, setOpenPicker] = useState<PickerType>(null);
   const [projects, setProjects] = useState<ProjectEntity[]>([]);
@@ -139,6 +145,10 @@ export function WorkspaceBar(): JSX.Element | null {
     setOpenPicker(prev => prev === type ? null : type);
   };
 
+  if (isMinimized) {
+    return null;
+  }
+
   return (
     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-500 max-w-[95%] sm:max-w-none" ref={pickerRef}>
       <div className="flex items-center gap-1 bg-slate-900/90 backdrop-blur-3xl border border-white/10 p-1.5 rounded-full shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)]">
@@ -233,6 +243,25 @@ export function WorkspaceBar(): JSX.Element | null {
             </button>
           </div>
         )}
+
+        {/* Global Controls */}
+        <div className="h-5 w-px bg-white/15 mx-1.5 self-center" />
+        
+        <button
+          onClick={handleMinimizeToggle}
+          className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          title="Minimizar barra"
+        >
+          <RiSubtractLine className="text-base" />
+        </button>
+
+        <button
+          onClick={() => clearWorkspace()}
+          className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer mr-1"
+          title="Limpiar todo el contexto"
+        >
+          <RiCloseLine className="text-base" />
+        </button>
       </div>
 
       {/* Popover List */}

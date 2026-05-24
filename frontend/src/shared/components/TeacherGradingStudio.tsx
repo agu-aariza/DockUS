@@ -12,8 +12,6 @@ import {
   RiInformationLine,
   RiLoader4Line,
   RiAwardFill,
-  RiChat3Line,
-  RiSendPlane2Fill,
   RiSave2Line,
 } from "react-icons/ri";
 import { useState, useMemo } from "react";
@@ -52,25 +50,7 @@ export function TeacherGradingStudio({
   const [graderNotes, setGraderNotes] = useState(initialNotes);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Mock chat state for premium interaction feel
-  const [chatMessages, setChatMessages] = useState<Array<{ sender: "tutor" | "student" | "system"; text: string; time: string }>>([
-    {
-      sender: "system",
-      text: "Pipeline de evaluación técnica finalizado automáticamente.",
-      time: "Ayer, 16:45",
-    },
-    {
-      sender: "student",
-      text: "Hola profesor, he corregido los problemas de concurrencia y he subido la v" + delivery.version + ". ¿Podría revisarlo?",
-      time: "Hoy, 09:30",
-    },
-    {
-      sender: "tutor",
-      text: "Revisando. Veo que el reporte de IA indica un estado " + (reportRun?.llmAssessment?.evaluativeState ?? "E2") + ". Validemos los ficheros.",
-      time: "Hoy, 10:15",
-    },
-  ]);
-  const [newMessage, setNewMessage] = useState("");
+
 
   const filteredFiles = useMemo(() => {
     return files.filter((f) =>
@@ -120,19 +100,7 @@ export function TeacherGradingStudio({
     URL.revokeObjectURL(url);
   };
 
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        sender: "tutor",
-        text: newMessage,
-        time: "Ahora",
-      },
-    ]);
-    setNewMessage("");
-  };
+
 
   const handleSaveGrading = async () => {
     setIsSaving(true);
@@ -146,7 +114,7 @@ export function TeacherGradingStudio({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-academic-surface text-academic-on-surface antialiased animate-fade-in">
+    <div className="fixed inset-0 z-[120] flex flex-col bg-academic-surface text-academic-on-surface antialiased animate-fade-in">
       {/* Header Bar */}
       <header className="flex items-center justify-between border-b border-academic-outline-variant bg-white px-6 py-4 shadow-academic">
         <div className="flex items-center gap-4">
@@ -382,65 +350,7 @@ export function TeacherGradingStudio({
               </Button>
             </form>
 
-            {/* Tutor-Student Discussion */}
-            <div className="border-t border-academic-outline-variant pt-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <RiChat3Line className="text-xl text-brand-maroon" />
-                <h4 className="font-display font-bold text-base text-brand-maroon">
-                  Discusión y Auditoría
-                </h4>
-              </div>
 
-              <div className="space-y-3 rounded-2xl bg-academic-surface p-4 max-h-[220px] overflow-y-auto border border-academic-outline-variant">
-                {chatMessages.map((msg, index) => {
-                  if (msg.sender === "system") {
-                    return (
-                      <div key={index} className="text-center py-1 border-b border-academic-outline-variant/30">
-                        <span className="text-[9px] font-bold text-academic-outline uppercase tracking-wider">
-                          {msg.text} · {msg.time}
-                        </span>
-                      </div>
-                    );
-                  }
-                  const isTutor = msg.sender === "tutor";
-                  return (
-                    <div
-                      key={index}
-                      className={`flex flex-col max-w-[85%] ${
-                        isTutor ? "ml-auto items-end" : "mr-auto items-start"
-                      }`}
-                    >
-                      <div
-                        className={`rounded-2xl px-3 py-2 text-xs leading-relaxed ${
-                          isTutor
-                            ? "bg-brand-maroon text-white"
-                            : "bg-academic-surface-container text-academic-on-surface-variant"
-                        }`}
-                      >
-                        {msg.text}
-                      </div>
-                      <span className="text-[9px] text-academic-outline mt-1 px-1">
-                        {isTutor ? "Tú" : "Alumno"} · {msg.time}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Chat Input */}
-              <form onSubmit={handleSendChat} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enviar comentario al alumno..."
-                  className="flex-1 rounded-xl border border-academic-outline-variant bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand-maroon"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                />
-                <Button type="submit" variant="secondary" className="!h-9 !w-9 !p-0">
-                  <RiSendPlane2Fill className="text-base text-brand-maroon" />
-                </Button>
-              </form>
-            </div>
           </div>
         </section>
       </div>

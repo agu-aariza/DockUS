@@ -286,6 +286,9 @@ export interface StorageObjectEntity {
   hash: string;
   createdAt: string;
   uploaderId: string;
+  projectName?: string;
+  deliveryVersion?: number;
+  studentName?: string;
 }
 
 export interface DownloadUrlResponse {

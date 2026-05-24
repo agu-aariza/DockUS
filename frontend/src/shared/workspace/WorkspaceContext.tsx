@@ -18,6 +18,8 @@ interface WorkspaceContextValue {
   setDelivery: (id: string, label?: string) => void;
   setRun: (id: string) => void;
   clearWorkspace: () => void;
+  isMinimized: boolean;
+  setIsMinimized: (min: boolean) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -141,14 +143,25 @@ export function WorkspaceProvider({ children }: PropsWithChildren): JSX.Element 
     setSelection(DEFAULT_SELECTION);
   };
 
+  const [isMinimized, setIsMinimizedState] = useState(() => {
+    return localStorage.getItem("dockus_workspace_bar_minimized") === "true";
+  });
+
+  const setIsMinimized = (min: boolean) => {
+    setIsMinimizedState(min);
+    localStorage.setItem("dockus_workspace_bar_minimized", String(min));
+  };
+
   const value = useMemo(() => ({
     selection,
     setProject,
     setAssignment,
     setDelivery,
     setRun,
-    clearWorkspace
-  }), [selection]);
+    clearWorkspace,
+    isMinimized,
+    setIsMinimized,
+  }), [selection, isMinimized]);
 
   return (
     <WorkspaceContext.Provider value={value}>

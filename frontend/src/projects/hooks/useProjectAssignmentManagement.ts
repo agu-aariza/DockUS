@@ -48,10 +48,12 @@ export function useProjectAssignmentManagement({
   const refreshAssignments = async (
     projectId = selectedProjectId,
     options?: { silent?: boolean; noticeText?: string },
+    signal?: AbortSignal,
   ) => {
     if (!canWrite || !projectId) return;
     try {
-      const response = await assignmentsApi.listByProject(projectId);
+      const response = await assignmentsApi.listByProject(projectId, signal);
+      if (signal?.aborted) return;
       setAssignmentsResult(response);
       if (!options?.silent) {
         setAssignmentNotice({
@@ -61,17 +63,20 @@ export function useProjectAssignmentManagement({
       }
       setDebugPayload(response);
     } catch (error) {
+      if (signal?.aborted) return;
       setAssignmentNotice({ text: getErrorMessage(error), tone: "warning" });
     }
   };
 
   const refreshGroups = async (
     options?: { silent?: boolean; noticeText?: string },
+    signal?: AbortSignal,
   ) => {
     if (!canWrite) return;
     setLoadingGroups(true);
     try {
-      const response = await groupsApi.list();
+      const response = await groupsApi.list(signal);
+      if (signal?.aborted) return;
       setGroups(response);
       setDebugPayload(response);
       setFocusedGroupId((current) =>
@@ -86,6 +91,7 @@ export function useProjectAssignmentManagement({
         });
       }
     } catch (error) {
+      if (signal?.aborted) return;
       setAssignmentNotice({ text: getErrorMessage(error), tone: "warning" });
     } finally {
       setLoadingGroups(false);
@@ -316,7 +322,9 @@ export function useProjectAssignmentManagement({
 
   useEffect(() => {
     if (!canWrite) return;
-    void refreshGroups({ silent: true });
+    const controller = new AbortController();
+    void refreshGroups({ silent: true }, controller.signal);
+    return () => controller.abort();
   }, [canWrite]);
 
   useEffect(() => {
@@ -328,7 +336,9 @@ export function useProjectAssignmentManagement({
     setSelectedGroupIds([]);
     setBulkStudentEmails("");
     if (canWrite) {
-      void refreshAssignments(selectedProjectId, { silent: true });
+      const controller = new AbortController();
+      void refreshAssignments(selectedProjectId, { silent: true }, controller.signal);
+      return () => controller.abort();
     }
   }, [canWrite, selectedProjectId]);
 

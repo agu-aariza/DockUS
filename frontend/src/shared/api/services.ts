@@ -238,9 +238,10 @@ export const projectsApi = {
     return data;
   },
 
-  async getTestSuite(projectId: string): Promise<StorageObjectEntity> {
+  async getTestSuite(projectId: string, signal?: AbortSignal): Promise<StorageObjectEntity> {
     const { data } = await http.get<StorageObjectEntity>(
       `/projects/${projectId}/test-suite`,
+      { signal },
     );
     return data;
   },
@@ -448,9 +449,10 @@ export const assignmentsApi = {
     return data;
   },
 
-  async listByProject(projectId: string): Promise<ProjectAssignmentEntity[]> {
+  async listByProject(projectId: string, signal?: AbortSignal): Promise<ProjectAssignmentEntity[]> {
     const { data } = await http.get<ProjectAssignmentEntity[]>(
       `/projects/${projectId}/assignments`,
+      { signal },
     );
     return data;
   },
@@ -469,8 +471,8 @@ export const assignmentsApi = {
 };
 
 export const groupsApi = {
-  async list(): Promise<CourseGroupEntity[]> {
-    const { data } = await http.get<CourseGroupEntity[]>('/groups');
+  async list(signal?: AbortSignal): Promise<CourseGroupEntity[]> {
+    const { data } = await http.get<CourseGroupEntity[]>('/groups', { signal });
     return data;
   },
 

@@ -1,7 +1,9 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { deliveriesApi, projectsApi } from "../shared/api/services";
+import { builderApi, deliveriesApi, projectsApi } from "../shared/api/services";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";
+import { TeacherGradingStudio } from "../shared/components/TeacherGradingStudio";
+import { useManagementPermissions } from "../shared/session/useManagementPermissions";
 import {
   RiAwardLine,
   RiCheckboxCircleLine,
@@ -31,6 +33,7 @@ import {
 import type { TeacherDeliveryDetailTab } from "../deliveries/teacherReviewNavigation";
 import type {
   BuilderOutcome,
+  BuildRunEntity,
   DeliveryEntity,
   DeliveryStatus,
   ProjectEntity,
@@ -151,12 +154,32 @@ export function ProgressDashboard({
     }
   }, [selectedProjectId]);
 
+  const { canWrite } = useManagementPermissions(session);
+  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryEntity | null>(null);
+  const [selectedReportRun, setSelectedReportRun] = useState<BuildRunEntity | null>(null);
+
   const handlePreview = async (deliveryId: string) => {
     setIsLoadingPreview(true);
     setIsPreviewModalOpen(true);
+    setSelectedDelivery(null);
+    setSelectedReportRun(null);
     try {
       const files = await deliveriesApi.preview(deliveryId);
       setPreviewFiles(files);
+
+      const delivery = await deliveriesApi.detail(deliveryId);
+      setSelectedDelivery(delivery);
+
+      try {
+        const runs = await builderApi.listByDelivery({ deliveryId, limit: 1, sortOrder: "DESC" });
+        const latestRun = runs.data[0] ?? null;
+        if (latestRun) {
+          const fullRun = await builderApi.detail(latestRun.id);
+          setSelectedReportRun(fullRun);
+        }
+      } catch (err) {
+        console.error("Error loading run report:", err);
+      }
     } catch (error) {
       pushToast({
         title: "Error previsualizando",
@@ -808,14 +831,50 @@ export function ProgressDashboard({
         </div>
       )}
 
-      <CodePreviewModal
-        isOpen={isPreviewModalOpen}
-        onClose={() => setIsPreviewModalOpen(false)}
-        title="Explorador de Entrega"
-        subtitle="Previsualizando código enviado por el alumno"
-        isLoading={isLoadingPreview}
-        files={previewFiles}
-      />
+      {canWrite && selectedDelivery ? (
+        <TeacherGradingStudio
+          isOpen={isPreviewModalOpen}
+          onClose={() => setIsPreviewModalOpen(false)}
+          delivery={selectedDelivery}
+          reportRun={selectedReportRun}
+          files={previewFiles}
+          isLoadingFiles={isLoadingPreview}
+          onSubmitGrading={async (grade, graderNotes) => {
+            try {
+              await deliveriesApi.updateGrading(selectedDelivery.id, {
+                grade: grade.trim() ? Number(grade) : null,
+                graderNotes: graderNotes,
+              });
+              pushToast({
+                title: "Calificación guardada",
+                description: "La nota oficial ha sido consolidada.",
+                tone: "success",
+              });
+              setIsPreviewModalOpen(false);
+              if (projectId.trim()) {
+                await fetchDashboard(projectId.trim(), groupFilter);
+              }
+            } catch (error) {
+              pushToast({
+                title: "Error al calificar",
+                description: getErrorMessage(error),
+                tone: "error",
+              });
+            }
+          }}
+          initialGrade={selectedDelivery.grade !== null ? String(selectedDelivery.grade) : ""}
+          initialNotes={extractLegacyAiEvidence(selectedDelivery.graderNotes).manualNotes ?? ""}
+        />
+      ) : (
+        <CodePreviewModal
+          isOpen={isPreviewModalOpen}
+          onClose={() => setIsPreviewModalOpen(false)}
+          title="Explorador de Entrega"
+          subtitle={selectedDelivery ? `v${selectedDelivery.version} — ${selectedDelivery.studentName}` : "Previsualizando código enviado por el alumno"}
+          isLoading={isLoadingPreview}
+          files={previewFiles}
+        />
+      )}
     </div>
   );
 }

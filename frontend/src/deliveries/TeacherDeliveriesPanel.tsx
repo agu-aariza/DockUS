@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   RiAlertLine,
@@ -234,6 +234,17 @@ export function TeacherDeliveriesPanel({
   const [searchParams, setSearchParams] = useSearchParams();
   const dc = useDeliveryManagement(session, { initialDeliveryId: searchParams.get("deliveryId") });
   const { selection, setProject, setAssignment, setDelivery } = useWorkspace();
+  const lastSyncedRef = useRef<{
+    projectId: string | null;
+    assignmentId: string | null;
+    deliveryId: string | null;
+    tab: string | null;
+  }>({
+    projectId: null,
+    assignmentId: null,
+    deliveryId: null,
+    tab: null,
+  });
   const deliveries = dc.deliveries?.data ?? [];
   const [detailTab, setDetailTab] = useState<DetailTab>(() => 
     normalizeTeacherDeliveryTab(searchParams.get("tab"))
@@ -278,21 +289,17 @@ export function TeacherDeliveriesPanel({
     if (quickFilterKey === "pass") return delivery.grade !== null && delivery.grade >= 5;
     return true;
   };
-  const visibleDeliveries = deliveries
-    .filter(quickFilterFn)
-    .filter((delivery) =>
-      normalizedSearch
-        ? [
-            delivery.studentEmail,
-            delivery.studentName,
-            delivery.projectTitle,
-            delivery.status,
-            `v${delivery.version}`,
-          ]
-            .filter(Boolean)
-            .some((value) => value.toLowerCase().includes(normalizedSearch))
-        : true,
-    );
+
+  const visibleDeliveries = useMemo(() => {
+    return deliveries
+      .filter(quickFilterFn)
+      .filter(d => 
+        !normalizedSearch ||
+        d.studentEmail.toLowerCase().includes(normalizedSearch) ||
+        (d.studentName?.toLowerCase().includes(normalizedSearch) ?? false) ||
+        new Date(d.createdAt).toLocaleDateString().includes(normalizedSearch)
+      );
+  }, [deliveries, normalizedSearch, quickFilterKey]);
 
   const handleQuickGrade = async (deliveryId: string, grade: number) => {
     try {
@@ -330,35 +337,123 @@ export function TeacherDeliveriesPanel({
     }
   };
 
-  // 1. Sync Workspace Selection from URL (Immediate ID sync)
-  // We omit selection.* from dependencies to prevent infinite loops when local state updates the URL.
+  // Synchronize URL and Workspace Selection robustly to prevent feedback/flip-flop loops
   useEffect(() => {
-    if (requestedProjectId && selection.projectId !== requestedProjectId) {
-      setProject(requestedProjectId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestedProjectId, setProject]);
+    const lastSynced = lastSyncedRef.current;
 
-  useEffect(() => {
-    if (requestedAssignmentId && selection.assignmentId !== requestedAssignmentId) {
-      setAssignment(requestedAssignmentId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestedAssignmentId, setAssignment]);
+    // A. Detect URL query param changes
+    const urlChanged = 
+      requestedProjectId !== lastSynced.projectId ||
+      requestedAssignmentId !== lastSynced.assignmentId ||
+      requestedDeliveryId !== lastSynced.deliveryId;
 
-  useEffect(() => {
-    if (requestedDeliveryId && selection.deliveryId !== requestedDeliveryId) {
-      setDelivery(requestedDeliveryId);
+    if (urlChanged) {
+      // Sync URL -> Workspace
+      if (requestedProjectId && selection.projectId !== requestedProjectId) {
+        setProject(requestedProjectId);
+      }
+      if (requestedAssignmentId && selection.assignmentId !== requestedAssignmentId) {
+        setAssignment(requestedAssignmentId);
+      }
+      if (requestedDeliveryId && selection.deliveryId !== requestedDeliveryId) {
+        setDelivery(requestedDeliveryId);
+      }
+      
+      // Update synced ref to URL values
+      lastSyncedRef.current = {
+        projectId: requestedProjectId,
+        assignmentId: requestedAssignmentId,
+        deliveryId: requestedDeliveryId,
+        tab: requestedDetailTab,
+      };
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestedDeliveryId, setDelivery]);
 
-  // 2. Sync Tab from URL
-  useEffect(() => {
-    if (requestedDetailTab !== detailTab) {
-      setDetailTab(requestedDetailTab);
+    // B. Detect Workspace selection changes
+    const workspaceChanged =
+      selection.projectId !== lastSynced.projectId ||
+      selection.assignmentId !== lastSynced.assignmentId ||
+      selection.deliveryId !== lastSynced.deliveryId ||
+      detailTab !== lastSynced.tab;
+
+    if (workspaceChanged) {
+      // Sync Workspace -> URL
+      if (!selection.projectId) return;
+
+      const next = new URLSearchParams(searchParams);
+      let nextChanged = false;
+
+      if (next.get("projectId") !== selection.projectId) {
+        next.set("projectId", selection.projectId);
+        nextChanged = true;
+      }
+
+      if (selection.assignmentId) {
+        if (next.get("assignmentId") !== selection.assignmentId) {
+          next.set("assignmentId", selection.assignmentId);
+          nextChanged = true;
+        }
+        if (selection.deliveryId) {
+          if (next.get("deliveryId") !== selection.deliveryId) {
+            next.set("deliveryId", selection.deliveryId);
+            nextChanged = true;
+          }
+          if (next.get("tab") !== detailTab) {
+            next.set("tab", detailTab);
+            nextChanged = true;
+          }
+        } else {
+          if (next.has("deliveryId")) {
+            next.delete("deliveryId");
+            nextChanged = true;
+          }
+          if (next.has("tab")) {
+            next.delete("tab");
+            nextChanged = true;
+          }
+        }
+      } else {
+        if (next.has("assignmentId")) {
+          next.delete("assignmentId");
+          nextChanged = true;
+        }
+        if (next.has("deliveryId")) {
+          next.delete("deliveryId");
+          nextChanged = true;
+        }
+        if (next.has("tab")) {
+          next.delete("tab");
+          nextChanged = true;
+        }
+      }
+
+      // Update synced ref to Workspace values
+      lastSyncedRef.current = {
+        projectId: selection.projectId,
+        assignmentId: selection.assignmentId,
+        deliveryId: selection.deliveryId,
+        tab: detailTab,
+      };
+
+      if (nextChanged) {
+        setSearchParams(next, { replace: true });
+      }
     }
-  }, [requestedDetailTab]);
+  }, [
+    requestedProjectId,
+    requestedAssignmentId,
+    requestedDeliveryId,
+    requestedDetailTab,
+    selection.projectId,
+    selection.assignmentId,
+    selection.deliveryId,
+    detailTab,
+    searchParams,
+    setSearchParams,
+    setProject,
+    setAssignment,
+    setDelivery,
+  ]);
 
   // 3. Update Labels and handle report loading once data is available
   useEffect(() => {
@@ -391,57 +486,6 @@ export function TeacherDeliveriesPanel({
       void dc.handleViewReport(requestedDeliveryId);
     }
   }, [deliveries, requestedDeliveryId, selection.deliveryLabel, setDelivery, detailTab]);
-
-  useEffect(() => {
-    // If the URL has values that don't match the current selection state,
-    // we are in the middle of syncing the URL to the selection state.
-    // Skip syncing back to avoid race conditions.
-    if (requestedProjectId && requestedProjectId !== dc.selectedProjectId) {
-      return;
-    }
-    if (requestedAssignmentId && requestedAssignmentId !== dc.selectedAssignmentId) {
-      return;
-    }
-    if (requestedDeliveryId && requestedDeliveryId !== dc.selectedDeliveryId) {
-      return;
-    }
-
-    if (!dc.selectedProjectId) {
-      return;
-    }
-
-    const next = new URLSearchParams(searchParams);
-    next.set("projectId", dc.selectedProjectId);
-
-    if (dc.selectedAssignmentId) {
-      next.set("assignmentId", dc.selectedAssignmentId);
-      if (dc.selectedDeliveryId) {
-        next.set("deliveryId", dc.selectedDeliveryId);
-        next.set("tab", detailTab);
-      } else {
-        next.delete("deliveryId");
-        next.delete("tab");
-      }
-    } else {
-      next.delete("assignmentId");
-      next.delete("deliveryId");
-      next.delete("tab");
-    }
-
-    if (next.toString() !== searchParams.toString()) {
-      setSearchParams(next, { replace: true });
-    }
-  }, [
-    dc.selectedAssignmentId,
-    dc.selectedDeliveryId,
-    dc.selectedProjectId,
-    detailTab,
-    requestedDeliveryId,
-    requestedProjectId,
-    requestedAssignmentId,
-    searchParams,
-    setSearchParams,
-  ]);
 
   const projectOptions: VisualPickerOption[] = useMemo(() => 
     dc.projects.map(p => ({

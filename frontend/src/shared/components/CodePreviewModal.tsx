@@ -86,7 +86,7 @@ export function CodePreviewModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-950 text-slate-300 antialiased animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[120] flex flex-col bg-slate-950 text-slate-300 antialiased animate-in fade-in duration-300">
       {/* Header Bar */}
       <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-6 py-3 backdrop-blur-md">
         <div className="flex items-center gap-4">

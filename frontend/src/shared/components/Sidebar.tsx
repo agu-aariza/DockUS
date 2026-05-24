@@ -4,6 +4,7 @@ import {
   RiLogoutBoxLine, RiBookOpenLine, RiFolderOpenFill, RiFileTextFill,
   RiInboxArchiveFill, RiUploadCloud2Fill,
 } from 'react-icons/ri';
+import { useWorkspace } from '../workspace/WorkspaceContext';
 
 interface SidebarProps {
   activeTab: string;
@@ -21,6 +22,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeStudentTab, onStudentTabChange, studentHasUnread,
 }) => {
   const isStudent = userRole === 'STUDENT';
+  const { selection, isMinimized, setIsMinimized } = useWorkspace();
+  const isWorkspaceActive = Boolean(selection.projectId || selection.assignmentId || selection.deliveryId);
 
   const teacherMainNavigation = [
     { id: 'resumen', label: 'Panel de Control', icon: RiLayoutGridFill },
@@ -115,6 +118,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="mt-auto border-t border-white/10 px-6 py-5">
+        {isWorkspaceActive && isMinimized && (
+          <button
+            onClick={() => setIsMinimized(false)}
+            className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-gold-light/40 px-4 py-3 text-left transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer group"
+            title="Expandir espacio de trabajo"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-gold/10 text-brand-gold group-hover:scale-110 transition-transform">
+              <RiStackFill className="text-lg animate-pulse" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-gold-light">
+                Espacio activo
+              </div>
+              <div className="truncate text-xs font-bold text-white/90 mt-0.5 uppercase tracking-wide">
+                {selection.projectTitle || "Workspace"}
+              </div>
+            </div>
+          </button>
+        )}
+
         <div className="mb-4 rounded-2xl bg-white/5 border border-white/10 px-4 py-4">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
             Operador activo
