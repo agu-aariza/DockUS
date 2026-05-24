@@ -71,7 +71,12 @@ export class StorageQueryService {
         'assignment.id = delivery.assignmentId',
       )
       .leftJoin(Project, 'project', 'project.id = assignment.projectId')
-      .leftJoin(Project, 'scopeProject', 'scopeProject.id = storage.projectId');
+      .leftJoin(Project, 'scopeProject', 'scopeProject.id = storage.projectId')
+      .leftJoinAndSelect('storage.project', 'projectRelation')
+      .leftJoinAndSelect('storage.delivery', 'deliveryRelation')
+      .leftJoinAndSelect('deliveryRelation.author', 'authorRelation')
+      .leftJoinAndSelect('deliveryRelation.assignment', 'assignmentRelation')
+      .leftJoinAndSelect('assignmentRelation.project', 'assignmentProjectRelation');
 
     this.storageAccessService.applyActorScope(queryBuilder, actor);
 

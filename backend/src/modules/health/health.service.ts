@@ -14,14 +14,6 @@ import { DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { RedisClientService } from '../../shared/infrastructure/cache/redis-client.service';
 import { DockerHostService } from '../../shared/infrastructure/docker/docker-host.service';
-import {
-  createOllamaConnectivityError,
-  createOllamaHttpError,
-  createOllamaTimeoutError,
-  hasOllamaModel,
-  normalizeOllamaModelNames,
-  OllamaRequestError,
-} from '../../shared/infrastructure/ai/ollama-request.util';
 
 type DependencyStatus = 'up' | 'down';
 type ReadinessStatus = 'ok' | 'error';
@@ -44,7 +36,7 @@ export interface ReadinessReport {
     database: DependencyHealth;
     redis: DependencyHealth;
     docker: DependencyHealth;
-    ollama: DependencyHealth;
+    bedrock: DependencyHealth;
   };
 }
 
@@ -72,25 +64,25 @@ export class HealthService {
    * Comprueba si las dependencias críticas están listas para recibir tráfico.
    */
   async getReadiness(): Promise<ReadinessReport> {
-    const [database, redis, docker, ollama] = await Promise.all([
+    const [database, redis, docker, bedrock] = await Promise.all([
       this.checkDatabase(),
       this.checkRedis(),
       this.checkDocker(),
-      this.checkOllama(),
+      this.checkBedrock(),
     ]);
 
     const status: ReadinessStatus =
       database.status === 'up' &&
       redis.status === 'up' &&
       docker.status === 'up' &&
-      ollama.status === 'up'
+      bedrock.status === 'up'
         ? 'ok'
         : 'error';
 
     return {
       status,
       timestamp: new Date().toISOString(),
-      checks: { database, redis, docker, ollama },
+      checks: { database, redis, docker, bedrock },
     };
   }
 
@@ -166,91 +158,38 @@ export class HealthService {
     }
   }
 
-  private async checkOllama(): Promise<DependencyHealth> {
+  private async checkBedrock(): Promise<DependencyHealth> {
     const startedAt = Date.now();
-    const baseUrl = this.configService.get<string>(
-      'BUILDER_OLLAMA_BASE_URL',
-      'http://ollama:11434',
-    );
-    const timeoutMs = Math.min(
-      this.configService.get<number>('BUILDER_OLLAMA_TIMEOUT_MS', 120000),
-      5000,
-    );
-    const requiredModels = [
-      this.configService.get<string>(
-        'BUILDER_OLLAMA_PLAN_MODEL',
-        'dockus-builder-plan',
-      ),
-      this.configService.get<string>(
-        'BUILDER_OLLAMA_EVAL_MODEL',
-        'dockus-builder-eval',
-      ),
-      this.configService.get<string>(
-        'BUILDER_OLLAMA_QUALITY_MODEL',
-        'dockus-builder-quality',
-      ),
-    ];
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const region = this.configService.get<string>('AWS_REGION', 'us-east-1');
 
     try {
-      const response = await fetch(`${baseUrl}/api/tags`, {
-        method: 'GET',
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const details = await response.text();
-        throw createOllamaHttpError({
-          baseUrl,
-          target: 'listado de modelos',
-          status: response.status,
-          details,
-        });
-      }
-
-      const payload = await response.json();
-      const availableModels = normalizeOllamaModelNames(payload);
-      const missingModels = requiredModels.filter(
-        (requiredModel) => !hasOllamaModel(availableModels, requiredModel),
+      const { BedrockClient, ListFoundationModelsCommand } = await import(
+        '@aws-sdk/client-bedrock'
       );
+      const client = new BedrockClient({ region });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
 
-      if (missingModels.length > 0) {
-        const info = `Faltan modelos Ollama requeridos en ${baseUrl}: ${missingModels.join(', ')}`;
-        this.logDependencyError('Ollama', new Error(info));
-        return {
-          status: 'down',
-          latencyMs: Date.now() - startedAt,
-          info,
-        };
+      try {
+        await client.send(new ListFoundationModelsCommand({}), {
+          abortSignal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
       }
 
       return {
         status: 'up',
         latencyMs: Date.now() - startedAt,
-        info: `Ollama listo en ${baseUrl}. ${requiredModels.length}/${requiredModels.length} modelos requeridos disponibles.`,
+        info: `Bedrock accesible en ${region}.`,
       };
     } catch (error) {
-      let normalizedError: Error;
-      if (error instanceof OllamaRequestError) {
-        normalizedError = error;
-      } else if (error instanceof Error && error.name === 'AbortError') {
-        normalizedError = createOllamaTimeoutError(
-          baseUrl,
-          'consultar modelos requeridos',
-        );
-      } else {
-        normalizedError = createOllamaConnectivityError(baseUrl, error);
-      }
-
-      this.logDependencyError('Ollama', normalizedError);
+      this.logDependencyError('Bedrock', error);
       return {
         status: 'down',
         latencyMs: Date.now() - startedAt,
-        info: normalizedError.message,
+        info: error instanceof Error ? error.message : String(error),
       };
-    } finally {
-      clearTimeout(timeout);
     }
   }
 

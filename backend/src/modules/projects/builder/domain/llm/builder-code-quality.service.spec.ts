@@ -1,11 +1,8 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PromptRegistryService } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
-import {
-  OllamaGenerationService,
-  OllamaModelProfile,
-} from '../../../../../shared/infrastructure/ai/ollama-generation.service';
-import { OllamaRequestError } from '../../../../../shared/infrastructure/ai/ollama-request.util';
+import { ILlmGenerationService } from '../../../../../shared/infrastructure/ai/llm-generation.token';
+import { BedrockRequestError } from '../../../../../shared/infrastructure/ai/bedrock-request.util';
 import { BuilderCodeQualityService } from './builder-code-quality.service';
 
 const validQualityResponse = JSON.stringify({
@@ -25,35 +22,14 @@ const validQualityResponse = JSON.stringify({
   rubricCompliance: [],
 });
 
-function createQualityProfile(model: string): OllamaModelProfile {
-  return {
-    profileVersion: 'builder-llm-profile/v1',
-    stage: 'quality',
-    model,
-    baseModel: 'deepseek-r1:8b',
-    numCtx: 24576,
-    numPredict: 8192,
-    temperature: 0.3,
-    topP: 0.9,
-    repeatPenalty: 1.1,
-    stopTokens: ['<|endoftext|>'],
-    keepAliveSeconds: 300,
-    timeoutMs: 300_000,
-  };
-}
-
 describe('BuilderCodeQualityService', () => {
   const promptRegistry = {
     getPrompt: jest.fn(() => 'TECHNICAL_FEEDBACK_PROMPT'),
   } as unknown as PromptRegistryService;
 
-  const ollamaGenerationService = {
+  const llmService: jest.Mocked<ILlmGenerationService> = {
     generate: jest.fn(),
-    getRuntimeConfig: jest.fn(() => ({
-      baseUrl: 'http://ollama.test',
-      timeoutMs: 1000,
-    })),
-  } as unknown as OllamaGenerationService;
+  };
 
   let service: BuilderCodeQualityService;
 
@@ -64,26 +40,22 @@ describe('BuilderCodeQualityService', () => {
       {
         get: jest.fn((key: string, fallback?: unknown) => {
           switch (key) {
-            case 'BUILDER_OLLAMA_QUALITY_MODEL':
-              return 'quality-model';
+            case 'BUILDER_BEDROCK_QUALITY_MODEL_ID':
+              return 'bedrock-quality-model';
             case 'BUILDER_LLM_QUALITY_MAX_INPUT_CHARS':
               return 240;
-            case 'OLLAMA_NUM_CTX':
-              return 24576;
             default:
               return fallback;
           }
         }),
       } as unknown as ConfigService,
       promptRegistry,
-      ollamaGenerationService,
+      llmService,
     );
   });
 
   it('captures prompt sections, raw response, and parsed contract during analysis', async () => {
-    (ollamaGenerationService.generate as jest.Mock).mockResolvedValue(
-      validQualityResponse,
-    );
+    llmService.generate.mockResolvedValue(validQualityResponse);
 
     const trace = await service.analyzeWithTrace(
       {
@@ -137,7 +109,12 @@ describe('BuilderCodeQualityService', () => {
       },
       {
         onBeforeCall: ({ modelProfile, sections, prompt }) => {
-          expect(modelProfile).toEqual(createQualityProfile('quality-model'));
+          expect(modelProfile).toEqual(
+            expect.objectContaining({
+              stage: 'quality',
+              modelId: 'bedrock-quality-model',
+            }),
+          );
           expect(prompt.length).toBeLessThanOrEqual(240);
           expect(sections.some((section) => section.label === 'CURRENT ACADEMIC ASSESSMENT')).toBe(true);
           expect(sections.some((section) => section.label === 'SOURCE EXCERPTS')).toBe(true);
@@ -145,15 +122,14 @@ describe('BuilderCodeQualityService', () => {
       },
     );
 
-    expect(ollamaGenerationService.generate).toHaveBeenCalledWith(
+    expect(llmService.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         stage: 'quality',
         promptId: 'technical-feedback',
         systemPrompt: 'TECHNICAL_FEEDBACK_PROMPT',
         profile: expect.objectContaining({
-          model: 'quality-model',
+          modelId: 'bedrock-quality-model',
           stage: 'quality',
-          numCtx: 24576,
         }),
       }),
     );
@@ -171,8 +147,8 @@ describe('BuilderCodeQualityService', () => {
     const errorSpy = jest
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
-    (ollamaGenerationService.generate as jest.Mock).mockRejectedValue(
-      new OllamaRequestError({
+    llmService.generate.mockRejectedValue(
+      new BedrockRequestError({
         code: 'model_not_found',
         message: "El modelo 'quality-model' no esta disponible.",
         httpStatus: 404,
@@ -240,7 +216,7 @@ describe('BuilderCodeQualityService', () => {
       expect.stringContaining('"promptId":"technical-feedback"'),
     );
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('"baseModel":"deepseek-r1:8b"'),
+      expect.stringContaining('"modelId":"bedrock-quality-model"'),
     );
   });
 });

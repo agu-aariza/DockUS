@@ -47,7 +47,7 @@ export class HealthController {
   @ApiOperation({
     summary: 'Readiness de infraestructura',
     description:
-      'Comprueba conectividad real con PostgreSQL, Redis, Docker y Ollama antes de recibir tráfico.',
+      'Comprueba conectividad real con PostgreSQL, Redis, Docker y Amazon Bedrock antes de recibir tráfico.',
   })
   @ApiResponse({
     status: 200,

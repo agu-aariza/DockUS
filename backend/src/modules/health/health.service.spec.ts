@@ -5,9 +5,14 @@ import { RedisClientService } from '../../shared/infrastructure/cache/redis-clie
 import { DockerHostService } from '../../shared/infrastructure/docker/docker-host.service';
 import { HealthService } from './health.service';
 
-describe('HealthService', () => {
-  const fetchMock = jest.fn();
+const mockBedrockSend = jest.fn();
 
+jest.mock('@aws-sdk/client-bedrock', () => ({
+  BedrockClient: jest.fn().mockImplementation(() => ({ send: mockBedrockSend })),
+  ListFoundationModelsCommand: jest.fn().mockImplementation(() => ({})),
+}));
+
+describe('HealthService', () => {
   let dataSource: { query: jest.Mock };
   let redisClient: { ping: jest.Mock };
   let dockerHost: { inspectDockerHost: jest.Mock };
@@ -16,8 +21,8 @@ describe('HealthService', () => {
   let service: HealthService;
 
   beforeEach(() => {
-    fetchMock.mockReset();
-    global.fetch = fetchMock as unknown as typeof fetch;
+    mockBedrockSend.mockReset();
+    mockBedrockSend.mockResolvedValue({ modelSummaries: [] });
 
     dataSource = {
       query: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
@@ -30,25 +35,11 @@ describe('HealthService', () => {
     };
     configService = {
       get: jest.fn((key: string, fallback?: unknown) => {
-        switch (key) {
-          case 'BUILDER_OLLAMA_BASE_URL':
-            return 'http://ollama:11434';
-          case 'BUILDER_OLLAMA_PLAN_MODEL':
-            return 'dockus-builder-plan';
-          case 'BUILDER_OLLAMA_EVAL_MODEL':
-            return 'dockus-builder-eval';
-          case 'BUILDER_OLLAMA_QUALITY_MODEL':
-            return 'dockus-builder-quality';
-          case 'BUILDER_OLLAMA_TIMEOUT_MS':
-            return 5000;
-          default:
-            return fallback;
-        }
+        if (key === 'AWS_REGION') return 'us-east-1';
+        return fallback;
       }),
     };
-    logger = {
-      error: jest.fn(),
-    };
+    logger = { error: jest.fn() };
 
     service = new HealthService(
       dataSource as unknown as DataSource,
@@ -59,68 +50,39 @@ describe('HealthService', () => {
     );
   });
 
-  it('reports readiness ok when Ollama responds and all required models are available', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        models: [
-          { name: 'dockus-builder-plan:latest' },
-          { name: 'dockus-builder-eval' },
-          { name: 'dockus-builder-quality' },
-        ],
-      }),
-    });
-
+  it('reports readiness ok when Bedrock is accessible', async () => {
     const report = await service.getReadiness();
 
     expect(report.status).toBe('ok');
-    expect(fetchMock).toHaveBeenCalledWith(
-      'http://ollama:11434/api/tags',
-      expect.objectContaining({
-        method: 'GET',
-      }),
-    );
-    expect(report.checks.ollama).toEqual(
+    expect(report.checks.bedrock).toEqual(
       expect.objectContaining({
         status: 'up',
-        info: expect.stringContaining('3/3'),
+        info: expect.stringContaining('us-east-1'),
       }),
     );
   });
 
-  it('reports readiness error when Ollama is unreachable', async () => {
-    fetchMock.mockRejectedValue(new TypeError('fetch failed'));
+  it('reports readiness error when Bedrock call throws', async () => {
+    mockBedrockSend.mockRejectedValue(
+      new Error('UnrecognizedClientException: credentials not configured'),
+    );
 
     const report = await service.getReadiness();
 
     expect(report.status).toBe('error');
-    expect(report.checks.ollama).toEqual(
-      expect.objectContaining({
-        status: 'down',
-        info: expect.stringContaining('http://ollama:11434'),
-      }),
+    expect(report.checks.bedrock).toEqual(
+      expect.objectContaining({ status: 'down' }),
     );
   });
 
-  it('reports readiness error when a required derived model is missing', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        models: [
-          { name: 'dockus-builder-plan' },
-          { name: 'dockus-builder-eval' },
-        ],
-      }),
-    });
+  it('reports database down correctly', async () => {
+    dataSource.query.mockRejectedValue(new Error('connection refused'));
 
     const report = await service.getReadiness();
 
     expect(report.status).toBe('error');
-    expect(report.checks.ollama).toEqual(
-      expect.objectContaining({
-        status: 'down',
-        info: expect.stringContaining('dockus-builder-quality'),
-      }),
+    expect(report.checks.database).toEqual(
+      expect.objectContaining({ status: 'down' }),
     );
   });
 });

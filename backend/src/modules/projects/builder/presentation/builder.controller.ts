@@ -38,6 +38,7 @@ import {
   INTERNAL_SERVER_ERROR_DESCRIPTION,
   UNAUTHORIZED_DESCRIPTION,
 } from '../../../../shared/http/http-response.constants';
+import { SkipThrottle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../../../auth/guards/roles.guard';
 import type { AuthenticatedRequest } from '../../../auth/interfaces/authenticated-user.interface';
@@ -169,6 +170,7 @@ export class BuilderController {
     description: 'Eventos recuperados correctamente.',
     type: BuildRunEventsResponseDto,
   })
+  @SkipThrottle({ burst: true })
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @Get('runs/:buildRunId/events')
   async getRunEvents(

@@ -1,12 +1,12 @@
 import { BuilderLlmChatService } from './builder-llm-chat.service';
 import { PromptRegistryService, PromptId } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
-import { OllamaGenerationService } from '../../../../../shared/infrastructure/ai/ollama-generation.service';
+import { ILlmGenerationService } from '../../../../../shared/infrastructure/ai/llm-generation.token';
 import { MinioStorageService } from '../../../../../shared/infrastructure/storage/minio-storage.service';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { BuildRunChatMessage } from '../entities/build-run-chat-message.entity';
 import { BuildRun } from '../entities/build-run.entity';
-import { BuildRunArtifact, BuildRunArtifactType } from '../entities/build-run-artifact.entity';
+import { BuildRunArtifact } from '../entities/build-run-artifact.entity';
 import { NotFoundException } from '@nestjs/common';
 
 describe('BuilderLlmChatService', () => {
@@ -26,9 +26,9 @@ describe('BuilderLlmChatService', () => {
     findOne: jest.fn(),
   } as unknown as jest.Mocked<Repository<BuildRunArtifact>>;
 
-  const mockOllamaService = {
+  const mockLlmService: jest.Mocked<ILlmGenerationService> = {
     generate: jest.fn(),
-  } as unknown as jest.Mocked<OllamaGenerationService>;
+  };
 
   const mockPromptRegistry = {
     getPrompt: jest.fn(() => 'SYSTEM_CHAT_PROMPT'),
@@ -39,7 +39,7 @@ describe('BuilderLlmChatService', () => {
   } as unknown as jest.Mocked<MinioStorageService>;
 
   const mockConfigService = {
-    get: jest.fn((key: string, fallback?: any) => fallback),
+    get: jest.fn((key: string, fallback?: unknown) => fallback),
   } as unknown as jest.Mocked<ConfigService>;
 
   beforeEach(() => {
@@ -49,7 +49,7 @@ describe('BuilderLlmChatService', () => {
       mockChatMessageRepo,
       mockBuildRunRepo,
       mockArtifactRepo,
-      mockOllamaService,
+      mockLlmService,
       mockPromptRegistry,
       mockMinioService,
       mockConfigService,
@@ -83,12 +83,12 @@ describe('BuilderLlmChatService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should query history, store user message, call ollama with context, and store assistant reply', async () => {
+    it('should query history, store user message, call LLM with context, and store assistant reply', async () => {
       const run = { id: 'run-id', status: 'SUCCESS', report: { overallOutcome: 'PASS', coaching: {} } };
       mockBuildRunRepo.findOne.mockResolvedValue(run as any);
       mockChatMessageRepo.find.mockResolvedValue([]);
-      mockArtifactRepo.findOne.mockResolvedValue(null); // No artifact -> Fallback context
-      mockOllamaService.generate.mockResolvedValue('Respuesta del tutor');
+      mockArtifactRepo.findOne.mockResolvedValue(null);
+      mockLlmService.generate.mockResolvedValue('Respuesta del tutor');
 
       const result = await service.postChatMessage('run-id', '¿Cómo soluciono mi error?');
 
@@ -104,7 +104,7 @@ describe('BuilderLlmChatService', () => {
         message: 'Respuesta del tutor',
       });
 
-      expect(mockOllamaService.generate).toHaveBeenCalledWith(
+      expect(mockLlmService.generate).toHaveBeenCalledWith(
         expect.objectContaining({
           stage: 'chat',
           promptId: PromptId.CHAT,
@@ -121,36 +121,36 @@ describe('BuilderLlmChatService', () => {
       const run = { id: 'run-id', status: 'SUCCESS' };
       mockBuildRunRepo.findOne.mockResolvedValue(run as any);
       mockChatMessageRepo.find.mockResolvedValue([]);
-      
+
       const mockArtifact = { bucket: 'b', objectKey: 'k' };
       mockArtifactRepo.findOne.mockResolvedValue(mockArtifact as any);
       mockMinioService.getObjectBuffer.mockResolvedValue(
         Buffer.from('stage: plan\n\n[USER PROMPT]\nContenido del prompt del estudiante', 'utf-8'),
       );
-      mockOllamaService.generate.mockResolvedValue('Tutor response');
+      mockLlmService.generate.mockResolvedValue('Tutor response');
 
       await service.postChatMessage('run-id', 'Duda');
 
       expect(mockMinioService.getObjectBuffer).toHaveBeenCalledWith('b', 'k');
-      expect(mockOllamaService.generate).toHaveBeenCalledWith(
+      expect(mockLlmService.generate).toHaveBeenCalledWith(
         expect.objectContaining({
           prompt: expect.stringContaining('Contenido del prompt del estudiante'),
         }),
       );
     });
 
-    it('should use fallback context and return generic response if Ollama generation fails', async () => {
+    it('should use fallback context and return generic response if LLM generation fails', async () => {
       const run = { id: 'run-id', status: 'FAILED' };
       mockBuildRunRepo.findOne.mockResolvedValue(run as any);
       mockChatMessageRepo.find.mockResolvedValue([]);
       mockArtifactRepo.findOne.mockResolvedValue(null);
-      mockOllamaService.generate.mockRejectedValue(new Error('Ollama offline'));
+      mockLlmService.generate.mockRejectedValue(new Error('Bedrock unreachable'));
 
       const result = await service.postChatMessage('run-id', 'Duda');
 
       expect(result.sender).toBe('assistant');
       expect(result.message).toContain('problema interno');
-      expect(mockChatMessageRepo.save).toHaveBeenCalledTimes(2); // saves user message and the fallback error message
+      expect(mockChatMessageRepo.save).toHaveBeenCalledTimes(2);
     });
   });
 });

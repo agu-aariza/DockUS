@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AssignmentContext,
@@ -13,10 +13,11 @@ import {
   PromptRegistryService,
 } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 import {
-  OllamaGenerationService,
-  OllamaModelProfile,
-} from '../../../../../shared/infrastructure/ai/ollama-generation.service';
-import { OllamaRequestError } from '../../../../../shared/infrastructure/ai/ollama-request.util';
+  ILlmGenerationService,
+  LLM_GENERATION_SERVICE,
+} from '../../../../../shared/infrastructure/ai/llm-generation.token';
+import type { LlmModelProfile } from '../../../../../shared/infrastructure/ai/llm.types';
+import { BedrockRequestError } from '../../../../../shared/infrastructure/ai/bedrock-request.util';
 import { parseBuilderCodeQualityContractV2 } from './builder-code-quality-contract.parser';
 import { resolveBuilderModelProfile } from './builder-llm-model-profile';
 import {
@@ -46,12 +47,13 @@ export class BuilderCodeQualityService {
   private readonly logger = new Logger(BuilderCodeQualityService.name);
   private readonly maxInputChars: number;
   private readonly systemPrompt: string;
-  private readonly modelProfile: OllamaModelProfile;
+  private readonly modelProfile: LlmModelProfile;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly promptRegistry: PromptRegistryService,
-    private readonly ollamaGenerationService: OllamaGenerationService,
+    @Inject(LLM_GENERATION_SERVICE)
+    private readonly llmService: ILlmGenerationService,
   ) {
     this.maxInputChars = this.configService.get<number>(
       'BUILDER_LLM_QUALITY_MAX_INPUT_CHARS',
@@ -99,12 +101,13 @@ export class BuilderCodeQualityService {
     let response: string | null = null;
 
     try {
-      response = await this.ollamaGenerationService.generate({
+      response = await this.llmService.generate({
         stage: 'quality',
         promptId: PromptId.TECHNICAL_FEEDBACK,
         prompt: composedPrompt.prompt,
         systemPrompt: this.systemPrompt,
         profile: this.modelProfile,
+        format: 'json',
       });
     } catch (error: unknown) {
       const serializedError = this.serializeError(error);
@@ -136,7 +139,7 @@ export class BuilderCodeQualityService {
     return {
       stage: 'quality',
       promptId: PromptId.TECHNICAL_FEEDBACK,
-      model: this.modelProfile.model,
+      model: this.modelProfile.modelId,
       systemPrompt: this.systemPrompt,
       prompt: prompt.prompt,
       sections: prompt.sections,
@@ -146,17 +149,13 @@ export class BuilderCodeQualityService {
   }
 
   private logStageError(error: BuilderLlmStageErrorInfo): void {
-    const runtime = this.ollamaGenerationService.getRuntimeConfig();
     this.logger.error(
       JSON.stringify({
         event: 'builder_llm_stage_error',
         stage: 'quality',
         promptId: PromptId.TECHNICAL_FEEDBACK,
-        model: this.modelProfile.model,
-        baseModel: this.modelProfile.baseModel,
+        modelId: this.modelProfile.modelId,
         profileVersion: this.modelProfile.profileVersion,
-        baseUrl: runtime.baseUrl,
-        timeoutMs: runtime.timeoutMs,
         code: error.code ?? 'unknown',
         httpStatus: error.httpStatus ?? null,
         message: error.message,
@@ -183,7 +182,7 @@ export class BuilderCodeQualityService {
     error: unknown,
     fallbackCode?: string,
   ): BuilderLlmStageErrorInfo {
-    if (error instanceof OllamaRequestError) {
+    if (error instanceof BedrockRequestError) {
       return {
         name: error.name,
         code: error.code,

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AssignmentContext,
@@ -14,10 +14,11 @@ import {
   PromptRegistryService,
 } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 import {
-  OllamaGenerationService,
-  OllamaModelProfile,
-} from '../../../../../shared/infrastructure/ai/ollama-generation.service';
-import { OllamaRequestError } from '../../../../../shared/infrastructure/ai/ollama-request.util';
+  ILlmGenerationService,
+  LLM_GENERATION_SERVICE,
+} from '../../../../../shared/infrastructure/ai/llm-generation.token';
+import type { LlmModelProfile } from '../../../../../shared/infrastructure/ai/llm.types';
+import { BedrockRequestError } from '../../../../../shared/infrastructure/ai/bedrock-request.util';
 import { BuilderLogTrimmer } from '../../infrastructure/utils/builder-log-trimmer.util';
 import { parseBuilderEvaluationContractV2 } from './builder-evaluation-contract.parser';
 import { resolveBuilderModelProfile } from './builder-llm-model-profile';
@@ -49,14 +50,15 @@ export class BuilderLlmEvaluatorService {
   private readonly evalMaxInputChars: number;
   private readonly systemPrompt: string;
   private readonly planSystemPrompt: string;
-  private readonly evaluationProfile: OllamaModelProfile;
-  private readonly planProfile: OllamaModelProfile;
+  private readonly evaluationProfile: LlmModelProfile;
+  private readonly planProfile: LlmModelProfile;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly promptRegistry: PromptRegistryService,
     private readonly logTrimmer: BuilderLogTrimmer,
-    private readonly ollamaGenerationService: OllamaGenerationService,
+    @Inject(LLM_GENERATION_SERVICE)
+    private readonly llmService: ILlmGenerationService,
   ) {
     this.planMaxInputChars = this.configService.get<number>(
       'BUILDER_LLM_PLAN_MAX_INPUT_CHARS',
@@ -112,12 +114,13 @@ export class BuilderLlmEvaluatorService {
     let response: string | null = null;
 
     try {
-      response = await this.ollamaGenerationService.generate({
+      response = await this.llmService.generate({
         stage: 'evaluation',
         promptId: PromptId.EVAL,
         prompt: composedPrompt.prompt,
         systemPrompt: this.systemPrompt,
         profile: this.evaluationProfile,
+        format: 'json',
       });
     } catch (error: unknown) {
       const serializedError = this.serializeError(error);
@@ -180,12 +183,13 @@ export class BuilderLlmEvaluatorService {
     let response: string | null = null;
 
     try {
-      response = await this.ollamaGenerationService.generate({
+      response = await this.llmService.generate({
         stage: 'plan',
         promptId: PromptId.PLAN,
         prompt: composedPrompt.prompt,
         systemPrompt: this.planSystemPrompt,
         profile: this.planProfile,
+        format: 'json',
       });
     } catch (error: unknown) {
       const serializedError = this.serializeError(error);
@@ -212,14 +216,14 @@ export class BuilderLlmEvaluatorService {
   private createPromptSnapshot(
     stage: BuilderLlmStagePromptSnapshot['stage'],
     promptId: PromptId,
-    modelProfile: OllamaModelProfile,
+    modelProfile: LlmModelProfile,
     prompt: ComposedPromptPayload,
     systemPrompt: string | null,
   ): BuilderLlmStagePromptSnapshot {
     return {
       stage,
       promptId,
-      model: modelProfile.model,
+      model: modelProfile.modelId,
       systemPrompt,
       prompt: prompt.prompt,
       sections: prompt.sections,
@@ -233,7 +237,6 @@ export class BuilderLlmEvaluatorService {
     promptId: PromptId,
     error: BuilderLlmStageErrorInfo,
   ): void {
-    const runtime = this.ollamaGenerationService.getRuntimeConfig();
     const profile =
       stage === 'plan' ? this.planProfile : this.evaluationProfile;
 
@@ -242,11 +245,8 @@ export class BuilderLlmEvaluatorService {
         event: 'builder_llm_stage_error',
         stage,
         promptId,
-        model: profile.model,
-        baseModel: profile.baseModel,
+        modelId: profile.modelId,
         profileVersion: profile.profileVersion,
-        baseUrl: runtime.baseUrl,
-        timeoutMs: runtime.timeoutMs,
         code: error.code ?? 'unknown',
         httpStatus: error.httpStatus ?? null,
         message: error.message,
@@ -275,7 +275,7 @@ export class BuilderLlmEvaluatorService {
     error: unknown,
     fallbackCode?: string,
   ): BuilderLlmStageErrorInfo {
-    if (error instanceof OllamaRequestError) {
+    if (error instanceof BedrockRequestError) {
       return {
         name: error.name,
         code: error.code,

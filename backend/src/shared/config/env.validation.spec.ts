@@ -11,33 +11,44 @@ const baseEnv = {
 };
 
 describe('envValidationSchema', () => {
-  it('accepts the canonical docker compose Ollama URL and applies LLM quality defaults', () => {
+  it('accepts base env and applies Bedrock defaults', () => {
+    const { error, value } = envValidationSchema.validate(baseEnv, {
+      abortEarly: false,
+    });
+
+    expect(error).toBeUndefined();
+    expect(value.AWS_REGION).toBe('us-east-1');
+    expect(value.BUILDER_BEDROCK_PLAN_MODEL_ID).toBe(
+      'qwen.qwen3-coder-480b-a35b-v1:0',
+    );
+    expect(value.BUILDER_BEDROCK_EVALUATION_MODEL_ID).toBe(
+      'qwen.qwen3-coder-480b-a35b-v1:0',
+    );
+    expect(value.BUILDER_LLM_QUALITY_MAX_INPUT_CHARS).toBe(30000);
+  });
+
+  it('accepts explicit AWS region override', () => {
+    const { error, value } = envValidationSchema.validate(
+      { ...baseEnv, AWS_REGION: 'eu-west-1' },
+      { abortEarly: false },
+    );
+
+    expect(error).toBeUndefined();
+    expect(value.AWS_REGION).toBe('eu-west-1');
+  });
+
+  it('accepts explicit Bedrock model ID override', () => {
     const { error, value } = envValidationSchema.validate(
       {
         ...baseEnv,
-        BUILDER_OLLAMA_BASE_URL: 'http://ollama:11434',
+        BUILDER_BEDROCK_PLAN_MODEL_ID: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
       },
       { abortEarly: false },
     );
 
     expect(error).toBeUndefined();
-    expect(value.BUILDER_OLLAMA_BASE_URL).toBe('http://ollama:11434');
-    expect(value.BUILDER_OLLAMA_QUALITY_MODEL).toBe('dockus-builder-quality');
-    expect(value.EVAL_BASE_MODEL).toBe('deepseek-r1:8b');
-    expect(value.QUALITY_BASE_MODEL).toBe('deepseek-r1:8b');
-    expect(value.OLLAMA_NUM_CTX).toBe(16384);
-    expect(value.BUILDER_LLM_QUALITY_MAX_INPUT_CHARS).toBe(30000);
-  });
-
-  it('rejects invalid Ollama URLs before boot', () => {
-    const { error } = envValidationSchema.validate(
-      {
-        ...baseEnv,
-        BUILDER_OLLAMA_BASE_URL: 'ollama:11434',
-      },
-      { abortEarly: false },
+    expect(value.BUILDER_BEDROCK_PLAN_MODEL_ID).toBe(
+      'anthropic.claude-3-5-sonnet-20241022-v2:0',
     );
-
-    expect(error?.message).toContain('BUILDER_OLLAMA_BASE_URL');
   });
 });

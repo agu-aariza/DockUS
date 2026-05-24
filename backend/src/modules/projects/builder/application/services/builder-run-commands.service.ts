@@ -1295,14 +1295,14 @@ export class BuilderRunCommandsService {
     const model = snapshot.model ?? 'unknown';
     const modelProfile = snapshot.modelProfile ?? null;
     const sections = snapshot.sections ?? [];
-    const baseModel = modelProfile?.baseModel ?? 'unknown';
+    const modelId = modelProfile?.modelId ?? 'unknown';
     const profileVersion = modelProfile?.profileVersion ?? 'legacy';
 
     const renderedPrompt = [
       `stage: ${snapshot.stage}`,
       `promptId: ${promptId}`,
       `model: ${model}`,
-      `baseModel: ${baseModel}`,
+      `modelId: ${modelId}`,
       `profileVersion: ${profileVersion}`,
       `createdAt: ${snapshot.createdAt}`,
       '',
@@ -1336,14 +1336,14 @@ export class BuilderRunCommandsService {
     const model = snapshot.model ?? 'unknown';
     const modelProfile = snapshot.modelProfile ?? null;
     const sections = snapshot.sections ?? [];
-    const baseModel = modelProfile?.baseModel ?? 'unknown';
+    const modelId = modelProfile?.modelId ?? 'unknown';
     const profileVersion = modelProfile?.profileVersion ?? 'legacy';
 
     const renderedPrompt = [
       'stage: quality',
       `promptId: ${promptId}`,
       `model: ${model}`,
-      `baseModel: ${baseModel}`,
+      `modelId: ${modelId}`,
       `profileVersion: ${profileVersion}`,
       `createdAt: ${snapshot.createdAt}`,
       '',

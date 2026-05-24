@@ -20,6 +20,9 @@ export interface StorageObjectResponse {
   hash: string;
   createdAt: string;
   uploaderId: string;
+  projectName?: string;
+  deliveryVersion?: number;
+  studentName?: string;
 }
 
 export interface CreateDownloadUrlResponse {

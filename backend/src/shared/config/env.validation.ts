@@ -51,18 +51,14 @@ export const envValidationSchema = Joi.object({
   MINIO_USE_SSL: Joi.boolean().default(false),
   STORAGE_SIGNED_URL_TTL_SECONDS: Joi.number().default(600),
   STORAGE_BOOTSTRAP_ON_STARTUP: Joi.boolean().default(true),
-  BUILDER_OLLAMA_BASE_URL: Joi.string()
-    .uri({ scheme: ['http', 'https'] })
-    .default('http://ollama:11434'),
-  BUILDER_OLLAMA_MODEL: Joi.string().default('qwen2.5-coder:7b'),
-  BUILDER_OLLAMA_PLAN_MODEL: Joi.string().default('dockus-builder-plan'),
-  BUILDER_OLLAMA_EVAL_MODEL: Joi.string().default('dockus-builder-eval'),
-  BUILDER_OLLAMA_QUALITY_MODEL: Joi.string().default('dockus-builder-quality'),
-  PLAN_BASE_MODEL: Joi.string().default('qwen2.5-coder:7b'),
-  EVAL_BASE_MODEL: Joi.string().default('deepseek-r1:8b'),
-  QUALITY_BASE_MODEL: Joi.string().default('deepseek-r1:8b'),
-  OLLAMA_NUM_CTX: Joi.number().integer().min(4096).default(16384),
-  BUILDER_OLLAMA_TIMEOUT_MS: Joi.number().integer().min(1000).default(120000),
+  AWS_REGION: Joi.string().default('us-east-1'),
+  AWS_ACCESS_KEY_ID: Joi.string().optional(),
+  AWS_SECRET_ACCESS_KEY: Joi.string().optional(),
+  AWS_SESSION_TOKEN: Joi.string().optional(),
+  BUILDER_BEDROCK_PLAN_MODEL_ID: Joi.string().default('qwen.qwen3-coder-480b-a35b-v1:0'),
+  BUILDER_BEDROCK_EVALUATION_MODEL_ID: Joi.string().default('qwen.qwen3-coder-480b-a35b-v1:0'),
+  BUILDER_BEDROCK_QUALITY_MODEL_ID: Joi.string().default('qwen.qwen3-coder-480b-a35b-v1:0'),
+  BUILDER_BEDROCK_CHAT_MODEL_ID: Joi.string().default('qwen.qwen3-coder-480b-a35b-v1:0'),
   BUILDER_LLM_ASSIST_ENABLED: Joi.boolean().default(true),
   BUILDER_SELF_HEAL_MAX_ATTEMPTS: Joi.number()
     .integer()

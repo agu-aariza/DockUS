@@ -37,6 +37,15 @@ export class StorageAccessService {
     const storageObject = await this.storageRepository.findOne({
       where: { id },
       withDeleted: includeDeleted,
+      relations: {
+        project: true,
+        delivery: {
+          author: true,
+          assignment: {
+            project: true,
+          },
+        },
+      },
     });
 
     if (!storageObject) {

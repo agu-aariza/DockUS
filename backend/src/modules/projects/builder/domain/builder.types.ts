@@ -1,8 +1,8 @@
 import { BuildRunArtifactType } from './entities/build-run-artifact.entity';
 import type {
   BuilderLlmPromptStage,
-  OllamaModelProfile,
-} from '../../../../shared/infrastructure/ai/ollama-generation.service';
+  LlmModelProfile,
+} from '../../../../shared/infrastructure/ai/llm.types';
 import type { PromptSectionTrace } from './llm/builder-prompt-composer';
 
 export const BUILDER_LLM_SCHEMA_VERSION = 'builder-llm/v2' as const;
@@ -126,7 +126,7 @@ export interface BuilderLlmStagePromptSnapshot {
   systemPrompt: string | null;
   prompt: string;
   sections: PromptSectionTrace[];
-  modelProfile: OllamaModelProfile;
+  modelProfile: LlmModelProfile;
   createdAt: string;
 }
 

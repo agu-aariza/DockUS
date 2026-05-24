@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -6,7 +6,10 @@ import { ConfigService } from '@nestjs/config';
 import { BuildRunChatMessage } from '../entities/build-run-chat-message.entity';
 import { BuildRun } from '../entities/build-run.entity';
 import { BuildRunArtifact, BuildRunArtifactType } from '../entities/build-run-artifact.entity';
-import { OllamaGenerationService } from '../../../../../shared/infrastructure/ai/ollama-generation.service';
+import {
+  ILlmGenerationService,
+  LLM_GENERATION_SERVICE,
+} from '../../../../../shared/infrastructure/ai/llm-generation.token';
 import { PromptRegistryService, PromptId } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 import { MinioStorageService } from '../../../../../shared/infrastructure/storage/minio-storage.service';
 import { resolveBuilderModelProfile } from './builder-llm-model-profile';
@@ -22,7 +25,8 @@ export class BuilderLlmChatService {
     private readonly buildRunRepository: Repository<BuildRun>,
     @InjectRepository(BuildRunArtifact)
     private readonly artifactRepository: Repository<BuildRunArtifact>,
-    private readonly ollamaGenerationService: OllamaGenerationService,
+    @Inject(LLM_GENERATION_SERVICE)
+    private readonly llmService: ILlmGenerationService,
     private readonly promptRegistryService: PromptRegistryService,
     private readonly minioStorageService: MinioStorageService,
     private readonly configService: ConfigService,
@@ -158,7 +162,7 @@ ${newUserMessage}
 [RESPUESTA DEL TUTOR — Estructura obligatoria: **Reconocimiento** → **El concepto** → **Por dónde empezar** → **Para reflexionar**]`;
 
     const profile = resolveBuilderModelProfile('chat', this.configService);
-    const response = await this.ollamaGenerationService.generate({
+    const response = await this.llmService.generate({
       stage: 'chat',
       promptId: PromptId.CHAT,
       prompt: fullPrompt,

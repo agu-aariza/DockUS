@@ -11,10 +11,10 @@ describe('HealthController', () => {
         database: { status: 'up' as const, latencyMs: 3 },
         redis: { status: 'up' as const, latencyMs: 2 },
         docker: { status: 'up' as const, latencyMs: 5 },
-        ollama: {
+        bedrock: {
           status: 'down' as const,
           latencyMs: 7,
-          info: 'Faltan modelos derivados.',
+          info: 'UnrecognizedClientException: credentials not configured.',
         },
       },
     };
