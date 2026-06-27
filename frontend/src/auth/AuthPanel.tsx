@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react';
 import { authApi } from '../shared/api/services';
-import type { AuthResponse } from '../shared/types';
+import type { AuthResponse } from "../features/auth/types";
 import { getErrorMessage } from '../shared/utils/errors';
 
 interface AuthPanelProps {

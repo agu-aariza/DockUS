@@ -8,7 +8,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 import { setAccessToken, setRefreshToken, subscribeAuthWarning, subscribeTokenUpdate } from '../api/http';
-import type { AuthResponse, SessionRecord } from '../types';
+import type { AuthResponse, SessionRecord } from "../../features/auth/types";
 import {
   createSessionRecord,
   readActiveSessionId,

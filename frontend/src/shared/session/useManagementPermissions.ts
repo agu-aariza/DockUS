@@ -1,4 +1,5 @@
-import type { SessionRecord, UserRole } from "../types";
+import type { SessionRecord } from "../../features/auth/types";
+import type { UserRole } from "../types";
 import { hasRole } from "../utils/permissions";
 
 export function useManagementPermissions(session: SessionRecord | null) {

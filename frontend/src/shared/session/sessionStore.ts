@@ -1,4 +1,4 @@
-import type { AuthResponse, SessionRecord } from '../types';
+import type { AuthResponse, SessionRecord } from "../../features/auth/types";
 
 const SESSIONS_KEY = 'dockus_console_sessions';
 const ACTIVE_SESSION_KEY = 'dockus_console_active_session';
