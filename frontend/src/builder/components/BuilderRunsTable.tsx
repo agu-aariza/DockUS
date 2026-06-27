@@ -1,4 +1,4 @@
-import type { BuildRunEntity } from "../../shared/types";
+import type { BuildRunEntity } from "../../features/builder/types";
 import { formatDate } from "../utils";
 
 const PREFLIGHT_COMPATIBILITY_LABEL: Record<string, string> = {

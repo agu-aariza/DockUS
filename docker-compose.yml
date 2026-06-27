@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.4-alpine
     container_name: dockus-postgres
     restart: unless-stopped
     environment:
@@ -10,7 +10,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\"",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -18,17 +22,25 @@ services:
       - dockus-network
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     container_name: dockus-redis
     restart: unless-stopped
     command: >
-      sh -c "if [ -z \"$$REDIS_PASSWORD\" ]; then redis-server --appendonly yes; else redis-server --requirepass $$REDIS_PASSWORD --appendonly yes; fi"
+      sh -c 'if [ -z "$$REDIS_PASSWORD" ]; then
+        redis-server --appendonly yes;
+      else
+        redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes;
+      fi'
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          'if [ -z "$$REDIS_PASSWORD" ]; then redis-cli ping; else redis-cli -a "$$REDIS_PASSWORD" ping; fi',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,7 +48,7 @@ services:
       - dockus-network
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2024-02-26T09-33-48Z
+    image: quay.io/minio/minio:RELEASE.2024-08-29T01-40-52Z
     container_name: dockus-minio
     restart: unless-stopped
     ports:
@@ -52,12 +64,12 @@ services:
       test:
         [
           "CMD-SHELL",
-          "mc alias set myminio http://localhost:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD >/dev/null 2>&1 && mc ready myminio >/dev/null 2>&1 || exit 1",
+          "mc alias set myminio http://localhost:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\" >/dev/null 2>&1 && mc ready myminio >/dev/null 2>&1 || exit 1",
         ]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
     networks:
       - dockus-network
 
@@ -65,7 +77,8 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile.backend
-    image: dockus-backend-dev
+      target: dev
+    image: dockus-backend:dev
     container_name: dockus-backend
     restart: unless-stopped
     profiles: ["dev"]
@@ -75,14 +88,16 @@ services:
     env_file:
       - .env
     environment:
+      NODE_ENV: development
+      PORT: ${PORT:-3000}
       DB_HOST: postgres
       REDIS_HOST: redis
       MINIO_ENDPOINT: minio
-      AWS_REGION: ${AWS_REGION:-us-east-1}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      MINIO_API_PORT: ${MINIO_API_PORT:-9000}
       DOCKER_HOST: unix:///var/run/docker.sock
       BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runc}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
@@ -96,19 +111,20 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp:/tmp
     command: >
-      sh -c "
-      if [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
-        npm install &&
-        cp package-lock.json node_modules/.package-lock.json;
-      fi &&
-      npm run start:dev
-      "
+      sh -c '
+        if [ ! -d node_modules ] || [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
+          npm install &&
+          cp package-lock.json node_modules/.package-lock.json;
+        fi &&
+        npm run start:dev
+      '
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health/live || exit 1"]
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health/live || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 45s
     networks:
       - dockus-network
 
@@ -116,18 +132,27 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile.prod
-    image: dockus-backend-prod
+      target: production
+    image: dockus-backend:prod
     container_name: dockus-backend-prod
     restart: unless-stopped
     profiles: ["prod"]
+    ports:
+      - "${PORT:-3000}:3000"
     env_file:
       - .env
     environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
       DB_HOST: postgres
       REDIS_HOST: redis
       MINIO_ENDPOINT: minio
+      MINIO_API_PORT: ${MINIO_API_PORT:-9000}
       DOCKER_HOST: unix:///var/run/docker.sock
-      BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runsc}
+      BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runc}
+      FRONTEND_URL: ${FRONTEND_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
@@ -135,15 +160,25 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    ports:
-      - "${PORT:-3000}:3000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    # The non-root container user needs the host Docker group GID to access the
+    # mounted Docker socket. Set DOCKER_HOST_GID to the GID of the host's docker
+    # group (e.g. `stat -c '%g' /var/run/docker.sock`).
+    group_add:
+      - ${DOCKER_HOST_GID:-999}
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health/live || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
     networks:
       - dockus-network
 
   frontend:
-    image: node:22-alpine
+    image: node:22.12.0-alpine3.21
     container_name: dockus-frontend
     restart: unless-stopped
     profiles: ["dev"]
@@ -151,6 +186,7 @@ services:
     ports:
       - "5173:5173"
     environment:
+      NODE_ENV: development
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api}
       CHOKIDAR_USEPOLLING: "true"
     depends_on:
@@ -160,13 +196,20 @@ services:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     command: >
-      sh -c "
-      if [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
-        npm install &&
-        cp package-lock.json node_modules/.package-lock.json;
-      fi &&
-      npm run dev -- --host 0.0.0.0 --port 5173
-      "
+      sh -c '
+        if [ ! -d node_modules ] || [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
+          npm install &&
+          cp package-lock.json node_modules/.package-lock.json;
+        fi &&
+        npm run dev -- --host 0.0.0.0 --port 5173
+      '
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:5173 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - dockus-network
 
@@ -176,13 +219,13 @@ services:
       dockerfile: frontend/Dockerfile.frontend
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api}
-    image: dockus-frontend-prod
+    image: dockus-frontend:prod
     container_name: dockus-frontend-prod
     restart: unless-stopped
     profiles: ["prod"]
     depends_on:
       backend-prod:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8080:80"
     networks:

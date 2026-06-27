@@ -16,11 +16,8 @@ import {
 import { projectsApi } from "../../shared/api/services";
 import { Badge, Card } from "../../shared/components/ui/Layout";
 import type { TeacherDeliveryDetailTab } from "../../deliveries/teacherReviewNavigation";
-import type {
-  ProjectQualityInsightsResponse,
-  ProjectStudentQualityInsightsResponse,
-  QualityInsightCategory,
-} from "../../shared/types";
+import type { ProjectQualityInsightsResponse, ProjectStudentQualityInsightsResponse } from "../../features/projects/types";
+import type { QualityInsightCategory } from "../../features/builder/types";
 
 interface QualityInsightsStudentOption {
   studentId: string;

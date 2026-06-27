@@ -6,16 +6,11 @@ import {
   deliveriesApi,
   projectsApi,
 } from "../../shared/api/services";
-import type {
-  BuildRunEntity,
-  DeliveryEntity,
-  EvidenceArtifactDto,
-  PaginatedResponse,
-  ProjectAssignmentEntity,
-  ProjectEntity,
-  ProjectRuntimeStatusResponse,
-  SessionRecord,
-} from "../../shared/types";
+import type { BuildRunEntity, EvidenceArtifactDto } from "../../features/builder/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
+import type { PaginatedResponse } from "../../shared/types";
+import type { ProjectAssignmentEntity, ProjectEntity } from "../../features/projects/types";
+import type { SessionRecord } from "../../features/auth/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useBuilderRunStream } from "../../builder/hooks/useBuilderRunStream";
 
@@ -35,7 +30,6 @@ export function useRuntimeManagement(session: SessionRecord | null) {
   const [selectedAssignmentId, setSelectedAssignmentId] = useState("");
   const [selectedDeliveryId, setSelectedDeliveryId] = useState("");
   
-  const [runtimeStatus, setRuntimeStatus] = useState<ProjectRuntimeStatusResponse | null>(null);
   const [runsResponse, setRunsResponse] = useState<PaginatedResponse<BuildRunEntity> | null>(null);
   const [selectedRunId, setSelectedRunId] = useState("");
   const [selectedRun, setSelectedRun] = useState<BuildRunEntity | null>(null);
@@ -107,42 +101,22 @@ export function useRuntimeManagement(session: SessionRecord | null) {
     finally { setBusyAction(null); }
   };
 
-  const refreshRuntimeStatus = async (projectId = selectedProjectId) => {
-    if (!projectId) return;
-    try {
-      const response = await projectsApi.runtime(projectId);
-      setRuntimeStatus(response);
-    } catch (e) {
-      setMessage({ text: getErrorMessage(e), tone: "warning" });
-    }
-  };
-
-  const handleReconcile = async () => {
-    // No-op en arquitectura efímera
-    setMessage({ text: "Infraestructura bajo demanda activa (Efímera).", tone: "info" });
-  };
-
   // Sync effects
   useEffect(() => { void loadProjects(); }, []);
 
   useEffect(() => {
     if (!selectedProjectId) {
       setAssignmentOptions([]);
-      setRuntimeStatus(null);
       return;
     }
     const sync = async () => {
       try {
-        const [as, rs] = await Promise.all([assignmentsApi.listByProject(selectedProjectId), projectsApi.runtime(selectedProjectId)]);
+        const as = await assignmentsApi.listByProject(selectedProjectId);
         setAssignmentOptions(as);
-        setRuntimeStatus(rs);
         setSelectedAssignmentId(curr => (curr && as.some(a => a.id === curr)) ? curr : (reqAssignmentId && as.some(a => a.id === reqAssignmentId) ? reqAssignmentId : (as[0]?.id ?? "")));
       } catch (e) { setMessage({ text: getErrorMessage(e), tone: "warning" }); }
     };
     void sync();
-    // Sondeo de estado plataforma menos agresivo (arquitectura efímera)
-    const inv = setInterval(() => { projectsApi.runtime(selectedProjectId).then(setRuntimeStatus).catch(() => {}); }, 15000);
-    return () => clearInterval(inv);
   }, [reqAssignmentId, selectedProjectId]);
 
   useEffect(() => {
@@ -298,10 +272,9 @@ export function useRuntimeManagement(session: SessionRecord | null) {
 
   useEffect(() => {
     const autorunRequested = searchParams.get("autorun") === "1";
-    const runtimeReady = runtimeStatus?.status === "READY";
     const nextAutorunKey = `${selectedProjectId}:${selectedAssignmentId}:${selectedDeliveryId}`;
 
-    if (!autorunRequested || !runtimeReady || !selectedDeliveryId || busyAction === "run") {
+    if (!autorunRequested || !selectedDeliveryId || busyAction === "run") {
       return;
     }
 
@@ -311,19 +284,19 @@ export function useRuntimeManagement(session: SessionRecord | null) {
 
     autorunKeyRef.current = nextAutorunKey;
     void handleStartRun();
-  }, [busyAction, runtimeStatus?.status, searchParams, selectedProjectId, selectedAssignmentId, selectedDeliveryId]);
+  }, [busyAction, searchParams, selectedProjectId, selectedAssignmentId, selectedDeliveryId]);
 
   return {
     projectOptions, assignmentOptions, deliveryOptions,
     selectedProjectId, setSelectedProjectId,
     selectedAssignmentId, setSelectedAssignmentId,
     selectedDeliveryId, setSelectedDeliveryId,
-    runtimeStatus, runsResponse, selectedRunId, setSelectedRunId, selectedRun, setSelectedRun,
+    runsResponse, selectedRunId, setSelectedRunId, selectedRun, setSelectedRun,
     evidenceArtifacts, evidenceLoading, evidenceError, downloadingArtifactId,
     previewingArtifact, setPreviewingArtifact, previewLoading,
     message, setMessage, busyAction, setBusyAction,
     streamState, latestSequence, streamError, liveEvents,
-    handleStartRun, handleCancelRun, handleReconcile, loadRuns, refreshRuntimeStatus,
+    handleStartRun, handleCancelRun, loadRuns,
     handleDownloadArtifact, handlePreviewArtifact,
   };
 }

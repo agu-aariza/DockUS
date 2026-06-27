@@ -2,20 +2,22 @@
 
 API REST construida con NestJS 11. Gestiona el dominio académico completo (proyectos, asignaciones, entregas, usuarios) y orquesta el pipeline de evaluación automática: análisis LLM, ejecución aislada en Docker, análisis estático y generación de informes pedagógicos.
 
+> **Proveedor LLM actual:** AWS Bedrock Runtime con modelos Anthropic Claude. Ollama y sus scripts asociados fueron eliminados del repositorio.
+
 ## Stack
 
-| Tecnología | Rol |
-|-----------|-----|
-| NestJS 11 + Express 5 | Framework HTTP |
-| TypeScript 5 | Lenguaje |
-| TypeORM 0.3 + PostgreSQL | Persistencia relacional |
-| BullMQ 5 + Redis | Cola de trabajos asíncrona |
-| Passport + JWT | Autenticación sin estado |
-| MinIO / AWS S3 SDK | Almacenamiento de artefactos |
-| Ollama (Qwen, DeepSeek) | Inferencia LLM local |
-| Docker CLI | Ejecución aislada de código |
-| nestjs-pino | Logging estructurado |
-| Joi | Validación de entorno |
+| Tecnología               | Rol                          |
+| ------------------------ | ---------------------------- |
+| NestJS 11 + Express 5    | Framework HTTP               |
+| TypeScript 5             | Lenguaje                     |
+| TypeORM 0.3 + PostgreSQL | Persistencia relacional      |
+| BullMQ 5 + Redis         | Cola de trabajos asíncrona   |
+| Passport + JWT           | Autenticación sin estado     |
+| MinIO / AWS S3 SDK       | Almacenamiento de artefactos |
+| AWS Bedrock Runtime      | Inferencia LLM               |
+| Docker CLI               | Ejecución aislada de código  |
+| nestjs-pino              | Logging estructurado         |
+| Joi                      | Validación de entorno        |
 
 ## Módulos principales
 
@@ -30,27 +32,33 @@ src/
 │       ├── assignments/    # Asignación proyecto-alumno
 │       ├── deliveries/     # Entregas versionadas
 │       ├── storage/        # Artefactos en MinIO
-│       ├── runtime/        # Redes y contenedores Docker por proyecto
 │       └── builder/        # ★ Pipeline LLM de evaluación
 └── shared/
-    └── infrastructure/
+    ├── config/          # Validación de variables de entorno, logger, Redis/BullMQ
+    └── infrastructure/  # Módulos transversales de infraestructura
         ├── database/    # Configuración TypeORM
-        ├── queue/       # BullMQ + Redis
         ├── docker/      # Abstracción sobre Docker CLI
-        ├── ai/          # Cliente Ollama + registro de prompts
-        └── storage/     # Cliente MinIO
+        ├── ai/          # Cliente Bedrock + registro de prompts
+        ├── storage/     # Cliente MinIO
+        ├── cache/       # Cliente Redis compartido
+        ├── queue/       # Reservado; config en shared/config/redis.config.ts
+        ├── security/    # Rate limiting
+        └── seed/        # Semillas de admin y demo
 ```
 
 ## Pipeline del builder
 
-El `BuilderRunCommandsService` orquesta el ciclo completo de forma asíncrona (BullMQ, concurrencia 5):
+El `BuilderRunCommandsService` orquesta el ciclo completo de forma asíncrona (BullMQ, concurrencia configurable):
 
 ```
 1. PLAN         → LLM analiza el código fuente e infiere receta Docker
-2. EXECUTION    → Instalación de dependencias y ejecución de tests en contenedor
-3. EVALUATION   → LLM genera informe con nota recomendada y desglose por rúbrica
-4. QUALITY      → ruff + bandit + análisis LLM de calidad de código
-5. REPORT       → Agregación de hallazgos, generación de feedback pedagógico
+2. COMPILE      → BuilderRecipeCompiler materializa la receta en comandos concretos
+3. EXECUTION    → Instalación de dependencias y ejecución de tests en contenedor
+4. GUARDRAIL    → BuilderHallucinationGuard detecta evaluaciones sin evidencia real
+5. EVALUATION   → LLM genera informe con nota recomendada y desglose por rúbrica
+6. QUALITY      → Análisis LLM de seguridad, arquitectura, calidad y rúbrica
+7. REPORT       → BuilderReportComposer agrega hallazgos y feedback pedagógico
+8. PERSIST      → BuilderArtifactPersister guarda prompts, trazas y reporte en MinIO
 ```
 
 Todos los artefactos intermedios (prompts, respuestas LLM, logs, JSONs) se persisten en MinIO y quedan enlazados al `BuildRun` para inspección posterior.
@@ -65,7 +73,7 @@ Contenedor de evaluación:
   --cap-drop ALL                    sin capacidades Linux
   --security-opt no-new-privileges  impide escalada de privilegios
   --tmpfs /tmp                      /tmp efímero en RAM
-  --network dockus-run-{id}         red interna aislada por run
+  --network none o aislada          sin conectividad saliente por defecto
   --cpus 0.5 --memory 512m          límites de recursos
 ```
 
@@ -115,11 +123,14 @@ JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=<mín. 32 caracteres>
 JWT_REFRESH_EXPIRES_IN=7d
 
-# Ollama / LLM
-BUILDER_OLLAMA_BASE_URL=http://ollama:11434
-BUILDER_OLLAMA_PLAN_MODEL=dockus-builder-plan
-BUILDER_OLLAMA_EVAL_MODEL=dockus-builder-eval
-BUILDER_OLLAMA_QUALITY_MODEL=dockus-builder-quality
+# AWS Bedrock / LLM
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+BUILDER_BEDROCK_PLAN_MODEL_ID=...
+BUILDER_BEDROCK_EVALUATION_MODEL_ID=...
+BUILDER_BEDROCK_QUALITY_MODEL_ID=...
+BUILDER_BEDROCK_CHAT_MODEL_ID=...
 
 # Docker (builder)
 BUILDER_DOCKER_RUNTIME=runc
@@ -133,7 +144,7 @@ BUILDER_BATCH_MEMORY_LIMIT=512m
 
 - Node.js 22, npm 10+
 - PostgreSQL, Redis, MinIO, Docker daemon accesibles
-- `python3`, `pip`, `ruff`, `bandit`
+- Credenciales de AWS configuradas para Bedrock
 
 Si el backend corre dentro de un contenedor necesita acceso al socket Docker del host:
 
@@ -160,22 +171,24 @@ npm test -- --runInBand
 # Tests con cobertura
 npm run test:cov
 
-# Tests e2e
-npm run test:e2e
-
 # Comprobación de tipos sin compilar
 npm run typecheck
 ```
 
 ## Operación con Docker Compose
 
-El stack completo se levanta desde la raíz del repositorio:
+El stack completo se levanta desde la raíz del repositorio usando perfiles:
 
 ```bash
-docker compose up --build
+# Desarrollo (hot-reload en backend y frontend)
+cd .. && docker compose --profile dev up --build
+
+# Producción (imágenes optimizadas, backend como usuario no-root)
+# Requiere DOCKER_HOST_GID con el GID del grupo docker del host:
+cd .. && DOCKER_HOST_GID=$(stat -c '%g' /var/run/docker.sock) docker compose --profile prod up --build -d
 ```
 
-Servicios levantados: `postgres`, `redis`, `minio`, `ollama`, `ollama-bootstrap`, `backend`, `frontend`.
+Servicios levantados: `postgres`, `redis`, `minio`, `backend`/`backend-prod`, `frontend`/`frontend-prod`.
 
 ## Notas operativas
 
@@ -183,3 +196,5 @@ Servicios levantados: `postgres`, `redis`, `minio`, `ollama`, `ollama-bootstrap`
 - Los `BuildRun` con más de 10 minutos en estado `RUNNING` o `QUEUED` al arrancar se marcan automáticamente como `FAILED` (limpieza de stale runs).
 - Swagger UI disponible en `/api/docs` fuera de producción.
 - Los artefactos LLM (prompts, respuestas raw) solo son visibles para roles `TEACHER` y `ADMIN`; los alumnos solo ven `REPORT_TEXT`, `BUILD_LOG` y `TEST_LOG`.
+- Source of truth de prompts: [`src/shared/infrastructure/ai/prompts.json`](./src/shared/infrastructure/ai/prompts.json).
+- La capa de runtime por proyecto fue eliminada; el builder utiliza contenedores efímeros gestionados por `shared/infrastructure/docker`.

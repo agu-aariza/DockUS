@@ -1,4 +1,4 @@
-import type { BuildRunEvent } from "../shared/types";
+import type { BuildRunEvent } from "../features/builder/types";
 
 export function mergeEvents(
   current: BuildRunEvent[],

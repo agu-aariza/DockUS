@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { groupsApi, usersApi } from "../../shared/api/services";
-import type {
-  CourseGroupEntity,
-  GroupEnrollmentEntity,
-  UserEntity,
-} from "../../shared/types";
+import type { CourseGroupEntity, GroupEnrollmentEntity } from "../../features/groups/types";
+import type { UserEntity } from "../../features/auth/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { normalizeOptionalText } from "../../projects/hooks/projectManagement.utils";
 

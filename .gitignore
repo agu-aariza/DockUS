@@ -25,15 +25,12 @@ backend/.env
 docs/
 
 # Casos de uso
-fixtures/*
-graphify-out/*
-.agents/*
-.codex/*
+graphify-out/
+.agents/
+.codex/
 AGENTS.md
-academic-project-bank/*
-results/*
-dockus-test-kit/*
-.claude/*
-CLAUDE.md   
-fixtures-error/*
-academic_proyects/*
+academic_proyects/
+skills/*
+agents/*
+frontend/.tmp-test-dist/*
+KIMI_MODIFY.md

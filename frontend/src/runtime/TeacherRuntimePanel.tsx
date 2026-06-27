@@ -9,16 +9,12 @@ import {
   RiStackFill,
   RiStopLine,
   RiUser3Fill,
-  RiSettings3Line,
 } from "react-icons/ri";
 import { useState, useEffect, useMemo } from "react";
 import { BuilderLiveRunPane } from "../builder/components/BuilderLiveRunPane";
 import { BuilderRunsTable } from "../builder/components/BuilderRunsTable";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";
-import type {
-  ProjectRuntimeEnvironmentStatus,
-  SessionRecord,
-} from "../shared/types";
+import type { SessionRecord } from "../features/auth/types";
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
 import { useToast } from "../shared/toast/ToastContext";
 import { useRuntimeManagement } from "./hooks/useRuntimeManagement";
@@ -26,6 +22,7 @@ import { useWorkspace } from "../shared/workspace/WorkspaceContext";
 import { deliveriesApi } from "../shared/api/services";
 import { getErrorMessage } from "../shared/utils/errors";
 import { MetricCard } from "../shared/components/MetricCard";
+import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import { VisualPicker, type VisualPickerOption } from "../shared/components/ui/VisualPicker";
 import { ProjectSelectionHub, type ProjectHubOption } from "../shared/components/ui/ProjectSelectionHub";
 import { PageHeader } from "../shared/components/ui/PageHeader";
@@ -36,20 +33,12 @@ interface TeacherRuntimePanelProps {
   session: SessionRecord | null;
 }
 
-const RUNTIME_STATUS_STYLES: Record<ProjectRuntimeEnvironmentStatus, string> = {
-  ABSENT: "border-academic-outline-variant/30 bg-academic-surface-container text-academic-outline",
-  PROVISIONING: "border-brand-blue/20 bg-brand-blue/5 text-brand-blue-dark",
-  READY: "border-brand-gold/20 bg-brand-gold/5 text-brand-gold-dark",
-  ERROR: "border-rose-100 bg-rose-50/70 text-rose-700",
-  DELETING: "border-amber-200 bg-amber-50 text-amber-700",
-};
+type RuntimeTab = "control" | "history" | "live";
 
 function formatStudentName(name?: string, email?: string) {
   if (!name || name === "Estudiante" || name.includes("@")) return email || "Sin identificar";
   return name;
 }
-
-type RuntimeTab = "control" | "history" | "live";
 
 export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.Element {
   const rc = useRuntimeManagement(session);
@@ -145,11 +134,10 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
   const selectedDelivery = rc.deliveryOptions.find(
     (delivery) => delivery.id === rc.selectedDeliveryId,
   );
-  const runtimeStatus = rc.runtimeStatus?.status ?? "ABSENT";
-  const runtimeStyle = RUNTIME_STATUS_STYLES[runtimeStatus];
+
   const runs = rc.runsResponse?.data ?? [];
 
-  const projectOptions: VisualPickerOption[] = useMemo(() => 
+  const projectOptions: VisualPickerOption[] = useMemo(() =>
     rc.projectOptions.map(p => ({
       id: p.id,
       label: p.title,
@@ -158,7 +146,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
       badge: p.status,
     })), [rc.projectOptions]);
 
-  const assignmentOptions: VisualPickerOption[] = useMemo(() => 
+  const assignmentOptions: VisualPickerOption[] = useMemo(() =>
     rc.assignmentOptions.map(a => ({
       id: a.id,
       label: formatStudentName(a.studentName, a.studentEmail),
@@ -167,7 +155,7 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
       badge: a.deliveryCount > 0 ? `${a.deliveryCount} entregas` : 'Sin entregas',
     })), [rc.assignmentOptions]);
 
-  const deliveryOptions: VisualPickerOption[] = useMemo(() => 
+  const deliveryOptions: VisualPickerOption[] = useMemo(() =>
     rc.deliveryOptions.map(d => ({
       id: d.id,
       label: `Versión ${d.version}`,
@@ -177,32 +165,32 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
       badgeTone: d.status === 'SUBMITTED' ? 'success' : d.status === 'EVALUATED' ? 'info' : 'default',
     })), [rc.deliveryOptions]);
 
-  const hubProjects: ProjectHubOption[] = useMemo(() => 
+  const hubProjects: ProjectHubOption[] = useMemo(() =>
     rc.projectOptions.map(p => ({
       id: p.id,
       title: p.title,
       description: p.contextAcademico || "Sin descripción operativa disponible.",
       studentCount: (p as any).assignmentCount || 0,
-      activeRuns: 0, 
-      status: p.runtimeEnvironmentStatus as any || 'ABSENT',
+      activeRuns: 0,
+      status: "READY" as const,
       teachers: p.teachers,
     })), [rc.projectOptions]);
 
   if (!rc.selectedProjectId) {
     return (
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-6">
         <PageHeader
           title="Runtime Operativo"
-          subtitle="Selecciona un proyecto para gestionar despliegues, monitorear ejecuciones y calificar entregas técnicas."
+          subtitle="Selecciona un proyecto para ejecutar evaluaciones de entregas y revisar runs en tiempo real."
           icon={<RiPulseFill />}
           badge={rc.projectOptions.length.toString()}
         />
-        <section className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white p-6 shadow-academic sm:p-8">
+        <section className="card p-6 sm:p-8">
           <ProjectSelectionHub
             projects={hubProjects}
             onSelect={(id) => rc.setSelectedProjectId(id)}
             title="Selecciona un proyecto para comenzar"
-            subtitle="Activa un contexto de runtime para preparar infraestructura, lanzar runs y monitorear ejecución en vivo."
+            subtitle="Activa un contexto de runtime para preparar ejecuciones, lanzar evaluaciones y monitorear resultados."
           />
         </section>
       </div>
@@ -211,47 +199,35 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
 
   return (
     <div className="space-y-6">
-      <PageHeader 
+      <PageHeader
         title="Runtime Operativo"
-        subtitle="Evaluación integral mediante ejecución efímera en contenedores aislados y auditoría por LLM."
+        subtitle="Ejecuta evaluaciones de entregas y audita builder runs en tiempo real."
         icon={<RiPulseFill />}
-        badge={runtimeStatus}
         actions={
-          <div className="flex items-center gap-3">
-            <Tabs 
-              tabs={[
-                { id: "control", label: "Control", icon: RiPlayLine },
-                { id: "history", label: "Historial", icon: RiArrowRightUpLine },
-                { id: "live", label: "En vivo", icon: RiRefreshLine },
-              ]}
-              activeTab={activeTab}
-              onTabChange={(id) => setActiveTab(id as RuntimeTab)}
-              variant="primary"
-            />
-            <Button
-              variant="secondary"
-              className="!h-11 px-4"
-              onClick={() => void rc.refreshRuntimeStatus()}
-              disabled={!rc.selectedProjectId}
-            >
-              <RiRefreshLine className={rc.busyAction === 'refresh' ? 'animate-spin' : ''} />
-              Sincronizar
-            </Button>
-          </div>
+          <Tabs
+            tabs={[
+              { id: "control", label: "Control", icon: RiPlayLine },
+              { id: "history", label: "Historial", icon: RiArrowRightUpLine },
+              { id: "live", label: "En vivo", icon: RiRefreshLine },
+            ]}
+            activeTab={activeTab}
+            onTabChange={(id) => setActiveTab(id as RuntimeTab)}
+            variant="primary"
+          />
         }
       />
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Estado Plataforma"
-          value={runtimeStatus === 'READY' ? 'OPERATIVA' : runtimeStatus}
-          helper="Motor de ejecución efímera"
+          value="OPERATIVA"
+          helper="Motor de ejecución listo"
           icon={<RiPulseFill />}
-          variant={runtimeStatus === 'READY' ? 'info' : 'warning'}
+          variant="info"
         />
         <MetricCard
           label="Capacidad Evaluación"
-          value="LLM + Docker"
+          value="LLM + Builder"
           helper="Análisis integral activo"
           icon={<RiServerLine />}
           variant="info"
@@ -273,28 +249,24 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
       </div>
 
       {activeTab === "control" ? (
-        <section className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white shadow-academic overflow-hidden animate-fade-in">
-          <div className="bg-brand-maroon p-8 text-academic-on-primary">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-gold/20 text-brand-gold-light text-xl">
-                  <RiPlayLine />
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold tracking-tight text-white">Evaluación Integral</h4>
-                  <p className="text-sm text-academic-on-primary/70">Ejecución efímera de código y evaluación por LLM en tiempo real.</p>
-                </div>
+        <section className="card">
+          <div className="panel-header bg-slate-50">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <RiPlayLine className="text-lg" />
               </div>
-              <span className={`rounded-full border px-4 py-1.5 text-xs font-bold ${runtimeStyle}`}>
-                {runtimeStatus}
-              </span>
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Evaluación Integral</h2>
+                <p className="text-sm text-slate-500">Ejecución de código y evaluación por LLM en tiempo real.</p>
+              </div>
             </div>
+            <StatusBadge tone="success">READY</StatusBadge>
           </div>
 
-          <div className="p-8 space-y-10">
+          <div className="p-6 space-y-8">
             <div className="grid gap-6 lg:grid-cols-3">
-              <div className="space-y-3">
-                <label className="ui-label ml-1">Proyecto de Referencia</label>
+              <div className="space-y-1.5">
+                <label className="label-text">Proyecto de Referencia</label>
                 <VisualPicker
                   options={projectOptions}
                   value={rc.selectedProjectId}
@@ -303,8 +275,8 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                   searchPlaceholder="Buscar por título o contexto..."
                 />
               </div>
-              <div className="space-y-3">
-                <label className="ui-label ml-1">Alumno Asignado</label>
+              <div className="space-y-1.5">
+                <label className="label-text">Alumno Asignado</label>
                 <VisualPicker
                   options={assignmentOptions}
                   value={rc.selectedAssignmentId}
@@ -314,8 +286,8 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                   className={!rc.selectedProjectId ? 'opacity-50 grayscale pointer-events-none' : ''}
                 />
               </div>
-              <div className="space-y-3">
-                <label className="ui-label ml-1">Versión de Entrega</label>
+              <div className="space-y-1.5">
+                <label className="label-text">Versión de Entrega</label>
                 <VisualPicker
                   options={deliveryOptions}
                   value={rc.selectedDeliveryId}
@@ -328,33 +300,33 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <div className="rounded-3xl border border-academic-outline-variant/20 bg-academic-surface-container/30 p-6">
-                <div className="eyebrow mb-3">Contexto Académico</div>
-                <div className="text-base font-bold tracking-tight text-academic-on-surface mb-2">
+              <div className="rounded-lg border border-app-border bg-slate-50 p-5">
+                <div className="eyebrow mb-2">Contexto Académico</div>
+                <div className="text-base font-semibold text-slate-900 mb-2">
                   {selectedProject?.title ?? "Sin proyecto seleccionado"}
                 </div>
-                <p className="text-sm leading-relaxed text-academic-on-surface-variant">
+                <p className="text-sm leading-relaxed text-slate-500">
                   {selectedProject?.contextAcademico ??
                     "El contexto académico del proyecto define los objetivos y restricciones de la ejecución."}
                 </p>
               </div>
 
-              <div className="rounded-3xl border border-academic-outline-variant/20 bg-academic-surface-container/30 p-6">
+              <div className="rounded-lg border border-app-border bg-slate-50 p-5">
                 <div className="eyebrow mb-3">Resumen de Destino</div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-academic-outline">Modo Ejecución:</span>
-                    <span className="font-bold text-emerald-600">Efímero / Aislado</span>
+                    <span className="font-medium text-slate-500">Modo Ejecución:</span>
+                    <span className="font-semibold text-emerald-600">Efímero / Aislado</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-academic-outline">Alumno:</span>
-                    <span className="font-bold text-academic-on-surface truncate max-w-[200px]">
+                    <span className="font-medium text-slate-500">Alumno:</span>
+                    <span className="font-semibold text-slate-900 truncate max-w-[200px]">
                       {formatStudentName(selectedAssignment?.studentName, selectedAssignment?.studentEmail)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-academic-outline">Entrega:</span>
-                    <span className="font-bold text-brand-maroon">
+                    <span className="font-medium text-slate-500">Entrega:</span>
+                    <span className="font-semibold text-accent">
                       {selectedDelivery ? `v${selectedDelivery.version} (${selectedDelivery.status})` : "n/a"}
                     </span>
                   </div>
@@ -362,52 +334,45 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-between gap-6 pt-8 border-t border-academic-outline-variant/20 sm:flex-row">
-              <div className="flex flex-wrap gap-3 w-full sm:w-auto">
-                <Button
-                  className="px-10 flex-1 sm:flex-none"
-                  onClick={() => {
-                    setActiveTab("live");
-                    void rc.handleStartRun();
-                  }}
-                  disabled={!rc.selectedDeliveryId || runtimeStatus !== "READY" || rc.busyAction === "run"}
-                  variant="primary"
-                >
-                  {rc.busyAction === "run" ? (
-                    <RiLoader4Line className="animate-spin text-2xl" />
-                  ) : (
-                    <RiPlayLine className="text-2xl" />
-                  )}
-                  Lanzar Evaluación
-                </Button>
-              </div>
+            <div className="flex flex-col items-center justify-between gap-4 pt-6 border-t border-app-border sm:flex-row">
+              <Button
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  setActiveTab("live");
+                  void rc.handleStartRun();
+                }}
+                disabled={!rc.selectedDeliveryId || rc.busyAction === "run"}
+                variant="primary"
+                size="md"
+              >
+                {rc.busyAction === "run" ? (
+                  <RiLoader4Line className="animate-spin text-xl" />
+                ) : (
+                  <RiPlayLine className="text-xl" />
+                )}
+                Lanzar Evaluación
+              </Button>
 
               {rc.selectedRunId && !rc.selectedRun?.isTerminal && (
                 <Button
-                  className="px-8 w-full sm:w-auto"
+                  className="w-full sm:w-auto"
                   onClick={() => void rc.handleCancelRun()}
                   disabled={rc.busyAction === "cancel"}
                   variant="danger"
+                  size="md"
                 >
                   {rc.busyAction === "cancel" ? (
-                    <RiLoader4Line className="animate-spin text-xl" />
+                    <RiLoader4Line className="animate-spin text-lg" />
                   ) : (
-                    <RiStopLine className="text-xl" />
+                    <RiStopLine className="text-lg" />
                   )}
                   Abortar Run
                 </Button>
               )}
             </div>
 
-            {runtimeStatus !== "READY" && rc.selectedProjectId ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3 text-sm text-amber-800">
-                <RiServerLine className="text-lg" />
-                <span>El motor de ejecución no está listo. Contacta con soporte técnico si el problema persiste.</span>
-              </div>
-            ) : null}
-
             {rc.streamError ? (
-              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-800">
+              <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
                 Error en stream SSE: {rc.streamError}. El sistema ha conmutado a modo de actualización manual (polling).
               </div>
             ) : null}
@@ -416,12 +381,12 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
       ) : null}
 
       {activeTab === "history" ? (
-        <section className="animate-fade-in">
-          <div className="mb-6 px-2">
-            <h3 className="text-xl font-bold tracking-tight text-academic-on-surface">Historial de Ejecuciones</h3>
-            <p className="text-sm text-academic-on-surface-variant">Registros históricos de todos los runs realizados para esta entrega.</p>
+        <section className="space-y-4">
+          <div>
+            <h3 className="section-heading">Historial de Ejecuciones</h3>
+            <p className="section-copy">Registros históricos de runs realizados para esta entrega.</p>
           </div>
-          <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic">
+          <div className="card">
             <BuilderRunsTable
               runs={runs}
               busyAction={rc.busyAction}
@@ -436,17 +401,17 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
       ) : null}
 
       {activeTab === "live" ? (
-        <section className="animate-fade-in">
-           <div className="mb-6 px-2 flex items-center justify-between">
+        <section className="space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h3 className="text-xl font-bold tracking-tight text-academic-on-surface">Ejecución en Vivo</h3>
-              <p className="text-sm text-academic-on-surface-variant">Monitorización en tiempo real vía SSE.</p>
+              <h3 className="section-heading">Ejecución en Vivo</h3>
+              <p className="section-copy">Monitorización en tiempo real vía SSE.</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {rc.selectedDeliveryId && (
                 <Button
                   variant="secondary"
-                  className="!h-9 px-4 text-xs"
+                  size="sm"
                   onClick={() => void handleOpenCodePreview()}
                   disabled={isLoadingCodePreview}
                 >
@@ -459,13 +424,13 @@ export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.
                 </Button>
               )}
               {rc.selectedRunId && (
-                <div className="text-xs font-bold text-brand-maroon bg-brand-maroon/5 px-3 py-1.5 rounded-xl border border-brand-maroon/10">
+                <span className="inline-flex items-center rounded-full border border-accent/10 bg-accent-subtle px-3 py-1.5 text-xs font-semibold text-accent">
                   Run: {rc.selectedRunId.slice(0, 12)}
-                </div>
+                </span>
               )}
             </div>
           </div>
-          <div className="rounded-[2.5rem] border border-academic-outline-variant/30 bg-white overflow-hidden shadow-academic min-h-[500px]">
+          <div className="card min-h-[500px]">
             <BuilderLiveRunPane
               selectedRun={rc.selectedRun}
               liveEvents={rc.liveEvents}

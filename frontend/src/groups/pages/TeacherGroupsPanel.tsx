@@ -1,29 +1,30 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { 
-  RiGroupLine, 
-  RiAddLine, 
-  RiDeleteBinLine, 
-  RiArrowRightSLine, 
-  RiUser3Fill, 
+import {
+  RiGroupLine,
+  RiAddLine,
+  RiDeleteBinLine,
+  RiArrowRightSLine,
+  RiUser3Fill,
   RiCheckFill,
   RiInformationFill,
   RiRefreshLine,
-  RiSearchLine,
-  RiFilter3Line,
-  RiArrowLeftRightLine,
   RiTeamFill,
-  RiSettings4Fill,
-  RiMore2Fill,
-  RiEditLine
+  RiEditLine,
+  RiCloseLine,
 } from "react-icons/ri";
 import { useGroupManagement } from "../hooks/useGroupManagement";
-import { UserEntity } from "../../shared/types";
+import { UserEntity } from "../../features/auth/types";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { useNoticeToasts } from "../../shared/toast/useNoticeToasts";
 import { PageHeader } from "../../shared/components/ui/PageHeader";
 import { Button } from "../../shared/components/ui/Button";
 import { Tabs } from "../../shared/components/ui/Tabs";
+import { Card } from "../../shared/components/ui/Layout";
+import { SectionCard } from "../../shared/components/ui/Layout";
+import { Badge } from "../../shared/components/ui/Layout";
+import { SearchInput } from "../../shared/components/ui/SearchInput";
+import { StatusBadge } from "../../shared/components/ui/StatusBadge";
 
 export function TeacherGroupsPanel({ session }: { session: any }) {
   const canWrite = ["TEACHER", "ADMIN"].includes(session.role);
@@ -41,20 +42,19 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
     loading,
     busy,
     notice,
-    setNotice,
+    refreshGroups,
+    refreshStudents,
     handleCreateGroup,
     handleUpdateGroup,
     handleEnrollStudents,
     handleToggleEnrollment,
-    refreshGroups,
-    refreshStudents,
-    handleDeleteGroup
+    handleDeleteGroup,
   } = useGroupManagement(canWrite);
 
   // Deep linking: focus group from URL
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const gId = params.get('focusedGroupId');
+    const gId = params.get("focusedGroupId");
     if (gId && gId !== focusedGroupId) {
       setFocusedGroupId(gId);
     }
@@ -66,22 +66,44 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
     refreshStudents();
   }, []);
 
+  useNoticeToasts([notice], "Gestión de Grupos");
+
   const [studentSearch, setStudentSearch] = useState("");
   const [groupSearch, setGroupSearch] = useState("");
   const [enrollmentFilter, setEnrollmentFilter] = useState<"all" | "enrolled" | "not_enrolled">("all");
-
-  const filteredGroups = groups.filter(g => 
-    !groupSearch.trim() || 
-    g.name.toLowerCase().includes(groupSearch.toLowerCase()) || 
-    g.code?.toLowerCase().includes(groupSearch.toLowerCase())
-  );
-
-  useNoticeToasts([notice], "Gestión de Grupos");
-
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", code: "", description: "" });
-  const focusedGroup = groups.find(g => g.id === focusedGroupId);
+
+  const focusedGroup = groups.find((g) => g.id === focusedGroupId);
+
+  const filteredGroups = groups.filter(
+    (g) =>
+      !groupSearch.trim() ||
+      g.name.toLowerCase().includes(groupSearch.toLowerCase()) ||
+      g.code?.toLowerCase().includes(groupSearch.toLowerCase())
+  );
+
+  const filteredStudents = allStudents.filter((student: UserEntity) => {
+    const searchLower = studentSearch.toLowerCase().trim();
+    const matchesSearch =
+      !searchLower ||
+      student.firstName.toLowerCase().includes(searchLower) ||
+      student.lastName.toLowerCase().includes(searchLower) ||
+      student.email.toLowerCase().includes(searchLower);
+
+    if (!focusedGroup) return matchesSearch;
+
+    const isEnrolled = groupEnrollments?.some(
+      (e) => e.studentId === student.id && !e.revokedAt
+    );
+    const matchesFilter =
+      enrollmentFilter === "all" ||
+      (enrollmentFilter === "enrolled" && isEnrolled) ||
+      (enrollmentFilter === "not_enrolled" && !isEnrolled);
+
+    return matchesSearch && matchesFilter;
+  });
 
   const openEditModal = () => {
     if (!focusedGroup) return;
@@ -94,28 +116,28 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-full overflow-x-hidden">
-      <PageHeader 
+    <div className="w-full max-w-full space-y-6 overflow-x-hidden">
+      <PageHeader
         title="Gestión de Grupos"
-        subtitle="Gestión estratégica de cohortes, control de matriculaciones y orquestación de grupos académicos."
+        subtitle="Administración de grupos docentes, matriculaciones y cohortes."
         icon={<RiTeamFill />}
         badge={groups.length.toString()}
         actions={
           <div className="flex items-center gap-2">
-            <Button 
-               variant="secondary"
-               className="h-11 px-4 flex items-center justify-center rounded-xl"
-               onClick={refreshGroups}
-               disabled={loading}
-               title="Refrescar datos"
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={refreshGroups}
+              disabled={loading}
+              title="Refrescar datos"
             >
               <RiRefreshLine className={loading ? "animate-spin" : ""} />
-              <span>{loading ? "Actualizando..." : "Actualizar grupos"}</span>
+              <span>{loading ? "Actualizando..." : "Actualizar"}</span>
             </Button>
             {canWrite && (
-              <Button 
+              <Button
                 variant="primary"
-                className="h-11"
+                size="md"
                 onClick={() => setIsCreating(true)}
               >
                 <RiAddLine /> Nuevo Grupo
@@ -125,457 +147,470 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] items-start relative max-w-full">
+      <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* Sidebar: Group Selection & Creation */}
-        <aside className="flex flex-col h-full rounded-lg border border-academic-surface-variant bg-white p-6 shadow-academic overflow-hidden lg:sticky lg:top-32">
+        <SectionCard
+          title="Grupos"
+          description="Selecciona un grupo para gestionar sus matriculaciones."
+          headerAction={
+            <Badge variant="info">{groups.length} grupos</Badge>
+          }
+          className="lg:sticky lg:top-8"
+        >
           {isCreating && (
-            <div className="mb-6 p-5 rounded-lg border border-brand-maroon/10 bg-brand-maroon/5 space-y-4 animate-in zoom-in-95 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-black uppercase tracking-widest text-brand-maroon">Crear Nuevo Grupo</h4>
-                <button onClick={() => setIsCreating(false)} className="text-brand-maroon/40 hover:text-brand-maroon">×</button>
+            <div className="mb-4 rounded-lg border border-app-border bg-slate-50 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Crear grupo
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setIsCreating(false)}
+                  className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                  aria-label="Cerrar formulario"
+                >
+                  <RiCloseLine />
+                </button>
               </div>
               <div className="space-y-3">
-                <input 
-                  className="w-full h-12 px-4 rounded-2xl bg-white border border-brand-maroon/10 focus:border-brand-maroon focus:ring-4 focus:ring-brand-maroon/5 transition-all text-sm font-medium" 
+                <input
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                   placeholder="Nombre del grupo (ej: 2º DAW)"
                   value={groupForm.name}
-                  onChange={(e) => setGroupForm(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setGroupForm((prev) => ({ ...prev, name: e.target.value }))
+                  }
                 />
-                <input 
-                  className="w-full h-12 px-4 rounded-2xl bg-white border border-brand-maroon/10 focus:border-brand-maroon focus:ring-4 focus:ring-brand-maroon/5 transition-all text-sm font-medium" 
+                <input
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                   placeholder="Código corto (ej: DAW-24)"
                   value={groupForm.code}
-                  onChange={(e) => setGroupForm(prev => ({ ...prev, code: e.target.value }))}
+                  onChange={(e) =>
+                    setGroupForm((prev) => ({ ...prev, code: e.target.value }))
+                  }
                 />
-                <Button 
+                <Button
                   variant="primary"
-                  className="w-full !h-12 shadow-none"
+                  size="md"
+                  className="w-full"
                   disabled={!groupForm.name || !!busy}
                   onClick={async () => {
                     await handleCreateGroup();
                     setIsCreating(false);
                   }}
                 >
-                  {busy === "create" ? "Generando..." : "Confirmar Creación"}
+                  {busy === "create" ? "Creando..." : "Crear grupo"}
                 </Button>
               </div>
             </div>
           )}
-          
-          <div className="flex items-center justify-between gap-3 mb-6">
-            <div>
-              <p className="eyebrow !mb-1">Catálogo</p>
-              <h3 className="text-xl font-bold tracking-tight text-academic-on-surface">
-                Grupos
-              </h3>
-            </div>
-            <span className="flex h-8 min-w-[2rem] items-center justify-center rounded-full bg-brand-maroon px-2 text-[11px] font-bold text-academic-on-primary shadow-sm">
-              {groups.length}
-            </span>
+
+          <div className="mb-4">
+            <SearchInput
+              value={groupSearch}
+              onChange={setGroupSearch}
+              placeholder="Buscar grupo..."
+            />
           </div>
 
-          <div className="space-y-4">
-            <div className="group relative">
-              <RiSearchLine className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline text-lg transition-colors group-focus-within:text-brand-maroon" />
-              <input
-                className="input-field pl-11 h-12 bg-academic-surface-container border-academic-outline-variant/20 focus:bg-white focus:border-brand-maroon/25 focus:ring-2 focus:ring-brand-maroon/10 transition-all"
-                placeholder="Buscar grupo..."
-                value={groupSearch}
-                onChange={(e) => setGroupSearch(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="mt-8 flex-1 overflow-y-auto space-y-3 pr-1 -mr-1 custom-scrollbar">
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1 -mr-1 custom-scrollbar">
             {filteredGroups.map((group) => {
               const isSelected = focusedGroupId === group.id;
               return (
                 <button
                   key={group.id}
-                  className={`group w-full rounded-lg border p-5 text-left transition-all duration-300 relative overflow-hidden ${isSelected
-                    ? "border-academic-primary bg-academic-primary text-academic-on-primary shadow-academic-lg scale-[1.02] z-10"
-                    : "border-academic-surface-variant bg-white hover:border-academic-outline hover:bg-academic-surface-container-lowest hover:shadow-academic active:scale-95"
-                    }`}
+                  type="button"
                   onClick={() => setFocusedGroupId(group.id)}
+                  className={`group flex w-full flex-col gap-3 rounded-md border p-4 text-left transition-colors ${
+                    isSelected
+                      ? "border-primary bg-primary-subtle"
+                      : "border-app-border bg-white hover:border-slate-300 hover:bg-slate-50"
+                  }`}
                 >
-                  {isSelected && (
-                    <div className="absolute top-0 right-0 p-1 opacity-20">
-                      <RiGroupLine className="text-4xl -rotate-12 translate-x-2 -translate-y-2" />
-                    </div>
-                  )}
-
-                  <div className="flex items-start justify-between gap-3 relative">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <RiGroupLine className={isSelected ? "text-academic-secondary" : "text-academic-outline group-hover:text-academic-outline-variant"} />
-                        <span className="line-clamp-1 text-sm font-bold tracking-tight">
-                          {group.name}
-                        </span>
-                      </div>
-                      <div className={`ui-label leading-relaxed line-clamp-1 ${isSelected ? "text-white/60" : "text-academic-on-surface-variant"}`}>
-                        {group.code || 'DOC'}
-                      </div>
-                    </div>
-                    <RiArrowRightSLine className={`text-lg transition-transform ${isSelected ? "text-white/40 translate-x-1" : "text-academic-outline group-hover:text-academic-outline-variant"}`} />
-                  </div>
-
-                  <div className="mt-5 flex items-center justify-between relative">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <RiGroupLine
+                        className={
+                          isSelected
+                            ? "text-primary"
+                            : "text-slate-400 group-hover:text-slate-500"
+                        }
+                      />
                       <span
-                        className={`rounded-full px-3 py-1 ui-label ${isSelected
-                          ? "bg-white/10 text-white/90 border border-white/10"
-                          : "bg-academic-surface-container text-academic-outline"
-                          }`}
+                        className={`line-clamp-1 text-sm font-semibold ${
+                          isSelected ? "text-primary" : "text-slate-900"
+                        }`}
                       >
-                        {group.studentCount} ALUMNOS
+                        {group.name}
                       </span>
                     </div>
+                    <RiArrowRightSLine
+                      className={`shrink-0 text-lg ${
+                        isSelected
+                          ? "text-primary"
+                          : "text-slate-300 group-hover:text-slate-400"
+                      }`}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">
+                      {group.code || "Sin código"}
+                    </span>
+                    <StatusBadge tone={isSelected ? "info" : "idle"}>
+                      {group.studentCount} alumnos
+                    </StatusBadge>
                   </div>
                 </button>
               );
             })}
-            
+
             {filteredGroups.length === 0 && !loading && (
-               <div className="py-20 text-center border-2 border-dashed border-academic-outline-variant/20 rounded-[3rem] bg-academic-surface-container/30 animate-in fade-in zoom-in-95">
-                  <RiGroupLine className="mx-auto text-5xl text-academic-outline/40 mb-4" />
-                  <p className="text-sm text-academic-outline font-bold uppercase tracking-widest">No hay resultados</p>
-                  <button 
-                    onClick={() => { setGroupSearch(""); setIsCreating(true); }}
-                    className="mt-4 text-xs font-bold text-brand-maroon uppercase tracking-widest hover:text-brand-maroon-dark hover:underline"
-                  >
-                    {groups.length === 0 ? "Crear el primero ahora" : "Limpiar búsqueda"}
-                  </button>
-               </div>
+              <EmptyState
+                title={groups.length === 0 ? "Sin grupos" : "Sin resultados"}
+                description={
+                  groups.length === 0
+                    ? "Crea tu primer grupo para empezar a matricular alumnos."
+                    : "No se encontraron grupos con ese criterio de búsqueda."
+                }
+                icon={<RiGroupLine className="text-3xl text-slate-400" />}
+                actionLabel={
+                  canWrite
+                    ? groups.length === 0
+                      ? "Crear grupo"
+                      : "Limpiar búsqueda"
+                    : undefined
+                }
+                onAction={
+                  canWrite
+                    ? () => {
+                        setGroupSearch("");
+                        setIsCreating(true);
+                      }
+                    : undefined
+                }
+              />
             )}
           </div>
-        </aside>
+        </SectionCard>
 
         {/* Main Content: Enrollment Management */}
         <section className="space-y-6">
           {focusedGroup ? (
-            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
-              {/* Focused Group Header Card */}
-              <div className="relative overflow-hidden p-8 sm:p-10 rounded-[3rem] bg-white border border-academic-outline-variant/30 shadow-academic">
-                <div className="absolute top-0 right-0 p-12 opacity-[0.03] text-[15rem] text-academic-on-surface pointer-events-none rotate-12">
-                   <RiGroupLine />
-                </div>
-                
-                <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-                  <div>
-                    <span className="eyebrow text-brand-gold mb-4 block">Perfil Operativo del Grupo</span>
-                    <h3 className="text-4xl font-bold text-academic-on-surface tracking-tight">{focusedGroup.name}</h3>
-                    <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-academic-on-surface-variant font-medium">
-                      <div className="flex items-center gap-1.5">
-                        <RiInformationFill className="text-academic-outline" />
-                        Código: <span className="text-academic-on-surface">{focusedGroup.code || "No asignado"}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <RiUser3Fill className="text-academic-outline" />
-                        Matriculados: <span className="text-academic-on-surface">{focusedGroup.studentCount}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
+            <>
+              <SectionCard
+                title={focusedGroup.name}
+                description={focusedGroup.description || "Grupo docente"}
+                headerAction={
                   <div className="flex items-center gap-2">
-                     <Button 
-                        variant="secondary"
-                        className="!h-12 !px-6"
-                        onClick={openEditModal}
-                      >
-                        <RiSettings4Fill className="text-lg" />
-                        Configuración
-                     </Button>
-                     <button 
-                       className="w-12 h-12 rounded-xl flex items-center justify-center bg-rose-50/70 text-rose-600 hover:text-rose-700 hover:bg-rose-100/60 border border-rose-100 hover:border-rose-200 transition-all shadow-sm"
-                       title="Eliminar Grupo"
-                       onClick={() => {
-                         if (window.confirm("¿Estás seguro de que deseas eliminar este grupo? Esta acción no se puede deshacer.")) {
-                           handleDeleteGroup(focusedGroup.id);
-                         }
-                       }}
-                     >
-                       <RiDeleteBinLine className="text-xl" />
-                     </button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={openEditModal}
+                    >
+                      <RiEditLine />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "¿Estás seguro de que deseas eliminar este grupo? Esta acción no se puede deshacer."
+                          )
+                        ) {
+                          handleDeleteGroup(focusedGroup.id);
+                        }
+                      }}
+                      title="Eliminar grupo"
+                    >
+                      <RiDeleteBinLine />
+                    </Button>
+                  </div>
+                }
+              >
+                <div className="flex flex-wrap items-center gap-6 text-sm">
+                  <div className="flex items-center gap-1.5 text-slate-500">
+                    <RiInformationFill className="text-slate-400" />
+                    <span>Código:</span>
+                    <span className="font-medium text-slate-900">
+                      {focusedGroup.code || "No asignado"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-500">
+                    <RiUser3Fill className="text-slate-400" />
+                    <span>Matriculados:</span>
+                    <span className="font-medium text-slate-900">
+                      {focusedGroup.studentCount}
+                    </span>
                   </div>
                 </div>
-              </div>
+              </SectionCard>
 
-              <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-                {/* List of enrolled students */}
-                <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4">
-                    <h4 className="eyebrow">Directorio de Matriculaciones</h4>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline" />
-                        <input 
-                          className="h-10 pl-10 pr-4 rounded-xl border border-academic-outline bg-white text-xs font-medium focus:border-brand-maroon focus:ring-2 focus:ring-brand-maroon/10 transition-all w-full sm:w-64"
-                          placeholder="Buscar por nombre o email..."
-                          value={studentSearch}
-                          onChange={(e) => setStudentSearch(e.target.value)}
-                        />
-                      </div>
-                      
-                      <Tabs 
+              <div className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
+                {/* Student directory */}
+                <Card
+                  title="Matriculaciones"
+                  headerAction={
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <SearchInput
+                        value={studentSearch}
+                        onChange={setStudentSearch}
+                        placeholder="Buscar por nombre o email..."
+                        className="w-full sm:w-56"
+                      />
+                      <Tabs
                         tabs={[
                           { id: "all", label: "Todos" },
-                          { id: "enrolled", label: "Sí" },
-                          { id: "not_enrolled", label: "No" },
+                          { id: "enrolled", label: "Matriculados" },
+                          { id: "not_enrolled", label: "No matriculados" },
                         ]}
                         activeTab={enrollmentFilter}
-                        onTabChange={(id) => setEnrollmentFilter(id as any)}
-                        variant="primary"
-                        className="!p-1 !rounded-xl"
+                        onTabChange={(id) =>
+                          setEnrollmentFilter(id as "all" | "enrolled" | "not_enrolled")
+                        }
                       />
                     </div>
-                  </div>
-                  
-                  <div className="grid gap-3">
+                  }
+                >
+                  <div className="space-y-2">
                     {(() => {
-                      const filteredStudents = allStudents.filter((student: UserEntity) => {
-                        const searchLower = studentSearch.toLowerCase().trim();
-                        const matchesSearch = !searchLower || 
-                                              student.firstName.toLowerCase().includes(searchLower) || 
-                                              student.lastName.toLowerCase().includes(searchLower) || 
-                                              student.email.toLowerCase().includes(searchLower);
-                        
-                        const isEnrolled = groupEnrollments?.some(e => e.studentId === student.id && !e.revokedAt);
-                        const matchesFilter = enrollmentFilter === "all" || 
-                                              (enrollmentFilter === "enrolled" && isEnrolled) || 
-                                              (enrollmentFilter === "not_enrolled" && !isEnrolled);
-                        
-                        return matchesSearch && matchesFilter;
-                      });
-
                       if (loading && allStudents.length === 0) {
                         return (
-                          <div className="py-20 text-center">
-                            <RiRefreshLine className="mx-auto text-4xl text-brand-maroon animate-spin mb-4" />
-                            <p className="text-sm text-academic-outline font-bold uppercase tracking-widest">Cargando alumnos...</p>
+                          <div className="py-12 text-center">
+                            <RiRefreshLine className="mx-auto mb-2 text-2xl text-primary animate-spin" />
+                            <p className="text-sm text-slate-500">Cargando alumnos...</p>
                           </div>
                         );
                       }
 
                       if (filteredStudents.length === 0) {
                         return (
-                          <EmptyState 
-                            title={studentSearch ? "No hay coincidencias" : "No hay alumnos registrados"}
-                            description={studentSearch ? "Intenta con otro nombre o correo." : "Utiliza el panel de la derecha para matricular alumnos masivamente."}
-                            icon={<RiUser3Fill className="text-6xl text-academic-outline/40" />}
-                            className="py-20 bg-academic-surface-container/20 border-2 border-dashed border-academic-outline-variant/30 rounded-[3rem]"
+                          <EmptyState
+                            title={
+                              studentSearch
+                                ? "No hay coincidencias"
+                                : "No hay alumnos registrados"
+                            }
+                            description={
+                              studentSearch
+                                ? "Intenta con otro nombre o correo."
+                                : "Utiliza el panel de la derecha para matricular alumnos masivamente."
+                            }
+                            icon={<RiUser3Fill className="text-3xl text-slate-400" />}
                           />
                         );
                       }
 
                       return filteredStudents.map((student: UserEntity) => {
-                        const enrollment = groupEnrollments?.find(e => e.studentId === student.id && !e.revokedAt);
+                        const enrollment = groupEnrollments?.find(
+                          (e) => e.studentId === student.id && !e.revokedAt
+                        );
                         const isEnrolled = !!enrollment;
-                        const isBusy = busy === `enroll:${student.id}` || (enrollment && busy === `revoke:${enrollment.id}`);
+                        const isBusy =
+                          busy === `enroll:${student.id}` ||
+                          (enrollment && busy === `revoke:${enrollment.id}`);
 
                         return (
-                          <div 
+                          <div
                             key={student.id}
-                            className={`group flex items-center justify-between p-5 rounded-3xl border transition-all duration-300 ${
-                              isEnrolled ? 'border-brand-blue/20 bg-brand-blue/5' : 'border-academic-outline bg-white hover:border-academic-outline-variant hover:shadow-academic'
+                            className={`flex items-center justify-between rounded-md border p-4 transition-colors ${
+                              isEnrolled
+                                ? "border-primary/20 bg-primary-subtle/50"
+                                : "border-app-border bg-white hover:border-slate-300"
                             }`}
                           >
-                            <div className="flex items-center gap-4">
-                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg transition-all duration-500 ${
-                                isEnrolled 
-                                  ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' 
-                                  : 'bg-academic-surface-container text-academic-outline group-hover:bg-brand-blue/10 group-hover:text-brand-blue'
-                              }`}>
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-base ${
+                                  isEnrolled
+                                    ? "bg-primary text-white"
+                                    : "bg-slate-100 text-slate-500"
+                                }`}
+                              >
                                 {isEnrolled ? <RiCheckFill /> : <RiUser3Fill />}
                               </div>
                               <div>
-                                <h5 className="font-bold text-academic-on-surface leading-none mb-1">
+                                <h5 className="text-sm font-semibold text-slate-900">
                                   {student.lastName}, {student.firstName}
                                 </h5>
-                                <p className="text-xs text-academic-on-surface-variant font-medium">{student.email}</p>
+                                <p className="text-xs text-slate-500">{student.email}</p>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-4">
-                              {isBusy ? (
-                                <div className="w-12 h-6 flex items-center justify-center">
-                                  <RiRefreshLine className="animate-spin text-brand-blue text-lg" />
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => handleToggleEnrollment(student.id, !!isEnrolled)}
-                                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-maroon focus:ring-offset-2 ${
-                                    isEnrolled ? 'bg-emerald-500' : 'bg-academic-surface-container'
+                            {isBusy ? (
+                              <RiRefreshLine className="animate-spin text-primary" />
+                            ) : (
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={isEnrolled}
+                                onClick={() =>
+                                  handleToggleEnrollment(student.id, isEnrolled)
+                                }
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                                  isEnrolled ? "bg-emerald-500" : "bg-slate-200"
+                                }`}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                                    isEnrolled ? "translate-x-5" : "translate-x-0"
                                   }`}
-                                >
-                                  <span
-                                    className={`pointer-events-none relative inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
-                                      isEnrolled ? 'translate-x-5' : 'translate-x-0'
-                                    }`}
-                                  >
-                                    {isEnrolled && <RiCheckFill className="text-emerald-600 text-xs" />}
-                                  </span>
-                                </button>
-                              )}
-                            </div>
+                                />
+                              </button>
+                            )}
                           </div>
                         );
                       });
                     })()}
                   </div>
-                </div>
+                </Card>
 
-                {/* Enrollment Card */}
-                <div className="space-y-4 sticky top-8">
-                  <h4 className="eyebrow px-4">Ingesta de Alumnos</h4>
-                  <div className="p-8 rounded-[3rem] bg-brand-maroon text-academic-on-primary shadow-academic relative overflow-hidden border border-brand-maroon/20">
-                     <div className="absolute -right-10 -bottom-10 p-12 opacity-[0.05] text-[12rem] text-white pointer-events-none rotate-12">
-                        <RiUser3Fill />
-                     </div>
-                     
-                     <div className="relative z-10 space-y-6">
-                        <div className="space-y-3">
-                           <h5 className="font-bold text-lg text-white">Añadir Estudiantes</h5>
-                           <p className="text-xs text-academic-on-primary/70 leading-relaxed">
-                             Pega una lista de <strong>Nombres y Apellidos</strong> (ej: "García López, Juan") o correos electrónicos, uno por línea.
-                           </p>
-                           <textarea 
-                             className="w-full bg-white/5 border border-white/10 rounded-[2rem] p-5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-gold/20 min-h-[220px] placeholder:text-white/20 transition-all"
-                             placeholder="Apellidos, Nombre&#10;García, Juan&#10;estudiante@dockus.io..."
-                             value={bulkInput}
-                             onChange={(e) => setBulkInput(e.target.value)}
-                           />
-                        </div>
-                        <Button 
-                          variant="primary"
-                          className="w-full h-14 flex items-center justify-center gap-3 rounded-2xl bg-white !text-brand-maroon font-bold hover:bg-brand-cream transition-all transform hover:-translate-y-1 shadow-xl shadow-brand-maroon/20 disabled:opacity-50 disabled:transform-none"
-                          disabled={!bulkInput.trim() || !!busy}
-                          onClick={handleEnrollStudents}
-                        >
-                          <RiCheckFill className="text-xl" />
-                          {busy === "enroll" ? "Procesando..." : "Matricular en Grupo"}
-                        </Button>
-                     </div>
+                {/* Bulk enrollment */}
+                <Card title="Ingesta masiva">
+                  <div className="space-y-4">
+                    <p className="text-sm text-slate-500">
+                      Pega una lista de <strong>nombres y apellidos</strong> o correos
+                      electrónicos, uno por línea.
+                    </p>
+                    <textarea
+                      className="w-full min-h-[180px] rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      placeholder={`Apellidos, Nombre\nGarcía, Juan\nestudiante@dockus.io`}
+                      value={bulkInput}
+                      onChange={(e) => setBulkInput(e.target.value)}
+                    />
+                    <Button
+                      variant="primary"
+                      size="md"
+                      className="w-full"
+                      disabled={!bulkInput.trim() || !!busy}
+                      onClick={handleEnrollStudents}
+                    >
+                      <RiCheckFill />
+                      {busy === "enroll" ? "Procesando..." : "Matricular en grupo"}
+                    </Button>
                   </div>
-                </div>
+                </Card>
               </div>
-            </div>
+            </>
           ) : (
-            <div className="space-y-6">
-              {/* Default view when no group is selected: Still show the student list but with a clear empty state for enrollments */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4">
-                <h4 className="eyebrow">Listado General de Alumnos</h4>
-                <div className="relative">
-                  <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline" />
-                  <input 
-                    className="h-10 pl-10 pr-4 rounded-xl border border-academic-outline bg-white text-xs font-medium focus:border-brand-maroon focus:ring-2 focus:ring-brand-maroon/10 transition-all w-full sm:w-64"
-                    placeholder="Busca alumnos para gestionar..."
-                    value={studentSearch}
-                    onChange={(e) => setStudentSearch(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3">
+            <Card
+              title="Listado general de alumnos"
+              headerAction={
+                <SearchInput
+                  value={studentSearch}
+                  onChange={setStudentSearch}
+                  placeholder="Buscar alumnos..."
+                  className="w-full sm:w-64"
+                />
+              }
+            >
+              <div className="space-y-2">
                 {(() => {
-                  const filteredStudents = allStudents.filter((student: UserEntity) => {
-                    const matchesSearch = student.firstName.toLowerCase().includes(studentSearch.toLowerCase()) || 
-                                          student.lastName.toLowerCase().includes(studentSearch.toLowerCase()) || 
-                                          student.email.toLowerCase().includes(studentSearch.toLowerCase());
-                    return matchesSearch;
-                  });
-
                   if (filteredStudents.length === 0) {
                     return (
-                      <EmptyState 
+                      <EmptyState
                         title="No se encontraron alumnos"
                         description="Prueba con otros criterios de búsqueda."
-                        icon={<RiUser3Fill className="text-6xl text-academic-outline/40" />}
-                        className="py-20 bg-academic-surface-container/20 border-2 border-dashed border-academic-outline-variant/30 rounded-[3rem]"
+                        icon={<RiUser3Fill className="text-3xl text-slate-400" />}
                       />
                     );
                   }
 
-                  return filteredStudents.map(student => (
-                    <div key={student.id} className="flex items-center justify-between p-5 rounded-3xl border border-academic-outline bg-white/50 opacity-60">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-academic-surface-container text-academic-outline flex items-center justify-center text-xs font-bold uppercase">
-                          {student.firstName[0]}{student.lastName[0]}
+                  return filteredStudents.map((student: UserEntity) => (
+                    <div
+                      key={student.id}
+                      className="flex items-center justify-between rounded-md border border-app-border bg-white p-4 opacity-70"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-semibold uppercase text-slate-500">
+                          {student.firstName[0]}
+                          {student.lastName[0]}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-academic-outline">{student.lastName}, {student.firstName}</p>
-                          <p className="text-[11px] text-academic-outline font-medium">{student.email}</p>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {student.lastName}, {student.firstName}
+                          </p>
+                          <p className="text-xs text-slate-500">{student.email}</p>
                         </div>
                       </div>
-                      <div className="ui-label text-academic-outline bg-academic-surface-container rounded-lg">
+                      <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
                         Selecciona un grupo
-                      </div>
+                      </span>
                     </div>
                   ));
                 })()}
               </div>
-            </div>
+            </Card>
           )}
         </section>
       </div>
 
-      {/* Modal overlays */}
-      {isEditing && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-          <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-academic border border-academic-outline-variant/20 overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 border-b border-academic-outline-variant/20 flex items-center justify-between">
+      {/* Edit modal */}
+      {isEditing && focusedGroup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg border border-app-border bg-white shadow-lg">
+            <div className="flex items-center justify-between border-b border-app-border px-6 py-4">
               <div>
-                <h4 className="text-xl font-bold text-academic-on-surface">Configuración de Grupo</h4>
-                <p className="text-sm text-academic-on-surface-variant mt-1">Modifica los detalles del grupo docente.</p>
+                <h4 className="text-base font-semibold text-slate-900">Editar grupo</h4>
+                <p className="text-sm text-slate-500">Modifica los datos del grupo.</p>
               </div>
-              <button 
+              <button
+                type="button"
                 onClick={() => setIsEditing(false)}
-                className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-academic-surface-container text-academic-outline transition-colors"
+                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Cerrar"
               >
-                ×
+                <RiCloseLine />
               </button>
             </div>
-            
-            <div className="p-8 space-y-5">
-              <div className="space-y-2">
-                <label className="ui-label ml-1">Nombre del Grupo</label>
-                <input 
-                  className="w-full h-14 px-5 rounded-2xl bg-academic-surface-container border border-academic-outline-variant/30 focus:border-brand-maroon focus:ring-2 focus:ring-brand-maroon/10 transition-all text-sm font-bold" 
-                  value={editForm.name}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="ui-label ml-1">Código Identificador</label>
-                <input 
-                  className="w-full h-14 px-5 rounded-2xl bg-academic-surface-container border border-academic-outline-variant/30 focus:border-brand-maroon focus:ring-2 focus:ring-brand-maroon/10 transition-all text-sm font-bold" 
-                  value={editForm.code}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, code: e.target.value }))}
-                />
-              </div>
 
-              <div className="space-y-2">
-                <label className="ui-label ml-1">Descripción (Opcional)</label>
-                <textarea 
-                  className="w-full px-5 py-4 rounded-2xl bg-academic-surface-container border border-academic-outline-variant/30 focus:border-brand-maroon focus:ring-2 focus:ring-brand-maroon/10 transition-all text-sm font-medium min-h-[100px]" 
+            <div className="space-y-4 p-6">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Nombre del grupo</label>
+                <input
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  value={editForm.name}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Código identificador</label>
+                <input
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  value={editForm.code}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, code: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Descripción (opcional)</label>
+                <textarea
+                  className="w-full min-h-[100px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                   value={editForm.description}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, description: e.target.value }))
+                  }
                 />
               </div>
             </div>
 
-            <div className="p-8 bg-academic-surface-container/30 border-t border-academic-outline-variant/20 flex gap-3">
-              <Button 
+            <div className="flex gap-3 border-t border-app-border bg-slate-50 px-6 py-4">
+              <Button
                 variant="secondary"
-                className="flex-1 !h-14"
+                size="md"
+                className="flex-1"
                 onClick={() => setIsEditing(false)}
               >
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 variant="primary"
-                className="flex-1 !h-14 shadow-none"
+                size="md"
+                className="flex-1"
                 disabled={!editForm.name || busy === `update:${focusedGroupId}`}
                 onClick={async () => {
                   if (focusedGroupId) {
@@ -584,7 +619,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                   }
                 }}
               >
-                {busy === `update:${focusedGroupId}` ? "Guardando..." : "Guardar Cambios"}
+                {busy === `update:${focusedGroupId}` ? "Guardando..." : "Guardar cambios"}
               </Button>
             </div>
           </div>

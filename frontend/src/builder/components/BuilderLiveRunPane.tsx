@@ -1,9 +1,5 @@
 import { pretty } from "../../shared/utils/errors";
-import type {
-  BuildRunEntity,
-  BuildRunEvent,
-  EvidenceArtifactDto,
-} from "../../shared/types";
+import type { BuildRunEntity, BuildRunEvent, EvidenceArtifactDto } from "../../features/builder/types";
 import type { StreamState } from "../hooks/useBuilderRunStream";
 import { formatDate } from "../utils";
 import { Button } from "../../shared/components/ui/Button";
