@@ -8,10 +8,12 @@ import { DangerConfirmModal } from '../shared/components/DangerConfirmModal';
 import { PageHeader } from '../shared/components/ui/PageHeader';
 import { StatsOverview } from '../shared/components/ui/StatsOverview';
 import { useToast } from '../shared/toast/ToastContext';
-import type { SessionRecord } from '../shared/types';
+import type { SessionRecord } from "../features/auth/types";
 import { useStorageManagement } from './hooks/useStorageManagement';
 import { Button } from '../shared/components/ui/Button';
 import { Tabs } from '../shared/components/ui/Tabs';
+import { StatusBadge } from '../shared/components/ui/StatusBadge';
+import { EmptyState } from '../shared/components/EmptyState';
 
 interface StoragePanelProps {
   session: SessionRecord | null;
@@ -42,15 +44,15 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
       : `${(totalBytes / 1024).toFixed(2)} KB`;
 
     return [
-      { label: 'Artefactos', value: totalItems, icon: <RiFileList3Fill />, variant: 'primary' as const },
-      { label: 'Espacio ocupado', value: formattedSize, icon: <RiHardDrive2Fill />, variant: 'secondary' as const },
+      { label: 'Artefactos', value: totalItems, icon: <RiFileList3Fill />, variant: 'info' as const },
+      { label: 'Espacio ocupado', value: formattedSize, icon: <RiHardDrive2Fill />, variant: 'default' as const },
       { label: 'SLA Subida', value: '99.9%', icon: <RiShieldCheckFill />, variant: 'success' as const },
-      { label: 'Nodos', value: 'Distribuido', icon: <RiDatabase2Fill />, variant: 'accent' as const },
+      { label: 'Nodos', value: 'Distribuido', icon: <RiDatabase2Fill />, variant: 'dark' as const },
     ];
   }, [sc.listResponse]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-6">
       <PageHeader 
         title="Bóveda de Artefactos"
         subtitle="Repositorio centralizado de objetos persistidos, binarios y evidencias de compilación del ecosistema DockUS."
@@ -68,99 +70,95 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
         ]}
         activeTab={activeTab}
         onTabChange={(id) => setActiveTab(id as StorageTab)}
-        variant="primary"
       />
 
       {activeTab === 'subida' ? (
-        <div>
-          <div className="card card-top-accent-primary">
-            <div className="p-8 border-b border-academic-surface-variant/40 flex items-center justify-between bg-academic-surface-container-lowest/40">
+        <div className="card">
+          <div className="panel-header">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-subtle text-primary">
+                <RiUploadCloud2Fill />
+              </div>
               <div>
-                <h3 className="font-display text-xl font-bold tracking-tight text-academic-on-surface flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-academic-primary text-white flex items-center justify-center shadow-academic">
-                    <RiUploadCloud2Fill />
-                  </div>
-                  Ingesta de Artefactos
-                </h3>
-                <p className="text-academic-outline text-xs font-medium mt-1">Sube archivos y asócialos a entregas específicas del proyecto.</p>
+                <h3 className="text-base font-semibold text-slate-900">Ingesta de Artefactos</h3>
+                <p className="text-sm text-slate-500">Sube archivos y asócialos a entregas específicas del proyecto.</p>
               </div>
             </div>
-            
-            <form className="p-8 space-y-6" onSubmit={sc.handleUpload}>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">ID de Entrega (UUID)</label>
-                    <input 
-                      required 
-                      className="input-field" 
-                      placeholder="00000000-0000-0000-0000-000000000000"
-                      value={sc.uploadForm.deliveryId} 
-                      onChange={e => sc.setUploadForm(p => ({ ...p, deliveryId: e.target.value }))} 
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Nombre Lógico</label>
-                    <input 
-                      required 
-                      className="input-field" 
-                      placeholder="ej: build_v1.zip"
-                      value={sc.uploadForm.logicalName} 
-                      onChange={e => sc.setUploadForm(p => ({ ...p, logicalName: e.target.value }))} 
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Selección de Binario</label>
-                  <div className={`relative border-2 border-dashed rounded-2xl p-8 transition-all flex flex-col items-center justify-center text-center cursor-pointer ${sc.file ? 'border-academic-primary bg-academic-primary/5' : 'border-academic-surface-variant bg-academic-surface hover:border-academic-outline'}`}>
-                    <input 
-                      type="file" 
-                      className="absolute inset-0 opacity-0 cursor-pointer" 
-                      required 
-                      onChange={e => sc.handleFileChange(e.target.files?.[0] ?? null)} 
-                    />
-                    <RiCloudFill className={`text-4xl mb-2 ${sc.file ? 'text-academic-primary' : 'text-academic-outline'}`} />
-                    <div className="text-xs font-bold text-academic-on-surface truncate max-w-full">
-                      {sc.file ? sc.file.name : 'Click o arrastra archivo'}
-                    </div>
-                    {sc.file && (
-                      <div className="text-[10px] text-academic-primary font-bold mt-1 uppercase tracking-widest">
-                        {(sc.file.size / 1024).toFixed(1)} KB detectados
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-4 pt-6 border-t border-academic-surface-variant/40">
-                <Button 
-                  type="submit" 
-                  className="px-8 py-3 rounded-xl"
-                  disabled={!sc.canUpload || !sc.file}
-                  variant="primary"
-                >
-                  Publicar en Bóveda
-                </Button>
-              </div>
-            </form>
           </div>
+          
+          <form className="p-6 space-y-6" onSubmit={sc.handleUpload}>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div className="space-y-4">
+                <div>
+                  <label className="label-text">ID de Entrega (UUID)</label>
+                  <input 
+                    required 
+                    className="input-field" 
+                    placeholder="00000000-0000-0000-0000-000000000000"
+                    value={sc.uploadForm.deliveryId} 
+                    onChange={e => sc.setUploadForm(p => ({ ...p, deliveryId: e.target.value }))} 
+                  />
+                </div>
+                <div>
+                  <label className="label-text">Nombre Lógico</label>
+                  <input 
+                    required 
+                    className="input-field" 
+                    placeholder="ej: build_v1.zip"
+                    value={sc.uploadForm.logicalName} 
+                    onChange={e => sc.setUploadForm(p => ({ ...p, logicalName: e.target.value }))} 
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="label-text">Selección de Binario</label>
+                <div className={`relative border-2 border-dashed rounded-lg p-6 transition-colors flex flex-col items-center justify-center text-center cursor-pointer ${sc.file ? 'border-primary bg-primary-subtle' : 'border-app-border bg-slate-50 hover:border-slate-400'}`}>
+                  <input 
+                    type="file" 
+                    className="absolute inset-0 opacity-0 cursor-pointer" 
+                    required 
+                    onChange={e => sc.handleFileChange(e.target.files?.[0] ?? null)} 
+                  />
+                  <RiCloudFill className={`text-2xl mb-2 ${sc.file ? 'text-primary' : 'text-slate-400'}`} />
+                  <div className="text-sm font-medium text-slate-900 truncate max-w-full">
+                    {sc.file ? sc.file.name : 'Click o arrastra archivo'}
+                  </div>
+                  {sc.file && (
+                    <div className="text-xs text-primary font-medium mt-1">
+                      {(sc.file.size / 1024).toFixed(1)} KB detectados
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-app-border">
+              <Button 
+                type="submit" 
+                disabled={!sc.canUpload || !sc.file}
+                variant="primary"
+              >
+                Publicar en Bóveda
+              </Button>
+            </div>
+          </form>
         </div>
       ) : null}
 
       {activeTab === 'consulta' ? (
         <div className="max-w-3xl mx-auto">
-          <div className="card p-8 text-center border-t-2 border-t-academic-secondary">
-            <div className="h-16 w-16 bg-academic-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-academic-secondary/20">
-              <RiSearch2Line className="text-3xl text-academic-secondary" />
+          <div className="card p-6 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 mx-auto mb-4 text-slate-600">
+              <RiSearch2Line className="text-2xl" />
             </div>
-            <h3 className="font-display text-xl font-bold tracking-tight text-academic-on-surface mb-2">Motor de Búsqueda de Objetos</h3>
-            <p className="text-academic-on-surface-variant text-sm font-medium mb-8 max-w-lg mx-auto">Consulta el registro global de artefactos filtrando por proyecto, entrega o ejecución.</p>
+            <h3 className="text-base font-semibold text-slate-900 mb-1">Motor de Búsqueda de Objetos</h3>
+            <p className="text-sm text-slate-500 mb-6 max-w-lg mx-auto">Consulta el registro global de artefactos filtrando por proyecto, entrega o ejecución.</p>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left mb-6">
               <div className="space-y-4 col-span-2 sm:col-span-1">
                 <div>
-                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Proyecto</label>
+                  <label className="label-text">Proyecto</label>
                   <select 
                     className="input-field" 
                     value={sc.query.projectId} 
@@ -173,7 +171,7 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Entrega (Versión / Alumno)</label>
+                  <label className="label-text">Entrega (Versión / Alumno)</label>
                   <select 
                     className="input-field" 
                     value={sc.query.deliveryId} 
@@ -189,7 +187,7 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Ejecución (Run / Estado)</label>
+                  <label className="label-text">Ejecución (Run / Estado)</label>
                   <select 
                     className="input-field" 
                     value={sc.query.runId} 
@@ -209,27 +207,26 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
               <div className="space-y-4 col-span-2 sm:col-span-1">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Página</label>
+                    <label className="label-text">Página</label>
                     <input type="number" className="input-field" value={sc.query.page} onChange={e => sc.setQuery(p => ({ ...p, page: e.target.value }))} />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Límite</label>
+                    <label className="label-text">Límite</label>
                     <input type="number" className="input-field" value={sc.query.limit} onChange={e => sc.setQuery(p => ({ ...p, limit: e.target.value }))} />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Subido Desde</label>
+                  <label className="label-text">Subido Desde</label>
                   <input type="date" className="input-field" value={sc.query.createdFrom} onChange={e => sc.setQuery(p => ({ ...p, createdFrom: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Subido Hasta</label>
+                  <label className="label-text">Subido Hasta</label>
                   <input type="date" className="input-field" value={sc.query.createdTo} onChange={e => sc.setQuery(p => ({ ...p, createdTo: e.target.value }))} />
                 </div>
               </div>
             </div>
 
             <Button 
-              className="px-8 py-3 rounded-xl"
               onClick={() => { void sc.handleList(); setActiveTab('inventario'); }} 
               disabled={!sc.canRead}
               variant="primary"
@@ -242,101 +239,103 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
 
       {activeTab === 'inventario' ? (
         <div className="card">
-          <div className="p-6 border-b border-academic-surface-variant/40 flex items-center justify-between bg-academic-surface-container-lowest/40">
-            <h3 className="ui-label">Objetos Persistidos</h3>
+          <div className="panel-header">
+            <h3 className="text-base font-semibold text-slate-900">Objetos Persistidos</h3>
           </div>
           
           {sc.unifiedItems && sc.unifiedItems.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="text-[10px] font-black text-academic-outline uppercase tracking-[0.2em] border-b border-academic-surface-variant/40 bg-academic-surface-container-lowest/20">
-                    <th className="px-6 py-4">Ficha Técnica</th>
-                    <th className="px-6 py-4">Asociación</th>
-                    <th className="px-6 py-4">Tamaño / Tipo</th>
-                    <th className="px-6 py-4 text-right">Acciones</th>
+                  <tr className="border-b border-app-border bg-slate-50">
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Ficha Técnica</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Asociación</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Tamaño / Tipo</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-academic-surface-variant/40">
+                <tbody className="divide-y divide-app-border">
                   {sc.unifiedItems.map((item) => {
                     const isRunArtifact = item.itemType === 'run_artifact';
                     return (
-                      <tr key={`${item.itemType}-${item.id}`} className="group hover:bg-academic-surface transition-all duration-300">
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-5">
-                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-lg border shrink-0 group-hover:scale-105 transition-transform ${
+                      <tr key={`${item.itemType}-${item.id}`} className="group hover:bg-slate-50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-4">
+                            <div className={`h-9 w-9 rounded-md flex items-center justify-center text-base border shrink-0 ${
                               isRunArtifact 
-                                ? 'bg-academic-secondary/10 text-academic-secondary border-academic-secondary/15'
+                                ? 'bg-slate-100 text-slate-600 border-slate-200'
                                 : item.contentType.includes('zip')
-                                  ? 'bg-academic-primary/10 text-academic-primary border-academic-primary/15'
-                                  : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/15'
+                                  ? 'bg-primary-subtle text-primary border-primary/20'
+                                  : 'bg-emerald-50 text-emerald-600 border-emerald-200'
                             }`}>
                               {isRunArtifact ? <RiFileList3Fill /> : <RiDatabase2Fill />}
                             </div>
                             <div className="min-w-0">
-                              <div className="text-sm font-bold text-academic-on-surface group-hover:text-academic-primary transition-colors truncate">
+                              <div className="text-sm font-medium text-slate-900 truncate">
                                 {item.logicalName}
                               </div>
-                              <div className="text-[10px] font-mono text-academic-outline mt-1 uppercase tracking-tighter truncate flex gap-2">
-                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold tracking-widest ${
-                                  isRunArtifact ? 'bg-academic-secondary/10 text-academic-secondary' : 'bg-academic-primary/10 text-academic-primary'
-                                }`}>
+                              <div className="mt-1 flex items-center gap-2">
+                                <StatusBadge tone={isRunArtifact ? 'idle' : 'info'}>
                                   {isRunArtifact ? 'LOG/REPORT' : 'SOURCE'}
+                                </StatusBadge>
+                                <span className="text-xs font-mono text-slate-500 truncate">
+                                  ID: {item.id.substring(0, 16)}...
                                 </span>
-                                <span>ID: {item.id.substring(0, 16)}...</span>
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-5">
+                        <td className="px-6 py-4">
                           <div className="text-xs space-y-1">
                             {item.projectName && (
-                              <div className="font-semibold text-academic-on-surface">{item.projectName}</div>
+                              <div className="font-medium text-slate-900">{item.projectName}</div>
                             )}
                             {item.deliveryVersion !== undefined && (
-                              <div className="text-[10px] text-academic-outline">
+                              <div className="text-xs text-slate-500">
                                 Entrega V{item.deliveryVersion} 
                                 {item.studentName ? ` • ${item.studentName}` : ''}
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-5">
+                        <td className="px-6 py-4">
                           <div className="flex flex-col gap-1">
-                            <span className="inline-flex items-center w-fit px-2 py-0.5 rounded-full bg-academic-surface text-academic-on-surface-variant text-[10px] font-bold border border-academic-surface-variant/60">
+                            <span className="inline-flex items-center w-fit px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200">
                               {item.sizeBytes > 1024 * 1024 ? `${(item.sizeBytes / (1024 * 1024)).toFixed(2)} MB` : `${(item.sizeBytes / 1024).toFixed(1)} KB`}
                             </span>
-                            <span className="text-[9px] font-mono text-academic-outline max-w-[150px] truncate">
+                            <span className="text-[10px] font-mono text-slate-500 max-w-[150px] truncate">
                               {item.contentType}
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-5 text-right">
+                        <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {/* Vista Previa Button */}
-                            <button
-                              className="px-3 py-1.5 text-[11px] font-bold text-academic-primary hover:bg-academic-primary/10 rounded-lg transition-all"
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               onClick={() => { void sc.handlePreview(item); }}
                             >
                               Vista Previa
-                            </button>
+                            </Button>
 
-                            {/* Download Button */}
-                            <button
-                              className="px-3 py-1.5 text-[11px] font-bold text-academic-on-surface hover:bg-academic-surface-variant/40 rounded-lg transition-all"
+                            <Button
+                              size="sm"
+                              variant="secondary"
                               onClick={() => { void sc.handleDownloadItem(item); }}
                             >
                               Descargar
-                            </button>
+                            </Button>
 
-                            {/* Delete Button (Only for storage objects and authorized roles) */}
                             {!isRunArtifact && sc.canSoftDelete && (
-                              <button 
-                                className="p-2 text-academic-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-slate-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100"
                                 onClick={() => { sc.setActionId(item.id); sc.setDangerAction('DELETE'); sc.setConfirmOpen(true); }}
+                                aria-label="Eliminar"
                               >
-                                <RiDeleteBin7Line className="text-lg" />
-                              </button>
+                                <RiDeleteBin7Line className="text-base" />
+                              </Button>
                             )}
                           </div>
                         </td>
@@ -347,62 +346,63 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
               </table>
             </div>
           ) : (
-            <div className="p-20 text-center">
-              <div className="h-16 w-16 bg-academic-surface rounded-3xl flex items-center justify-center mx-auto mb-4 border border-academic-surface-variant/40">
-                <RiDatabase2Fill className="text-2xl text-academic-outline/60" />
-              </div>
-              <p className="text-academic-outline text-sm font-medium italic">Inicia una búsqueda global para visualizar el inventario.</p>
-            </div>
+            <EmptyState 
+              icon={<RiDatabase2Fill className="text-2xl text-slate-400" />}
+              title="Sin resultados"
+              description="Inicia una búsqueda global para visualizar el inventario."
+              className="m-6"
+            />
           )}
         </div>
       ) : null}
 
       {/* Vista Previa Modal */}
       {sc.previewTitle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="card w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 bg-academic-surface-container-lowest">
-            <div className="p-6 border-b border-academic-surface-variant/40 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="card w-full max-w-4xl max-h-[85vh] flex flex-col bg-white">
+            <div className="panel-header">
               <div>
-                <span className="text-[10px] font-bold text-academic-primary uppercase tracking-widest">Previsualizador de Artefactos</span>
-                <h3 className="font-display text-lg font-bold text-academic-on-surface mt-0.5">{sc.previewTitle}</h3>
+                <span className="text-xs font-semibold text-primary uppercase tracking-wide">Previsualizador de Artefactos</span>
+                <h3 className="text-base font-semibold text-slate-900 mt-0.5">{sc.previewTitle}</h3>
               </div>
-              <button 
+              <Button 
+                variant="secondary"
+                size="sm"
                 onClick={() => { sc.setPreviewTitle(''); sc.setPreviewContent(null); }}
-                className="p-2 hover:bg-academic-surface-variant/40 rounded-xl transition-colors font-bold text-academic-outline"
               >
                 Cerrar
-              </button>
+              </Button>
             </div>
             
-            <div className="p-6 overflow-y-auto flex-1 font-mono text-xs text-academic-on-surface bg-academic-surface-container-lowest/30">
+            <div className="p-6 overflow-y-auto flex-1 font-mono text-xs text-slate-900 bg-slate-50">
               {sc.previewLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
-                  <div className="animate-spin rounded-full h-10 w-10 border-2 border-academic-primary border-t-transparent" />
-                  <div className="text-xs font-bold text-academic-outline">Procesando y extrayendo contenido...</div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                  <div className="text-xs font-medium text-slate-500">Procesando y extrayendo contenido...</div>
                 </div>
               ) : sc.previewContent === null ? (
-                <div className="text-center py-20 text-academic-outline italic">No se pudo cargar la vista previa.</div>
+                <div className="text-center py-20 text-slate-500 italic">No se pudo cargar la vista previa.</div>
               ) : typeof sc.previewContent === 'string' ? (
-                <pre className="whitespace-pre-wrap bg-academic-surface/40 p-4 rounded-xl border border-academic-surface-variant/30 overflow-x-auto max-h-[50vh] text-left leading-relaxed">
+                <pre className="whitespace-pre-wrap bg-white p-4 rounded-md border border-app-border overflow-x-auto max-h-[50vh] text-left leading-relaxed">
                   {sc.previewContent}
                 </pre>
               ) : Array.isArray(sc.previewContent) ? (
-                <div className="space-y-6">
-                  <div className="text-[10px] font-black uppercase text-academic-outline tracking-wider">Archivos contenidos en el paquete ZIP ({sc.previewContent.length}):</div>
-                  <div className="space-y-4">
+                <div className="space-y-4">
+                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Archivos contenidos en el paquete ZIP ({sc.previewContent.length}):</div>
+                  <div className="space-y-3">
                     {sc.previewContent.map((file, i) => (
-                      <details key={i} className="group border border-academic-surface-variant/30 rounded-xl bg-academic-surface/20 overflow-hidden transition-all">
-                        <summary className="p-4 font-bold text-xs text-academic-on-surface hover:bg-academic-surface-variant/20 cursor-pointer flex items-center justify-between list-none">
+                      <details key={i} className="group border border-app-border rounded-md bg-white overflow-hidden">
+                        <summary className="p-4 font-medium text-xs text-slate-900 hover:bg-slate-50 cursor-pointer flex items-center justify-between list-none">
                           <span className="flex items-center gap-2">
-                            <RiFileList3Fill className="text-academic-primary" />
+                            <RiFileList3Fill className="text-primary" />
                             {file.path}
                           </span>
-                          <span className="text-[10px] text-academic-primary font-black uppercase tracking-wider group-open:hidden">Desplegar</span>
-                          <span className="text-[10px] text-academic-outline font-black uppercase tracking-wider hidden group-open:inline">Contraer</span>
+                          <span className="text-xs text-primary font-medium group-open:hidden">Desplegar</span>
+                          <span className="text-xs text-slate-500 font-medium hidden group-open:inline">Contraer</span>
                         </summary>
-                        <div className="p-4 border-t border-academic-surface-variant/30 bg-academic-surface-container-lowest">
+                        <div className="p-4 border-t border-app-border bg-slate-50">
                           <pre className="whitespace-pre-wrap overflow-x-auto text-left leading-relaxed text-[11px] max-h-[40vh]">
-                            {file.content || <span className="italic text-academic-outline">[Archivo vacío]</span>}
+                            {file.content || <span className="italic text-slate-500">[Archivo vacío]</span>}
                           </pre>
                         </div>
                       </details>
@@ -410,15 +410,15 @@ export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-20 text-academic-outline italic">Formato de vista previa no soportado.</div>
+                <div className="text-center py-20 text-slate-500 italic">Formato de vista previa no soportado.</div>
               )}
             </div>
 
-            <div className="p-6 border-t border-academic-surface-variant/40 flex items-center justify-end bg-academic-surface-container-lowest/40">
+            <div className="p-4 border-t border-app-border flex items-center justify-end bg-white">
               <Button 
                 variant="primary"
+                size="sm"
                 onClick={() => { sc.setPreviewTitle(''); sc.setPreviewContent(null); }}
-                className="px-6 py-2 rounded-xl"
               >
                 Cerrar Vista Previa
               </Button>

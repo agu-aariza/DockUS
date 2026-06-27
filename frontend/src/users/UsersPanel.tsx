@@ -1,15 +1,29 @@
-import { useEffect, useState } from 'react';
-import { 
-  RiUser3Fill, RiUserAddFill, RiSearchLine, RiDeleteBin7Line, 
-  RiShieldUserFill, RiShieldCheckFill, RiLockPasswordFill, RiMailFill
+import { useEffect, useMemo, useState } from 'react';
+import {
+  RiUser3Fill,
+  RiUserAddFill,
+  RiSearchLine,
+  RiDeleteBin7Line,
+  RiShieldCheckFill,
+  RiLockPasswordFill,
+  RiMailFill,
 } from 'react-icons/ri';
 import { DangerConfirmModal } from '../shared/components/DangerConfirmModal';
+import { EmptyState } from '../shared/components/EmptyState';
 import { PageHeader } from '../shared/components/ui/PageHeader';
 import { useToast } from '../shared/toast/ToastContext';
-import type { SessionRecord, UserRole, UserStatus } from '../shared/types';
+import type { SessionRecord, UserEntity, UserStatus } from '../features/auth/types';
+import type { UserRole } from '../shared/types';
 import { useUserManagement } from './hooks/useUserManagement';
-import { Button } from '../shared/components/ui/Button';
+import { Button, IconButton } from '../shared/components/ui/Button';
 import { Tabs } from '../shared/components/ui/Tabs';
+import { Card } from '../shared/components/ui/Layout';
+import { SectionCard } from '../shared/components/ui/Layout';
+import { Badge } from '../shared/components/ui/Layout';
+import { StatusBadge } from '../shared/components/ui/StatusBadge';
+import { SearchInput } from '../shared/components/ui/SearchInput';
+import { DataTable } from '../shared/components/ui/DataTable';
+import type { Column } from '../shared/components/ui/DataTable';
 
 interface UsersPanelProps {
   session: SessionRecord | null;
@@ -19,6 +33,19 @@ type UsersTab = 'consulta' | 'alta';
 
 const USER_ROLES: UserRole[] = ['ADMIN', 'TEACHER', 'STUDENT'];
 const USER_STATUSES: UserStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: 'Administrador',
+  TEACHER: 'Docente',
+  STUDENT: 'Estudiante',
+};
+
+const STATUS_TONE: Record<UserStatus, import('../shared/components/ui/StatusBadge').StatusTone> = {
+  ACTIVE: 'active',
+  INACTIVE: 'idle',
+  SUSPENDED: 'warning',
+  PENDING_VERIFICATION: 'pending',
+};
 
 export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
   const uc = useUserManagement(session);
@@ -35,261 +62,249 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
     uc.setMessage('');
   }, [pushToast, uc.message, uc.setMessage]);
 
+  const columns = useMemo<Column<UserEntity>[]>(
+    () => [
+      {
+        header: 'Usuario',
+        accessor: 'firstName',
+        render: (user) => (
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-xs font-semibold text-primary">
+              {user.firstName[0]}
+              {user.lastName[0]}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-slate-900">
+                {user.firstName} {user.lastName}
+              </div>
+              <div className="flex items-center gap-1 truncate text-xs text-slate-500">
+                <RiMailFill className="shrink-0 text-[10px]" />
+                {user.email}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        header: 'Rol / Estado',
+        accessor: 'role',
+        render: (user) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="info">{user.role}</Badge>
+            <StatusBadge tone={STATUS_TONE[user.status]}>{user.status}</StatusBadge>
+          </div>
+        ),
+      },
+      {
+        header: 'Acciones',
+        accessor: (user) => user.id,
+        align: 'right',
+        render: (user) => (
+          <IconButton
+            label="Revocar acceso"
+            onClick={() => {
+              uc.setDeleteId(user.id);
+              uc.setConfirmOpen(true);
+            }}
+            disabled={!uc.canAdmin}
+            className="text-slate-400 hover:text-red-700 hover:bg-red-50"
+          >
+            <RiDeleteBin7Line className="text-base" />
+          </IconButton>
+        ),
+      },
+    ],
+    [uc]
+  );
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <PageHeader 
+    <div className="space-y-6">
+      <PageHeader
         title="Directorio de Usuarios"
-        subtitle="Gestión avanzada de identidades, roles y permisos de seguridad para el ecosistema DockUS."
+        subtitle="Gestión de identidades, roles y permisos de seguridad para el ecosistema DockUS."
         icon={<RiUser3Fill />}
         badge="Administración"
       />
 
-      <Tabs 
+      <Tabs
         tabs={[
           { id: 'consulta', label: 'Directorio', icon: RiSearchLine },
           { id: 'alta', label: 'Nuevo Usuario', icon: RiUserAddFill },
         ]}
         activeTab={activeTab}
         onTabChange={(id) => setActiveTab(id as UsersTab)}
-        variant="primary"
       />
 
       {activeTab === 'consulta' ? (
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
           {/* Filters Column */}
           <div className="xl:col-span-1">
-            <div className="flex flex-col h-full rounded-2xl border border-academic-surface-variant/60 bg-white p-6 shadow-academic overflow-hidden sticky top-32">
-              <div className="flex items-center justify-between gap-3 mb-6">
+            <Card title="Filtros" className="sticky top-24">
+              <div className="space-y-5">
                 <div>
-                  <p className="eyebrow !mb-1">Filtros Inteligentes</p>
-                  <h3 className="font-display text-xl font-bold tracking-tight text-academic-on-surface">
-                    Criterios
-                  </h3>
-                </div>
-              </div>
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-wider mb-2 block text-academic-outline">Nivel de Acceso</label>
-                  <select 
-                    className="w-full bg-white border border-academic-outline-variant/30 rounded-xl px-4 py-2.5 text-sm font-bold text-academic-on-surface-variant focus:outline-none focus:border-academic-secondary transition-all cursor-pointer"
-                    value={uc.query.role} 
-                    onChange={e => uc.setQuery(p => ({ ...p, role: e.target.value }))}
+                  <label htmlFor="role-filter" className="mb-1.5 block text-xs font-medium text-slate-500">
+                    Rol
+                  </label>
+                  <select
+                    id="role-filter"
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    value={uc.query.role}
+                    onChange={(e) => uc.setQuery((p) => ({ ...p, role: e.target.value }))}
                   >
                     <option value="">Todos los roles</option>
-                    {USER_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    {USER_ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-wider mb-2 block text-academic-outline">Estado de Cuenta</label>
-                  <select 
-                    className="w-full bg-white border border-academic-outline-variant/30 rounded-xl px-4 py-2.5 text-sm font-bold text-academic-on-surface-variant focus:outline-none focus:border-academic-secondary transition-all cursor-pointer"
-                    value={uc.query.status} 
-                    onChange={e => uc.setQuery(p => ({ ...p, status: e.target.value }))}
+                  <label htmlFor="status-filter" className="mb-1.5 block text-xs font-medium text-slate-500">
+                    Estado
+                  </label>
+                  <select
+                    id="status-filter"
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    value={uc.query.status}
+                    onChange={(e) => uc.setQuery((p) => ({ ...p, status: e.target.value }))}
                   >
                     <option value="">Cualquier estado</option>
-                    {USER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                    {USER_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-wider mb-2 block text-academic-outline">Identidad</label>
-                  <div className="relative group">
-                    <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline group-focus-within:text-brand-blue transition-colors" />
-                    <input 
-                      className="w-full bg-white border border-academic-outline-variant/30 rounded-xl pl-11 pr-4 py-2.5 text-sm font-bold text-academic-on-surface-variant placeholder:text-academic-outline focus:outline-none focus:border-academic-secondary transition-all"
-                      placeholder="Nombre o email..." 
-                      value={uc.query.search} 
-                      onChange={e => uc.setQuery(p => ({ ...p, search: e.target.value }))} 
-                    />
-                  </div>
+                  <label htmlFor="search-filter" className="mb-1.5 block text-xs font-medium text-slate-500">
+                    Buscar
+                  </label>
+                  <SearchInput
+                    id="search-filter"
+                    value={uc.query.search}
+                    onChange={(value) => uc.setQuery((p) => ({ ...p, search: value }))}
+                    placeholder="Nombre o email..."
+                  />
                 </div>
-                <Button 
-                  className="w-full py-3 rounded-xl"
-                  onClick={() => void uc.handleList()} 
-                  disabled={!uc.canList}
-                  variant="primary"
-                >
+                <Button className="w-full" onClick={() => void uc.handleList()} disabled={!uc.canList}>
                   Sincronizar Directorio
                 </Button>
               </div>
-            </div>
+            </Card>
           </div>
 
           {/* Table Column */}
           <div className="xl:col-span-3">
-            <div className="bg-white border border-academic-surface-variant/60 rounded-2xl shadow-academic overflow-hidden">
-              <div className="p-6 border-b border-academic-surface-variant/40 flex items-center justify-between bg-academic-surface-container-lowest/40">
-                <h3 className="ui-label">Registros Encontrados</h3>
-              </div>
-              
-              {uc.listResponse ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="text-[10px] font-black text-academic-outline uppercase tracking-[0.2em] border-b border-academic-surface-variant/40 bg-academic-surface-container-lowest/20">
-                        <th className="px-6 py-4">Perfil de Operador</th>
-                        <th className="px-6 py-4">Seguridad / Rol</th>
-                        <th className="px-6 py-4 text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-academic-surface-variant/40">
-                      {uc.listResponse.data.map((user) => (
-                        <tr key={user.id} className="group hover:bg-academic-surface transition-all duration-300">
-                          <td className="px-6 py-5">
-                            <div className="flex items-center gap-4">
-                              <div className="h-10 w-10 rounded-full bg-academic-primary/10 flex items-center justify-center text-academic-primary font-bold text-xs border border-academic-primary/20 shrink-0">
-                                {user.firstName[0]}{user.lastName[0]}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="text-sm font-bold text-academic-on-surface group-hover:text-academic-primary transition-colors truncate">
-                                  {user.firstName} {user.lastName}
-                                </div>
-                                <div className="text-xs font-medium text-academic-outline flex items-center gap-1.5 mt-0.5 truncate">
-                                  <RiMailFill className="text-[10px]" />
-                                  {user.email}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-5">
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black text-white bg-academic-on-surface uppercase tracking-wider">
-                                <RiShieldUserFill />
-                                {user.role}
-                              </span>
-                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
-                                user.status === 'ACTIVE' 
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                                  : 'bg-academic-surface-container text-academic-outline border-academic-surface-variant/40'
-                              }`}>
-                                <div className={`h-1.5 w-1.5 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-academic-outline'}`} />
-                                {user.status}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-5 text-right">
-                            <button 
-                              className="p-2 text-academic-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                              title="Revocar acceso"
-                              onClick={() => { uc.setDeleteId(user.id); uc.setConfirmOpen(true); }} 
-                              disabled={!uc.canAdmin}
-                            >
-                              <RiDeleteBin7Line className="text-lg" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-20 text-center">
-                  <div className="h-16 w-16 bg-academic-surface rounded-3xl flex items-center justify-center mx-auto mb-4 border border-academic-surface-variant/40">
-                    <RiSearchLine className="text-2xl text-academic-outline/60" />
-                  </div>
-                  <p className="text-academic-outline text-sm font-medium italic">Configura los filtros para cargar el personal del sistema.</p>
-                </div>
-              )}
-            </div>
+            {uc.listResponse ? (
+              <DataTable
+                caption="Registros encontrados"
+                columns={columns}
+                data={uc.listResponse.data}
+                keyExtractor={(user) => user.id}
+                emptyState={
+                  <EmptyState
+                    icon={<RiSearchLine className="text-2xl text-slate-400" />}
+                    title="Sin resultados"
+                    description="No se encontraron usuarios con los criterios seleccionados."
+                  />
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={<RiSearchLine className="text-2xl text-slate-400" />}
+                title="Directorio no cargado"
+                description="Configura los filtros y sincroniza para ver el personal del sistema."
+              />
+            )}
           </div>
         </div>
       ) : (
         <div className="max-w-3xl">
-          <div className="card card-top-accent-primary">
-            <div className="p-8 border-b border-academic-surface-variant/40 flex items-center justify-between bg-academic-surface-container-lowest/40">
-              <div>
-                <h3 className="font-display text-xl font-bold tracking-tight text-academic-on-surface flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-academic-primary text-white flex items-center justify-center shadow-academic">
-                    <RiUserAddFill />
-                  </div>
-                  Alta de Nuevo Operador
-                </h3>
-                <p className="text-academic-outline text-xs font-medium mt-1">Crea una nueva identidad con acceso controlado a la plataforma.</p>
-              </div>
-            </div>
-            
-            <form className="p-8 space-y-6" onSubmit={uc.handleCreate}>
+          <SectionCard
+            title="Alta de Nuevo Operador"
+            description="Crea una nueva identidad con acceso controlado a la plataforma."
+          >
+            <form className="space-y-6" onSubmit={uc.handleCreate}>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div>
-                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Información de Perfil</label>
-                  <div className="space-y-4">
-                    <input 
-                      required 
-                      className="input-field" 
-                      placeholder="Nombre completo"
-                      value={uc.createForm.firstName} 
-                      onChange={e => uc.setCreateForm(p => ({ ...p, firstName: e.target.value }))} 
-                    />
-                    <input 
-                      required 
-                      className="input-field" 
-                      placeholder="Apellidos"
-                      value={uc.createForm.lastName} 
-                      onChange={e => uc.setCreateForm(p => ({ ...p, lastName: e.target.value }))} 
+                <div className="space-y-4">
+                  <label className="block text-xs font-medium text-slate-500">Información de Perfil</label>
+                  <input
+                    required
+                    className="input-field"
+                    placeholder="Nombre"
+                    value={uc.createForm.firstName}
+                    onChange={(e) => uc.setCreateForm((p) => ({ ...p, firstName: e.target.value }))}
+                  />
+                  <input
+                    required
+                    className="input-field"
+                    placeholder="Apellidos"
+                    value={uc.createForm.lastName}
+                    onChange={(e) => uc.setCreateForm((p) => ({ ...p, lastName: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-4">
+                  <label className="block text-xs font-medium text-slate-500">Seguridad y Credenciales</label>
+                  <div className="relative">
+                    <RiMailFill className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      required
+                      className="input-field pl-10"
+                      type="email"
+                      placeholder="email@dockus.pro"
+                      value={uc.createForm.email}
+                      onChange={(e) => uc.setCreateForm((p) => ({ ...p, email: e.target.value }))}
                     />
                   </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-2 block">Seguridad y Credenciales</label>
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <RiMailFill className="absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline" />
-                      <input 
-                        required 
-                        className="input-field pl-11" 
-                        type="email" 
-                        placeholder="email@dockus.pro"
-                        value={uc.createForm.email} 
-                        onChange={e => uc.setCreateForm(p => ({ ...p, email: e.target.value }))} 
-                      />
-                    </div>
-                    <div className="relative">
-                      <RiLockPasswordFill className="absolute left-4 top-1/2 -translate-y-1/2 text-academic-outline" />
-                      <input 
-                        required 
-                        className="input-field pl-11" 
-                        type="password" 
-                        placeholder="Establecer contraseña"
-                        value={uc.createForm.password} 
-                        onChange={e => uc.setCreateForm(p => ({ ...p, password: e.target.value }))} 
-                      />
-                    </div>
+                  <div className="relative">
+                    <RiLockPasswordFill className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      required
+                      className="input-field pl-10"
+                      type="password"
+                      placeholder="Establecer contraseña"
+                      value={uc.createForm.password}
+                      onChange={(e) => uc.setCreateForm((p) => ({ ...p, password: e.target.value }))}
+                    />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-academic-outline uppercase tracking-wider mb-3 block">Nivel de Autorización</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {USER_ROLES.map(role => (
+                <label className="mb-3 block text-xs font-medium text-slate-500">Nivel de Autorización</label>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {USER_ROLES.map((role) => (
                     <button
                       key={role}
                       type="button"
-                      onClick={() => uc.setCreateForm(p => ({ ...p, role }))}
-                      className={`flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all ${
+                      onClick={() => uc.setCreateForm((p) => ({ ...p, role }))}
+                      className={`flex flex-col items-center gap-2 rounded-lg border px-4 py-4 text-center transition-colors ${
                         uc.createForm.role === role
-                          ? 'border-academic-primary bg-academic-primary/5 text-academic-primary shadow-academic'
-                          : 'border-academic-surface-variant bg-white text-academic-outline hover:border-academic-outline'
+                          ? 'border-primary bg-primary-subtle text-primary'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                     >
-                      <RiShieldCheckFill className={`text-xl ${uc.createForm.role === role ? 'text-academic-primary' : 'text-academic-surface-variant'}`} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{role}</span>
+                      <RiShieldCheckFill
+                        className={`text-lg ${uc.createForm.role === role ? 'text-primary' : 'text-slate-400'}`}
+                      />
+                      <span className="text-xs font-semibold uppercase tracking-wide">{role}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-4 pt-6 border-t border-academic-surface-variant/40">
-                <Button 
-                  type="submit" 
-                  className="px-8 py-3 rounded-xl"
+              <div className="flex items-center justify-end gap-3 border-t border-app-border pt-4">
+                <Button
+                  type="submit"
                   disabled={!uc.canAdmin || !uc.createForm.password}
-                  variant="primary"
                 >
                   Finalizar Alta de Usuario
                 </Button>
               </div>
             </form>
-          </div>
+          </SectionCard>
         </div>
       )}
 

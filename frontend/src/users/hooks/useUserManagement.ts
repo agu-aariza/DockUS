@@ -1,12 +1,7 @@
 import { type FormEvent, useState } from 'react';
 import { usersApi } from '../../shared/api/services';
-import type {
-  PaginatedResponse,
-  SessionRecord,
-  UserEntity,
-  UserRole,
-  UserStatus,
-} from '../../shared/types';
+import type { PaginatedResponse, UserRole } from "../../shared/types";
+import type { SessionRecord, UserEntity, UserStatus } from "../../features/auth/types";
 import { useManagementPermissions } from '../../shared/session/useManagementPermissions';
 import { getErrorMessage } from '../../shared/utils/errors';
 

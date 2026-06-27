@@ -6,14 +6,11 @@ import {
   assignmentsApi, 
   builderApi 
 } from '../../shared/api/services';
-import type {
-  DownloadUrlResponse,
-  PaginatedResponse,
-  SessionRecord,
-  StorageObjectEntity,
-  DeliveryEntity,
-  BuildRunEntity,
-} from '../../shared/types';
+import type { DownloadUrlResponse, StorageObjectEntity } from "../../features/storage/types";
+import type { PaginatedResponse } from "../../shared/types";
+import type { SessionRecord } from "../../features/auth/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
+import type { BuildRunEntity } from "../../features/builder/types";
 import { useManagementPermissions } from '../../shared/session/useManagementPermissions';
 import { getErrorMessage } from '../../shared/utils/errors';
 import { computeSha256Hex } from '../../shared/utils/hash';
