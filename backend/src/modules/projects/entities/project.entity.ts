@@ -35,11 +35,6 @@ export enum ProjectStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
-export enum ProjectRuntimeEnvironmentStatus {
-  ABSENT = 'ABSENT',
-  READY = 'READY',
-}
-
 @Entity('projects')
 export class Project {
   /** Identificador unico de proyecto. */
@@ -61,26 +56,6 @@ export class Project {
   /** Estado de ciclo de vida del proyecto. */
   @Column({ type: 'enum', enum: ProjectStatus, default: ProjectStatus.DRAFT })
   status: ProjectStatus;
-
-  @Column({
-    type: 'varchar',
-    length: 128,
-    nullable: true,
-  })
-  runtimeNetworkName: string | null;
-
-  @Column({
-    type: 'enum',
-    enum: ProjectRuntimeEnvironmentStatus,
-    default: ProjectRuntimeEnvironmentStatus.ABSENT,
-  })
-  runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus;
-
-  @Column({ type: 'timestamp', nullable: true })
-  runtimeProvisionedAt: Date | null;
-
-  @Column({ type: 'text', nullable: true })
-  runtimeLastError: string | null;
 
   /** Tipo de proyecto esperado (ej: Web API con FastAPI, Script CLI, etc.) */
   @Column({ type: 'varchar', length: 100, nullable: true })

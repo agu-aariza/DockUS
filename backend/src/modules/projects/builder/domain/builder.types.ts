@@ -3,7 +3,7 @@ import type {
   BuilderLlmPromptStage,
   LlmModelProfile,
 } from '../../../../shared/infrastructure/ai/llm.types';
-import type { PromptSectionTrace } from './llm/builder-prompt-composer';
+import type { PromptSectionTrace } from './ai/builder-prompt-composer';
 
 export const BUILDER_LLM_SCHEMA_VERSION = 'builder-llm/v2' as const;
 export type BuilderLlmSchemaVersion = typeof BUILDER_LLM_SCHEMA_VERSION;
@@ -27,9 +27,6 @@ export type Confidence = (typeof CONFIDENCE_LEVELS)[number];
 
 export const BUILDER_RUNTIME_FAMILIES = ['python', 'node', 'c', 'unknown'] as const;
 export type BuilderRuntimeFamily = (typeof BUILDER_RUNTIME_FAMILIES)[number];
-
-export const BUILD_RUN_KINDS = ['STANDARD'] as const;
-export type BuildRunKind = (typeof BUILD_RUN_KINDS)[number];
 
 export const BUILD_RUN_EVENT_TYPES = [
   'RUN_ENQUEUED',
@@ -148,18 +145,15 @@ export interface BuilderLlmStageTrace<
   error: BuilderLlmStageErrorInfo | null;
 }
 
+export type BuilderCodeQualityPromptSnapshot = BuilderLlmStagePromptSnapshot;
+
+export type BuilderCodeQualityTrace =
+  BuilderLlmStageTrace<BuilderCodeQualityContractV2>;
+
 export interface AssignmentContext {
   expectedType: string | null;
   rubricInstructions: string | null;
   expectedOutput: string | null;
-}
-
-export interface BuildRunRuntimeTarget {
-  projectId: string;
-  workspaceNetworkName: string;
-  executionNetworkName: string;
-  primaryContainerId: string | null;
-  helperContainerIds: string[];
 }
 
 export interface RuntimeFile {

@@ -32,8 +32,8 @@ describe('ProjectLifecycleService', () => {
 
   beforeEach(() => {
     projectsRepository = {
-      create: jest.fn((value) => value as Project),
-      save: jest.fn(async (value) => value as Project),
+      create: jest.fn((value) => value as Project) as any,
+      save: jest.fn(async (value) => value as Project) as any,
     };
     deliveriesRepository = {
       createQueryBuilder: jest.fn(),

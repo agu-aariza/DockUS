@@ -8,10 +8,11 @@
  * @module ProjectsService
  */
 
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import type { IProjectRepository } from './domain/repositories/project.repository.interface';
 import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
 import {
   ListProjectsQueryDto,
@@ -24,8 +25,7 @@ import { ProjectGradebookService } from './project-gradebook.service';
 import { ProjectLifecycleService } from './project-lifecycle.service';
 import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectAccessService } from './project-access.service';
-import { ProjectRuntimeService } from './runtime/project-runtime.service';
-import { BuilderQualityAggregationService } from './builder/application/services/builder-quality-aggregation.service';
+import { BuilderQualityAggregationService } from './builder/application/services/evaluation/builder-quality-aggregation.service';
 import { buildPaginationMeta } from '../../shared/utils/pagination.util';
 import { Delivery } from './deliveries/entities/delivery.entity';
 import {
@@ -59,12 +59,11 @@ const PROJECT_SORT_COLUMNS: Record<ProjectSortField, string> = {
 @Injectable()
 export class ProjectsService {
   constructor(
-    @InjectRepository(Project)
-    private readonly projectsRepository: Repository<Project>,
+    @Inject('IProjectRepository')
+    private readonly projectsRepository: IProjectRepository,
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
     private readonly projectLifecycleService: ProjectLifecycleService,
-    private readonly projectRuntimeService: ProjectRuntimeService,
     private readonly projectAccessService: ProjectAccessService,
     private readonly projectGradebookService: ProjectGradebookService,
     private readonly projectOperationalIssuesService: ProjectOperationalIssuesService,

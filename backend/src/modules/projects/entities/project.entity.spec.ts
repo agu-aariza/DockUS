@@ -3,19 +3,19 @@ import { getMetadataArgsStorage } from 'typeorm';
 import { Project } from './project.entity';
 
 describe('Project entity storage mapping', () => {
-  it('persists runtime metadata with Docker-first column names', () => {
+  it('maps core project columns', () => {
     const columns = getMetadataArgsStorage().columns.filter(
       (column) => column.target === Project,
     );
 
-    const runtimeNetworkNameColumn = columns.find(
-      (column) => column.propertyName === 'runtimeNetworkName',
+    const titleColumn = columns.find(
+      (column) => column.propertyName === 'title',
     );
-    const runtimeEnvironmentStatusColumn = columns.find(
-      (column) => column.propertyName === 'runtimeEnvironmentStatus',
+    const statusColumn = columns.find(
+      (column) => column.propertyName === 'status',
     );
 
-    expect(runtimeNetworkNameColumn?.options.name).toBeUndefined();
-    expect(runtimeEnvironmentStatusColumn?.options.name).toBeUndefined();
+    expect(titleColumn).toBeDefined();
+    expect(statusColumn).toBeDefined();
   });
 });

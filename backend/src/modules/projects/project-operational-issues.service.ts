@@ -356,8 +356,8 @@ export class ProjectOperationalIssuesService {
       .leftJoin('deliveries', 'delivery', 'delivery.id = storage.deliveryId')
       .where(
         [
-          "(storage.scopeType = 'PROJECT' AND (project.id IS NULL OR project.deletedAt IS NOT NULL))",
-          "(storage.scopeType = 'DELIVERY' AND (delivery.id IS NULL OR delivery.deletedAt IS NOT NULL))",
+          '(storage.projectId IS NOT NULL AND (project.id IS NULL OR project.deletedAt IS NOT NULL))',
+          '(storage.deliveryId IS NOT NULL AND (delivery.id IS NULL OR delivery.deletedAt IS NOT NULL))',
         ].join(' OR '),
       );
 

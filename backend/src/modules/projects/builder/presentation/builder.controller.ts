@@ -43,7 +43,9 @@ import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../../../auth/guards/roles.guard';
 import type { AuthenticatedRequest } from '../../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../../users/entities/user.entity';
-import { BuilderService } from '../application/builder.service';
+import { BuilderRunCommandsService } from '../application/services/orchestration/builder-run-commands.service';
+import { BuilderRunQueriesService } from '../application/services/orchestration/builder-run-queries.service';
+import { BuilderLlmChatService } from '../domain/ai/builder-llm-chat.service';
 import {
   BuildRunResponseDto,
   BuildRunEventsResponseDto,
@@ -76,7 +78,11 @@ const BUILD_RUN_ID_PARAM = {
 @Controller('builder')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class BuilderController {
-  constructor(private readonly builderService: BuilderService) {}
+  constructor(
+    private readonly builderRunCommandsService: BuilderRunCommandsService,
+    private readonly builderRunQueriesService: BuilderRunQueriesService,
+    private readonly builderLlmChatService: BuilderLlmChatService,
+  ) {}
 
   @ApiOperation({
     summary: 'Encolar ejecución Builder para una entrega',
@@ -116,7 +122,7 @@ export class BuilderController {
     @Param('deliveryId', ParseUUIDPipe) deliveryId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<EnqueueBuildRunResponseDto> {
-    return this.builderService.enqueueDeliveryRun(deliveryId, request.user);
+    return this.builderRunCommandsService.enqueueDeliveryRun(deliveryId, request.user);
   }
 
   @ApiOperation({
@@ -155,7 +161,7 @@ export class BuilderController {
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<BuildRunResponseDto> {
-    const run = await this.builderService.getRunById(buildRunId, request.user);
+    const run = await this.builderRunQueriesService.getRunById(buildRunId, request.user);
     return toBuildRunResponseDto(run);
   }
 
@@ -180,7 +186,7 @@ export class BuilderController {
     @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
     @Req() request: AuthenticatedRequest,
   ): Promise<BuildRunEventsResponseDto> {
-    const page = await this.builderService.listRunEvents(
+    const page = await this.builderRunQueriesService.listRunEvents(
       buildRunId,
       request.user,
       afterSequence,
@@ -214,7 +220,7 @@ export class BuilderController {
     response.setHeader('X-Accel-Buffering', 'no');
     response.flushHeaders?.();
 
-    const firstPage = await this.builderService.listRunEvents(
+    const firstPage = await this.builderRunQueriesService.listRunEvents(
       buildRunId,
       request.user,
       afterSequence,
@@ -231,7 +237,7 @@ export class BuilderController {
 
     let hasMore = firstPage.hasMore;
     while (hasMore) {
-      const page = await this.builderService.listRunEvents(
+      const page = await this.builderRunQueriesService.listRunEvents(
         buildRunId,
         request.user,
         latestSequence,
@@ -244,7 +250,7 @@ export class BuilderController {
       }
     }
 
-    const unsubscribe = await this.builderService.subscribeRunEvents(
+    const unsubscribe = await this.builderRunQueriesService.subscribeRunEvents(
       buildRunId,
       request.user,
       (event) => {
@@ -302,7 +308,7 @@ export class BuilderController {
     @Req() request: AuthenticatedRequest,
   ): Promise<PaginatedBuildRunsResponseDto> {
     console.log('[DEBUG] getRunsByDelivery query:', query);
-    const response = await this.builderService.listRunsByDelivery(
+    const response = await this.builderRunQueriesService.listRunsByDelivery(
       deliveryId,
       query,
       request.user,
@@ -329,7 +335,7 @@ export class BuilderController {
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<CancelBuildRunResponseDto> {
-    return this.builderService.cancelRun(buildRunId, request.user);
+    return this.builderRunCommandsService.cancelRun(buildRunId, request.user);
   }
 
   @ApiOperation({
@@ -348,7 +354,7 @@ export class BuilderController {
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<EvidenceArtifactDto[]> {
-    return this.builderService.listEvidenceArtifacts(buildRunId, request.user);
+    return this.builderRunQueriesService.listEvidenceArtifacts(buildRunId, request.user);
   }
 
   @ApiOperation({
@@ -373,7 +379,7 @@ export class BuilderController {
     @Param('artifactId', ParseUUIDPipe) artifactId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<EvidenceDownloadUrlDto> {
-    return this.builderService.createEvidenceDownloadUrl(
+    return this.builderRunQueriesService.createEvidenceDownloadUrl(
       buildRunId,
       artifactId,
       request.user,
@@ -403,7 +409,7 @@ export class BuilderController {
     @Res() res: Response,
   ): Promise<void> {
     const { content, contentType } =
-      await this.builderService.getEvidenceArtifactContent(
+      await this.builderRunQueriesService.getEvidenceArtifactContent(
         buildRunId,
         artifactId,
         request.user,
@@ -425,7 +431,7 @@ export class BuilderController {
     @Param('assignmentId', ParseUUIDPipe) assignmentId: string,
     @Req() request: AuthenticatedRequest,
   ) {
-    return this.builderService.getAssignmentQualityInsights(
+    return this.builderRunQueriesService.getAssignmentQualityInsights(
       assignmentId,
       request.user,
     );
@@ -442,7 +448,8 @@ export class BuilderController {
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<BuildRunChatMessage[]> {
-    return this.builderService.getChatMessages(buildRunId, request.user);
+    await this.builderRunQueriesService.getRunById(buildRunId, request.user);
+    return this.builderLlmChatService.getChatMessages(buildRunId);
   }
 
   @ApiOperation({
@@ -457,10 +464,7 @@ export class BuilderController {
     @Body() body: PostChatMessageDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<BuildRunChatMessage> {
-    return this.builderService.postChatMessage(
-      buildRunId,
-      body.message,
-      request.user,
-    );
+    await this.builderRunQueriesService.getRunById(buildRunId, request.user);
+    return this.builderLlmChatService.postChatMessage(buildRunId, body.message);
   }
 }

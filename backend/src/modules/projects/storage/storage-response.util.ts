@@ -22,8 +22,6 @@ export function toStorageObjectResponse(
 
   return {
     id: storageObject.id,
-    scopeType: storageObject.scopeType,
-    scopeId: storageObject.scopeId,
     assetRole: storageObject.assetRole,
     projectId: storageObject.projectId,
     deliveryId: storageObject.deliveryId,

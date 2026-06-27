@@ -39,12 +39,6 @@ export class BuildRunResponseDto {
   triggeredById!: string;
 
   @ApiProperty({
-    enum: ['STANDARD'],
-    example: 'STANDARD',
-  })
-  runKind!: string;
-
-  @ApiProperty({
     enum: BuildRunStatus,
     example: BuildRunStatus.RUNNING,
   })
@@ -73,18 +67,6 @@ export class BuildRunResponseDto {
     type: Object,
   })
   report?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Contexto de ejecución capturado durante el run.',
-    type: Object,
-  })
-  executionContext?: unknown;
-
-  @ApiPropertyOptional({
-    description: 'Destino runtime del run dentro del cluster del proyecto.',
-    type: Object,
-  })
-  runtimeTarget?: unknown;
 
   @ApiPropertyOptional({
     description: 'Causa exacta de fallo (si aplica).',

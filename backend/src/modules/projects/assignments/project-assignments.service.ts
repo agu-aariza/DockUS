@@ -4,18 +4,17 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-  Optional,
-  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { User, UserRole } from '../../users/entities/user.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
-import { Project, ProjectStatus } from '../entities/project.entity';
+import { ProjectStatus } from '../entities/project.entity';
 import { ProjectAccessService } from '../project-access.service';
 import { ProjectAssignment } from './entities/project-assignment.entity';
-import { GroupsService } from '../../academic/services/groups.service';
+import { GROUP_ROSTER_READER } from '../../../shared/application/group-roster-reader.port';
+import type { GroupRosterReader } from '../../../shared/application/group-roster-reader.port';
 
 export interface ProjectAssignmentResponse {
   id: string;
@@ -70,8 +69,8 @@ export class ProjectAssignmentsService {
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
     private readonly projectAccessService: ProjectAccessService,
-    @Inject(forwardRef(() => GroupsService))
-    private readonly groupsService: GroupsService,
+    @Inject(GROUP_ROSTER_READER)
+    private readonly groupRosterReader: GroupRosterReader,
   ) {}
 
   /**
@@ -183,7 +182,7 @@ export class ProjectAssignmentsService {
 
     const studentToGroups = new Map<string, Set<string>>();
     for (const groupId of requestedGroupIds) {
-      const enrollments = await this.groupsService.listEnrollments(groupId);
+      const enrollments = await this.groupRosterReader.listEnrollments(groupId);
       enrollments.forEach((e) => {
         if (!studentToGroups.has(e.studentId)) {
           studentToGroups.set(e.studentId, new Set());
@@ -426,7 +425,7 @@ export class ProjectAssignmentsService {
     >();
 
     if (allGroupIds.length > 0) {
-      const groups = await this.groupsService.list(); // This service list() returns group entities + count
+      const groups = await this.groupRosterReader.listGroups();
       groups.forEach((g) => {
         if (allGroupIds.includes(g.id)) {
           groupMap.set(g.id, { id: g.id, name: g.name, code: g.code });

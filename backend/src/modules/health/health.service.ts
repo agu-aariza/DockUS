@@ -12,6 +12,10 @@ import { Injectable } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
 import { DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import {
+  BedrockClient,
+  ListFoundationModelsCommand,
+} from '@aws-sdk/client-bedrock';
 import { RedisClientService } from '../../shared/infrastructure/cache/redis-client.service';
 import { DockerHostService } from '../../shared/infrastructure/docker/docker-host.service';
 
@@ -163,9 +167,6 @@ export class HealthService {
     const region = this.configService.get<string>('AWS_REGION', 'us-east-1');
 
     try {
-      const { BedrockClient, ListFoundationModelsCommand } = await import(
-        '@aws-sdk/client-bedrock'
-      );
       const client = new BedrockClient({ region });
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);

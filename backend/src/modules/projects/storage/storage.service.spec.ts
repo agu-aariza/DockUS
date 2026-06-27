@@ -384,7 +384,6 @@ describe('StorageService', () => {
     const saved = buildStorageObject({
       projectId: project.id,
       deliveryId: null,
-      scopeId: project.id,
       logicalName: 'teacher-suite.zip',
       logicalPath: 'teacher-suite.zip',
       contentType: 'application/zip',

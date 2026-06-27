@@ -34,7 +34,6 @@ export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
     id: run.id,
     deliveryId: run.deliveryId,
     triggeredById: run.triggeredById,
-    runKind: run.runKind,
     status: run.status,
     latestEventSequence: run.latestEventSequence
       ? Number(run.latestEventSequence)
@@ -46,8 +45,6 @@ export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
     ].includes(run.status),
     llmAssessment: run.llmAssessment,
     report: run.report,
-    executionContext: run.executionContext,
-    runtimeTarget: run.runtimeTarget,
     failureReason: run.failureReason,
     warnings: run.warnings ?? [],
     startedAt: run.startedAt?.toISOString() ?? null,

@@ -1,10 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository, IsNull } from 'typeorm';
 import { CourseGroup } from '../entities/course-group.entity';
@@ -12,7 +6,7 @@ import { GroupEnrollment } from '../entities/group-enrollment.entity';
 import { User, UserRole } from '../../users/entities/user.entity';
 import { CreateGroupDto } from '../dto/create-group.dto';
 import { BulkEnrollDto } from '../dto/bulk-enroll.dto';
-import { ProjectAssignmentsService } from '../../projects/assignments/project-assignments.service';
+import { GroupEnrollmentEventsService } from '../../../shared/application/group-enrollment-events.service';
 
 @Injectable()
 export class GroupsService {
@@ -23,8 +17,7 @@ export class GroupsService {
     private readonly enrollmentsRepository: Repository<GroupEnrollment>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
-    @Inject(forwardRef(() => ProjectAssignmentsService))
-    private readonly projectAssignmentsService: ProjectAssignmentsService,
+    private readonly groupEnrollmentEventsService: GroupEnrollmentEventsService,
   ) {}
 
   async list(): Promise<any[]> {
@@ -41,6 +34,17 @@ export class GroupsService {
         return { ...group, studentCount };
       }),
     );
+  }
+
+  async listGroups(): Promise<
+    Array<{ id: string; name: string; code: string | null }>
+  > {
+    const groups = await this.list();
+    return groups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      code: group.code ?? null,
+    }));
   }
 
   async create(dto: CreateGroupDto, creatorId: string): Promise<CourseGroup> {
@@ -235,10 +239,10 @@ export class GroupsService {
 
     // Sync project assignments for the newly enrolled students
     if (studentIds.length > 0) {
-      await this.projectAssignmentsService.syncGroupAssignments(
+      await this.groupEnrollmentEventsService.publishStudentsEnrolled({
         groupId,
         studentIds,
-      );
+      });
     }
 
     return results;

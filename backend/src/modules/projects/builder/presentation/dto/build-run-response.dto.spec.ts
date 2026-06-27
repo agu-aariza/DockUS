@@ -8,7 +8,6 @@ describe('toBuildRunResponseDto', () => {
       id: 'run-1',
       deliveryId: 'delivery-1',
       triggeredById: 'teacher-1',
-      runKind: 'STANDARD',
       status: BuildRunStatus.SUCCESS,
       latestEventSequence: '12',
       llmAssessment: {
@@ -48,8 +47,6 @@ describe('toBuildRunResponseDto', () => {
           nextAttemptChecklist: ['Anade main.py'],
         },
       },
-      executionContext: null,
-      runtimeTarget: null,
       failureReason: null,
       warnings: [],
       startedAt: new Date('2026-05-11T10:00:00.000Z'),

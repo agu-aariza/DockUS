@@ -20,10 +20,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import {
-  StorageAssetRole,
-  StorageScopeType,
-} from '../entities/storage-object.entity';
+import { StorageAssetRole } from '../entities/storage-object.entity';
 
 const STORAGE_SORT_FIELDS = [
   'createdAt',
@@ -75,14 +72,6 @@ export class ListStorageObjectsQueryDto {
   @IsUUID('4', { message: 'El projectId debe ser un UUID valido.' })
   @IsOptional()
   projectId?: string;
-
-  @ApiPropertyOptional({
-    description: 'Filtro por tipo de scope.',
-    enum: StorageScopeType,
-  })
-  @IsEnum(StorageScopeType, { message: 'El scopeType es invalido.' })
-  @IsOptional()
-  scopeType?: StorageScopeType;
 
   @ApiPropertyOptional({
     description: 'Filtro por rol del artefacto.',

@@ -25,9 +25,10 @@ describe('BuilderController', () => {
       createdAt: '2026-05-11T10:01:00.000Z',
     };
 
-    let liveCallback: ((event: typeof liveEvent) => void) | null = null;
+    let liveCallback: any = null;
     const unsubscribe = jest.fn();
-    const builderService = {
+    const builderRunCommandsService = {} as any;
+    const builderRunQueriesService = {
       listRunEvents: jest
         .fn()
         .mockResolvedValueOnce({
@@ -40,8 +41,13 @@ describe('BuilderController', () => {
         return unsubscribe;
       }),
     } as any;
+    const builderLlmChatService = {} as any;
 
-    const controller = new BuilderController(builderService);
+    const controller = new BuilderController(
+      builderRunCommandsService,
+      builderRunQueriesService,
+      builderLlmChatService,
+    );
     const writes: string[] = [];
     const request = new EventEmitter() as EventEmitter & {
       user: { userId: string; role: string };

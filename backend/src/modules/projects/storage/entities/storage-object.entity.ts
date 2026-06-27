@@ -2,7 +2,7 @@
  * @fileoverview Entidad TypeORM para metadatos de objetos almacenados.
  *
  * Contexto:
- * - Vincula cada objeto fisico de storage con una entrega concreta.
+ * - Vincula cada objeto fisico de storage con un proyecto o una entrega concreta.
  * - Conserva metadatos funcionales para trazabilidad y evaluacion.
  *
  * @module StorageObject
@@ -23,27 +23,20 @@ import { Delivery } from '../../deliveries/entities/delivery.entity';
 import { User } from '../../../users/entities/user.entity';
 import { Project } from '../../entities/project.entity';
 
-export enum StorageScopeType {
-  DELIVERY = 'DELIVERY',
-  PROJECT = 'PROJECT',
-}
-
 export enum StorageAssetRole {
   STUDENT_SOURCE = 'STUDENT_SOURCE',
   TEACHER_TESTS = 'TEACHER_TESTS',
 }
 
 @Entity('storage_objects')
-@Index(['scopeType', 'scopeId', 'assetRole', 'logicalPath'], { unique: true })
+@Index(
+  'UQ_storage_objects_scope',
+  ['projectId', 'deliveryId', 'assetRole', 'logicalPath'],
+  { unique: true },
+)
 export class StorageObject {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
-  @Column({ type: 'enum', enum: StorageScopeType })
-  scopeType: StorageScopeType;
-
-  @Column({ type: 'uuid' })
-  scopeId: string;
 
   @Column({ type: 'enum', enum: StorageAssetRole })
   assetRole: StorageAssetRole;

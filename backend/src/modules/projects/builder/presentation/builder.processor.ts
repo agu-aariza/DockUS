@@ -3,7 +3,7 @@
  *
  * Contexto:
  * - Consume jobs de la cola builder-runs.
- * - Delega la ejecución y persistencia de estado al BuilderService.
+ * - Delega la ejecución y persistencia de estado al BuilderRunCommandsService.
  *
  * @module BuilderProcessor
  */
@@ -14,14 +14,12 @@ import {
   BUILDER_RUN_JOB_NAME,
   BUILDER_RUNS_QUEUE_NAME,
 } from '../domain/builder.constants';
-import {
-  BuilderService,
-  ExecuteBuildRunJobData,
-} from '../application/builder.service';
+import { BuilderRunCommandsService } from '../application/services/orchestration/builder-run-commands.service';
+import type { ExecuteBuildRunJobData } from '../application/services/builder-application.types';
 
 @Processor(BUILDER_RUNS_QUEUE_NAME, { concurrency: 5 })
 export class BuilderProcessor extends WorkerHost {
-  constructor(private readonly builderService: BuilderService) {
+  constructor(private readonly builderRunCommandsService: BuilderRunCommandsService) {
     super();
   }
 
@@ -30,6 +28,6 @@ export class BuilderProcessor extends WorkerHost {
       return;
     }
 
-    await this.builderService.processBuildRunJob(job.data);
+    await this.builderRunCommandsService.processBuildRunJob(job.data);
   }
 }

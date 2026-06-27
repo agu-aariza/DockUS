@@ -1,15 +1,10 @@
 import type { PaginationMeta } from '../../../shared/utils/pagination.util';
-import type {
-  StorageAssetRole,
-  StorageScopeType,
-} from './entities/storage-object.entity';
+import type { StorageAssetRole } from './entities/storage-object.entity';
 
 export type StorageObjectsPaginationMeta = PaginationMeta;
 
 export interface StorageObjectResponse {
   id: string;
-  scopeType: StorageScopeType;
-  scopeId: string;
   assetRole: StorageAssetRole;
   projectId: string | null;
   deliveryId: string | null;

@@ -1,0 +1,216 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  AssignmentContext,
+  BuilderEvaluationContractV2,
+  BuilderLlmStageErrorInfo,
+  BuilderLlmStagePromptSnapshot,
+  BuilderLlmStageTrace,
+  BuilderPlanContractV2,
+  BUILDER_LLM_SCHEMA_VERSION,
+} from '../builder.types';
+import {
+  PromptId,
+  PromptRegistryService,
+} from '../../../../../shared/infrastructure/ai/prompt-registry.service';
+import { BedrockGenerationService } from '../../../../../shared/infrastructure/ai/bedrock-generation.service';
+import type { LlmModelProfile } from '../../../../../shared/infrastructure/ai/llm.types';
+import { BuilderLogTrimmer } from '../../infrastructure/utils/builder-log-trimmer.util';
+import { parseBuilderEvaluationContractV2 } from './builder-evaluation-contract.parser';
+import { resolveBuilderModelProfile } from './builder-llm-model-profile';
+import { parseBuilderPlanContractV2 } from './builder-plan-contract.parser';
+import {
+  ComposedPromptPayload,
+  composeEvaluationPrompt,
+  composePlanPrompt,
+} from './builder-prompt-composer';
+import {
+  createPromptSnapshot,
+  logStageError,
+  buildTrace,
+  serializeError,
+} from './builder-llm-trace.util';
+
+export interface EvaluatorInput {
+  projectRootDir: string;
+  sourceCodePayload: string;
+  executionLogs: string;
+  assignmentContext: AssignmentContext;
+  plannerAssessment?: BuilderPlanContractV2;
+}
+
+interface BuilderLlmTraceHooks {
+  onBeforeCall?: (
+    snapshot: BuilderLlmStagePromptSnapshot,
+  ) => Promise<void> | void;
+}
+
+@Injectable()
+export class BuilderLlmEvaluatorService {
+  private readonly logger = new Logger(BuilderLlmEvaluatorService.name);
+  private readonly planMaxInputChars: number;
+  private readonly evalMaxInputChars: number;
+  private readonly systemPrompt: string;
+  private readonly planSystemPrompt: string;
+  private readonly evaluationProfile: LlmModelProfile;
+  private readonly planProfile: LlmModelProfile;
+
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly promptRegistry: PromptRegistryService,
+    private readonly logTrimmer: BuilderLogTrimmer,
+    private readonly llmService: BedrockGenerationService,
+  ) {
+    this.planMaxInputChars = this.configService.get<number>(
+      'BUILDER_LLM_PLAN_MAX_INPUT_CHARS',
+      15000,
+    );
+    this.evalMaxInputChars = this.configService.get<number>(
+      'BUILDER_LLM_EVAL_MAX_INPUT_CHARS',
+      15000,
+    );
+    this.systemPrompt = this.promptRegistry.getPrompt(PromptId.EVAL);
+    this.planSystemPrompt = this.promptRegistry.getPrompt(PromptId.PLAN);
+    this.evaluationProfile = resolveBuilderModelProfile(
+      'evaluation',
+      this.configService,
+    );
+    this.planProfile = resolveBuilderModelProfile('plan', this.configService);
+  }
+
+  async evaluate(input: EvaluatorInput): Promise<BuilderEvaluationContractV2> {
+    const trace = await this.evaluateWithTrace(input);
+    if (trace.parsedContract) {
+      return trace.parsedContract;
+    }
+
+    throw new Error(
+      trace.error?.message ??
+        'No se pudo obtener una evaluacion valida del LLM.',
+    );
+  }
+
+  async evaluateWithTrace(
+    input: EvaluatorInput,
+    hooks?: BuilderLlmTraceHooks,
+  ): Promise<BuilderLlmStageTrace<BuilderEvaluationContractV2>> {
+    const composedPrompt = composeEvaluationPrompt(
+      input.sourceCodePayload,
+      this.logTrimmer.smartTrim(input.executionLogs) ||
+        'No execution logs were captured.',
+      input.assignmentContext,
+      input.plannerAssessment,
+      this.evalMaxInputChars,
+    );
+
+    const snapshot = createPromptSnapshot(
+      'evaluation',
+      PromptId.EVAL,
+      this.evaluationProfile,
+      composedPrompt,
+      this.systemPrompt,
+    );
+    await hooks?.onBeforeCall?.(snapshot);
+
+    let response: string | null = null;
+
+    try {
+      response = await this.llmService.generate({
+        stage: 'evaluation',
+        promptId: PromptId.EVAL,
+        prompt: composedPrompt.prompt,
+        systemPrompt: this.systemPrompt,
+        profile: this.evaluationProfile,
+        format: 'json',
+      });
+    } catch (error: unknown) {
+      const serializedError = serializeError(error);
+      logStageError('evaluation', PromptId.EVAL, this.evaluationProfile, serializedError, this.logger);
+      return buildTrace(snapshot, null, serializedError);
+    }
+
+    try {
+      const parsedContract = parseBuilderEvaluationContractV2(response);
+      return buildTrace(snapshot, response, null, parsedContract);
+    } catch (parseError) {
+      const serializedError = serializeError(
+        parseError,
+        'invalid_contract',
+      );
+      logStageError('evaluation', PromptId.EVAL, this.evaluationProfile, serializedError, this.logger);
+      this.logger.error(
+        `Fallo al parsear respuesta del Evaluador. Respuesta bruta: ${response}`,
+      );
+      return buildTrace(snapshot, response, serializedError);
+    }
+  }
+
+  async plan(input: {
+    sourceCodePayload: string;
+    assignmentContext: AssignmentContext;
+  }): Promise<BuilderPlanContractV2> {
+    const trace = await this.planWithTrace(input);
+    if (trace.parsedContract) {
+      return trace.parsedContract;
+    }
+
+    throw new Error(
+      trace.error?.message ?? 'No se pudo obtener un plan valido del LLM.',
+    );
+  }
+
+  async planWithTrace(
+    input: {
+      sourceCodePayload: string;
+      assignmentContext: AssignmentContext;
+    },
+    hooks?: BuilderLlmTraceHooks,
+  ): Promise<BuilderLlmStageTrace<BuilderPlanContractV2>> {
+    const composedPrompt = composePlanPrompt(
+      input.sourceCodePayload,
+      input.assignmentContext,
+      this.planMaxInputChars,
+    );
+
+    const snapshot = createPromptSnapshot(
+      'plan',
+      PromptId.PLAN,
+      this.planProfile,
+      composedPrompt,
+      this.planSystemPrompt,
+    );
+    await hooks?.onBeforeCall?.(snapshot);
+
+    let response: string | null = null;
+
+    try {
+      response = await this.llmService.generate({
+        stage: 'plan',
+        promptId: PromptId.PLAN,
+        prompt: composedPrompt.prompt,
+        systemPrompt: this.planSystemPrompt,
+        profile: this.planProfile,
+        format: 'json',
+      });
+    } catch (error: unknown) {
+      const serializedError = serializeError(error);
+      logStageError('plan', PromptId.PLAN, this.planProfile, serializedError, this.logger);
+      return buildTrace(snapshot, null, serializedError);
+    }
+
+    try {
+      const parsedContract = parseBuilderPlanContractV2(response);
+      return buildTrace(snapshot, response, null, parsedContract);
+    } catch (parseError) {
+      const serializedError = serializeError(
+        parseError,
+        'invalid_contract',
+      );
+      logStageError('plan', PromptId.PLAN, this.planProfile, serializedError, this.logger);
+      this.logger.error(
+        `Fallo al parsear respuesta del Planner. Respuesta bruta: ${response}`,
+      );
+      return buildTrace(snapshot, response, serializedError);
+    }
+  }
+}

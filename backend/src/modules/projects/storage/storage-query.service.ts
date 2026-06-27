@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
 import { parseZipEntries } from '../builder/infrastructure/utils/archive-extractor.util';
@@ -19,7 +19,6 @@ import {
 import {
   StorageAssetRole,
   StorageObject,
-  StorageScopeType,
 } from './entities/storage-object.entity';
 import {
   CreateDownloadUrlResponse,
@@ -89,12 +88,6 @@ export class StorageQueryService {
     if (query.projectId) {
       queryBuilder.andWhere('storage.projectId = :projectId', {
         projectId: query.projectId,
-      });
-    }
-
-    if (query.scopeType) {
-      queryBuilder.andWhere('storage.scopeType = :scopeType', {
-        scopeType: query.scopeType,
       });
     }
 
@@ -179,8 +172,8 @@ export class StorageQueryService {
   ): Promise<StorageObject | null> {
     return this.storageRepository.findOne({
       where: {
-        scopeType: StorageScopeType.PROJECT,
-        scopeId: projectId,
+        projectId,
+        deliveryId: IsNull(),
         assetRole: StorageAssetRole.TEACHER_TESTS,
       },
     });

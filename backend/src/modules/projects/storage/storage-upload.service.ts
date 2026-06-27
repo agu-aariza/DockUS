@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -17,7 +18,6 @@ import { CreateStorageObjectDto } from './dto/create-storage-object.dto';
 import {
   StorageAssetRole,
   StorageObject,
-  StorageScopeType,
 } from './entities/storage-object.entity';
 import { UploadedStorageFile } from './interfaces/uploaded-storage-file.interface';
 import { StorageObjectResponse } from './storage.types';
@@ -91,8 +91,6 @@ export class StorageUploadService {
       uploadedObject = true;
 
       const storageObject = this.storageRepository.create({
-        scopeType: StorageScopeType.DELIVERY,
-        scopeId: delivery.id,
         assetRole: StorageAssetRole.STUDENT_SOURCE,
         projectId: delivery.assignment.projectId,
         deliveryId: delivery.id,
@@ -144,8 +142,8 @@ export class StorageUploadService {
 
     const existing = await this.storageRepository.findOne({
       where: {
-        scopeType: StorageScopeType.PROJECT,
-        scopeId: projectId,
+        projectId,
+        deliveryId: IsNull(),
         assetRole: StorageAssetRole.TEACHER_TESTS,
       },
     });
@@ -175,8 +173,6 @@ export class StorageUploadService {
 
     const saved = await this.storageRepository.save(
       this.storageRepository.create({
-        scopeType: StorageScopeType.PROJECT,
-        scopeId: projectId,
         assetRole: StorageAssetRole.TEACHER_TESTS,
         projectId,
         deliveryId: null,

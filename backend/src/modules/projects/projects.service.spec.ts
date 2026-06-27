@@ -21,8 +21,7 @@ import { ProjectGradebookService } from './project-gradebook.service';
 import { ProjectLifecycleService } from './project-lifecycle.service';
 import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectsService } from './projects.service';
-import { ProjectRuntimeService } from './runtime/project-runtime.service';
-import { BuilderQualityAggregationService } from './builder/application/services/builder-quality-aggregation.service';
+import { BuilderQualityAggregationService } from './builder/application/services/evaluation/builder-quality-aggregation.service';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -55,17 +54,6 @@ describe('ProjectsService', () => {
 
   const deliveriesRepository = {
     createQueryBuilder: jest.fn(),
-  };
-
-  const projectRuntimeService = {
-    syncCreatedProject: jest.fn((project: Project) => Promise.resolve(project)),
-    transitionProjectStatus: jest.fn(
-      (project: Project, status: ProjectStatus) =>
-        Promise.resolve({
-          ...project,
-          status,
-        }),
-    ),
   };
 
   const projectLifecycleService = {
@@ -110,7 +98,6 @@ describe('ProjectsService', () => {
       projectsRepository as unknown as Repository<Project>,
       deliveriesRepository as unknown as Repository<Delivery>,
       projectLifecycleService as unknown as ProjectLifecycleService,
-      projectRuntimeService as unknown as ProjectRuntimeService,
       projectAccessService as unknown as ProjectAccessService,
       projectGradebookService as unknown as ProjectGradebookService,
       projectOperationalIssuesService as unknown as ProjectOperationalIssuesService,
