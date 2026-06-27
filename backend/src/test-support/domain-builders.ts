@@ -2,7 +2,6 @@ import type { AuthenticatedUser } from '../modules/auth/interfaces/authenticated
 import { UserRole } from '../modules/users/entities/user.entity';
 import {
   Project,
-  ProjectRuntimeEnvironmentStatus,
   ProjectStatus,
 } from '../modules/projects/entities/project.entity';
 import { ProjectAssignment } from '../modules/projects/assignments/entities/project-assignment.entity';
@@ -13,7 +12,6 @@ import {
 import {
   StorageAssetRole,
   StorageObject,
-  StorageScopeType,
 } from '../modules/projects/storage/entities/storage-object.entity';
 import type { UploadedStorageFile } from '../modules/projects/storage/interfaces/uploaded-storage-file.interface';
 import type { MinioStorageService } from '../shared/infrastructure/storage/minio-storage.service';
@@ -39,10 +37,6 @@ export function buildProject(overrides: Partial<Project> = {}): Project {
     maxDeliveriesPerStudent: 2,
     expectedType: 'PYTHON_FASTAPI',
     rubricInstructions: 'Evaluar calidad de código y tests.',
-    runtimeNetworkName: null,
-    runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.ABSENT,
-    runtimeProvisionedAt: null,
-    runtimeLastError: null,
     expectedOutput: null,
     opensAt: null,
     closesAt: null,
@@ -104,8 +98,6 @@ export function buildStorageObject(
 ): StorageObject {
   return {
     id: '66666666-6666-6666-6666-666666666666',
-    scopeType: StorageScopeType.DELIVERY,
-    scopeId: '55555555-5555-5555-5555-555555555555',
     assetRole: StorageAssetRole.STUDENT_SOURCE,
     projectId: '5a6f2626-c78c-4842-b180-f1ca0a3f2d53',
     project: null,
