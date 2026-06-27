@@ -52,8 +52,8 @@ function getNotificationConfig(notification: EvaluationNotification) {
 
   return {
     icon: RiCheckboxCircleLine,
-    bg: "bg-brand-blue/5 border-brand-blue/20",
-    iconColor: "text-brand-blue",
+    bg: "bg-primary/5 border-primary/20",
+    iconColor: "text-primary",
     label: "Informe técnico disponible",
     description: "Tu evaluación terminó y el informe técnico ya está listo para consulta.",
   };
@@ -69,13 +69,13 @@ export function EvaluationNotificationBanner({
 
   return (
     <div
-      className="mb-6 space-y-3 animate-in fade-in slide-in-from-top-4 duration-300"
+      className="mb-6 space-y-3 duration-300"
       aria-live="polite"
     >
       {notifications.length > 1 ? (
         <div className="flex justify-end">
           <button
-            className="text-xs font-semibold text-academic-outline transition hover:text-academic-on-surface"
+            className="text-xs font-semibold text-slate-400 transition hover:text-slate-900"
             onClick={onDismissAll}
           >
             Descartar todas
@@ -90,10 +90,10 @@ export function EvaluationNotificationBanner({
         return (
           <div
             key={notification.id}
-            className={`relative rounded-2xl border p-4 shadow-academic-sm transition-all ${config.bg} animate-in fade-in slide-in-from-top-2 duration-200`}
+            className={`relative rounded-lg border p-4 transition-all ${config.bg}    duration-200`}
           >
             <button
-              className="absolute right-3 top-3 text-academic-outline transition hover:text-academic-on-surface-variant"
+              className="absolute right-3 top-3 text-slate-400 transition hover:text-slate-500"
               onClick={() => onDismiss(notification.id)}
               aria-label="Descartar notificación"
             >
@@ -103,15 +103,15 @@ export function EvaluationNotificationBanner({
             <div className="flex items-start gap-3 pr-8">
               <Icon className={`mt-0.5 flex-shrink-0 text-2xl ${config.iconColor}`} />
               <div className="min-w-0 flex-1">
-                <h4 className="text-sm font-bold text-academic-on-surface">
+                <h4 className="text-sm font-bold text-slate-900">
                   {config.label}
                 </h4>
-                <p className="mt-0.5 text-xs text-academic-on-surface-variant">
+                <p className="mt-0.5 text-xs text-slate-500">
                   <strong>v{notification.deliveryVersion}</strong> · {notification.projectTitle}
                 </p>
-                <p className="mt-1 text-xs text-academic-outline">{config.description}</p>
+                <p className="mt-1 text-xs text-slate-400">{config.description}</p>
                 <button
-                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-brand-blue transition hover:text-brand-blue-dark"
+                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary transition hover:text-primary"
                   onClick={() => onViewReport(notification.deliveryId)}
                 >
                   <RiFileTextLine />

@@ -27,14 +27,10 @@ interface StudentKeyValueListProps {
 }
 
 const SURFACE_TONE: Record<NonNullable<StudentSurfaceProps["tone"]>, string> = {
-  default:
-    "border-academic-surface-variant bg-white shadow-academic",
-  accent:
-    "border-brand-blue/10 bg-gradient-to-br from-white via-white to-brand-blue/5 shadow-academic",
-  subtle:
-    "border-academic-surface-variant bg-academic-surface-container-lowest shadow-academic",
-  warm:
-    "border-academic-surface-variant bg-gradient-to-br from-white via-white to-academic-surface-container-low shadow-academic",
+  default: "border-app-border bg-white",
+  accent: "border-primary/20 bg-primary-subtle",
+  subtle: "border-app-border bg-slate-50",
+  warm: "border-amber-200 bg-amber-50",
 };
 
 export function StudentSurface({
@@ -44,7 +40,7 @@ export function StudentSurface({
 }: StudentSurfaceProps): JSX.Element {
   return (
     <section
-      className={`rounded-[2rem] border p-6 ${SURFACE_TONE[tone]} ${className}`}
+      className={`rounded-lg border p-5 ${SURFACE_TONE[tone]} ${className}`}
     >
       {children}
     </section>
@@ -64,20 +60,24 @@ export function StudentSurfaceHeader({
       className={`flex flex-col gap-4 md:flex-row md:items-start md:justify-between ${className}`}
     >
       <div className="space-y-2">
-        {eyebrow ? <div className="eyebrow">{eyebrow}</div> : null}
+        {eyebrow ? (
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {eyebrow}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-3">
-          <h3 className="font-display text-2xl font-semibold tracking-tight text-academic-on-surface">
-            {title}
-          </h3>
+          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
           {badge}
         </div>
         {description ? (
-          <p className="max-w-3xl text-sm leading-6 text-academic-on-surface-variant">
+          <p className="max-w-3xl text-sm leading-6 text-slate-500">
             {description}
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-3">{actions}</div> : null}
+      {actions ? (
+        <div className="flex flex-wrap items-center gap-3">{actions}</div>
+      ) : null}
     </div>
   );
 }
@@ -95,10 +95,12 @@ export function StudentKeyValueList({
       {items.map((item) => (
         <div
           key={item.label}
-          className="rounded-2xl border border-academic-surface-variant bg-white/80 px-4 py-3"
+          className="rounded-lg border border-app-border bg-white px-4 py-3"
         >
-          <div className="ui-label text-academic-outline">{item.label}</div>
-          <div className="mt-2 text-sm font-medium text-academic-on-surface">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {item.label}
+          </div>
+          <div className="mt-2 text-sm font-medium text-slate-900">
             {item.value}
           </div>
         </div>

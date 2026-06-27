@@ -14,7 +14,9 @@ import {
 } from "react-icons/ri";
 import { useWorkspace } from "./WorkspaceContext";
 import { projectsApi, assignmentsApi, deliveriesApi, builderApi } from "../api/services";
-import type { ProjectEntity, ProjectAssignmentEntity, DeliveryEntity, BuildRunEntity } from "../types";
+import type { ProjectEntity, ProjectAssignmentEntity } from "../../features/projects/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
+import type { BuildRunEntity } from "../../features/builder/types";
 
 type PickerType = 'project' | 'assignment' | 'delivery' | 'run' | null;
 type PickerOption = ProjectEntity | ProjectAssignmentEntity | DeliveryEntity | BuildRunEntity;
@@ -150,8 +152,8 @@ export function WorkspaceBar(): JSX.Element | null {
   }
 
   return (
-    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-500 max-w-[95%] sm:max-w-none" ref={pickerRef}>
-      <div className="flex items-center gap-1 bg-slate-900/90 backdrop-blur-3xl border border-white/10 p-1.5 rounded-full shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)]">
+    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[100] max-w-[95%] sm:max-w-none" ref={pickerRef}>
+      <div className="flex items-center gap-1 bg-slate-900/90 backdrop-blur border border-white/10 p-1.5 rounded-full">
 
         {/* Project Context */}
         {selection.projectId && (
@@ -162,7 +164,7 @@ export function WorkspaceBar(): JSX.Element | null {
                 openPicker === 'project' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
               }`}
             >
-              <RiStackFill className="text-brand-primary text-base group-hover:scale-110 transition-transform" />
+              <RiStackFill className="text-accent text-base group-hover:scale-110 transition-transform" />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">{selection.projectTitle || "Proyecto"}</span>
             </button>
             <button
@@ -185,7 +187,7 @@ export function WorkspaceBar(): JSX.Element | null {
                 openPicker === 'assignment' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
               }`}
             >
-              <RiLayoutGridFill className="text-brand-gold text-base group-hover:scale-110 transition-transform" />
+              <RiLayoutGridFill className="text-amber-400 text-base group-hover:scale-110 transition-transform" />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">{selection.assignmentLabel || "Alumno"}</span>
             </button>
             <button
@@ -208,7 +210,7 @@ export function WorkspaceBar(): JSX.Element | null {
                 openPicker === 'delivery' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
               }`}
             >
-              <RiPulseFill className="text-brand-tertiary text-base group-hover:scale-110 transition-transform" />
+              <RiPulseFill className="text-primary text-base group-hover:scale-110 transition-transform" />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">{selection.deliveryLabel || "Entrega"}</span>
             </button>
             <button
@@ -266,19 +268,19 @@ export function WorkspaceBar(): JSX.Element | null {
 
       {/* Popover List */}
       {openPicker && (
-        <div className="absolute top-full left-0 right-0 mt-3 max-h-[350px] flex flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/95 backdrop-blur-2xl shadow-[0_30px_70px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300">
+        <div className="absolute top-full left-0 right-0 mt-3 max-h-[350px] flex flex-col overflow-hidden rounded-lg border border-white/10 bg-slate-900/95">
           {/* Search */}
           <div className="p-3 border-b border-white/5 bg-white/5">
             <div className="relative">
               <RiSearch2Line className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 autoFocus
-                className="w-full rounded-xl border-none bg-slate-800/50 py-2 pl-9 pr-4 text-xs font-bold text-white placeholder:text-slate-500 focus:ring-1 focus:ring-brand-gold"
+                className="w-full rounded-md border-none bg-slate-800/50 py-2 pl-9 pr-4 text-xs font-bold text-white placeholder:text-slate-500 focus:ring-1 focus:ring-amber-400"
                 placeholder={`Buscar ${openPicker === 'project' ? 'proyecto' : openPicker === 'assignment' ? 'alumno' : 'entrega'}...`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              {loading && <RiLoader4Line className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-gold animate-spin" />}
+              {loading && <RiLoader4Line className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-400 animate-spin" />}
             </div>
           </div>
 
@@ -298,13 +300,13 @@ export function WorkspaceBar(): JSX.Element | null {
                   label = p.title;
                   subStatus = p.status;
                   active = selection.projectId === id;
-                  icon = <RiStackFill className="text-brand-primary" />;
+                  icon = <RiStackFill className="text-accent" />;
                 } else if (openPicker === 'assignment') {
                   const a = opt as ProjectAssignmentEntity;
                   label = a.studentName;
                   sub = a.studentEmail;
                   active = selection.assignmentId === id;
-                  icon = <RiLayoutGridFill className="text-brand-gold" />;
+                  icon = <RiLayoutGridFill className="text-amber-400" />;
                 } else if (openPicker === 'delivery') {
                   const d = opt as DeliveryEntity;
                   label = d.studentName
@@ -313,7 +315,7 @@ export function WorkspaceBar(): JSX.Element | null {
                   sub = new Date(d.createdAt).toLocaleDateString();
                   subStatus = d.status;
                   active = selection.deliveryId === id;
-                  icon = <RiPulseFill className="text-brand-tertiary" />;
+                  icon = <RiPulseFill className="text-primary" />;
                 } else if (openPicker === 'run') {
                   const r = opt as BuildRunEntity;
                   label = `Ejecución #${id.slice(-6)}`;
@@ -343,7 +345,7 @@ export function WorkspaceBar(): JSX.Element | null {
                         {icon}
                       </div>
                       <div className="truncate">
-                        <div className={`text-[11px] font-black uppercase tracking-wider ${active ? 'text-brand-gold' : 'text-white'}`}>
+                        <div className={`text-[11px] font-black uppercase tracking-wider ${active ? 'text-amber-400' : 'text-white'}`}>
                           {label}
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5">
@@ -360,7 +362,7 @@ export function WorkspaceBar(): JSX.Element | null {
                         </div>
                       </div>
                     </div>
-                    {active && <RiCheckLine className="text-brand-gold" />}
+                    {active && <RiCheckLine className="text-amber-400" />}
                   </button>
                 );
               })

@@ -93,13 +93,13 @@ function buildTree(files: SubmissionPreviewFile[]): TreeNode[] {
 
 function TreeBranch({ nodes }: { nodes: TreeNode[] }): JSX.Element {
   return (
-    <ul className="space-y-2 text-sm text-academic-on-surface">
+    <ul className="space-y-2 text-sm text-slate-900">
       {nodes.map((node) => (
         <li key={node.path}>
           {node.kind === "directory" ? (
             <details open className="rounded-xl border border-slate-200 bg-white px-3 py-2">
               <summary className="flex cursor-pointer items-center gap-2 font-medium">
-                <RiFolder3Line className="text-brand-blue" />
+                <RiFolder3Line className="text-primary" />
                 {node.name}
               </summary>
               {node.children.length > 0 ? (
@@ -132,18 +132,18 @@ export function FileTreePreview({
   const tree = buildTree(files);
 
   return (
-    <section className="rounded-[1.75rem] border border-academic-surface-variant bg-white p-5">
+    <section className="rounded-lg border border-app-border bg-white p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="eyebrow text-academic-outline">Preview del ZIP</div>
-          <h4 className="mt-2 text-lg font-semibold text-academic-on-surface">
+          <div className="eyebrow text-slate-400">Preview del ZIP</div>
+          <h4 className="mt-2 text-lg font-semibold text-slate-900">
             Estructura detectada antes de enviar
           </h4>
-          <p className="mt-2 text-sm leading-6 text-academic-on-surface-variant">
+          <p className="mt-2 text-sm leading-6 text-slate-500">
             {files.length} archivo(s) · {formatBytes(totalSizeBytes)}
           </p>
         </div>
-        <div className="grid gap-2 text-xs text-academic-on-surface-variant sm:grid-cols-3">
+        <div className="grid gap-2 text-xs text-slate-500 sm:grid-cols-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
             <RiGitCommitLine />
             +{diff.added.length} anadidos

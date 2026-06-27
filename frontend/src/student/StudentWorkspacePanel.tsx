@@ -113,7 +113,7 @@ export function StudentWorkspacePanel({
     <div className="-mx-4 -my-6 sm:-mx-6 lg:-mx-8 lg:-my-8 flex flex-col">
       <a
         href="#student-workspace-main"
-        className="sr-only rounded-full border border-brand-blue bg-white px-4 py-2 text-sm font-semibold text-brand-blue focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[150]"
+        className="sr-only rounded-full border border-primary bg-white px-4 py-2 text-sm font-semibold text-primary focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[150]"
       >
         Saltar al contenido principal
       </a>

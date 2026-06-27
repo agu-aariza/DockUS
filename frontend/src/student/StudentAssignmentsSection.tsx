@@ -6,18 +6,16 @@ import {
 } from "react-icons/ri";
 
 import type { SessionRecord, ProjectAssignmentEntity } from "../shared/types";
-import { Button } from "../shared/components/ui/Button";
 import { EmptyState } from "../shared/components/EmptyState";
 import { Skeleton } from "../shared/components/Skeleton";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
-import { StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
 import { describeAssignmentTimeline } from "./deadlineUtils";
 
 interface Props {
   session: SessionRecord | null;
   data: StudentWorkspaceData;
-  onNavigate: (tab: any) => void;
+  onNavigate: (_tab: any) => void;
 }
 
 function getUrgencyStyle(
@@ -26,10 +24,10 @@ function getUrgencyStyle(
 ): { border: string; iconBg: string; iconColor: string; chip: string } {
   if (assignment.revokedAt) {
     return {
-      border: "border-academic-outline-variant/30 opacity-75 bg-academic-surface-container/20",
-      iconBg: "bg-academic-surface-container",
-      iconColor: "text-academic-outline",
-      chip: "bg-academic-surface-container text-academic-on-surface-variant border-academic-outline-variant/20",
+      border: "border-app-border/30 opacity-75 bg-slate-50/20",
+      iconBg: "bg-slate-50",
+      iconColor: "text-slate-400",
+      chip: "bg-slate-50 text-slate-500 border-app-border/20",
     };
   }
 
@@ -56,10 +54,10 @@ function getUrgencyStyle(
   }
 
   return {
-    border: "border-brand-blue/15",
-    iconBg: "bg-brand-blue/10",
-    iconColor: "text-brand-blue",
-    chip: "bg-brand-blue/5 text-brand-blue-dark border-brand-blue/15",
+    border: "border-primary/15",
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
+    chip: "bg-primary/5 text-primary border-primary/15",
   };
 }
 
@@ -68,7 +66,7 @@ function formatDate(value?: string | null): string {
 }
 
 export function StudentAssignmentsSection({
-  session,
+  session: _session,
   data,
   onNavigate,
 }: Props): JSX.Element {
@@ -116,20 +114,20 @@ export function StudentAssignmentsSection({
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-academic">
-          <div className="h-5 w-40 animate-pulse rounded bg-academic-surface-container" />
-          <div className="mt-4 h-4 w-3/4 animate-pulse rounded bg-academic-surface-container/60" />
+        <div className="rounded-lg border border-app-border bg-white p-6">
+          <div className="h-5 w-40 animate-pulse rounded bg-slate-50" />
+          <div className="mt-4 h-4 w-3/4 animate-pulse rounded bg-slate-50/60" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((index) => (
             <div
               key={index}
-              className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-academic"
+              className="rounded-lg border border-app-border bg-white p-6"
             >
-              <Skeleton type="rounded" className="h-12 w-12 bg-academic-surface-container" />
-              <div className="mt-6 h-5 w-3/4 animate-pulse rounded bg-academic-surface-container/60" />
-              <div className="mt-4 h-4 w-full animate-pulse rounded bg-academic-surface-container/60" />
-              <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-academic-surface-container/60" />
+              <Skeleton type="rounded" className="h-12 w-12 bg-slate-50" />
+              <div className="mt-6 h-5 w-3/4 animate-pulse rounded bg-slate-50/60" />
+              <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-50/60" />
+              <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-slate-50/60" />
             </div>
           ))}
         </div>
@@ -139,7 +137,7 @@ export function StudentAssignmentsSection({
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+      <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-800">
         Error al cargar proyectos: {error}
       </div>
     );
@@ -148,7 +146,7 @@ export function StudentAssignmentsSection({
   if (assignments.length === 0) {
     return (
       <EmptyState
-        icon={<RiFolderOpenLine className="text-4xl text-academic-outline/40" />}
+        icon={<RiFolderOpenLine className="text-4xl text-slate-400/40" />}
         title="Sin proyectos asignados"
         description="Aún no tienes ningún proyecto asignado. Contacta con tu profesor si crees que es un error o espera a que se abran nuevas convocatorias."
       />
@@ -167,64 +165,64 @@ export function StudentAssignmentsSection({
           return (
             <article
               key={assignment.id}
-              className={`group flex h-full cursor-pointer flex-col rounded-[2rem] border bg-white p-6 shadow-academic transition-all duration-300 hover:-translate-y-1 hover:shadow-academic-lg ${urgency.border}`}
+              className={`group flex h-full cursor-pointer flex-col rounded-lg border bg-white p-6  transition-all duration-300  ${urgency.border}`}
               onClick={() => handleSelect(assignment)}
             >
               <div className="flex items-start justify-between gap-4">
                 <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-2xl ${urgency.iconBg} ${urgency.iconColor}`}
+                  className={`flex h-12 w-12 items-center justify-center rounded-lg ${urgency.iconBg} ${urgency.iconColor}`}
                 >
                   <RiFolderOpenLine className="text-xl" />
                 </div>
                 <span
-                  className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${urgency.chip}`}
+                  className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase  ${urgency.chip}`}
                 >
                   {assignment.revokedAt ? "Revocada" : timeline.headline}
                 </span>
               </div>
 
               <div className="mt-6 flex-1">
-                <h4 className="font-display text-2xl font-bold tracking-tight text-academic-on-surface">
+                <h4 className="text-base font-semibold text-slate-900">
                   {assignment.projectTitle}
                 </h4>
-                <p className="mt-3 text-sm leading-6 text-academic-on-surface-variant">
+                <p className="mt-3 text-sm leading-6 text-slate-500">
                   {timeline.detail}
                 </p>
 
-                <div className="mt-5 space-y-3 rounded-[1.5rem] border border-academic-surface-variant bg-academic-surface-container-lowest p-4 text-sm">
+                <div className="mt-5 space-y-3 rounded-lg border border-app-border bg-slate-50 p-4 text-sm">
                   <div className="flex items-center justify-between gap-4">
-                    <span className="ui-label text-academic-outline">Entregas realizadas</span>
-                    <span className="font-semibold text-academic-on-surface">
+                    <span className="ui-label text-slate-400">Entregas realizadas</span>
+                    <span className="font-semibold text-slate-900">
                       {assignment.deliveryCount}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="ui-label text-academic-outline">Intentos restantes</span>
-                    <span className="font-semibold text-academic-on-surface">
+                    <span className="ui-label text-slate-400">Intentos restantes</span>
+                    <span className="font-semibold text-slate-900">
                       {assignment.remainingDeliveries}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="ui-label text-academic-outline">Apertura</span>
-                    <span className="text-right font-medium text-academic-on-surface">
+                    <span className="ui-label text-slate-400">Apertura</span>
+                    <span className="text-right font-medium text-slate-900">
                       {formatDate(assignment.opensAt)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="ui-label text-academic-outline">Cierre</span>
-                    <span className="text-right font-medium text-academic-on-surface">
+                    <span className="ui-label text-slate-400">Cierre</span>
+                    <span className="text-right font-medium text-slate-900">
                       {formatDate(assignment.closesAt)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 flex items-center justify-between border-t border-academic-surface-variant pt-4">
-                <div className="flex items-center gap-2 text-xs text-academic-on-surface-variant">
+              <div className="mt-6 flex items-center justify-between border-t border-app-border pt-4">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
                   <RiTimeLine className="text-sm" />
                   {timeline.countdownLabel ?? "Sin cuenta atrás"}
                 </div>
-                <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand-blue transition group-hover:translate-x-1">
+                <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary transition group-hover:translate-x-1">
                   Abrir historial
                   <RiArrowRightLine />
                 </span>

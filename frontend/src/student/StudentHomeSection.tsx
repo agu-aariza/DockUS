@@ -3,7 +3,6 @@ import {
   RiArrowRightLine,
   RiAwardLine,
   RiBookOpenLine,
-  RiCheckboxCircleLine,
   RiFileList3Line,
   RiFolderOpenLine,
   RiInboxArchiveLine,
@@ -28,7 +27,7 @@ import { deriveStudentWorkspaceInsights, resolveStudentRunOutcome } from "./stud
 interface Props {
   session: SessionRecord | null;
   data: StudentWorkspaceData;
-  onNavigate: (tab: any) => void;
+  onNavigate: (_tab: any) => void;
 }
 
 const HEADLINE_MAP: Record<StudentWorkflowState, string> = {
@@ -72,12 +71,12 @@ function formatOutcome(outcome: ReturnType<typeof resolveStudentRunOutcome>): {
     case "UNKNOWN":
       return {
         label: "Sin resolver",
-        className: "border-academic-outline-variant/30 bg-academic-surface-container text-academic-on-surface-variant font-semibold",
+        className: "border-app-border/30 bg-slate-50 text-slate-500 font-semibold",
       };
     default:
       return {
         label: "Sin run",
-        className: "border-academic-outline-variant/20 bg-academic-surface-container/80 text-academic-on-surface-variant/80",
+        className: "border-app-border/20 bg-slate-50/80 text-slate-500/80",
       };
   }
 }
@@ -91,16 +90,16 @@ function gradeColor(grade: number): string {
 function timelineStyle(state: string): string {
   switch (state) {
     case "late":
-      return "border-rose-200 bg-rose-50/70 text-rose-700 font-semibold shadow-academic-sm";
+      return "border-rose-200 bg-rose-50/70 text-rose-700 font-semibold";
     case "upcoming":
-      return "border-brand-blue/20 bg-brand-blue/5 text-brand-blue font-semibold shadow-academic-sm";
+      return "border-primary/20 bg-primary/5 text-primary font-semibold";
     default:
-      return "border-emerald-100 bg-emerald-50/70 text-emerald-700 font-semibold shadow-academic-sm";
+      return "border-emerald-100 bg-emerald-50/70 text-emerald-700 font-semibold";
   }
 }
 
 export function StudentHomeSection({
-  session,
+  session: _session,
   data,
   onNavigate,
 }: Props): JSX.Element {
@@ -155,20 +154,20 @@ export function StudentHomeSection({
   if (loading) {
     return (
       <div className="grid gap-6 lg:grid-cols-[1.55fr,0.95fr]">
-        <div className="rounded-[2rem] border border-academic-surface-variant bg-white p-8 shadow-academic">
-          <div className="h-5 w-28 animate-pulse rounded bg-academic-outline-variant/30" />
-          <div className="mt-5 h-12 w-3/4 animate-pulse rounded bg-academic-surface-container/60" />
-          <div className="mt-4 h-4 w-full animate-pulse rounded bg-academic-surface-container/60" />
-          <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-academic-surface-container/60" />
+        <div className="rounded-lg border border-app-border bg-white p-8">
+          <div className="h-5 w-28 animate-pulse rounded bg-app-bg-subtle/30" />
+          <div className="mt-5 h-12 w-3/4 animate-pulse rounded bg-slate-50/60" />
+          <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-50/60" />
+          <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-slate-50/60" />
         </div>
         <div className="grid gap-4">
           {[1, 2, 3].map((index) => (
             <div
               key={index}
-              className="rounded-[2rem] border border-academic-surface-variant bg-white p-6 shadow-academic"
+              className="rounded-lg border border-app-border bg-white p-6"
             >
-              <div className="h-4 w-28 animate-pulse rounded bg-academic-outline-variant/30" />
-              <div className="mt-4 h-8 w-2/3 animate-pulse rounded bg-academic-surface-container/60" />
+              <div className="h-4 w-28 animate-pulse rounded bg-app-bg-subtle/30" />
+              <div className="mt-4 h-8 w-2/3 animate-pulse rounded bg-slate-50/60" />
             </div>
           ))}
         </div>
@@ -178,7 +177,7 @@ export function StudentHomeSection({
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+      <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-800">
         Error: {error}
       </div>
     );
@@ -191,16 +190,16 @@ export function StudentHomeSection({
           <div className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="eyebrow text-brand-blue">Qué te toca hacer ahora</div>
+                <div className="eyebrow text-primary">Qué te toca hacer ahora</div>
                 <div
                   className={`mt-4 inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${workflow.badgeClassName}`}
                 >
                   {workflow.label}
                 </div>
-                <h3 className="mt-4 font-display text-4xl font-semibold tracking-tight text-academic-on-surface sm:text-5xl">
+                <h3 className="mt-4 text-4xl font-semibold text-slate-900 sm:text-5xl">
                   {hasAssignments ? HEADLINE_MAP[workflowState] : "Aún no tienes proyectos"}
                 </h3>
-                <p className="mt-4 max-w-3xl text-base leading-8 text-academic-on-surface-variant">
+                <p className="mt-4 max-w-3xl text-base leading-8 text-slate-500">
                   {hasAssignments
                     ? workflow.description
                     : "Cuando tu profesor te asigne una práctica, desde aquí verás el estado real de tus entregas, el informe técnico y el siguiente paso recomendado."}
@@ -208,12 +207,12 @@ export function StudentHomeSection({
               </div>
 
               {activeAssignment ? (
-                <div className="rounded-[1.5rem] border border-academic-outline-variant/20 bg-white/95 px-4 py-3 shadow-academic-sm">
-                  <div className="ui-label text-brand-blue">Práctica activa</div>
-                  <div className="mt-2 text-sm font-semibold text-academic-on-surface">
+                <div className="rounded-lg border border-app-border/20 bg-white/95 px-4 py-3">
+                  <div className="ui-label text-primary">Práctica activa</div>
+                  <div className="mt-2 text-sm font-semibold text-slate-900">
                     {activeAssignment.projectTitle}
                   </div>
-                  <div className="mt-1 text-xs text-academic-on-surface-variant">
+                  <div className="mt-1 text-xs text-slate-500">
                     {activeAssignment.deliveryCount} entrega(s) · {activeAssignment.remainingDeliveries} intento(s) disponibles
                   </div>
                 </div>
@@ -222,7 +221,7 @@ export function StudentHomeSection({
 
             {activeTimeline ? (
               <div
-                className={`rounded-[1.5rem] border px-5 py-4 ${timelineStyle(activeTimeline.state)}`}
+                className={`rounded-lg border px-5 py-4 ${timelineStyle(activeTimeline.state)}`}
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -230,7 +229,7 @@ export function StudentHomeSection({
                     <p className="mt-1 text-sm opacity-90">{activeTimeline.detail}</p>
                   </div>
                   {activeTimeline.countdownLabel ? (
-                    <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em]">
+                    <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-bold uppercase">
                       {activeTimeline.countdownLabel}
                     </span>
                   ) : null}
@@ -239,8 +238,8 @@ export function StudentHomeSection({
             ) : null}
 
             {hasAssignments ? (
-              <div className="rounded-[1.5rem] border border-academic-outline-variant/30 bg-white/85 px-5 py-4 shadow-academic">
-                <div className="ui-label text-academic-outline">Pipeline de evaluación</div>
+              <div className="rounded-lg border border-app-border/30 bg-white/85 px-5 py-4">
+                <div className="ui-label text-slate-400">Pipeline de evaluación</div>
                 <div className="mt-4">
                   <PipelineStepper
                     workflowState={workflowState}

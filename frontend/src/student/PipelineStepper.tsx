@@ -85,11 +85,11 @@ export function PipelineStepper({
           IconComponent = RiAlertLine;
           labelColor = "text-rose-600";
         } else if (isCurrent) {
-          circleClasses = "border-brand-blue/40 bg-brand-blue/5 text-brand-blue ring-2 ring-brand-blue/10";
-          labelColor = "text-brand-blue";
+          circleClasses = "border-primary/40 bg-primary/5 text-primary ring-2 ring-brand-blue/10";
+          labelColor = "text-primary";
         } else {
-          circleClasses = "border-academic-outline-variant/30 bg-academic-surface-container/50 text-academic-outline";
-          labelColor = "text-academic-outline";
+          circleClasses = "border-app-border/30 bg-slate-50/50 text-slate-400";
+          labelColor = "text-slate-400";
         }
 
         const connectorColor = isCompleted
@@ -97,8 +97,8 @@ export function PipelineStepper({
           : isCurrent && !isFuture
             ? isFailedStep
               ? "bg-rose-300"
-              : "bg-brand-blue/40"
-            : "bg-academic-surface-variant";
+              : "bg-primary/40"
+            : "bg-app-bg-subtle";
 
         return (
           <div key={step.id} className="flex items-start flex-1 min-w-0">
@@ -115,7 +115,7 @@ export function PipelineStepper({
                 {step.label}
               </span>
               {isCurrent && stageStartedAt && !compact && (
-                <span className="mt-0.5 text-[10px] text-academic-outline">
+                <span className="mt-0.5 text-[10px] text-slate-400">
                   {formatElapsed(stageStartedAt)}
                 </span>
               )}
