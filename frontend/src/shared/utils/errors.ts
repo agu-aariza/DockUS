@@ -1,4 +1,4 @@
-import type { ApiErrorPayload } from '../types';
+import type { ApiErrorPayload } from "../types";
 
 export function getErrorMessage(error: unknown): string {
   const payload = error as Partial<ApiErrorPayload> | undefined;

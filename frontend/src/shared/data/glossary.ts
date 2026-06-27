@@ -105,7 +105,7 @@ const GLOSSARY_ENTRIES: GlossaryEntry[] = [
     term: "Capacidades",
     title: "Capacidades del sistema",
     description:
-      "Senales que resumen lo que DockUS si pudo reconocer, ejecutar o validar dentro de tu entrega.",
+      "Senales que summary lo que DockUS si pudo reconocer, ejecutar o validar dentro de tu entrega.",
   },
 ];
 

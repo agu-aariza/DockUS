@@ -1,26 +1,8 @@
 import { http } from "./http";
-import type {
-  BuildRunEntity,
-  BuildRunEventsPage,
-  DownloadUrlResponse,
-  EvidenceArtifactDto,
-  EnqueueBuildRunResponse,
-  PaginatedResponse,
-  BuildRunChatMessage,
-} from "../types";
-
-function toParams(
-  input: Record<string, string | number | undefined>,
-): URLSearchParams {
-  const params = new URLSearchParams();
-  Object.entries(input).forEach(([key, value]) => {
-    if (value === undefined) return;
-    const normalized = String(value).trim();
-    if (!normalized) return;
-    params.set(key, normalized);
-  });
-  return params;
-}
+import type { BuildRunEntity, BuildRunEventsPage, EvidenceArtifactDto, EnqueueBuildRunResponse, BuildRunChatMessage } from "../../features/builder/types";
+import type { DownloadUrlResponse } from "../../features/storage/types";
+import type { PaginatedResponse } from "../types";
+import { toParams } from "./query-params";
 
 export const builderApi = {
   async runForDelivery(deliveryId: string): Promise<EnqueueBuildRunResponse> {
@@ -84,7 +66,9 @@ export const builderApi = {
     return data;
   },
 
-  async listEvidenceArtifacts(buildRunId: string): Promise<EvidenceArtifactDto[]> {
+  async listEvidenceArtifacts(
+    buildRunId: string,
+  ): Promise<EvidenceArtifactDto[]> {
     const { data } = await http.get<EvidenceArtifactDto[]>(
       `/builder/runs/${buildRunId}/evidence`,
     );
@@ -107,7 +91,7 @@ export const builderApi = {
   ): Promise<string> {
     const { data } = await http.get<string>(
       `/builder/runs/${buildRunId}/evidence/${artifactId}/content`,
-      { responseType: 'text' },
+      { responseType: "text" },
     );
     return data;
   },
@@ -118,7 +102,7 @@ export const builderApi = {
   ): Promise<Blob> {
     const { data } = await http.get<Blob>(
       `/builder/runs/${buildRunId}/evidence/${artifactId}/content`,
-      { responseType: 'blob' },
+      { responseType: "blob" },
     );
     return data;
   },

@@ -1,8 +1,4 @@
-import type {
-  TechnicalFeedbackItem,
-  TechnicalFeedbackLevel,
-  TechnicalFeedbackSeverity,
-} from "../types";
+import type { TechnicalFeedbackItem, TechnicalFeedbackLevel, TechnicalFeedbackSeverity } from "../../features/builder/types";
 
 const VALID_SEVERITIES = new Set<TechnicalFeedbackSeverity>([
   "low",
