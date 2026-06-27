@@ -30,7 +30,7 @@ export function TeacherReviewSummary({
   return (
     <div className="space-y-4">
       {needsOfficialGrade ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <strong>Falta consolidar nota oficial.</strong> El builder ya dejó
           cierre técnico legible, pero esta entrega aún no tiene calificación
           docente publicada.
@@ -38,11 +38,11 @@ export function TeacherReviewSummary({
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+        <article className="rounded-lg border border-app-border bg-white p-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Nota recomendada por el builder
           </div>
-          <div className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+          <div className="mt-2 text-2xl font-semibold text-slate-900">
             {formatGrade(recommendedGrade)}
           </div>
           <p className="mt-2 text-sm text-slate-500">
@@ -52,11 +52,11 @@ export function TeacherReviewSummary({
           </p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+        <article className="rounded-lg border border-app-border bg-white p-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Nota oficial actual
           </div>
-          <div className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+          <div className="mt-2 text-2xl font-semibold text-slate-900">
             {formatGrade(officialGrade)}
           </div>
           <p className="mt-2 text-sm text-slate-500">
@@ -66,11 +66,11 @@ export function TeacherReviewSummary({
           </p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+        <article className="rounded-lg border border-app-border bg-white p-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Alineación docente
           </div>
-          <div className="mt-3 text-lg font-semibold tracking-tight text-slate-950">
+          <div className="mt-2 text-base font-semibold text-slate-900">
             {gradeDelta === null
               ? `Estado técnico: ${technicalState}`
               : gradeDelta === 0
@@ -85,8 +85,8 @@ export function TeacherReviewSummary({
         </article>
       </div>
 
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+      <article className="rounded-lg border border-app-border bg-white p-5">
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           Observaciones docentes oficiales
         </div>
         <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -95,8 +95,8 @@ export function TeacherReviewSummary({
         </p>
 
         {legacyAiEvidence.length > 0 ? (
-          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+          <div className="mt-5 rounded-lg border border-app-border bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Evidencia AI histórica
             </div>
             <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600">

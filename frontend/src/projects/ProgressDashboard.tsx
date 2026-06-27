@@ -31,16 +31,10 @@ import {
   resolveTeacherReviewTarget,
 } from "../deliveries/teacherReviewNavigation";
 import type { TeacherDeliveryDetailTab } from "../deliveries/teacherReviewNavigation";
-import type {
-  BuilderOutcome,
-  BuildRunEntity,
-  DeliveryEntity,
-  DeliveryStatus,
-  ProjectEntity,
-  ProjectGradebookRow,
-  ProjectProgressSummary,
-  SessionRecord,
-} from "../shared/types";
+import type { BuilderOutcome, BuildRunEntity } from "../features/builder/types";
+import type { DeliveryEntity, DeliveryStatus } from "../features/deliveries/types";
+import type { ProjectEntity, ProjectGradebookRow, ProjectProgressSummary } from "../features/projects/types";
+import type { SessionRecord } from "../features/auth/types";
 import { useToast } from "../shared/toast/ToastContext";
 import { getErrorMessage } from "../shared/utils/errors";
 

@@ -1,0 +1,289 @@
+import { useState, useDeferredValue, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useWorkspace } from "../../shared/workspace/WorkspaceContext";
+import { deliveriesApi } from "../../shared/api/services";
+import { getErrorMessage } from "../../shared/utils/errors";
+import { useToast } from "../../shared/toast/ToastContext";
+import { useNoticeToasts } from "../../shared/toast/useNoticeToasts";
+import { useDeliveryManagement } from "./useDeliveryManagement";
+import { normalizeTeacherDeliveryTab } from "../teacherReviewNavigation";
+import { DeliveryEntity, SessionRecord } from "../../shared/types";
+
+export type DetailTab = "overview" | "grading" | "report";
+
+export function useDeliveriesPanel(session: SessionRecord | null) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dc = useDeliveryManagement(session, { initialDeliveryId: searchParams.get("deliveryId") });
+  const { selection, setProject, setAssignment, setDelivery } = useWorkspace();
+  const lastSyncedRef = useRef<{
+    projectId: string | null;
+    assignmentId: string | null;
+    deliveryId: string | null;
+    tab: string | null;
+  }>({
+    projectId: null,
+    assignmentId: null,
+    deliveryId: null,
+    tab: null,
+  });
+
+  const deliveries = dc.deliveries?.data ?? [];
+  const [detailTab, setDetailTab] = useState<DetailTab>(() => 
+    normalizeTeacherDeliveryTab(searchParams.get("tab"))
+  );
+  const [deliverySearch, setDeliverySearch] = useState("");
+  const deferredDeliverySearch = useDeferredValue(deliverySearch);
+  const [quickFilterKey, setQuickFilterKey] = useState<"all" | "late" | "ungraded" | "fail" | "pass">("all");
+  const { pushToast } = useToast();
+
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewFiles, setPreviewFiles] = useState<Array<{ path: string; content: string }>>([]);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  const handlePreview = async (deliveryId: string) => {
+    setIsLoadingPreview(true);
+    setIsPreviewModalOpen(true);
+    try {
+      const files = await deliveriesApi.preview(deliveryId);
+      setPreviewFiles(files);
+    } catch (error) {
+      pushToast({
+        title: "Error previsualizando",
+        description: getErrorMessage(error),
+        tone: "error",
+      });
+      setIsPreviewModalOpen(false);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  useNoticeToasts(
+    [dc.workspaceNotice, dc.editorNotice, dc.reportNotice],
+    "Entregas",
+  );
+
+  const normalizedSearch = deferredDeliverySearch.trim().toLowerCase();
+  const quickFilterFn = (delivery: DeliveryEntity): boolean => {
+    if (quickFilterKey === "late") return delivery.isLate === true;
+    if (quickFilterKey === "ungraded") return delivery.grade === null && delivery.status === "EVALUATED";
+    if (quickFilterKey === "fail") return delivery.grade !== null && delivery.grade < 5;
+    if (quickFilterKey === "pass") return delivery.grade !== null && delivery.grade >= 5;
+    return true;
+  };
+
+  const visibleDeliveries = useMemo(() => {
+    return deliveries
+      .filter(quickFilterFn)
+      .filter(d => 
+        !normalizedSearch ||
+        d.studentEmail.toLowerCase().includes(normalizedSearch) ||
+        (d.studentName?.toLowerCase().includes(normalizedSearch) ?? false) ||
+        new Date(d.createdAt).toLocaleDateString().includes(normalizedSearch)
+      );
+  }, [deliveries, normalizedSearch, quickFilterKey]);
+
+  const handleQuickGrade = async (deliveryId: string, grade: number) => {
+    try {
+      await deliveriesApi.updateGrading(deliveryId, { grade, graderNotes: undefined });
+      pushToast({ title: "Nota guardada", description: `${grade.toFixed(2)} / 10`, tone: "success" });
+      await dc.refreshDeliveries();
+    } catch (error) {
+      pushToast({ title: "Error al guardar la nota", description: getErrorMessage(error), tone: "error" });
+    }
+  };
+
+  const selectedAssignment = dc.assignments.find(
+    (assignment) => assignment.id === dc.selectedAssignmentId,
+  );
+  const selectedProject = dc.projects.find(
+    (project) => project.id === dc.selectedProjectId,
+  );
+  const selectedDelivery = dc.selectedDelivery;
+
+  const requestedProjectId = searchParams.get("projectId");
+  const requestedAssignmentId = searchParams.get("assignmentId");
+  const requestedDeliveryId = searchParams.get("deliveryId");
+  const requestedDetailTab = normalizeTeacherDeliveryTab(searchParams.get("tab"));
+
+  const submittedCount = deliveries.filter((delivery) => delivery.status === "SUBMITTED").length;
+  const reviewCount = deliveries.filter((delivery) => delivery.status === "IN_REVIEW").length;
+  const evaluatedCount = deliveries.filter((delivery) => delivery.status === "EVALUATED").length;
+
+  const openDelivery = (deliveryId: string, tab: DetailTab = "overview") => {
+    const delivery = deliveries.find(d => d.id === deliveryId);
+    setDelivery(deliveryId, delivery ? `v${delivery.version} - ${delivery.studentName}` : undefined);
+    setDetailTab(tab);
+    if (tab !== "overview") {
+      void dc.handleViewReport(deliveryId);
+    }
+  };
+
+  useEffect(() => {
+    const lastSynced = lastSyncedRef.current;
+    const urlChanged = 
+      requestedProjectId !== lastSynced.projectId ||
+      requestedAssignmentId !== lastSynced.assignmentId ||
+      requestedDeliveryId !== lastSynced.deliveryId;
+
+    if (urlChanged) {
+      if (requestedProjectId && selection.projectId !== requestedProjectId) {
+        setProject(requestedProjectId);
+      }
+      if (requestedAssignmentId && selection.assignmentId !== requestedAssignmentId) {
+        setAssignment(requestedAssignmentId);
+      }
+      if (requestedDeliveryId && selection.deliveryId !== requestedDeliveryId) {
+        setDelivery(requestedDeliveryId);
+      }
+      
+      lastSyncedRef.current = {
+        projectId: requestedProjectId,
+        assignmentId: requestedAssignmentId,
+        deliveryId: requestedDeliveryId,
+        tab: requestedDetailTab,
+      };
+      return;
+    }
+
+    const workspaceChanged =
+      selection.projectId !== lastSynced.projectId ||
+      selection.assignmentId !== lastSynced.assignmentId ||
+      selection.deliveryId !== lastSynced.deliveryId ||
+      detailTab !== lastSynced.tab;
+
+    if (workspaceChanged) {
+      if (!selection.projectId) return;
+
+      const next = new URLSearchParams(searchParams);
+      let nextChanged = false;
+
+      if (next.get("projectId") !== selection.projectId) {
+        next.set("projectId", selection.projectId);
+        nextChanged = true;
+      }
+
+      if (selection.assignmentId) {
+        if (next.get("assignmentId") !== selection.assignmentId) {
+          next.set("assignmentId", selection.assignmentId);
+          nextChanged = true;
+        }
+        if (selection.deliveryId) {
+          if (next.get("deliveryId") !== selection.deliveryId) {
+            next.set("deliveryId", selection.deliveryId);
+            nextChanged = true;
+          }
+          if (next.get("tab") !== detailTab) {
+            next.set("tab", detailTab);
+            nextChanged = true;
+          }
+        } else {
+          if (next.has("deliveryId")) {
+            next.delete("deliveryId");
+            nextChanged = true;
+          }
+          if (next.has("tab")) {
+            next.delete("tab");
+            nextChanged = true;
+          }
+        }
+      } else {
+        if (next.has("assignmentId")) {
+          next.delete("assignmentId");
+          nextChanged = true;
+        }
+        if (next.has("deliveryId")) {
+          next.delete("deliveryId");
+          nextChanged = true;
+        }
+        if (next.has("tab")) {
+          next.delete("tab");
+          nextChanged = true;
+        }
+      }
+
+      lastSyncedRef.current = {
+        projectId: selection.projectId,
+        assignmentId: selection.assignmentId,
+        deliveryId: selection.deliveryId,
+        tab: detailTab,
+      };
+
+      if (nextChanged) {
+        setSearchParams(next, { replace: true });
+      }
+    }
+  }, [
+    requestedProjectId,
+    requestedAssignmentId,
+    requestedDeliveryId,
+    requestedDetailTab,
+    selection.projectId,
+    selection.assignmentId,
+    selection.deliveryId,
+    detailTab,
+    searchParams,
+    setSearchParams,
+    setProject,
+    setAssignment,
+    setDelivery,
+  ]);
+
+  useEffect(() => {
+    if (!requestedProjectId) return;
+    const project = dc.projects.find(p => p.id === requestedProjectId);
+    if (project && selection.projectTitle !== project.title) {
+      setProject(project.id, project.title);
+    }
+  }, [dc.projects, requestedProjectId, selection.projectTitle, setProject]);
+
+  useEffect(() => {
+    if (!requestedAssignmentId) return;
+    const assignment = dc.assignments.find(a => a.id === requestedAssignmentId);
+    if (assignment && selection.assignmentLabel !== `${assignment.studentName} · ${assignment.projectTitle}`) {
+      setAssignment(assignment.id, `${assignment.studentName} · ${assignment.projectTitle}`);
+    }
+  }, [dc.assignments, requestedAssignmentId, selection.assignmentLabel, setAssignment]);
+
+  useEffect(() => {
+    if (!requestedDeliveryId) return;
+    const delivery = deliveries.find(d => d.id === requestedDeliveryId);
+    
+    if (delivery && selection.deliveryLabel !== `v${delivery.version} - ${delivery.studentName}`) {
+      setDelivery(requestedDeliveryId, `v${delivery.version} - ${delivery.studentName}`);
+    }
+
+    if (delivery && detailTab !== "overview") {
+      void dc.handleViewReport(requestedDeliveryId);
+    }
+  }, [deliveries, requestedDeliveryId, selection.deliveryLabel, setDelivery, detailTab, dc]);
+
+  return {
+    dc,
+    detailTab,
+    setDetailTab,
+    deliverySearch,
+    setDeliverySearch,
+    quickFilterKey,
+    setQuickFilterKey,
+    isPreviewModalOpen,
+    setIsPreviewModalOpen,
+    previewFiles,
+    isLoadingPreview,
+    handlePreview,
+    visibleDeliveries,
+    handleQuickGrade,
+    selectedAssignment,
+    selectedProject,
+    selectedDelivery,
+    submittedCount,
+    reviewCount,
+    evaluatedCount,
+    openDelivery,
+    searchParams,
+    setSearchParams,
+    setProject,
+    setAssignment,
+    deliveries,
+  };
+}

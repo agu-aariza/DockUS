@@ -1,512 +1,57 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useMemo } from "react";
 import {
-  RiAlertLine,
-  RiArrowRightUpLine,
-  RiCodeSSlashLine,
-  RiFileChartLine,
-  RiFileTextLine,
-  RiFolderChartLine,
   RiInboxArchiveLine,
-  RiLoader4Line,
-  RiPulseLine,
-  RiRefreshLine,
-  RiSearchLine,
-  RiSparkling2Line,
-  RiStackLine,
-  RiTimeLine,
-  RiCheckFill,
   RiStackFill,
   RiUser3Fill,
 } from "react-icons/ri";
-import { ReportView } from "../shared/components/ReportView";
 import { EmptyState } from "../shared/components/EmptyState";
-import { SkeletonTable } from "../shared/components/Skeleton";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";
 import { TeacherGradingStudio } from "../shared/components/TeacherGradingStudio";
-import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
-import { useWorkspace } from "../shared/workspace/WorkspaceContext";
-import { VisualPicker, type VisualPickerOption } from "../shared/components/ui/VisualPicker";
+import { VisualPickerOption } from "../shared/components/ui/VisualPicker";
 import { ProjectSelectionHub, type ProjectHubOption } from "../shared/components/ui/ProjectSelectionHub";
 import { deliveriesApi } from "../shared/api/services";
 import { getErrorMessage } from "../shared/utils/errors";
 import { useToast } from "../shared/toast/ToastContext";
-import type {
-  DeliveryEntity,
-  DeliveryStatus,
-  ProjectAssignmentEntity,
-  SessionRecord,
-} from "../shared/types";
-import { useDeliveryManagement } from "./hooks/useDeliveryManagement";
-import { TeacherReviewSummary } from "./components/TeacherReviewSummary";
-import {
-  normalizeTeacherDeliveryTab,
-} from "./teacherReviewNavigation";
-import { MetricCard } from "../shared/components/MetricCard";
+import type { SessionRecord } from "../shared/types";
 import { PageHeader } from "../shared/components/ui/PageHeader";
-import { Button } from "../shared/components/ui/Button";
-import { Tabs } from "../shared/components/ui/Tabs";
+
+import { useDeliveriesPanel } from "./hooks/useDeliveriesPanel";
+import { DeliveriesSidebar } from "./components/DeliveriesSidebar";
+import { DeliveryDetailHeader } from "./components/DeliveryDetailHeader";
+import { DeliveryOverview } from "./components/DeliveryOverview";
+import { DeliveryGrading } from "./components/DeliveryGrading";
+import { DeliveryReport } from "./components/DeliveryReport";
 
 interface TeacherDeliveriesPanelProps {
   session: SessionRecord | null;
 }
 
-type DetailTab = "overview" | "grading" | "report";
-
-const STATUS_STYLE: Record<DeliveryStatus, string> = {
-  DRAFT: "border-slate-200 bg-slate-100 text-slate-700",
-  SUBMITTED: "border-brand-blue/20 bg-brand-blue/5 text-brand-blue-dark",
-  IN_REVIEW: "border-brand-gold/20 bg-brand-gold/5 text-brand-gold-dark",
-  EVALUATED: "border-brand-blue/20 bg-brand-blue/5 text-brand-blue",
-};
-
-const STATUS_TEXT: Record<DeliveryStatus, string> = {
-  DRAFT: "Borrador",
-  SUBMITTED: "Entregada",
-  IN_REVIEW: "En revisión",
-  EVALUATED: "Evaluada",
-};
-
-function formatDateTime(value?: string | null): string {
-  return value ? new Date(value).toLocaleString("es-ES") : "Sin fecha";
-}
-
-function DeliveryStatusPill({ status }: { status: DeliveryStatus }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-3 py-1 ui-label ${
-        STATUS_STYLE[status]
-      }`}
-    >
-      {STATUS_TEXT[status]}
-    </span>
-  );
-}
-
-function DeliveryListItem({
-  delivery,
-  active,
-  onSelect,
-  onOpenReport,
-  onQuickGrade,
-}: {
-  delivery: DeliveryEntity;
-  active: boolean;
-  onSelect: () => void;
-  onOpenReport: () => void;
-  onQuickGrade: (grade: number) => void;
-}) {
-  const [inlineGrade, setInlineGrade] = useState(
-    delivery.grade !== null ? String(delivery.grade) : "",
-  );
-  const canInlineGrade =
-    delivery.status === "IN_REVIEW" || delivery.status === "EVALUATED";
-
-  const commitGrade = () => {
-    const parsed = parseFloat(inlineGrade);
-    if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 10) {
-      onQuickGrade(parsed);
-    }
-  };
-
-  return (
-    <article
-      className={`group w-full rounded-lg border p-5 text-left transition-all duration-300 relative overflow-hidden ${
-        active
-          ? "border-academic-primary bg-academic-primary text-academic-on-primary shadow-academic-lg scale-[1.02] z-10"
-          : "border-academic-surface-variant bg-white hover:border-academic-outline hover:bg-academic-surface-container-lowest hover:shadow-academic active:scale-95"
-      }`}
-    >
-      <button type="button" onClick={onSelect} className="w-full text-left">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className={`ui-label ${active ? "text-slate-400" : "text-slate-500"}`}>
-              v{delivery.version}
-            </div>
-            <div className="mt-0.5 truncate text-sm font-bold tracking-tight">
-              {delivery.studentName}
-            </div>
-          </div>
-          <span
-            className={`rounded-full px-3 py-1 ui-label ${
-              active
-                ? "bg-white/10 text-white/90 border border-white/10"
-                : STATUS_STYLE[delivery.status]
-            }`}
-          >
-            {STATUS_TEXT[delivery.status]}
-          </span>
-        </div>
-
-        <div
-          className={`mt-3 space-y-1 ui-label leading-tight ${
-            active ? "text-slate-300" : "text-slate-500"
-          }`}
-        >
-          <div className="flex items-center gap-1.5 font-medium">
-            <RiTimeLine className="text-sm opacity-60" />
-            {formatDateTime(delivery.createdAt)}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <RiFileChartLine className="text-sm opacity-60" />
-            <span className={delivery.isLate ? "text-rose-500 font-medium" : "text-emerald-500 font-medium"}>
-              {delivery.isLate ? "Retrasada" : "En plazo"}
-            </span>
-          </div>
-        </div>
-      </button>
-
-      {canInlineGrade ? (
-        <div
-          className="mt-3 flex items-center gap-2"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <RiFileChartLine className={`text-sm ${active ? "text-white/60" : "text-slate-400"}`} />
-          <input
-            type="number"
-            min={0}
-            max={10}
-            step={0.5}
-            value={inlineGrade}
-            onChange={(e) => setInlineGrade(e.target.value)}
-            onBlur={commitGrade}
-            onKeyDown={(e) => e.key === "Enter" && commitGrade()}
-            placeholder="0–10"
-            className={`w-20 rounded-lg border px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-brand-blue ${
-              active
-                ? "border-white/20 bg-white/10 text-white placeholder-white/40"
-                : "border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400"
-            }`}
-          />
-          <span className={`text-xs ${active ? "text-white/60" : "text-slate-400"}`}>/ 10</span>
-        </div>
-      ) : (
-        <div className={`mt-3 flex items-center gap-1.5 ui-label ${active ? "text-slate-300" : "text-slate-500"}`}>
-          <RiFileChartLine className="text-sm opacity-60" />
-          <span className={active ? "text-white" : "text-slate-900 font-semibold"}>
-            {delivery.grade !== null ? `Nota: ${delivery.grade.toFixed(2)}` : "Nota pendiente"}
-          </span>
-        </div>
-      )}
-
-      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
-        <div className={`flex items-center gap-1 ui-label ${active ? "text-slate-400" : "text-slate-400"}`}>
-          <RiStackLine className="text-xs" />
-          {delivery.remainingDeliveries} disponibles
-        </div>
-        <button
-          type="button"
-          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 ui-label transition-all ${
-            active
-              ? "bg-white/10 text-white hover:bg-white/20"
-              : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
-          }`}
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpenReport();
-          }}
-        >
-          <RiFileTextLine className="text-sm" />
-          Informe
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function AssignmentLabel({ assignment }: { assignment: ProjectAssignmentEntity | undefined }) {
-  if (!assignment) {
-    return <>Sin asignación</>;
-  }
-
-  return (
-    <>
-      <span className="font-semibold text-slate-900">{assignment.studentName}</span>
-      <span className="mx-2 text-slate-300">|</span>
-      <span className="text-slate-500">{assignment.projectTitle}</span>
-    </>
-  );
-}
-
 export function TeacherDeliveriesPanel({
   session,
 }: TeacherDeliveriesPanelProps): JSX.Element {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const dc = useDeliveryManagement(session, { initialDeliveryId: searchParams.get("deliveryId") });
-  const { selection, setProject, setAssignment, setDelivery } = useWorkspace();
-  const lastSyncedRef = useRef<{
-    projectId: string | null;
-    assignmentId: string | null;
-    deliveryId: string | null;
-    tab: string | null;
-  }>({
-    projectId: null,
-    assignmentId: null,
-    deliveryId: null,
-    tab: null,
-  });
-  const deliveries = dc.deliveries?.data ?? [];
-  const [detailTab, setDetailTab] = useState<DetailTab>(() => 
-    normalizeTeacherDeliveryTab(searchParams.get("tab"))
-  );
-  const [deliverySearch, setDeliverySearch] = useState("");
-  const deferredDeliverySearch = useDeferredValue(deliverySearch);
-  const [quickFilterKey, setQuickFilterKey] = useState<"all" | "late" | "ungraded" | "fail" | "pass">("all");
+  const panel = useDeliveriesPanel(session);
   const { pushToast } = useToast();
 
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [previewFiles, setPreviewFiles] = useState<Array<{ path: string; content: string }>>([]);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-
-  const handlePreview = async (deliveryId: string) => {
-    setIsLoadingPreview(true);
-    setIsPreviewModalOpen(true);
-    try {
-      const files = await deliveriesApi.preview(deliveryId);
-      setPreviewFiles(files);
-    } catch (error) {
-      pushToast({
-        title: "Error previsualizando",
-        description: getErrorMessage(error),
-        tone: "error",
-      });
-      setIsPreviewModalOpen(false);
-    } finally {
-      setIsLoadingPreview(false);
-    }
-  };
-
-  useNoticeToasts(
-    [dc.workspaceNotice, dc.editorNotice, dc.reportNotice],
-    "Entregas",
-  );
-
-  const normalizedSearch = deferredDeliverySearch.trim().toLowerCase();
-  const quickFilterFn = (delivery: DeliveryEntity): boolean => {
-    if (quickFilterKey === "late") return delivery.isLate === true;
-    if (quickFilterKey === "ungraded") return delivery.grade === null && delivery.status === "EVALUATED";
-    if (quickFilterKey === "fail") return delivery.grade !== null && delivery.grade < 5;
-    if (quickFilterKey === "pass") return delivery.grade !== null && delivery.grade >= 5;
-    return true;
-  };
-
-  const visibleDeliveries = useMemo(() => {
-    return deliveries
-      .filter(quickFilterFn)
-      .filter(d => 
-        !normalizedSearch ||
-        d.studentEmail.toLowerCase().includes(normalizedSearch) ||
-        (d.studentName?.toLowerCase().includes(normalizedSearch) ?? false) ||
-        new Date(d.createdAt).toLocaleDateString().includes(normalizedSearch)
-      );
-  }, [deliveries, normalizedSearch, quickFilterKey]);
-
-  const handleQuickGrade = async (deliveryId: string, grade: number) => {
-    try {
-      await deliveriesApi.updateGrading(deliveryId, { grade, graderNotes: undefined });
-      pushToast({ title: "Nota guardada", description: `${grade.toFixed(2)} / 10`, tone: "success" });
-      await dc.refreshDeliveries();
-    } catch (error) {
-      pushToast({ title: "Error al guardar la nota", description: getErrorMessage(error), tone: "error" });
-    }
-  };
-
-  const selectedAssignment = dc.assignments.find(
-    (assignment) => assignment.id === dc.selectedAssignmentId,
-  );
-  const selectedProject = dc.projects.find(
-    (project) => project.id === dc.selectedProjectId,
-  );
-  const selectedDelivery = dc.selectedDelivery;
-
-  const requestedProjectId = searchParams.get("projectId");
-  const requestedAssignmentId = searchParams.get("assignmentId");
-  const requestedDeliveryId = searchParams.get("deliveryId");
-  const requestedDetailTab = normalizeTeacherDeliveryTab(searchParams.get("tab"));
-
-  const submittedCount = deliveries.filter((delivery) => delivery.status === "SUBMITTED").length;
-  const reviewCount = deliveries.filter((delivery) => delivery.status === "IN_REVIEW").length;
-  const evaluatedCount = deliveries.filter((delivery) => delivery.status === "EVALUATED").length;
-
-  const openDelivery = (deliveryId: string, tab: DetailTab = "overview") => {
-    const delivery = deliveries.find(d => d.id === deliveryId);
-    setDelivery(deliveryId, delivery ? `v${delivery.version} - ${delivery.studentName}` : undefined);
-    setDetailTab(tab);
-    if (tab !== "overview") {
-      void dc.handleViewReport(deliveryId);
-    }
-  };
-
-  // Synchronize URL and Workspace Selection robustly to prevent feedback/flip-flop loops
-  useEffect(() => {
-    const lastSynced = lastSyncedRef.current;
-
-    // A. Detect URL query param changes
-    const urlChanged = 
-      requestedProjectId !== lastSynced.projectId ||
-      requestedAssignmentId !== lastSynced.assignmentId ||
-      requestedDeliveryId !== lastSynced.deliveryId;
-
-    if (urlChanged) {
-      // Sync URL -> Workspace
-      if (requestedProjectId && selection.projectId !== requestedProjectId) {
-        setProject(requestedProjectId);
-      }
-      if (requestedAssignmentId && selection.assignmentId !== requestedAssignmentId) {
-        setAssignment(requestedAssignmentId);
-      }
-      if (requestedDeliveryId && selection.deliveryId !== requestedDeliveryId) {
-        setDelivery(requestedDeliveryId);
-      }
-      
-      // Update synced ref to URL values
-      lastSyncedRef.current = {
-        projectId: requestedProjectId,
-        assignmentId: requestedAssignmentId,
-        deliveryId: requestedDeliveryId,
-        tab: requestedDetailTab,
-      };
-      return;
-    }
-
-    // B. Detect Workspace selection changes
-    const workspaceChanged =
-      selection.projectId !== lastSynced.projectId ||
-      selection.assignmentId !== lastSynced.assignmentId ||
-      selection.deliveryId !== lastSynced.deliveryId ||
-      detailTab !== lastSynced.tab;
-
-    if (workspaceChanged) {
-      // Sync Workspace -> URL
-      if (!selection.projectId) return;
-
-      const next = new URLSearchParams(searchParams);
-      let nextChanged = false;
-
-      if (next.get("projectId") !== selection.projectId) {
-        next.set("projectId", selection.projectId);
-        nextChanged = true;
-      }
-
-      if (selection.assignmentId) {
-        if (next.get("assignmentId") !== selection.assignmentId) {
-          next.set("assignmentId", selection.assignmentId);
-          nextChanged = true;
-        }
-        if (selection.deliveryId) {
-          if (next.get("deliveryId") !== selection.deliveryId) {
-            next.set("deliveryId", selection.deliveryId);
-            nextChanged = true;
-          }
-          if (next.get("tab") !== detailTab) {
-            next.set("tab", detailTab);
-            nextChanged = true;
-          }
-        } else {
-          if (next.has("deliveryId")) {
-            next.delete("deliveryId");
-            nextChanged = true;
-          }
-          if (next.has("tab")) {
-            next.delete("tab");
-            nextChanged = true;
-          }
-        }
-      } else {
-        if (next.has("assignmentId")) {
-          next.delete("assignmentId");
-          nextChanged = true;
-        }
-        if (next.has("deliveryId")) {
-          next.delete("deliveryId");
-          nextChanged = true;
-        }
-        if (next.has("tab")) {
-          next.delete("tab");
-          nextChanged = true;
-        }
-      }
-
-      // Update synced ref to Workspace values
-      lastSyncedRef.current = {
-        projectId: selection.projectId,
-        assignmentId: selection.assignmentId,
-        deliveryId: selection.deliveryId,
-        tab: detailTab,
-      };
-
-      if (nextChanged) {
-        setSearchParams(next, { replace: true });
-      }
-    }
-  }, [
-    requestedProjectId,
-    requestedAssignmentId,
-    requestedDeliveryId,
-    requestedDetailTab,
-    selection.projectId,
-    selection.assignmentId,
-    selection.deliveryId,
-    detailTab,
-    searchParams,
-    setSearchParams,
-    setProject,
-    setAssignment,
-    setDelivery,
-  ]);
-
-  // 3. Update Labels and handle report loading once data is available
-  useEffect(() => {
-    if (!requestedProjectId) return;
-    const project = dc.projects.find(p => p.id === requestedProjectId);
-    if (project && selection.projectTitle !== project.title) {
-      setProject(project.id, project.title);
-    }
-  }, [dc.projects, requestedProjectId, selection.projectTitle, setProject]);
-
-  useEffect(() => {
-    if (!requestedAssignmentId) return;
-    const assignment = dc.assignments.find(a => a.id === requestedAssignmentId);
-    if (assignment && selection.assignmentLabel !== `${assignment.studentName} · ${assignment.projectTitle}`) {
-      setAssignment(assignment.id, `${assignment.studentName} · ${assignment.projectTitle}`);
-    }
-  }, [dc.assignments, requestedAssignmentId, selection.assignmentLabel, setAssignment]);
-
-  useEffect(() => {
-    if (!requestedDeliveryId) return;
-    const delivery = deliveries.find(d => d.id === requestedDeliveryId);
-    
-    // Update label if found
-    if (delivery && selection.deliveryLabel !== `v${delivery.version} - ${delivery.studentName}`) {
-      setDelivery(requestedDeliveryId, `v${delivery.version} - ${delivery.studentName}`);
-    }
-
-    // Trigger report load if needed
-    if (delivery && detailTab !== "overview") {
-      void dc.handleViewReport(requestedDeliveryId);
-    }
-  }, [deliveries, requestedDeliveryId, selection.deliveryLabel, setDelivery, detailTab]);
-
   const projectOptions: VisualPickerOption[] = useMemo(() => 
-    dc.projects.map(p => ({
+    panel.dc.projects.map(p => ({
       id: p.id,
       label: p.title,
       description: p.contextAcademico ? (p.contextAcademico.slice(0, 60) + (p.contextAcademico.length > 60 ? '...' : '')) : 'Sin descripción',
       icon: <RiStackFill />,
       badge: p.status,
-    })), [dc.projects]);
+    })), [panel.dc.projects]);
 
   const assignmentOptions: VisualPickerOption[] = useMemo(() => 
-    dc.assignments.map(a => ({
+    panel.dc.assignments.map(a => ({
       id: a.id,
       label: a.studentName,
       description: a.studentEmail,
       icon: <RiUser3Fill />,
       badge: `${a.deliveryCount} entregas`,
-    })), [dc.assignments]);
+    })), [panel.dc.assignments]);
 
   const hubProjects: ProjectHubOption[] = useMemo(() => 
-    dc.projects.map(p => ({
+    panel.dc.projects.map(p => ({
       id: p.id,
       title: p.title,
       description: p.contextAcademico || "Sin descripción operativa disponible.",
@@ -514,21 +59,21 @@ export function TeacherDeliveriesPanel({
       activeRuns: 0, 
       status: p.status === 'ACTIVE' ? 'READY' : 'HALTED',
       teachers: (p as any).teachers,
-    })), [dc.projects]);
+    })), [panel.dc.projects]);
 
-  if (!dc.selectedProjectId) {
+  if (!panel.dc.selectedProjectId) {
     return (
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-6">
         <PageHeader
           title="Gestión de Entregas"
           subtitle="Selecciona un proyecto para revisar la cola de entregas, calificar el trabajo de los alumnos y auditar el código."
           icon={<RiInboxArchiveLine />}
-          badge={dc.projects.length.toString()}
+          badge={panel.dc.projects.length.toString()}
         />
-        <section className="rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="rounded-lg border border-app-border bg-white p-6">
           <ProjectSelectionHub
             projects={hubProjects}
-            onSelect={(id, label) => setProject(id, label)}
+            onSelect={(id, label) => panel.setProject(id, label)}
             title="Selecciona un proyecto para comenzar"
             subtitle="Activa un contexto de trabajo para abrir asignaciones, cargar entregas y revisar informes técnicos."
           />
@@ -537,548 +82,137 @@ export function TeacherDeliveriesPanel({
     );
   }
 
+  const navigateRuntime = () => {
+    if (panel.selectedDelivery) {
+      panel.dc.navigate(
+        `/runtime?projectId=${panel.selectedDelivery.projectId}&assignmentId=${panel.selectedDelivery.assignmentId}&deliveryId=${panel.selectedDelivery.id}&autorun=1`,
+      );
+    }
+  };
+
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6">
       <PageHeader 
         title="Gestión de Entregas"
         subtitle="Auditoría de entregas, flujo de calificación técnica y evaluación de evidencia académica."
         icon={<RiInboxArchiveLine />}
-        badge={deliveries.length.toString()}
+        badge={panel.deliveries.length.toString()}
       />
 
       <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] items-start relative max-w-full">
-        <aside className="flex flex-col h-full rounded-lg border border-academic-surface-variant bg-white p-6 shadow-academic overflow-hidden lg:sticky lg:top-32">
-          <div className="flex items-center justify-between gap-3 mb-6">
-            <div>
-              <p className="eyebrow !mb-1">Cola Operativa</p>
-              <h3 className="text-xl font-bold tracking-tight text-slate-950">
-                Entregas
-              </h3>
-            </div>
-            <Button
-              variant="secondary"
-              className="h-10 w-10 !p-0 rounded-xl"
-              onClick={() => void dc.refreshDeliveries()}
-              disabled={!dc.selectedAssignmentId}
-            >
-              <RiRefreshLine className={dc.loadingDeliveries ? "animate-spin" : ""} />
-            </Button>
-          </div>
-
-          <div className="mt-5 space-y-5">
-            <div>
-              <label className="ui-label ml-1">Proyecto</label>
-              <VisualPicker
-                options={projectOptions}
-                value={dc.selectedProjectId}
-                onSelect={(id) => {
-                  const next = new URLSearchParams();
-                  next.set("projectId", id);
-                  setSearchParams(next, { replace: true });
-                }}
-                placeholder="Selecciona proyecto..."
-                searchPlaceholder="Buscar por título..."
-              />
-            </div>
-
-            <div>
-              <label className="ui-label ml-1">Asignación</label>
-              <VisualPicker
-                options={assignmentOptions}
-                value={dc.selectedAssignmentId}
-                onSelect={(id, label) => setAssignment(id, label)}
-                placeholder="Selecciona alumno..."
-                searchPlaceholder="Buscar por nombre o email..."
-                className={!dc.selectedProjectId ? 'opacity-50 grayscale pointer-events-none' : ''}
-              />
-            </div>
-
-            <div className="relative">
-              <RiSearchLine className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                className="input-field pl-11"
-                value={deliverySearch}
-                onChange={(event) => setDeliverySearch(event.target.value)}
-                placeholder="Buscar por alumno, proyecto o estado"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              {(
-                [
-                  { key: "all", label: "Todas" },
-                  { key: "late", label: "Tardías" },
-                  { key: "ungraded", label: "Sin nota" },
-                  { key: "fail", label: "Suspensas" },
-                  { key: "pass", label: "Aprobadas" },
-                ] as const
-              ).map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setQuickFilterKey(key)}
-                  className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-all ${
-                    quickFilterKey === key
-                      ? "bg-academic-primary text-white shadow-sm"
-                      : "border border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-4">
-            <MetricCard
-              label="Visibles"
-              value={visibleDeliveries.length}
-              helper="Entregas registradas"
-              variant="default"
-              icon={<RiInboxArchiveLine />}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <MetricCard
-                label="Pendientes"
-                value={submittedCount + reviewCount}
-                helper="Por revisar"
-                variant="warning"
-                icon={<RiPulseLine />}
-              />
-              <MetricCard
-                label="Cerradas"
-                value={evaluatedCount}
-                helper="Calificadas"
-                variant="info"
-                icon={<RiCheckFill />}
-              />
-            </div>
-          </div>
-
-          <div className="mt-6 border-t border-slate-100 pt-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="eyebrow">
-                  Selección actual
-                </p>
-                <div className="mt-2 text-sm font-medium text-slate-900">
-                  <AssignmentLabel assignment={selectedAssignment} />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {dc.loadingDeliveries ? (
-                <SkeletonTable rows={4} />
-              ) : visibleDeliveries.length === 0 ? (
-                <div className="rounded-[1.6rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                  {!dc.selectedAssignmentId
-                    ? "Selecciona una asignación para cargar entregas."
-                    : "No hay entregas con los filtros actuales."}
-                </div>
-              ) : (
-                visibleDeliveries.map((delivery) => (
-                  <DeliveryListItem
-                    key={delivery.id}
-                    delivery={delivery}
-                    active={dc.selectedDeliveryId === delivery.id}
-                    onSelect={() => openDelivery(delivery.id, "overview")}
-                    onOpenReport={() => {
-                      openDelivery(delivery.id, "report");
-                      void dc.handleViewReport(delivery.id);
-                    }}
-                    onQuickGrade={(grade) => void handleQuickGrade(delivery.id, grade)}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        </aside>
+        <DeliveriesSidebar
+          selectedProjectId={panel.dc.selectedProjectId}
+          selectedAssignmentId={panel.dc.selectedAssignmentId}
+          selectedDeliveryId={panel.dc.selectedDeliveryId}
+          projectOptions={projectOptions}
+          assignmentOptions={assignmentOptions}
+          deliverySearch={panel.deliverySearch}
+          quickFilterKey={panel.quickFilterKey}
+          visibleDeliveries={panel.visibleDeliveries}
+          submittedCount={panel.submittedCount}
+          reviewCount={panel.reviewCount}
+          evaluatedCount={panel.evaluatedCount}
+          loadingDeliveries={panel.dc.loadingDeliveries}
+          selectedAssignment={panel.selectedAssignment}
+          onRefreshDeliveries={() => void panel.dc.refreshDeliveries()}
+          onProjectSelect={(id) => {
+            const next = new URLSearchParams(panel.searchParams);
+            next.set("projectId", id);
+            panel.setSearchParams(next, { replace: true });
+          }}
+          onAssignmentSelect={(id, label) => panel.setAssignment(id, label)}
+          onDeliverySearchChange={panel.setDeliverySearch}
+          onQuickFilterChange={panel.setQuickFilterKey}
+          openDelivery={panel.openDelivery}
+          handleViewReport={(id) => void panel.dc.handleViewReport(id)}
+          handleQuickGrade={panel.handleQuickGrade}
+        />
 
         <section className="space-y-6">
-          {!selectedDelivery ? (
-            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-12 shadow-sm">
-              <EmptyState
-                icon={<RiInboxArchiveLine className="text-6xl text-slate-200" />}
-                title="Terminal de Auditoría de Entregas"
-                description="Seleccione un registro de la cola operativa para iniciar el proceso de revisión técnica y académica."
-                actionLabel={visibleDeliveries[0] ? "Empezar con la primera entrega" : undefined}
-                onAction={
-                  visibleDeliveries[0]
-                    ? () => openDelivery(visibleDeliveries[0].id, "overview")
-                    : undefined
-                }
-              />
-            </div>
+          {!panel.selectedDelivery ? (
+            <EmptyState
+              icon={<RiInboxArchiveLine className="text-3xl text-slate-400" />}
+              title="Terminal de Auditoría de Entregas"
+              description="Seleccione un registro de la cola operativa para iniciar el proceso de revisión técnica y académica."
+              actionLabel={panel.visibleDeliveries[0] ? "Empezar con la primera entrega" : undefined}
+              onAction={
+                panel.visibleDeliveries[0]
+                  ? () => panel.openDelivery(panel.visibleDeliveries[0].id, "overview")
+                  : undefined
+              }
+            />
           ) : (
             <>
-              <article className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-                <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="max-w-3xl">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <DeliveryStatusPill status={selectedDelivery.status} />
-                      <span
-                        className={`rounded-full px-3 py-1 ui-label ${
-                          selectedDelivery.isLate
-                            ? "bg-rose-50 text-rose-700 border border-rose-100"
-                            : "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                        }`}
-                      >
-                        {selectedDelivery.isLate ? "Entrega Tardía" : "A Tiempo"}
-                      </span>
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 ui-label text-slate-500">
-                        Versión {selectedDelivery.version}
-                      </span>
-                    </div>
+              <DeliveryDetailHeader
+                selectedDelivery={panel.selectedDelivery}
+                detailTab={panel.detailTab}
+                setDetailTab={(tab) => {
+                  panel.setDetailTab(tab);
+                  if (tab !== "overview" && panel.selectedDelivery) {
+                    void panel.dc.handleViewReport(panel.selectedDelivery.id);
+                  }
+                }}
+                handlePreview={panel.handlePreview}
+                canWrite={panel.dc.canWrite}
+                onNavigateRuntime={navigateRuntime}
+              />
 
-                    <h3 className="mt-6 text-4xl font-bold tracking-tight text-slate-950">
-                      {selectedDelivery.studentName}
-                    </h3>
-                    <p className="mt-2 text-sm font-medium text-slate-500">
-                      {selectedDelivery.projectTitle} · <span className="text-slate-400 font-normal">{selectedDelivery.studentEmail}</span>
-                    </p>
-                    <p className="mt-6 max-w-2xl text-sm leading-relaxed text-slate-600">
-                      {selectedDelivery.notes ||
-                        "Sin notas adicionales del alumno para esta entrega."}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Tabs 
-                      tabs={[
-                        { id: "overview", label: "Resumen", icon: RiStackLine },
-                        { id: "grading", label: "Calificación", icon: RiFolderChartLine },
-                        { 
-                          id: "report", 
-                          label: "Informe", 
-                          icon: RiFileTextLine,
-                        },
-                      ]}
-                      activeTab={detailTab}
-                      onTabChange={(id) => {
-                        const nextTab = id as DetailTab;
-                        setDetailTab(nextTab);
-                        if (nextTab !== "overview" && selectedDelivery) {
-                          void dc.handleViewReport(selectedDelivery.id);
-                        }
-                      }}
-                      variant="primary"
-                    />
-                    
-                    <div className="mx-2 h-10 w-px bg-slate-200" />
-
-                    <Button
-                      variant="secondary"
-                      onClick={() => handlePreview(selectedDelivery.id)}
-                    >
-                      <RiCodeSSlashLine />
-                      Ver código
-                    </Button>
-                    
-                    {dc.canWrite ? (
-                      <Button
-                        variant="secondary"
-                        onClick={() =>
-                          dc.navigate(
-                            `/runtime?projectId=${selectedDelivery.projectId}&assignmentId=${selectedDelivery.assignmentId}&deliveryId=${selectedDelivery.id}&autorun=1`,
-                          )
-                        }
-                      >
-                        <RiArrowRightUpLine />
-                        Runtime
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              </article>
-
-              {detailTab === "overview" && (
-                <div className="space-y-6">
-                  <section className="grid gap-4 lg:grid-cols-4">
-                    <MetricCard
-                      label="Recepción"
-                      value={formatDateTime(selectedDelivery.createdAt)}
-                      helper="Fecha y hora"
-                      icon={<RiTimeLine />}
-                      variant="default"
-                    />
-                    <MetricCard
-                      label="Histórico"
-                      value={`${selectedDelivery.deliveryCount} entregas`}
-                      helper="Total acumulado"
-                      icon={<RiStackLine />}
-                    />
-                    <MetricCard
-                      label="Disponibles"
-                      value={`${selectedDelivery.remainingDeliveries} intentos`}
-                      helper="Cupo restante"
-                      icon={<RiSparkling2Line />}
-                    />
-                    <MetricCard
-                      label="Nota Oficial"
-                      value={selectedDelivery.grade !== null ? selectedDelivery.grade.toFixed(2) : "Pendiente"}
-                      helper="Escala 0-10"
-                      icon={<RiFileChartLine />}
-                      variant={selectedDelivery.grade !== null ? "default" : "warning"}
-                    />
-                  </section>
-
-                  <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                    <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                      <h4 className="eyebrow">
-                        Contexto de revisión
-                      </h4>
-                      <div className="mt-5 space-y-4 text-sm leading-6 text-slate-600">
-                        <div>
-                          <strong className="text-slate-900">Proyecto:</strong>{" "}
-                          {selectedProject?.title || selectedDelivery.projectTitle}
-                        </div>
-                        <div>
-                          <strong className="text-slate-900">Asignación:</strong>{" "}
-                          <AssignmentLabel assignment={selectedAssignment} />
-                        </div>
-                        <div>
-                          <strong className="text-slate-900">Requisito mínimo:</strong>{" "}
-                          {selectedDelivery.minimumRequirementMet
-                            ? "Cumplido"
-                            : "Todavía pendiente"}
-                        </div>
-                        <div>
-                          <strong className="text-slate-900">Notas del alumno:</strong>{" "}
-                          {selectedDelivery.notes || "Sin observaciones del alumno."}
-                        </div>
-                        <div>
-                          <strong className="text-slate-900">Observaciones docentes:</strong>{" "}
-                          {dc.selectedDeliveryReviewNotes.manualNotes ||
-                            "Aún no hay feedback manual publicado."}
-                        </div>
-                      </div>
-                    </article>
-
-                    <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                      <h4 className="eyebrow">
-                        Acciones rápidas
-                      </h4>
-                      <div className="mt-5 space-y-3">
-                        <Button
-                          variant="secondary"
-                          className="w-full justify-start"
-                          onClick={() => void dc.refreshDeliveries()}
-                        >
-                          <RiRefreshLine />
-                          Refrescar cola actual
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className="w-full justify-start"
-                          onClick={() => {
-                            setDetailTab("report");
-                            void dc.handleViewReport();
-                          }}
-                        >
-                          <RiFileTextLine />
-                          Cargar último informe
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className="w-full justify-start"
-                          onClick={() => {
-                            setDetailTab("grading");
-                            void dc.handleViewReport();
-                          }}
-                        >
-                          <RiFolderChartLine />
-                          Editar nota y feedback
-                        </Button>
-                        {dc.canWrite ? (
-                          <Button
-                            variant="secondary"
-                            className="w-full justify-start"
-                            onClick={() =>
-                              dc.navigate(
-                                `/runtime?projectId=${selectedDelivery.projectId}&assignmentId=${selectedDelivery.assignmentId}&deliveryId=${selectedDelivery.id}&autorun=1`,
-                              )
-                            }
-                          >
-                            <RiPulseLine />
-                            Abrir runtime contextual
-                          </Button>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-                        <div>
-                          <strong className="text-slate-900">Estado operativo:</strong>{" "}
-                          {selectedDelivery.status === "SUBMITTED"
-                            ? "Pendiente de corrección"
-                            : selectedDelivery.status === "IN_REVIEW"
-                              ? "Builder o revisión en curso"
-                              : selectedDelivery.status === "EVALUATED"
-                                ? "Cierre técnico disponible"
-                                : "Borrador aún no entregado"}
-                        </div>
-                        <div className="mt-2">
-                          <strong className="text-slate-900">Prioridad:</strong>{" "}
-                          {selectedDelivery.isLate
-                            ? "Conviene revisar el impacto de la entrega tardía."
-                            : selectedDelivery.grade === null &&
-                                selectedDelivery.status === "EVALUATED"
-                              ? "Falta consolidar nota oficial."
-                              : "Flujo estable."}
-                        </div>
-                      </div>
-                    </article>
-                  </section>
-                </div>
+              {panel.detailTab === "overview" && (
+                <DeliveryOverview
+                  selectedDelivery={panel.selectedDelivery}
+                  selectedProject={panel.selectedProject}
+                  selectedAssignment={panel.selectedAssignment}
+                  selectedDeliveryReviewNotes={panel.dc.selectedDeliveryReviewNotes}
+                  canWrite={panel.dc.canWrite}
+                  onRefreshDeliveries={() => void panel.dc.refreshDeliveries()}
+                  onSetDetailTab={(tab) => {
+                    panel.setDetailTab(tab);
+                    if (tab !== "overview" && panel.selectedDelivery) {
+                      void panel.dc.handleViewReport(panel.selectedDelivery.id);
+                    }
+                  }}
+                  onNavigateRuntime={navigateRuntime}
+                />
               )}
 
-              {detailTab === "grading" && (
-                <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-                  <TeacherReviewSummary
-                    delivery={selectedDelivery}
-                    latestRun={dc.reportRun}
-                    manualGraderNotes={dc.selectedDeliveryReviewNotes.manualNotes}
-                    legacyAiEvidence={dc.selectedDeliveryReviewNotes.legacyBlocks}
-                  />
-
-                  {dc.canWrite ? (
-                    <form
-                      className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
-                      onSubmit={dc.handleGradingUpdate}
-                    >
-                      <div className="border-b border-slate-100 pb-5">
-                        <p className="eyebrow">Calificación</p>
-                        <h4 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                          Consolida la nota oficial
-                        </h4>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                          La nota vive en la entrega, no en el run del builder. Usa este bloque para cerrar evaluación académica y feedback manual.
-                        </p>
-                      </div>
-
-                      <div className="mt-6 grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-                        <div>
-                          <label className="ui-label">Nota oficial</label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="10"
-                            step="0.01"
-                            className="input-field"
-                            value={dc.gradingForm.grade}
-                            onChange={(event) =>
-                              dc.setGradingForm((current) => ({
-                                ...current,
-                                grade: event.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-                        <div>
-                          <label className="ui-label">Observaciones del corrector</label>
-                          <textarea
-                            className="input-field min-h-[180px]"
-                            value={dc.gradingForm.graderNotes}
-                            onChange={(event) =>
-                              dc.setGradingForm((current) => ({
-                                ...current,
-                                graderNotes: event.target.value,
-                              }))
-                            }
-                            placeholder="Comentarios manuales para el alumno"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
-                        <div className="text-sm text-slate-500">
-                          {selectedDelivery.grade === null
-                            ? "Aún no existe una nota oficial publicada."
-                            : "La entrega ya tenía nota; este guardado la reemplazará."}
-                        </div>
-                        <Button type="submit" variant="primary">
-                          Guardar calificación
-                        </Button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                      <EmptyState
-                        icon={<RiAlertLine className="text-4xl text-slate-300" />}
-                        title="Solo lectura"
-                        description="Tu rol actual no permite modificar la calificación oficial de esta entrega."
-                      />
-                    </div>
-                  )}
-                </section>
+              {panel.detailTab === "grading" && (
+                <DeliveryGrading
+                  selectedDelivery={panel.selectedDelivery}
+                  reportRun={panel.dc.reportRun}
+                  selectedDeliveryReviewNotes={panel.dc.selectedDeliveryReviewNotes}
+                  canWrite={panel.dc.canWrite}
+                  gradingForm={panel.dc.gradingForm}
+                  onSetGradingForm={panel.dc.setGradingForm}
+                  onHandleGradingUpdate={panel.dc.handleGradingUpdate}
+                />
               )}
 
-              {detailTab === "report" && (
-                <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <h4 className="text-lg font-semibold tracking-tight text-slate-950">
-                        Dictamen de Evaluación Técnica
-                      </h4>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
-                        Se carga desde el último run disponible de la entrega y convive aquí con el contexto de corrección.
-                      </p>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      onClick={() => void dc.handleViewReport(undefined, { force: true })}
-                      disabled={!dc.selectedDeliveryId || dc.reportLoading}
-                    >
-                      <RiFileTextLine />
-                      {dc.reportLoading ? "Cargando..." : "Recargar informe"}
-                    </Button>
-                  </div>
-
-                  <div className="mt-6">
-                    <TeacherReviewSummary
-                      delivery={selectedDelivery}
-                      latestRun={dc.reportRun}
-                      manualGraderNotes={dc.selectedDeliveryReviewNotes.manualNotes}
-                      legacyAiEvidence={dc.selectedDeliveryReviewNotes.legacyBlocks}
-                    />
-                  </div>
-
-                  <div className="mt-8">
-                    {dc.reportLoading ? (
-                      <div className="flex justify-center py-16 text-slate-400">
-                        <RiLoader4Line className="animate-spin text-2xl" />
-                      </div>
-                    ) : dc.reportRun ? (
-                      <ReportView
-                        run={dc.reportRun}
-                        deliveryVersion={dc.reportDelivery?.version}
-                        mode="teacher"
-                      />
-                    ) : (
-                      <EmptyState
-                        icon={<RiFileTextLine className="text-4xl text-slate-300" />}
-                        title="Ningún informe cargado"
-                        description="Pulsa en 'Recargar informe' para traer el último run asociado a esta entrega."
-                      />
-                    )}
-                  </div>
-                </section>
+              {panel.detailTab === "report" && (
+                <DeliveryReport
+                  selectedDelivery={panel.selectedDelivery}
+                  reportRun={panel.dc.reportRun}
+                  reportDeliveryVersion={panel.dc.reportDelivery?.version}
+                  reportLoading={panel.dc.reportLoading}
+                  selectedDeliveryReviewNotes={panel.dc.selectedDeliveryReviewNotes}
+                  selectedDeliveryId={panel.dc.selectedDeliveryId}
+                  onHandleViewReport={(id, options) => void panel.dc.handleViewReport(id, options)}
+                />
               )}
             </>
           )}
         </section>
       </div>
-      {dc.canWrite && selectedDelivery ? (
+      {panel.dc.canWrite && panel.selectedDelivery ? (
         <TeacherGradingStudio
-          isOpen={isPreviewModalOpen}
-          onClose={() => setIsPreviewModalOpen(false)}
-          delivery={selectedDelivery}
-          reportRun={dc.reportRun}
-          files={previewFiles}
-          isLoadingFiles={isLoadingPreview}
+          isOpen={panel.isPreviewModalOpen}
+          onClose={() => panel.setIsPreviewModalOpen(false)}
+          delivery={panel.selectedDelivery}
+          reportRun={panel.dc.reportRun}
+          files={panel.previewFiles}
+          isLoadingFiles={panel.isLoadingPreview}
           onSubmitGrading={async (grade, graderNotes) => {
             try {
-              await deliveriesApi.updateGrading(selectedDelivery.id, {
+              await deliveriesApi.updateGrading(panel.selectedDelivery!.id, {
                 grade: grade.trim() ? Number(grade) : null,
                 graderNotes: graderNotes,
               });
@@ -1087,8 +221,8 @@ export function TeacherDeliveriesPanel({
                 description: "La nota oficial ha sido consolidada.",
                 tone: "success",
               });
-              setIsPreviewModalOpen(false);
-              await dc.refreshDeliveries();
+              panel.setIsPreviewModalOpen(false);
+              await panel.dc.refreshDeliveries();
             } catch (error) {
               pushToast({
                 title: "Error al calificar",
@@ -1097,17 +231,17 @@ export function TeacherDeliveriesPanel({
               });
             }
           }}
-          initialGrade={dc.gradingForm.grade}
-          initialNotes={dc.gradingForm.graderNotes}
+          initialGrade={panel.dc.gradingForm.grade}
+          initialNotes={panel.dc.gradingForm.graderNotes}
         />
       ) : (
         <CodePreviewModal
-          isOpen={isPreviewModalOpen}
-          onClose={() => setIsPreviewModalOpen(false)}
+          isOpen={panel.isPreviewModalOpen}
+          onClose={() => panel.setIsPreviewModalOpen(false)}
           title="Explorador de Entrega"
-          subtitle={`v${selectedDelivery?.version} — ${selectedDelivery?.studentName}`}
-          isLoading={isLoadingPreview}
-          files={previewFiles}
+          subtitle={panel.selectedDelivery ? `v${panel.selectedDelivery.version} — ${panel.selectedDelivery.studentName}` : ""}
+          isLoading={panel.isLoadingPreview}
+          files={panel.previewFiles}
         />
       )}
     </div>
