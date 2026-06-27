@@ -19,10 +19,10 @@ describe('envValidationSchema', () => {
     expect(error).toBeUndefined();
     expect(value.AWS_REGION).toBe('us-east-1');
     expect(value.BUILDER_BEDROCK_PLAN_MODEL_ID).toBe(
-      'qwen.qwen3-coder-480b-a35b-v1:0',
+      'anthropic.claude-3-5-haiku-20241022-v1:0',
     );
     expect(value.BUILDER_BEDROCK_EVALUATION_MODEL_ID).toBe(
-      'qwen.qwen3-coder-480b-a35b-v1:0',
+      'anthropic.claude-sonnet-4-20250514-v1:0',
     );
     expect(value.BUILDER_LLM_QUALITY_MAX_INPUT_CHARS).toBe(30000);
   });
@@ -41,7 +41,8 @@ describe('envValidationSchema', () => {
     const { error, value } = envValidationSchema.validate(
       {
         ...baseEnv,
-        BUILDER_BEDROCK_PLAN_MODEL_ID: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+        BUILDER_BEDROCK_PLAN_MODEL_ID:
+          'anthropic.claude-3-5-sonnet-20241022-v2:0',
       },
       { abortEarly: false },
     );

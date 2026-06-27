@@ -7,93 +7,72 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Core institutional palette (sober B2B dashboard)
+        app: {
+          bg: '#f8fafc',           // slate-50
+          'bg-subtle': '#f1f5f9',  // slate-100
+          surface: '#ffffff',
+          border: '#e2e8f0',       // slate-200
+          'border-subtle': '#f1f5f9',
+        },
+        primary: {
+          DEFAULT: '#2563eb',      // blue-600
+          hover: '#1d4ed8',        // blue-700
+          subtle: '#eff6ff',       // blue-50
+          muted: '#93c5fd',        // blue-300
+        },
+        accent: {
+          DEFAULT: '#5b040d',      // brand wine — institutional accent only
+          hover: '#7a1d20',
+          subtle: '#fef2f2',
+        },
+        success: {
+          DEFAULT: '#059669',      // emerald-600
+          subtle: '#ecfdf5',       // emerald-50
+        },
+        warning: {
+          DEFAULT: '#d97706',      // amber-600
+          subtle: '#fffbeb',       // amber-50
+        },
+        danger: {
+          DEFAULT: '#dc2626',      // red-600
+          subtle: '#fee2e2',       // red-50
+        },
+        // Legacy aliases — kept for gradual migration of existing components.
+        // Prefer using app.* / primary.* / accent.* / slate.* in new code.
         academic: {
-          surface: '#fff8f5',
-          'surface-dim': '#f2d4bf',
-          'surface-bright': '#fff8f5',
-          'surface-container-lowest': '#ffffff',
-          'surface-container-low': '#fff1e9',
-          'surface-container': '#ffeadc',
-          'surface-container-high': '#ffe3cf',
-          'surface-container-highest': '#fbddc7',
-          'on-surface': '#28180b',
-          'on-surface-variant': '#564240',
-          'inverse-surface': '#3f2d1e',
-          'inverse-on-surface': '#ffede2',
-          outline: '#8a7170',
-          'outline-variant': '#ddc0be',
-          'surface-tint': '#a33b3b',
-          primary: '#5b040d',
+          surface: '#f8fafc',
+          'on-surface': '#0f172a',
+          'on-surface-variant': '#64748b',
+          outline: '#cbd5e1',
+          'outline-variant': '#e2e8f0',
+          primary: '#2563eb',
           'on-primary': '#ffffff',
-          'primary-container': '#7a1d20',
-          'on-primary-container': '#ff8a86',
-          'inverse-primary': '#ffb3af',
-          secondary: '#256489',
-          'on-secondary': '#ffffff',
-          'secondary-container': '#9ad2fd',
-          'on-secondary-container': '#195b80',
-          tertiary: '#3e2500',
-          'on-tertiary': '#ffffff',
-          'tertiary-container': '#583a0f',
-          'on-tertiary-container': '#cfa470',
-          error: '#ba1a1a',
-          'on-error': '#ffffff',
-          'error-container': '#ffdad6',
-          'on-error-container': '#93000a',
-          'primary-fixed': '#ffdad7',
-          'primary-fixed-dim': '#ffb3af',
-          'on-primary-fixed': '#410005',
-          'on-primary-fixed-variant': '#832426',
-          'secondary-fixed': '#c9e6ff',
-          'secondary-fixed-dim': '#94cdf8',
-          'on-secondary-fixed': '#001e2f',
-          'on-secondary-fixed-variant': '#004b6f',
-          'tertiary-fixed': '#ffddb6',
-          'tertiary-fixed-dim': '#ecbf88',
-          'on-tertiary-fixed': '#2a1800',
-          'on-tertiary-fixed-variant': '#5f4115',
-          background: '#fff8f5',
-          'on-background': '#28180b',
-          'surface-variant': '#fbddc7',
+          'primary-container': '#1d4ed8',
+          secondary: '#475569',
+          tertiary: '#5b040d',
+          error: '#dc2626',
+          'error-container': '#fee2e2',
+          'surface-variant': '#e2e8f0',
         },
         brand: {
           primary: '#5b040d',
-          secondary: '#cfa470',
-          tertiary: '#256489',
-          gold: {
-            DEFAULT: '#cfa470',
-            light: '#ecbf88',
-            dark: '#583a0f',
-          },
-          maroon: {
-            DEFAULT: '#5b040d',
-            light: '#7a1d20',
-            dark: '#410005',
-          },
-          blue: {
-            DEFAULT: '#256489',
-            light: '#9ad2fd',
-            dark: '#195b80',
-          },
-          cream: {
-            DEFAULT: '#fff8f5',
-          },
+          secondary: '#64748b',
+          tertiary: '#2563eb',
+          blue: { DEFAULT: '#2563eb', light: '#dbeafe', dark: '#1d4ed8' },
         },
       },
       fontFamily: {
-        sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['Newsreader', 'serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'ui-monospace', 'monospace'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       borderRadius: {
-        sm: '0.375rem',
-        DEFAULT: '0.5rem',
-        md: '0.75rem',
-        lg: '1rem',
-        xl: '1.25rem',
-        '2xl': '1.75rem',
-        '3xl': '2.25rem',
-        full: '9999px',
+        sm: '0.25rem',
+        DEFAULT: '0.375rem',
+        md: '0.5rem',
+        lg: '0.75rem',
+        xl: '1rem',
+        '2xl': '1.25rem',
       },
       spacing: {
         base: '8px',
@@ -105,10 +84,6 @@ export default {
         gutter: '24px',
         margin: '32px',
       },
-      boxShadow: {
-        'academic': '0 4px 20px 0 rgba(40, 24, 11, 0.08)',
-        'academic-lg': '0 10px 40px -10px rgba(40, 24, 11, 0.12)',
-      }
     },
   },
   plugins: [],

@@ -55,10 +55,18 @@ export const envValidationSchema = Joi.object({
   AWS_ACCESS_KEY_ID: Joi.string().optional(),
   AWS_SECRET_ACCESS_KEY: Joi.string().optional(),
   AWS_SESSION_TOKEN: Joi.string().optional(),
-  BUILDER_BEDROCK_PLAN_MODEL_ID: Joi.string().default('qwen.qwen3-coder-480b-a35b-v1:0'),
-  BUILDER_BEDROCK_EVALUATION_MODEL_ID: Joi.string().default('qwen.qwen3-coder-480b-a35b-v1:0'),
-  BUILDER_BEDROCK_QUALITY_MODEL_ID: Joi.string().default('qwen.qwen3-coder-480b-a35b-v1:0'),
-  BUILDER_BEDROCK_CHAT_MODEL_ID: Joi.string().default('qwen.qwen3-coder-480b-a35b-v1:0'),
+  BUILDER_BEDROCK_PLAN_MODEL_ID: Joi.string().default(
+    'anthropic.claude-3-5-haiku-20241022-v1:0',
+  ),
+  BUILDER_BEDROCK_EVALUATION_MODEL_ID: Joi.string().default(
+    'anthropic.claude-sonnet-4-20250514-v1:0',
+  ),
+  BUILDER_BEDROCK_QUALITY_MODEL_ID: Joi.string().default(
+    'anthropic.claude-sonnet-4-20250514-v1:0',
+  ),
+  BUILDER_BEDROCK_CHAT_MODEL_ID: Joi.string().default(
+    'anthropic.claude-sonnet-4-20250514-v1:0',
+  ),
   BUILDER_LLM_ASSIST_ENABLED: Joi.boolean().default(true),
   BUILDER_SELF_HEAL_MAX_ATTEMPTS: Joi.number()
     .integer()
@@ -66,8 +74,6 @@ export const envValidationSchema = Joi.object({
     .max(5)
     .default(3),
   BUILDER_STATIC_REVIEW_ENABLED: Joi.boolean().default(true),
-  BUILDER_RUFF_BIN: Joi.string().default('ruff'),
-  BUILDER_BANDIT_BIN: Joi.string().default('bandit'),
   BUILDER_STATIC_REVIEW_TIMEOUT_MS: Joi.number()
     .integer()
     .min(5000)
@@ -118,18 +124,6 @@ export const envValidationSchema = Joi.object({
   ),
   BUILDER_WORKSPACE_NETWORK_PREFIX: Joi.string().default('dockus-workspace'),
   BUILDER_EXECUTION_NETWORK_PREFIX: Joi.string().default('dockus-run'),
-  PROJECT_RUNTIME_PROVISION_TIMEOUT_MS: Joi.number()
-    .integer()
-    .min(10000)
-    .default(600000),
-  PROJECT_RUNTIME_DELETE_TIMEOUT_MS: Joi.number()
-    .integer()
-    .min(10000)
-    .default(240000),
-  PROJECT_RUNTIME_INSPECT_TIMEOUT_MS: Joi.number()
-    .integer()
-    .min(5000)
-    .default(30000),
   BUILDER_BATCH_TIMEOUT_SECONDS: Joi.number().integer().min(10).default(60),
   BUILDER_SERVICE_READY_TIMEOUT_SECONDS: Joi.number()
     .integer()

@@ -1,0 +1,61 @@
+# Dependencies
+backend/node_modules
+frontend/node_modules
+node_modules
+
+# Build outputs
+backend/dist
+frontend/build
+frontend/.tmp-test-dist
+backend/coverage
+frontend/coverage
+dist
+build
+*.log
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Version control
+.git
+.gitignore
+
+# IDE / OS
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Docker artifacts
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Documentation
+README.md
+backend/README.md
+frontend/README.md
+
+# Tests (kept out of production images; bind-mounted for local dev tests)
+tests/
+test/
+backend/test/
+frontend/tests/
+*.spec.ts
+*.test.ts
+
+# Caches
+.vite
+.next
+.cache
+coverage
+
+# Misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

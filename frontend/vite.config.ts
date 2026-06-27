@@ -7,10 +7,21 @@ export default defineConfig({
     outDir: 'build',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['react-icons'],
-          'utils-vendor': ['axios'],
+        manualChunks(id: string | null) {
+          if (!id) return;
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/react-dom') ||
+            id.includes('node_modules/react-router-dom')
+          ) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/react-icons')) {
+            return 'ui-vendor';
+          }
+          if (id.includes('node_modules/axios')) {
+            return 'utils-vendor';
+          }
         },
       },
     },
