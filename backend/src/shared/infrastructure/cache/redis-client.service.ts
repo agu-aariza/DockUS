@@ -18,7 +18,7 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
-import { buildRedisConnectionOptions } from './redis.config';
+import { buildRedisConnectionOptions } from '../../config/redis.config';
 
 const REDIS_TIMEOUT_MS = 2000;
 

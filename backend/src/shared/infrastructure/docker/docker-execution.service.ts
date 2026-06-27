@@ -3,14 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { DockerContainerService } from './docker-container.service';
 import { DockerNetworkService } from './docker-network.service';
 import {
+  DockerCreateNetworkInfo,
+  DockerRunOptions,
   DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
   DEFAULT_DOCKER_EPHEMERAL_TIMEOUT_MS,
   DEFAULT_DOCKER_RUNTIME,
-} from './docker.constants';
-
-import {
-  DockerCreateNetworkInfo,
-  DockerRunOptions,
 } from './docker.types';
 
 @Injectable()

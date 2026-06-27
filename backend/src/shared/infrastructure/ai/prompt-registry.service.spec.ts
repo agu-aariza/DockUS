@@ -25,8 +25,8 @@ describe('prompts.json', () => {
           decision_policy: expect.any(Array),
         }),
       );
-      expect(manifest[key].hard_rules.length).toBeGreaterThan(2);
-      expect(manifest[key].decision_policy.length).toBeGreaterThan(1);
+      expect(manifest[key]!.hard_rules.length).toBeGreaterThan(2);
+      expect(manifest[key]!.decision_policy!.length).toBeGreaterThan(1);
     }
   });
 
@@ -49,65 +49,73 @@ describe('prompts.json', () => {
   it('documents anti-hallucination planning rules for CLI, C, and service inference', () => {
     const manifest = loadManifest();
     const hardRules = manifest.plan.hard_rules.join('\n');
-    const policy = manifest.plan.decision_policy.join('\n');
+    const policy = manifest.plan!.decision_policy!.join('\n');
 
-    expect(hardRules).toContain('Cada comando es un array de tokens');
-    expect(hardRules).toContain('Makefile');
-    expect(hardRules).toContain('.c');
-    expect(hardRules).toContain('service=null');
-    expect(hardRules).toContain('NUNCA pongas make, gcc');
-    expect(hardRules).toContain('recipe.install es el paso de COMPILACI');
-    expect(policy).toContain('Para C con Makefile');
-    expect(hardRules).toContain('run=null');
-    expect(policy).toContain('recipe segura');
-    expect(policy).toContain("recipe.run=['./TARGET']");
+    expect(hardRules).toContain(
+      'Cada comando debe ser un array de tokens de tipo string',
+    );
+    const examples = manifest.plan!.examples!.join('\n');
+    expect(policy).toContain('Makefile');
+    expect(examples).toContain('.c');
+    expect(hardRules).toContain('recipe.install es la fase de compilación');
+    expect(hardRules).toContain(
+      'Las invocaciones del compilador o herramienta de construcción nunca aparecen en recipe.run',
+    );
+    expect(policy).toContain('Proyecto C con Makefile');
+    expect(policy).toContain('recipe.install=[[\'make\']]');
+    expect(policy).toContain('Alinea C3 y C5 con recipe.service');
   });
 
   it('documents evidence-first adjudication and pedagogical review priorities', () => {
     const manifest = loadManifest();
 
     expect(manifest.eval.hard_rules.join('\n')).toContain('observedEvidence');
-    expect(manifest.eval.hard_rules.join('\n')).toContain('PROHIBIDO INVENTAR SALIDA');
-    expect(manifest.eval.decision_policy.join('\n')).toContain(
-      'ANTES de evaluar criterios de r',
+    expect(manifest.eval.hard_rules.join('\n')).toContain(
+      'NUNCA inventes salida del programa',
+    );
+    expect(manifest.eval!.decision_policy!.join('\n')).toContain(
+      'Antes de puntuar cualquier criterio',
     );
 
-    const qualityRules = manifest['technical-feedback'].hard_rules.join('\n');
+    const qualityRules = manifest['technical-feedback']!.hard_rules.join('\n');
     const qualityPolicy =
-      manifest['technical-feedback'].decision_policy.join('\n');
+      manifest['technical-feedback']!.decision_policy!.join('\n');
 
     expect(qualityRules).toContain('BUENA PR');
-    expect(qualityRules).toContain('malloc sin free');
-    expect(qualityRules).toContain('off-by-one');
-    expect(qualityRules).toContain('impide aprobar');
+    expect(qualityPolicy).toContain('malloc sin free');
+    expect(qualityPolicy).toContain('desbordamiento de buffer');
     expect(qualityRules).toContain('codeSnippet');
     expect(qualityRules).toContain('conceptExplanation');
-    expect(qualityPolicy).toContain('Primero clasifica bloqueos de aprobaci');
+    expect(qualityPolicy).toContain('rubricCompliance');
+    expect(qualityPolicy).toContain('impacto de aprendizaje');
   });
 
   it('documents anti-hallucination eval rules for fabricated output and vacuous truth', () => {
     const manifest = loadManifest();
-    const evalRules = manifest.eval.hard_rules.join('\n');
-    const evalPolicy = manifest.eval.decision_policy.join('\n');
+    const evalRules = manifest.eval!.hard_rules.join('\n');
+    const evalPolicy = manifest.eval!.decision_policy!.join('\n');
 
-    expect(evalRules).toContain('PROHIBIDO INVENTAR SALIDA');
-    expect(evalRules).toContain('DISTINGUE compilaci');
-    expect(evalRules).toContain('nota m');
+    expect(evalRules).toContain('NUNCA inventes salida del programa');
+    expect(evalRules).toContain(
+      'Los mensajes del compilador y de las herramientas de construcción',
+    );
+    expect(evalRules).toContain('recommendedGrade');
     expect(evalRules).toContain('VERDAD VACUA');
-    expect(evalRules).toContain('archivo');
-    expect(evalPolicy).toContain('ANTES de evaluar criterios de r');
+    expect(evalRules).toContain('observedEvidence');
+    expect(evalPolicy).toContain('Antes de puntuar cualquier criterio');
     expect(evalPolicy).toContain('evaluativeState=E3');
-    expect(evalRules).toContain('NUNCA repitas el mismo argumento');
+    expect(evalPolicy).toContain('Archivos vacíos o stub');
   });
 
   it('documents minimum findings and mandatory good practices for quality analysis', () => {
     const manifest = loadManifest();
-    const qualityRules = manifest['technical-feedback'].hard_rules.join('\n');
-    const qualityPolicy = manifest['technical-feedback'].decision_policy.join('\n');
+    const qualityRules = manifest['technical-feedback']!.hard_rules.join('\n');
+    const qualityPolicy =
+      manifest['technical-feedback']!.decision_policy!.join('\n');
 
-    expect(qualityRules).toContain('NIMO de 3 hallazgos totales');
+    expect(qualityRules).toContain('Mínimo 3 hallazgos en total');
     expect(qualityRules).toContain('BUENA PR');
-    expect(qualityRules).toContain('pr');
+    expect(qualityPolicy).toContain('impacto de aprendizaje');
     expect(qualityPolicy).toContain('rubricCompliance');
   });
 });

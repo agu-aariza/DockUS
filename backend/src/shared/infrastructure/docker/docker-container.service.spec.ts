@@ -4,7 +4,7 @@ import { DockerExecutionService } from './docker-execution.service';
 import {
   DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
   DEFAULT_DOCKER_EPHEMERAL_TIMEOUT_MS,
-} from './docker.constants';
+} from './docker.types';
 
 jest.mock('./command-runner.util', () => ({
   runCommand: jest.fn(),

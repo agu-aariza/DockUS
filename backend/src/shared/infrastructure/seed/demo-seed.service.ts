@@ -11,7 +11,6 @@ import {
 } from '../../../modules/users/entities/user.entity';
 import {
   Project,
-  ProjectRuntimeEnvironmentStatus,
   ProjectStatus,
 } from '../../../modules/projects/entities/project.entity';
 import { ProjectAssignment } from '../../../modules/projects/assignments/entities/project-assignment.entity';
@@ -120,9 +119,6 @@ export class DemoSeedService implements OnApplicationBootstrap {
           'Valora arranque correcto, rutas mínimas, organización del código y robustez frente a errores.',
         opensAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
         closesAt: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
-        runtimeNetworkName: 'dockus-demo-flask',
-        runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.READY,
-        runtimeProvisionedAt: now,
       }),
     );
 
@@ -139,9 +135,6 @@ export class DemoSeedService implements OnApplicationBootstrap {
           'Comprueba parseo de argumentos, mensajes de ayuda y organización del módulo principal.',
         opensAt: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000),
         closesAt: new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000),
-        runtimeNetworkName: null,
-        runtimeEnvironmentStatus: ProjectRuntimeEnvironmentStatus.ABSENT,
-        runtimeProvisionedAt: null,
       }),
     );
 
