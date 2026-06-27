@@ -1,39 +1,65 @@
-import React, { type ReactNode } from "react";
+import React, { type ReactNode, type ButtonHTMLAttributes } from "react";
 
-interface ButtonProps {
-  variant?: "primary" | "secondary" | "tertiary" | "ghost" | "danger" | "success";
+type ButtonVariant = "primary" | "secondary" | "tertiary" | "ghost" | "danger" | "success";
+type ButtonSize = "sm" | "md" | "lg";
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   children: ReactNode;
   className?: string;
-  onClick?: any;
-  disabled?: boolean;
-  type?: "button" | "submit" | "reset";
-  title?: string;
 }
 
-const VARIANT_STYLES = {
+const VARIANT_STYLES: Record<ButtonVariant, string> = {
   primary:
-    "bg-academic-primary text-academic-on-primary hover:bg-academic-primary-container focus-visible:ring-academic-primary/30 shadow-academic",
+    "bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary/40",
   secondary:
-    "border border-academic-secondary bg-transparent text-academic-secondary hover:bg-academic-secondary hover:text-white focus-visible:ring-academic-secondary/30 shadow-sm",
+    "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-slate-300",
   tertiary:
-    "bg-academic-surface-variant text-academic-on-surface-variant hover:bg-academic-surface-container-high focus-visible:ring-academic-outline/30",
+    "bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-300",
   ghost:
-    "bg-transparent text-academic-on-surface-variant hover:text-academic-primary hover:bg-academic-surface-container-low focus-visible:ring-academic-primary/10",
+    "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-300",
   danger:
-    "bg-academic-error text-academic-on-error hover:bg-academic-error-container hover:text-academic-on-error-container focus-visible:ring-academic-error/30 shadow-academic",
+    "border border-red-300 bg-white text-red-700 hover:bg-red-50 focus-visible:ring-red-300",
   success:
-    "bg-academic-tertiary text-academic-on-tertiary hover:bg-academic-tertiary-container hover:text-academic-on-tertiary-container focus-visible:ring-academic-tertiary/30 shadow-academic",
-} as const;
+    "bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500/40",
+};
 
-export function Button({ 
-  variant = "primary", 
-  children, 
-  className = "", 
-  ...props 
+const SIZE_STYLES: Record<ButtonSize, string> = {
+  sm: "gap-1.5 px-2.5 py-1.5 text-xs",
+  md: "gap-2 px-3 py-2 text-sm",
+  lg: "gap-2 px-4 py-2.5 text-sm",
+};
+
+export function Button({
+  variant = "primary",
+  size = "md",
+  children,
+  className = "",
+  ...props
 }: ButtonProps) {
   return (
-    <button 
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all active:scale-[0.98] hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 ${VARIANT_STYLES[variant]} ${className}`} 
+    <button
+      className={`inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-app-bg disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT_STYLES[variant]} ${SIZE_STYLES[size]} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children: ReactNode;
+  className?: string;
+  label: string;
+}
+
+export function IconButton({ children, className = "", label, ...props }: IconButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className={`inline-flex items-center justify-center rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 ${className}`}
       {...props}
     >
       {children}

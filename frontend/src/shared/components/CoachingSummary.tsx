@@ -1,8 +1,4 @@
-import type {
-  BuilderRuntimeFamily,
-  BuilderReportCoaching,
-  TechnicalFeedbackItem,
-} from "../types";
+import type { BuilderRuntimeFamily, BuilderReportCoaching, TechnicalFeedbackItem } from "../../features/builder/types";
 import {
   RiAlertLine,
   RiAlarmWarningLine,
@@ -56,7 +52,7 @@ function FeedbackList({
       {normalizedItems.map((item, index) => (
         <article
           key={`${item.title}-${index}`}
-          className="rounded-2xl border border-slate-200 bg-white p-4 text-sm"
+          className="rounded-lg border border-app-border bg-white p-4 text-sm"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="font-semibold text-slate-900">{item.title}</div>
@@ -86,8 +82,8 @@ function FeedbackList({
           ) : null}
           <CodeSnippet code={item.codeSnippet} runtimeFamily={runtimeFamily} />
           {item.conceptExplanation.trim() ? (
-            <details className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <summary className="cursor-pointer text-sm font-semibold text-brand-blue">
+            <details className="mt-4 rounded-lg border border-app-border bg-slate-50 px-4 py-3">
+              <summary className="cursor-pointer text-sm font-semibold text-primary">
                 Aprende mas
               </summary>
               <div className="mt-3 text-slate-700">
@@ -111,7 +107,7 @@ function Checklist({
       {entries.map((entry, index) => (
         <li
           key={`${entry}-${index}`}
-          className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4"
+          className="flex gap-3 rounded-lg border border-app-border bg-white p-4"
         >
           <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
             {index + 1}
@@ -147,7 +143,7 @@ export function CoachingSummary({
 
   if (variant === "compact") {
     return (
-      <section className="rounded-3xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
+      <section className="rounded-lg border border-indigo-200 bg-indigo-50 p-5">
         <div className="flex items-center gap-2 text-indigo-800">
           <RiListCheck3 className="text-lg" />
           <h3 className="text-sm font-bold uppercase tracking-[0.16em]">
@@ -188,7 +184,7 @@ export function CoachingSummary({
   }
 
   return (
-    <section className="rounded-3xl border border-indigo-200 bg-indigo-50 p-6 shadow-sm">
+    <section className="rounded-lg border border-indigo-200 bg-indigo-50 p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2 text-indigo-800">

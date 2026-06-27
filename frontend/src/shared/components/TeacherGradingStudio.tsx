@@ -15,7 +15,8 @@ import {
   RiSave2Line,
 } from "react-icons/ri";
 import { useState, useMemo } from "react";
-import type { DeliveryEntity, BuildRunEntity } from "../../shared/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
+import type { BuildRunEntity } from "../../features/builder/types";
 import { Button } from "./ui/Button";
 
 interface TeacherGradingStudioProps {
@@ -25,7 +26,7 @@ interface TeacherGradingStudioProps {
   reportRun: BuildRunEntity | null;
   files: Array<{ path: string; content: string }>;
   isLoadingFiles: boolean;
-  onSubmitGrading: (grade: string, graderNotes: string) => Promise<void>;
+  onSubmitGrading: (_grade: string, _graderNotes: string) => Promise<void>;
   initialGrade: string;
   initialNotes: string;
 }
@@ -73,10 +74,10 @@ export function TeacherGradingStudio({
         return <RiInformationLine className="text-slate-400" />;
       case "sh":
       case "bash":
-        return <RiTerminalBoxLine className="text-brand-blue" />;
+        return <RiTerminalBoxLine className="text-primary" />;
       case "yml":
       case "yaml":
-        return <RiHashtag className="text-brand-gold-dark" />;
+        return <RiHashtag className="text-amber-500" />;
       default:
         return <RiFileCodeLine className="text-slate-400" />;
     }
@@ -114,18 +115,18 @@ export function TeacherGradingStudio({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] flex flex-col bg-academic-surface text-academic-on-surface antialiased animate-fade-in">
+    <div className="fixed inset-0 z-[120] flex flex-col bg-app-bg text-slate-900 antialiased">
       {/* Header Bar */}
-      <header className="flex items-center justify-between border-b border-academic-outline-variant bg-white px-6 py-4 shadow-academic">
+      <header className="flex items-center justify-between border-b border-app-border bg-white px-6 py-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-maroon/10 text-brand-maroon">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-subtle text-accent">
             <RiAwardFill className="text-2xl" />
           </div>
           <div>
-            <h3 className="font-display text-lg font-black tracking-tight text-brand-maroon">
+            <h3 className="text-lg font-black tracking-tight text-accent">
               Estudio de Calificación Docente
             </h3>
-            <p className="text-[10px] font-black uppercase tracking-widest text-academic-outline">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
               v{delivery.version} · {delivery.studentName} ({delivery.studentEmail})
             </p>
           </div>
@@ -133,12 +134,12 @@ export function TeacherGradingStudio({
 
         <div className="flex items-center gap-4">
           {reportRun?.llmAssessment && (
-            <div className="hidden lg:flex items-center gap-3 rounded-xl border border-brand-gold/30 bg-brand-gold/[0.04] px-4 py-1">
-              <span className="text-xs font-bold text-brand-gold-dark">
+            <div className="hidden lg:flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-1">
+              <span className="text-xs font-bold text-amber-700">
                 Nota IA: {reportRun.llmAssessment.recommendedGrade?.toFixed(2) ?? "N/A"}
               </span>
-              <div className="h-3 w-px bg-brand-gold/20" />
-              <span className="text-xs font-black text-brand-gold-dark">
+              <div className="h-3 w-px bg-amber-300" />
+              <span className="text-xs font-black text-amber-700">
                 Estado: {reportRun.llmAssessment.evaluativeState}
               </span>
             </div>
@@ -146,7 +147,7 @@ export function TeacherGradingStudio({
           
           <button
             onClick={onClose}
-            className="group flex h-10 w-10 items-center justify-center rounded-full border border-academic-outline-variant bg-white text-academic-outline transition-all hover:bg-rose-500 hover:text-white"
+            className="group flex h-10 w-10 items-center justify-center rounded-full border border-app-border bg-white text-slate-400 transition-all hover:bg-rose-500 hover:text-white"
           >
             <RiCloseLine className="text-2xl transition-transform group-hover:rotate-90" />
           </button>
@@ -156,16 +157,16 @@ export function TeacherGradingStudio({
       {/* Main Double-Column Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Side: Code Files Explorer & Preview */}
-        <section className="flex flex-1 border-r border-academic-outline-variant bg-white overflow-hidden">
+        <section className="flex flex-1 border-r border-app-border bg-white overflow-hidden">
           {/* File Tree / List */}
-          <aside className="flex w-64 flex-col border-r border-academic-outline-variant bg-academic-surface-container/30">
-            <div className="p-4 border-b border-academic-outline-variant">
+          <aside className="flex w-64 flex-col border-r border-app-border bg-slate-50/50">
+            <div className="p-4 border-b border-app-border">
               <div className="relative">
-                <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-academic-outline" />
+                <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Buscar archivo..."
-                  className="w-full rounded-xl border border-academic-outline-variant bg-white py-1.5 pl-9 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-brand-blue"
+                  className="w-full rounded-md border border-app-border bg-white py-1.5 pl-9 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -173,17 +174,17 @@ export function TeacherGradingStudio({
             </div>
 
             <div className="flex-1 overflow-y-auto px-2 py-3 scroll-bar">
-              <div className="mb-2 px-2 text-[10px] font-black tracking-widest text-academic-outline">
+              <div className="mb-2 px-2 text-[10px] font-black tracking-widest text-slate-400">
                 ARCHIVOS ZIP
               </div>
               {isLoadingFiles ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
-                  <RiLoader4Line className="text-2xl text-brand-maroon animate-spin" />
-                  <span className="text-xs text-academic-outline font-bold">Analizando zip...</span>
+                  <RiLoader4Line className="text-2xl text-accent animate-spin" />
+                  <span className="text-xs text-slate-400 font-bold">Analizando zip...</span>
                 </div>
               ) : filteredFiles.length === 0 ? (
                 <div className="px-3 py-10 text-center">
-                  <p className="text-xs text-academic-outline italic">Vacío o sin coincidencia</p>
+                  <p className="text-xs text-slate-400 italic">Vacío o sin coincidencia</p>
                 </div>
               ) : (
                 <div className="space-y-0.5">
@@ -194,10 +195,10 @@ export function TeacherGradingStudio({
                       <button
                         key={file.path}
                         onClick={() => setSelectedFileIdx(idx)}
-                        className={`group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs transition-all ${
+                        className={`group flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-xs transition-all ${
                           isActive
-                            ? "bg-brand-maroon/5 text-brand-maroon font-bold border-l-4 border-brand-maroon pl-2"
-                            : "text-academic-on-surface-variant hover:bg-academic-surface hover:text-academic-on-surface"
+                            ? "bg-accent-subtle text-accent font-bold border-l-4 border-accent pl-2"
+                            : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                         }`}
                       >
                         <span className="flex-shrink-0">
@@ -213,10 +214,10 @@ export function TeacherGradingStudio({
           </aside>
 
           {/* Code Viewer Panel */}
-          <main className="flex-1 flex flex-col bg-academic-surface-container/10">
-            <header className="flex items-center justify-between border-b border-academic-outline-variant bg-white px-4 py-2">
-              <div className="flex items-center gap-2 text-xs text-academic-on-surface-variant font-mono">
-                <RiFileCodeLine className="text-brand-maroon" />
+          <main className="flex-1 flex flex-col bg-slate-50/30">
+            <header className="flex items-center justify-between border-b border-app-border bg-white px-4 py-2">
+              <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
+                <RiFileCodeLine className="text-accent" />
                 <span>{selectedFile?.path || "ningún archivo seleccionado"}</span>
               </div>
               
@@ -224,7 +225,7 @@ export function TeacherGradingStudio({
                 <button
                   onClick={handleCopy}
                   disabled={!selectedFile}
-                  className="flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-academic-outline transition-all hover:bg-academic-surface hover:text-academic-on-surface disabled:opacity-30"
+                  className="flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-900 disabled:opacity-30"
                 >
                   {copied ? <RiCheckLine className="text-emerald-500" /> : <RiFileCopyLine />}
                   {copied ? "Copiado" : "Copiar"}
@@ -232,7 +233,7 @@ export function TeacherGradingStudio({
                 <button
                   onClick={handleDownload}
                   disabled={!selectedFile}
-                  className="flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-academic-outline transition-all hover:bg-academic-surface hover:text-academic-on-surface disabled:opacity-30"
+                  className="flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-900 disabled:opacity-30"
                 >
                   <RiDownloadLine />
                   Descargar
@@ -257,8 +258,8 @@ export function TeacherGradingStudio({
                   </pre>
                 </div>
               ) : (
-                <div className="flex h-full flex-col items-center justify-center text-academic-outline gap-4">
-                  <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center border border-academic-outline-variant shadow-academic">
+                <div className="flex h-full flex-col items-center justify-center text-slate-400 gap-4">
+                  <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center border border-app-border">
                     <RiFileCodeLine className="text-3xl opacity-40" />
                   </div>
                   <p className="text-sm font-medium">Selecciona un archivo del explorador para empezar</p>
@@ -269,19 +270,19 @@ export function TeacherGradingStudio({
         </section>
 
         {/* Right Side: Grading & Discussion Sidepanel */}
-        <section className="w-[480px] flex flex-col bg-white overflow-hidden shadow-academic">
+        <section className="w-[480px] flex flex-col bg-white overflow-hidden border-l border-app-border">
           {/* Scrollable Contents */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* AI Recommendation Context */}
             {reportRun?.llmAssessment ? (
-              <article className="rounded-2xl border border-brand-gold/30 bg-brand-gold/[0.02] p-4">
-                <div className="text-[10px] font-black uppercase tracking-widest text-brand-gold-dark mb-1">
+              <article className="rounded-lg border border-amber-200 bg-amber-50/30 p-4">
+                <div className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1">
                   Dictamen de la Inteligencia Artificial
                 </div>
-                <h4 className="font-display font-bold text-academic-on-surface text-base">
+                <h4 className="font-bold text-slate-900 text-base">
                   {reportRun.llmAssessment.structuralType}
                 </h4>
-                <p className="mt-2 text-xs leading-relaxed text-academic-on-surface-variant">
+                <p className="mt-2 text-xs leading-relaxed text-slate-500">
                   {reportRun.llmAssessment.rationale}
                 </p>
               </article>
@@ -289,11 +290,11 @@ export function TeacherGradingStudio({
 
             {/* Official Grading Form */}
             <form onSubmit={(e) => { e.preventDefault(); void handleSaveGrading(); }} className="space-y-4">
-              <div className="border-b border-academic-outline-variant pb-3">
-                <h4 className="font-display font-bold text-base text-brand-maroon">
+              <div className="border-b border-app-border pb-3">
+                <h4 className="font-bold text-base text-accent">
                   Nota Oficial y Feedback
                 </h4>
-                <p className="text-xs text-academic-outline mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Consolida la nota oficial para el expediente del estudiante.
                 </p>
               </div>
@@ -306,14 +307,14 @@ export function TeacherGradingStudio({
                     min="0"
                     max="10"
                     step="0.01"
-                    className="input-field text-center font-bold font-display text-lg"
+                    className="input-field text-center font-bold text-lg"
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
                   />
                 </div>
                 <div className="sm:col-span-2 space-y-1">
                   <label className="ui-label">Estado de la Entrega</label>
-                  <div className="flex items-center h-11 border border-academic-outline-variant bg-academic-surface-container/30 rounded-xl px-3 text-xs font-bold text-academic-on-surface-variant">
+                  <div className="flex items-center h-11 border border-app-border bg-slate-50/50 rounded-md px-3 text-xs font-bold text-slate-500">
                     {delivery.status}
                   </div>
                 </div>

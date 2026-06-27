@@ -14,7 +14,7 @@ export interface VisualPickerOption {
 interface VisualPickerProps {
   options: VisualPickerOption[];
   value: string | null;
-  onSelect: (id: string, label: string) => void;
+  onSelect: (_id: string, _label: string) => void;
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
@@ -57,13 +57,13 @@ export function VisualPicker({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex w-full items-center justify-between gap-3 rounded-2xl border bg-white px-4 py-3 text-left transition-all hover:border-brand-blue/30 hover:shadow-md ${
-          isOpen ? 'border-brand-blue ring-4 ring-brand-blue/5' : 'border-slate-200'
+        className={`flex w-full items-center justify-between gap-3 rounded-lg border bg-white px-4 py-3 text-left transition-all hover:border-primary/30 ${
+          isOpen ? 'border-primary ring-2 ring-primary/10' : 'border-app-border'
         }`}
       >
         <div className="flex items-center gap-3 truncate">
           {selectedOption?.icon && (
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400 group-hover:text-brand-blue transition-colors">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-400 group-hover:text-primary transition-colors">
               {selectedOption.icon}
             </div>
           )}
@@ -80,7 +80,7 @@ export function VisualPicker({
         </div>
         <div className="flex items-center gap-2">
            {selectedOption && (
-             <div className="h-5 w-5 rounded-full bg-brand-blue/5 text-brand-blue flex items-center justify-center animate-in zoom-in duration-300">
+             <div className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center">
                <RiCheckLine className="text-xs" />
              </div>
            )}
@@ -97,7 +97,7 @@ export function VisualPicker({
             className="fixed inset-0 z-[110]" 
             onClick={() => setIsOpen(false)} 
           />
-          <div className="absolute top-full left-0 right-0 z-[120] mt-3 max-h-[400px] flex flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white/90 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="absolute top-full left-0 right-0 z-[120] mt-3 max-h-[400px] flex flex-col overflow-hidden rounded-lg border border-app-border bg-white shadow-sm">
             
             {/* Search Input */}
             <div className="sticky top-0 z-10 border-b border-slate-100 bg-white/50 p-4">
@@ -105,7 +105,7 @@ export function VisualPicker({
                 <RiSearch2Line className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   autoFocus
-                  className="w-full rounded-xl border-none bg-slate-100 py-2.5 pl-10 pr-10 text-sm font-medium focus:ring-2 focus:ring-brand-blue"
+                  className="w-full rounded-md border-none bg-slate-100 py-2.5 pl-10 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary"
                   placeholder={searchPlaceholder}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -132,18 +132,18 @@ export function VisualPicker({
                       setIsOpen(false);
                       setSearch("");
                     }}
-                    className={`group flex w-full items-center justify-between gap-4 rounded-2xl p-4 text-left transition-all hover:bg-white hover:shadow-lg hover:shadow-slate-200/50 ${
-                      value === opt.id ? 'bg-white shadow-md' : ''
+                    className={`group flex w-full items-center justify-between gap-4 rounded-lg p-4 text-left transition-all hover:bg-slate-50 ${
+                      value === opt.id ? 'bg-slate-50' : ''
                     }`}
                   >
                     <div className="flex items-center gap-4 truncate">
-                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-all ${
-                        value === opt.id ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'bg-slate-50 text-slate-400 group-hover:bg-brand-blue/5 group-hover:text-brand-blue'
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-all ${
+                        value === opt.id ? 'bg-primary text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary'
                       }`}>
                         {opt.icon || <RiCheckLine />}
                       </div>
                       <div className="truncate">
-                        <div className={`text-sm font-bold tracking-tight ${value === opt.id ? 'text-brand-blue' : 'text-slate-900'}`}>
+                        <div className={`text-sm font-bold tracking-tight ${value === opt.id ? 'text-primary' : 'text-slate-900'}`}>
                           {opt.label}
                         </div>
                         {opt.description && (

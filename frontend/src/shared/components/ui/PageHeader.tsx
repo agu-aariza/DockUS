@@ -10,40 +10,40 @@ interface PageHeaderProps {
 
 /**
  * Shared header component for all dashboard panels.
- * Ensures a consistent, premium feel across the application.
+ * Compact, functional and consistent with the institutional B2B style.
  */
 export function PageHeader({ title, subtitle, icon, actions, badge }: PageHeaderProps): JSX.Element {
   return (
-    <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-      <div className="flex items-start gap-5">
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex items-start gap-3">
         {icon && (
-          <div className="hidden sm:flex h-16 w-16 rounded-3xl bg-academic-surface-container-low border border-academic-outline-variant/30 items-center justify-center text-brand-blue text-3xl shadow-academic group-hover:scale-105 transition-transform duration-500">
-            <div className="bg-brand-blue/5 rounded-2xl p-3 text-brand-blue">
-              {icon}
-            </div>
+          <div className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+            {icon}
           </div>
         )}
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-4 flex-wrap">
-            <h2 className="font-display text-3xl font-black text-academic-on-surface tracking-tight sm:text-4xl lg:text-5xl uppercase">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900">
               {title}
-            </h2>
+            </h1>
             {badge && (
-              <span className="inline-flex items-center px-4 py-1.5 rounded-full ui-label bg-brand-blue text-white shadow-lg shadow-brand-blue/10 border border-brand-blue-dark">
+              <span className="inline-flex items-center rounded-full bg-primary-subtle px-2.5 py-0.5 text-xs font-medium text-primary border border-primary/20">
                 {badge}
               </span>
             )}
           </div>
           {subtitle && (
-            <p className="text-academic-on-surface-variant text-sm sm:text-base font-medium leading-relaxed max-w-3xl">
+            <p className="text-sm text-slate-500 max-w-2xl">
               {subtitle}
             </p>
           )}
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-3 mt-4 lg:mt-0">
-        {actions}
-      </div>
+      {actions && (
+        <div className="flex flex-wrap items-center gap-2 sm:pt-0.5">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

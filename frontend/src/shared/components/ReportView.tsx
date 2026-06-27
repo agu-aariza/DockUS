@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
 import { builderApi } from "../api/builderApi";
-import type {
-  BuilderPreflightSummary,
-  BuilderReportEntity,
-  BuilderRuntimeFamily,
-  BuildRunEntity,
-  TechnicalFeedbackItem,
-} from "../types";
+import type { BuilderPreflightSummary, BuilderReportEntity, BuilderRuntimeFamily, BuildRunEntity, TechnicalFeedbackItem } from "../../features/builder/types";
 import {
   RiAlarmWarningLine,
   RiAlertLine,
@@ -67,9 +61,9 @@ const OUTCOME_CONFIG = {
   UNKNOWN: {
     label: "Sin evaluar",
     icon: RiQuestionLine,
-    bg: "bg-academic-surface-container/60",
-    border: "border-academic-outline-variant/30",
-    text: "text-academic-on-surface-variant",
+    bg: "bg-slate-50/60",
+    border: "border-app-border/30",
+    text: "text-slate-500",
     meaning: "El sistema no pudo producir un resultado concluyente para esta version.",
   },
 } as const;
@@ -87,7 +81,7 @@ const SEVERITY_STYLE = {
   },
   low: {
     label: "Severidad baja",
-    badge: "border-brand-blue/25 bg-brand-blue/5 text-brand-blue font-semibold",
+    badge: "border-primary/25 bg-primary/5 text-primary font-semibold",
     icon: RiLightbulbFlashLine,
   },
 } as const;
@@ -240,10 +234,10 @@ function FindingCard({
   return (
     <article
       key={`${title}-${index}`}
-      className="rounded-2xl border border-academic-outline-variant/30 bg-academic-surface-container-lowest/50 p-4 text-sm"
+      className="rounded-lg border border-app-border/30 bg-white/50 p-4 text-sm"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <span className="font-semibold text-academic-on-surface">{item.title}</span>
+        <span className="font-semibold text-slate-900">{item.title}</span>
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${severity.badge}`}
@@ -251,18 +245,18 @@ function FindingCard({
             <SeverityIcon className="text-sm" aria-hidden="true" />
             {severity.label}
           </span>
-          <span className="inline-flex rounded-full border border-academic-outline-variant/20 bg-academic-surface-container px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-academic-on-surface-variant">
+          <span className="inline-flex rounded-full border border-app-border bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
             {item.level}
           </span>
         </div>
       </div>
 
-      <div className="mt-2 text-academic-on-surface-variant">
+      <div className="mt-2 text-slate-500">
         <MarkdownContent content={item.detail} />
       </div>
 
       {item.file ? (
-        <div className="mt-2 inline-block rounded bg-academic-surface-container/60 px-2 py-1 font-mono text-xs text-academic-outline">
+        <div className="mt-2 inline-block rounded bg-slate-50 px-2 py-1 font-mono text-xs text-slate-400">
           {item.file}
           {item.line ? `:${item.line}` : ""}
         </div>
@@ -271,11 +265,11 @@ function FindingCard({
       <CodeSnippet code={item.codeSnippet} runtimeFamily={runtimeFamily} />
 
       {item.conceptExplanation.trim() ? (
-        <details className="mt-4 rounded-2xl border border-academic-outline-variant/20 bg-academic-surface-container/30 px-4 py-3">
-          <summary className="cursor-pointer text-sm font-semibold text-brand-blue">
+        <details className="mt-4 rounded-lg border border-app-border bg-slate-50 px-4 py-3">
+          <summary className="cursor-pointer text-sm font-semibold text-primary">
             Aprende mas
           </summary>
-          <div className="mt-3 text-academic-on-surface-variant">
+          <div className="mt-3 text-slate-500">
             <MarkdownContent content={item.conceptExplanation} />
           </div>
         </details>
@@ -305,7 +299,7 @@ function FeedbackAxis({
 
   return (
     <div className="mt-6">
-      <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-academic-outline">
+      <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
         <AxisIcon className="text-base" />
         {title}
       </h4>
@@ -320,8 +314,8 @@ function FeedbackAxis({
           />
         ))}
         {lowerItems.length > 0 ? (
-          <details className="rounded-2xl border border-academic-outline-variant/30">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-academic-on-surface-variant hover:text-academic-on-surface">
+          <details className="rounded-lg border border-app-border/30">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-500 hover:text-slate-900">
               {lowerItems.length} observaci{lowerItems.length === 1 ? "ón" : "ones"} de prioridad media/baja
             </summary>
             <div className="space-y-3 px-2 pb-3 pt-1">
@@ -464,18 +458,18 @@ export function ReportView({
     <div className="space-y-6">
       {/* Priority Action Block — student only, shown before tabs */}
       {mode === "student" && priorityBlockItems.length > 0 ? (
-        <section className="rounded-3xl border border-academic-outline-variant/30 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-academic-outline">
+        <section className="rounded-lg border border-app-border bg-white p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
             Por dónde empezar
           </p>
-          <h3 className="mt-2 text-lg font-semibold tracking-tight text-academic-on-surface">
+          <h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-900">
             Resumen de prioridades de esta entrega
           </h3>
           <ul className="mt-4 space-y-2">
             {priorityBlockItems.map((item, i) => (
               <li
                 key={i}
-                className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm ${
+                className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${
                   item.kind === "blocker"
                     ? "border-rose-100 bg-rose-50/70 text-rose-800"
                     : item.kind === "improve"
@@ -494,10 +488,10 @@ export function ReportView({
       ) : null}
 
       {/* Final Outcome Banner */}
-      <div className={`rounded-3xl border ${config.border} ${config.bg} p-6 shadow-sm`}>
+      <div className={`rounded-lg border ${config.border} ${config.bg} p-6`}>
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
           <div
-            className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ${config.text}`}
+            className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white ${config.text}`}
           >
             <Icon className="text-3xl" />
           </div>
@@ -523,7 +517,7 @@ export function ReportView({
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex flex-wrap border-b border-academic-outline-variant/60 gap-1">
+      <div className="flex flex-wrap border-b border-app-border gap-1">
         {tabs.map((tab) => {
           const TabIcon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -533,8 +527,8 @@ export function ReportView({
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 py-3 px-4 text-xs font-bold uppercase tracking-wider transition-all duration-200 border-b-2 -mb-[2px] ${
                 isActive
-                  ? "border-academic-primary text-academic-primary font-black"
-                  : "border-transparent text-academic-outline hover:text-academic-on-surface hover:border-academic-outline-variant/50"
+                  ? "border-primary text-primary font-black"
+                  : "border-transparent text-slate-400 hover:text-slate-900 hover:border-app-border"
               }`}
             >
               <TabIcon className="text-base" />
@@ -547,39 +541,39 @@ export function ReportView({
       {/* Tab Panels */}
       <div className="space-y-6">
         {activeTab === "overview" && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6">
             {primarySummary ? (
-              <section className="rounded-3xl border border-academic-outline-variant/30 bg-white p-6 shadow-sm">
+              <section className="rounded-lg border border-app-border bg-white p-6">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-academic-outline">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                       {mode === "student" ? "Resumen pedagógico" : "Resumen docente"}
                     </p>
-                    <h3 className="mt-2 text-xl font-display font-semibold tracking-tight text-academic-on-surface">
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
                       {mode === "student"
                         ? "Qué significa este resultado para tu aprendizaje"
                         : "Lectura curada para consolidar la revisión"}
                     </h3>
                   </div>
                   {run.llmAssessment?.evaluativeState ? (
-                    <span className="inline-flex rounded-full border border-academic-outline-variant/20 bg-academic-surface-container px-3 py-1 text-xs font-semibold text-academic-on-surface-variant">
+                    <span className="inline-flex rounded-full border border-app-border bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500">
                       <GlossaryTerm term={run.llmAssessment.evaluativeState}>
                         {run.llmAssessment.evaluativeState}
                       </GlossaryTerm>
                     </span>
                   ) : null}
                 </div>
-                <div className="mt-5 text-academic-on-surface-variant">
+                <div className="mt-5 text-slate-500">
                   <MarkdownContent content={primarySummary} />
                 </div>
                 {secondarySummary ? (
-                  <details className="mt-5 rounded-2xl border border-academic-outline-variant/20 bg-academic-surface-container-lowest/50 px-4 py-3">
-                    <summary className="cursor-pointer text-sm font-semibold text-brand-blue">
+                  <details className="mt-5 rounded-lg border border-app-border bg-white px-4 py-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-primary">
                       {mode === "student"
                         ? "Ver lectura para profesorado"
                         : "Ver lectura pensada para el alumno"}
                     </summary>
-                    <div className="mt-3 text-academic-on-surface-variant">
+                    <div className="mt-3 text-slate-500">
                       <MarkdownContent content={secondarySummary} />
                     </div>
                   </details>
@@ -592,8 +586,8 @@ export function ReportView({
             ) : null}
 
             {mode === "teacher" && run.llmAssessment ? (
-              <div className="rounded-3xl border border-academic-outline-variant/30 bg-white p-6 shadow-sm">
-                <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.16em] text-academic-outline">
+              <div className="rounded-lg border border-app-border bg-white p-6">
+                <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
                   Resumen del run
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -607,12 +601,12 @@ export function ReportView({
                   ].map((item) => (
                     <div
                       key={item.label}
-                      className="rounded-xl border border-academic-outline-variant/20 bg-academic-surface-container/50 p-4"
+                      className="rounded-lg border border-app-border bg-slate-50 p-4"
                     >
-                      <span className="text-xs uppercase tracking-wider text-academic-outline">
+                      <span className="text-xs uppercase tracking-wider text-slate-400">
                         {item.label}
                       </span>
-                      <div className="mt-1 font-semibold text-academic-on-surface">
+                      <div className="mt-1 font-semibold text-slate-900">
                         {item.value ? (
                           item.label === "Tipo" ||
                             item.label === "Estado evaluativo" ? (
@@ -628,8 +622,8 @@ export function ReportView({
                   ))}
                 </div>
                 {run.llmAssessment.rationale ? (
-                  <div className="mt-5 rounded-2xl border border-academic-outline-variant/20 bg-academic-surface-container/30 p-4 text-academic-on-surface-variant">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-academic-outline">
+                  <div className="mt-5 rounded-lg border border-app-border bg-slate-50 p-4 text-slate-500">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                       Rationale
                     </p>
                     <div className="mt-3">
@@ -645,67 +639,67 @@ export function ReportView({
         )}
 
         {activeTab === "coaching" && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6">
             {mode === "student" ? (
-              <div className="rounded-3xl border border-academic-outline-variant/30 bg-white p-6 shadow-sm">
+              <div className="rounded-lg border border-app-border bg-white p-6">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-academic-outline">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                       Lectura guiada del informe
                     </p>
-                    <h3 className="mt-2 text-xl font-display font-semibold tracking-tight text-academic-on-surface">
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
                       Empieza por el plan de acción y usa la evidencia como respaldo
                     </h3>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-academic-on-surface-variant">
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
                       Este plan resume las tareas prioritarias para mejorar tu código en la siguiente entrega.
                     </p>
                   </div>
-                  <div className="rounded-full bg-academic-surface-container px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-academic-on-surface-variant shrink-0">
+                  <div className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 shrink-0">
                     Plan de remediación
                   </div>
                 </div>
 
                 <div className="mt-5 grid gap-4 lg:grid-cols-3">
-                  <div className="rounded-2xl border border-academic-outline-variant/25 bg-academic-surface-container-lowest/50 p-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-academic-outline">
+                  <div className="rounded-lg border border-app-border bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                       Remediación
                     </div>
-                    <div className="mt-2 text-sm font-semibold text-academic-on-surface">
+                    <div className="mt-2 text-sm font-semibold text-slate-900">
                       {coaching
                         ? coaching.passReadiness === "BLOCKED"
                           ? "Hay correcciones obligatorias antes de pasar"
                           : "La práctica ya supera lo esencial"
                         : "Consulta el resultado general y las observaciones"}
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-academic-on-surface-variant">
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
                       {coaching
                         ? `${coaching.mustFix.length} must-fix · ${coaching.shouldImprove.length} mejora(s) · ${coaching.nextAttemptChecklist.length} paso(s) sugeridos`
                         : "El informe técnico se resume debajo en coaching, evidencia y feedback estructurado."}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-academic-outline-variant/25 bg-academic-surface-container-lowest/50 p-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-academic-outline">
+                  <div className="rounded-lg border border-app-border bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                       Evidencia observada
                     </div>
-                    <div className="mt-2 text-sm font-semibold text-academic-on-surface">
+                    <div className="mt-2 text-sm font-semibold text-slate-900">
                       {observedEvidenceCount > 0
                         ? `${observedEvidenceCount} evidencia(s) curada(s)`
                         : "Sin evidencia curada destacada"}
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-academic-on-surface-variant">
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
                       {evaluationLimitsCount > 0
                         ? `${evaluationLimitsCount} límite(s) de evaluación explicados.`
-                        : "No hay límites destacados en el resumen curado de esta ejecución."}
+                        : "No hay límites destacados en el summary curado de esta ejecución."}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-academic-outline-variant/25 bg-academic-surface-container-lowest/50 p-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-academic-outline">
+                  <div className="rounded-lg border border-app-border bg-white p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                       Plan a seguir
                     </div>
-                    <div className="mt-2 text-sm font-semibold text-academic-on-surface">
+                    <div className="mt-2 text-sm font-semibold text-slate-900">
                       Checklist de ejecución
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-academic-on-surface-variant">
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
                       Prioriza los fallos obligatorios (must-fix). Si tienes dudas técnicas de arquitectura o seguridad, consulta la pestaña de feedback.
                     </p>
                   </div>
@@ -723,8 +717,8 @@ export function ReportView({
             ) : null}
 
             {!coaching && report.llmRecommendations?.length ? (
-              <div className="rounded-3xl border border-brand-blue/20 bg-brand-blue/5 p-6 shadow-sm">
-                <div className="mb-4 flex items-center gap-2 text-brand-blue-dark">
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
+                <div className="mb-4 flex items-center gap-2 text-primary-hover">
                   <RiLightbulbFlashLine className="text-xl" />
                   <h3 className="text-sm font-bold uppercase tracking-[0.16em]">
                     {mode === "student"
@@ -732,11 +726,11 @@ export function ReportView({
                       : "Recomendaciones"}
                   </h3>
                 </div>
-                <ul className="space-y-3 text-sm leading-relaxed text-brand-blue-dark">
+                <ul className="space-y-3 text-sm leading-relaxed text-primary-hover">
                   {report.llmRecommendations.map((recommendation, index) => (
                     <li
                       key={`${recommendation}-${index}`}
-                      className="rounded-xl border border-brand-blue/10 bg-white/50 p-3"
+                      className="rounded-lg border border-primary/10 bg-white p-3"
                     >
                       <MarkdownContent content={recommendation} />
                     </li>
@@ -746,8 +740,8 @@ export function ReportView({
             ) : null}
 
             {mode === "teacher" && selfHealing ? (
-              <div className="rounded-3xl border border-academic-outline-variant/30 bg-white p-6 shadow-sm">
-                <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.16em] text-academic-outline">
+              <div className="rounded-lg border border-app-border bg-white p-6">
+                <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
                   Autocorrección aplicada
                 </h3>
                 <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -763,12 +757,12 @@ export function ReportView({
                         ? "Intentado"
                         : "No necesario"}
                   </span>
-                  <span className="text-sm text-academic-outline">
+                  <span className="text-sm text-slate-400">
                     {selfHealing.attemptsUsed} intento
                     {selfHealing.attemptsUsed === 1 ? "" : "s"}
                   </span>
                 </div>
-                <p className="text-sm leading-relaxed text-academic-on-surface-variant">
+                <p className="text-sm leading-relaxed text-slate-500">
                   {selfHealing.summary}
                 </p>
               </div>
@@ -777,9 +771,9 @@ export function ReportView({
         )}
 
         {activeTab === "technical" && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6">
             {hasFeedback ? (
-              <div className="rounded-3xl border border-academic-outline-variant/30 bg-white p-6 shadow-sm">
+              <div className="rounded-lg border border-app-border bg-white p-6">
                 {mode === "student" ? (
                   <>
                     <button
@@ -789,21 +783,21 @@ export function ReportView({
                       aria-expanded={techOpen}
                     >
                       <div>
-                        <h3 className="text-lg font-bold tracking-tight text-academic-on-surface">
+                        <h3 className="text-lg font-bold tracking-tight text-slate-900">
                           Puntos de mejora detectados
                         </h3>
-                        <p className="mt-1 text-sm text-academic-on-surface-variant">
+                        <p className="mt-1 text-sm text-slate-500">
                           Despliega las pestañas para profundizar en la revisión de tu código fuente.
                         </p>
                       </div>
                       <span
-                        className={`text-xl text-academic-outline transition-transform ${techOpen ? "rotate-180" : ""}`}
+                        className={`text-xl text-slate-400 transition-transform ${techOpen ? "rotate-180" : ""}`}
                       >
                         ▼
                       </span>
                     </button>
                     {techOpen ? (
-                      <div className="animate-in fade-in">
+                      <div>
                         <FeedbackAxis
                           title="Seguridad"
                           items={techFeedback.security}
@@ -829,7 +823,7 @@ export function ReportView({
                   </>
                 ) : (
                   <>
-                    <h3 className="mb-1 text-lg font-bold tracking-tight text-academic-on-surface">
+                    <h3 className="mb-1 text-lg font-bold tracking-tight text-slate-900">
                       Feedback técnico
                     </h3>
                     <FeedbackAxis
@@ -856,9 +850,9 @@ export function ReportView({
                 )}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center p-12 bg-academic-surface-container/20 rounded-3xl border border-dashed border-academic-outline-variant/60 text-center">
+              <div className="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-lg border border-dashed border-app-border text-center">
                 <RiShieldCheckLine className="text-4xl text-emerald-500 mb-2" />
-                <p className="text-sm font-semibold text-academic-on-surface-variant">
+                <p className="text-sm font-semibold text-slate-500">
                   No se han registrado incidencias ni feedback técnico detallado para este run.
                 </p>
               </div>
@@ -871,19 +865,19 @@ export function ReportView({
         )}
 
         {activeTab === "logs" && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6">
             {preflight ? <PreflightSummaryBlock preflight={preflight} /> : null}
 
             {loadingLogs ? (
-              <div className="flex flex-col items-center justify-center p-12 bg-academic-surface-container/20 rounded-3xl border border-dashed border-academic-outline-variant/60 text-center animate-pulse">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue mb-3"></div>
-                <p className="text-sm font-semibold text-academic-on-surface-variant">
+              <div className="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-lg border border-dashed border-app-border text-center animate-pulse">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
+                <p className="text-sm font-semibold text-slate-500">
                   Cargando logs de ejecución...
                 </p>
               </div>
             ) : logs ? (
-              <div className="rounded-3xl border border-academic-outline-variant/30 bg-white p-6 shadow-sm">
-                <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.16em] text-academic-outline">
+              <div className="rounded-lg border border-app-border bg-white p-6">
+                <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
                   {mode === "student"
                     ? "Comentarios adicionales y logs"
                     : "Informe de compilacion y pruebas"}
@@ -894,23 +888,23 @@ export function ReportView({
                 />
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center p-12 bg-academic-surface-container/20 rounded-3xl border border-dashed border-academic-outline-variant/60 text-center">
-                <RiTerminalBoxLine className="text-4xl text-academic-outline mb-2" />
-                <p className="text-sm font-semibold text-academic-on-surface-variant">
+              <div className="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-lg border border-dashed border-app-border text-center">
+                <RiTerminalBoxLine className="text-4xl text-slate-400 mb-2" />
+                <p className="text-sm font-semibold text-slate-500">
                   No hay logs de compilación registrados para esta ejecución.
                 </p>
               </div>
             )}
 
             {run.warnings?.length ? (
-              <details className="group rounded-2xl border border-academic-outline-variant/30 bg-white" open={mode === "teacher"}>
-                <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium text-academic-on-surface-variant hover:text-academic-on-surface">
-                  <RiInformationLine className="text-academic-outline group-hover:text-brand-blue" />
+              <details className="group rounded-lg border border-app-border bg-white" open={mode === "teacher"}>
+                <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-900">
+                  <RiInformationLine className="text-slate-400 group-hover:text-primary" />
                   {mode === "student"
                     ? "Ver registros técnicos del pipeline (avanzado)"
                     : `Avisos del pipeline (${run.warnings.length})`}
                 </summary>
-                <div className="border-t border-academic-outline-variant/20 bg-academic-surface-container/50 p-4 text-xs font-mono text-academic-on-surface-variant">
+                <div className="border-t border-app-border bg-slate-50 p-4 text-xs font-mono text-slate-500">
                   <ul className="list-disc space-y-2 pl-4">
                     {run.warnings.map((warning, index) => (
                       <li key={`${warning}-${index}`}>{warning}</li>

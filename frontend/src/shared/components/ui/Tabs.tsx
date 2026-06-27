@@ -4,57 +4,63 @@ export interface TabItem {
   id: string;
   label: string;
   icon?: React.ElementType | React.ReactNode;
-  onClick?: () => void;
-  badge?: boolean;
+  badge?: number | boolean;
+  disabled?: boolean;
 }
 
 interface TabsProps {
   tabs: TabItem[];
   activeTab: string;
-  onTabChange: (id: string) => void;
-  variant?: 'primary' | 'secondary' | 'tertiary';
+  onTabChange: (_id: string) => void;
   className?: string;
+  /** @deprecated Mantenido por compatibilidad; se ignora. */
+  variant?: string;
 }
 
-export function Tabs({ 
-  tabs, 
-  activeTab, 
-  onTabChange, 
-  variant = 'primary',
-  className = "" 
+export function Tabs({
+  tabs,
+  activeTab,
+  onTabChange,
+  className = ""
 }: TabsProps) {
-  // Variant is ignored in Academic style to maintain a unified scholarly look,
-  // but kept in props for backward compatibility
-  
   return (
-    <div className={`flex border-b border-academic-surface-variant ${className}`}>
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab.id;
-        return (
-          <button
-            key={tab.id}
-            className={`group relative flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-colors ${
-              isActive 
-                ? 'text-academic-primary border-b-2 border-academic-primary' 
-                : 'text-academic-on-surface-variant hover:text-academic-on-surface hover:bg-academic-surface-container-lowest'
-            }`}
-            onClick={() => {
-              onTabChange(tab.id);
-              if (tab.onClick) tab.onClick();
-            }}
-          >
-            {tab.icon && (
-              <span className={`text-lg transition-transform ${isActive ? 'text-academic-primary' : 'text-academic-outline'}`}>
-                {typeof tab.icon === 'function' ? React.createElement(tab.icon as React.ElementType) : tab.icon}
-              </span>
-            )}
-            {tab.label}
-            {tab.badge && (
-              <span className={`ml-2 flex h-2 w-2 rounded-full ${isActive ? 'bg-academic-primary' : 'bg-academic-outline'}`} />
-            )}
-          </button>
-        );
-      })}
+    <div className={`border-b border-app-border ${className}`}>
+      <nav className="-mb-px flex" aria-label="Tabs">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              disabled={tab.disabled}
+              onClick={() => onTabChange(tab.id)}
+              className={`group relative inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                isActive
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+              } ${tab.disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              {Icon && (
+                <span className={isActive ? 'text-primary' : 'text-slate-400 group-hover:text-slate-500'}>
+                  {typeof Icon === 'function' ? <Icon className="text-base" /> : Icon}
+                </span>
+              )}
+              {tab.label}
+              {typeof tab.badge === 'number' && tab.badge > 0 && (
+                <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                  isActive ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {tab.badge}
+                </span>
+              )}
+              {tab.badge === true && (
+                <span className={`ml-1 h-1.5 w-1.5 rounded-full ${isActive ? 'bg-primary' : 'bg-slate-400'}`} aria-hidden="true" />
+              )}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }

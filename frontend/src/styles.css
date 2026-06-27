@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,12 +10,12 @@
   }
 
   body {
-    @apply bg-academic-surface text-academic-on-surface antialiased font-sans;
+    @apply bg-app-bg text-slate-900 antialiased font-sans;
   }
 
   ::selection {
-    background-color: rgb(91 4 13 / 0.10); /* primary with opacity */
-    @apply text-academic-primary;
+    background-color: rgb(37 99 235 / 0.12);
+    @apply text-blue-700;
   }
 
   #root {
@@ -24,94 +24,104 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: #cfa470 transparent; /* tertiary/gold color */
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  /* Focus visible ring for keyboard navigation */
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary/40 ring-offset-1 ring-offset-app-bg;
+  }
+
+  button:focus:not(:focus-visible),
+  a:focus:not(:focus-visible),
+  input:focus:not(:focus-visible) {
+    @apply ring-0 ring-offset-0;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-academic-primary px-6 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-academic-primary-container hover:shadow-academic hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-academic-primary/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-academic-secondary bg-transparent px-6 py-3 text-sm font-bold text-academic-secondary transition-all duration-300 hover:bg-academic-secondary hover:text-white hover:shadow-academic hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-academic-secondary/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
-  .btn-tertiary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-academic-tertiary-container px-6 py-3 text-sm font-bold text-academic-on-tertiary-container transition-all duration-300 hover:bg-academic-tertiary hover:text-white hover:shadow-academic hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-academic-tertiary/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-transparent px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-academic-error-container px-6 py-3 text-sm font-bold text-academic-on-error-container transition-all duration-300 hover:bg-academic-error hover:text-white hover:shadow-academic hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-academic-error/30 active:scale-95 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-300 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .input-field {
-    @apply w-full rounded-xl border border-academic-outline bg-white px-3 py-2.5 text-sm text-academic-on-surface transition-all placeholder:text-academic-outline-variant focus:border-academic-secondary focus:outline-none focus:ring-1 focus:ring-academic-secondary hover:border-academic-on-surface-variant;
+    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 hover:border-slate-400;
   }
 
   .card {
-    @apply overflow-hidden rounded-2xl border border-academic-surface-variant bg-white shadow-sm transition-all hover:shadow-academic hover:border-academic-outline-variant;
-  }
-  
-  .card-top-accent-primary {
-    @apply border-t-2 border-t-academic-primary;
+    @apply overflow-hidden rounded-lg border border-app-border bg-white;
   }
 
-  .card-top-accent-secondary {
-    @apply border-t-2 border-t-academic-secondary;
+  .card-top-accent-primary {
+    @apply border-t-2 border-t-primary;
+  }
+
+  .card-top-accent-accent {
+    @apply border-t-2 border-t-accent;
   }
 
   .label-text {
-    @apply mb-1.5 block text-sm font-medium text-academic-on-surface-variant;
+    @apply mb-1.5 block text-sm font-medium text-slate-600;
   }
 
   .panel-header {
-    @apply flex flex-col gap-1 border-b border-academic-surface-variant px-6 py-5 sm:flex-row sm:items-center sm:justify-between;
+    @apply flex flex-col gap-2 border-b border-app-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between;
   }
 
   .section-heading {
-    @apply font-display text-3xl font-semibold tracking-tight text-academic-on-surface;
+    @apply text-xl font-semibold tracking-tight text-slate-900;
   }
 
   .section-copy {
-    @apply text-base leading-relaxed text-academic-on-surface-variant;
+    @apply text-sm leading-relaxed text-slate-500;
   }
 
   .eyebrow {
-    @apply font-mono text-[10px] font-black uppercase tracking-[0.2em] text-academic-secondary;
+    @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
   }
 
   .ui-label {
-    @apply font-mono text-[10px] font-black uppercase tracking-[0.2em] text-academic-tertiary;
+    @apply text-[10px] font-semibold uppercase tracking-wider text-slate-400;
   }
 
   .status-chip {
-    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-mono uppercase font-bold tracking-wider;
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium;
   }
-  
+
   .academic-tab {
-    @apply relative py-2 px-4 text-sm font-medium text-academic-on-surface-variant transition-colors hover:text-academic-primary;
+    @apply relative px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-800;
   }
-  
+
   .academic-tab.active {
-    @apply text-academic-primary border-b-2 border-academic-primary;
+    @apply text-primary border-b-2 border-primary;
   }
 }
 
-/* Custom Scrollbar for TerminalViewer */
+/* Custom scrollbar for TerminalViewer */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(91, 4, 13, 0.05); /* warm primary light background tint */
+  background: #f1f5f9;
   border-radius: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(207, 164, 112, 0.4); /* gold/tertiary with opacity */
+  background: #cbd5e1;
   border-radius: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(207, 164, 112, 0.7);
+  background: #94a3b8;
 }
-

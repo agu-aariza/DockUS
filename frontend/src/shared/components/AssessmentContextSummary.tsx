@@ -1,4 +1,4 @@
-import type { BuildRunEntity } from "../types";
+import type { BuildRunEntity } from "../../features/builder/types";
 import { GlossaryTerm } from "./Glossary";
 import { MarkdownContent } from "./MarkdownContent";
 
@@ -46,7 +46,7 @@ export function AssessmentContextSummary({
       : "border-slate-200 bg-slate-50";
   const description =
     mode === "student"
-      ? "Este resumen separa lo que el sistema si pudo comprobar de lo que quedo fuera de alcance."
+      ? "Este summary separa lo que el sistema si pudo comprobar de lo que quedo fuera de alcance."
       : "Resumen curado de evidencia y limites del analisis automatico.";
 
   return (

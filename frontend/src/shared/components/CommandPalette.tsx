@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   RiSearch2Line, 
   RiStackFill, 
-  RiUser3Fill, 
   RiPulseFill, 
   RiCommandFill,
   RiArrowRightLine,
@@ -24,7 +23,7 @@ export function CommandPalette(): JSX.Element | null {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const { selection, setProject, setAssignment } = useWorkspace();
+  const { selection } = useWorkspace();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -76,7 +75,7 @@ export function CommandPalette(): JSX.Element | null {
       category: 'Proyectos',
       label: selection.projectTitle || 'Seleccionar Proyecto Actual',
       description: 'Ver detalles del proyecto activo',
-      icon: <RiStackFill className="text-brand-blue" />,
+      icon: <RiStackFill className="text-primary" />,
       action: () => navigate('/projects'),
     },
   ], [navigate, selection]);
@@ -112,11 +111,11 @@ export function CommandPalette(): JSX.Element | null {
   return (
     <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[15vh] px-4">
       <div 
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" 
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" 
         onClick={() => setIsOpen(false)} 
       />
       
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/80 backdrop-blur-2xl shadow-[0_30px_100px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in-95 slide-in-from-top-8 duration-300">
+      <div className="relative w-full max-w-2xl overflow-hidden rounded-lg border border-app-border bg-white shadow-sm">
         {/* Search Bar */}
         <div className="flex items-center gap-4 border-b border-slate-100 p-6">
           <RiSearch2Line className="text-2xl text-slate-400" />
@@ -159,12 +158,12 @@ export function CommandPalette(): JSX.Element | null {
                           }}
                           onMouseEnter={() => setSelectedIndex(globalIndex)}
                           className={`group flex w-full items-center justify-between gap-4 rounded-2xl p-4 text-left transition-all ${
-                            isSelected ? 'bg-brand-blue text-white shadow-xl shadow-brand-blue/20 scale-[1.02]' : 'hover:bg-slate-50'
+                            isSelected ? 'bg-primary text-white' : 'hover:bg-slate-50'
                           }`}
                         >
                           <div className="flex items-center gap-4 truncate">
                             <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl transition-colors ${
-                              isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-brand-blue/5 group-hover:text-brand-blue'
+                              isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary'
                             }`}>
                               {cmd.icon}
                             </div>
@@ -173,14 +172,14 @@ export function CommandPalette(): JSX.Element | null {
                                 {cmd.label}
                               </div>
                               {cmd.description && (
-                                <div className={`text-[11px] font-medium ${isSelected ? 'text-brand-blue-light' : 'text-slate-500'}`}>
+                                <div className={`text-[11px] font-medium ${isSelected ? 'text-primary-muted' : 'text-slate-500'}`}>
                                   {cmd.description}
                                 </div>
                               )}
                             </div>
                           </div>
                           {isSelected && (
-                            <RiArrowRightLine className="text-xl animate-in slide-in-from-left-2" />
+                            <RiArrowRightLine className="text-xl" />
                           )}
                         </button>
                       );

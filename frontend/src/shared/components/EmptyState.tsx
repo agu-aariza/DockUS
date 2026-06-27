@@ -1,5 +1,6 @@
-import React, { ReactNode } from "react";
+import React, { type ReactNode } from "react";
 import { RiFolderUnknowLine, RiAddLine } from "react-icons/ri";
+import { Button } from "./ui/Button";
 
 interface EmptyStateProps {
   icon?: ReactNode;
@@ -11,7 +12,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  icon = <RiFolderUnknowLine className="text-5xl text-slate-300" />,
+  icon = <RiFolderUnknowLine className="text-3xl text-slate-400" />,
   title,
   description,
   actionLabel,
@@ -19,22 +20,19 @@ export function EmptyState({
   className = ""
 }: EmptyStateProps) {
   return (
-    <div className={`flex flex-col items-center justify-center p-12 text-center rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 ${className}`}>
-      <div className="mb-4 bg-white p-4 rounded-full shadow-sm border border-slate-100">
+    <div className={`flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50/50 p-10 text-center ${className}`}>
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
         {icon}
       </div>
-      <h3 className="text-lg font-bold text-slate-900 mb-2">{title}</h3>
-      <p className="text-sm text-slate-500 max-w-sm mb-6 leading-relaxed">
+      <h3 className="mb-1 text-sm font-semibold text-slate-900">{title}</h3>
+      <p className="mb-4 max-w-sm text-sm text-slate-500">
         {description}
       </p>
       {actionLabel && onAction && (
-        <button
-          onClick={onAction}
-          className="flex items-center gap-2 px-5 py-2.5 bg-brand-blue text-white font-bold text-sm rounded-xl hover:bg-brand-blue-dark transition shadow-sm"
-        >
-          <RiAddLine className="text-lg" />
+        <Button onClick={onAction} size="sm">
+          <RiAddLine className="text-base" />
           {actionLabel}
-        </button>
+        </Button>
       )}
     </div>
   );

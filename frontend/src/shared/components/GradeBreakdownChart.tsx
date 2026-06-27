@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { RiArrowDownSLine, RiArrowUpSLine } from "react-icons/ri";
 
-import type { RubricGradeItem } from "../types";
+import type { RubricGradeItem } from "../../features/builder/types";
 import { MarkdownContent } from "./MarkdownContent";
 
 interface GradeBreakdownChartProps {
@@ -40,7 +40,7 @@ export function GradeBreakdownChart({
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-lg border border-app-border bg-white p-6">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
           Desglose de la nota
@@ -60,7 +60,7 @@ export function GradeBreakdownChart({
           return (
             <article
               key={item.criterion}
-              className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+              className="rounded-lg border border-app-border bg-slate-50/70 p-4"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -87,7 +87,7 @@ export function GradeBreakdownChart({
 
               <button
                 type="button"
-                className="mt-4 flex items-center gap-2 text-sm font-semibold text-brand-blue transition hover:text-brand-blue-dark"
+                className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary transition hover:text-primary-hover"
                 onClick={() =>
                   setExpandedCriterion((current) =>
                     current === item.criterion ? null : item.criterion,
@@ -100,7 +100,7 @@ export function GradeBreakdownChart({
               </button>
 
               {isExpanded ? (
-                <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="mt-3 rounded-lg border border-app-border bg-white p-4">
                   <MarkdownContent content={item.justification} />
                 </div>
               ) : null}

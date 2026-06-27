@@ -1,6 +1,6 @@
 import { Highlight, themes } from "prism-react-renderer";
 
-import type { BuilderRuntimeFamily } from "../types";
+import type { BuilderRuntimeFamily } from "../../features/builder/types";
 
 interface CodeSnippetProps {
   code: string;
