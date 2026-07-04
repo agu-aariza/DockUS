@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { useSession } from '../session/SessionContext';
 
-export interface WorkspaceSelection {
+interface WorkspaceSelection {
   projectId: string | null;
   projectTitle: string | null;
   assignmentId: string | null;

@@ -61,7 +61,7 @@ export function SubmissionStep1({ flow }: Props) {
                 checked={selectedAssignmentId === assignment.id}
                 disabled={disabled}
                 onChange={() => setSelectedAssignmentId(assignment.id)}
-                className="mt-1 h-4 w-4 text-primary focus:ring-brand-blue"
+                className="mt-1 h-4 w-4 text-primary focus:ring-primary"
               />
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-primary">
                 <RiFolderOpenLine className="text-xl" />

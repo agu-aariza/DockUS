@@ -85,11 +85,11 @@ function getCategoryIcon(category: QualityInsightCategory) {
     case "security":
       return <RiShieldFlashFill className="text-rose-500" />;
     case "architecture":
-      return <RiLayoutMasonryFill className="text-brand-blue" />;
+      return <RiLayoutMasonryFill className="text-primary" />;
     case "quality":
       return <RiCodeBoxFill className="text-emerald-500" />;
     default:
-      return <RiErrorWarningFill className="text-brand-gold" />;
+      return <RiErrorWarningFill className="text-warning" />;
   }
 }
 
@@ -254,7 +254,7 @@ export function QualityInsightsDashboard({
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-3 rounded-3xl border border-slate-200 bg-white px-6 py-12 text-slate-500 shadow-sm">
-        <RiLoader4Line className="animate-spin text-xl text-brand-blue" />
+        <RiLoader4Line className="animate-spin text-xl text-primary" />
         Analizando patrones de calidad del proyecto...
       </div>
     );
@@ -294,7 +294,7 @@ export function QualityInsightsDashboard({
 
         <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="mb-6 flex items-center gap-2">
-            <RiBarChartFill className="text-brand-maroon text-xl" />
+            <RiBarChartFill className="text-accent text-xl" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
               Distribucion de Hallazgos
             </span>
@@ -323,8 +323,8 @@ export function QualityInsightsDashboard({
                           : currentCategory === "quality"
                             ? "bg-emerald-500"
                             : currentCategory === "architecture"
-                              ? "bg-brand-blue"
-                              : "bg-brand-gold"
+                              ? "bg-primary"
+                              : "bg-warning"
                       }`}
                       style={{ width: `${Math.min(100, percentage)}%` }}
                     />
@@ -344,7 +344,7 @@ export function QualityInsightsDashboard({
             onClick={() => setCategory(option)}
             className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-[0.18em] transition-colors ${
               category === option
-                ? "bg-brand-maroon text-white shadow-sm"
+                ? "bg-accent text-white shadow-sm"
                 : "bg-white text-slate-500 ring-1 ring-slate-200 hover:text-slate-900"
             }`}
           >
@@ -371,7 +371,7 @@ export function QualityInsightsDashboard({
                       {getCategoryIcon(insight.category)}
                     </div>
                     <div>
-                      <div className="text-base font-bold text-slate-900 transition-colors group-hover:text-brand-blue">
+                      <div className="text-base font-bold text-slate-900 transition-colors group-hover:text-primary">
                         {insight.title}
                       </div>
                       <div className="mt-0.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
@@ -455,7 +455,7 @@ export function QualityInsightsDashboard({
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-brand-blue/30 hover:text-brand-blue"
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-primary/30 hover:text-primary"
                       onClick={() => onOpenStudentReview(selectedStudent.studentId, "report")}
                     >
                       <RiFileTextLine />
@@ -463,7 +463,7 @@ export function QualityInsightsDashboard({
                     </button>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-brand-maroon/30 hover:text-brand-maroon"
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-accent/30 hover:text-accent"
                       onClick={() => onOpenStudentReview(selectedStudent.studentId, "grading")}
                     >
                       <RiFolderChartLine />
@@ -476,7 +476,7 @@ export function QualityInsightsDashboard({
 
             {studentLoading ? (
               <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                <RiLoader4Line className="animate-spin text-brand-blue" />
+                <RiLoader4Line className="animate-spin text-primary" />
                 Cargando hallazgos individuales...
               </div>
             ) : (
@@ -557,7 +557,7 @@ export function QualityInsightsDashboard({
                 {selectedStudentReviewTarget && onOpenStudentReview ? (
                   <button
                     type="button"
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-brand-blue/30 hover:text-brand-blue"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-primary/30 hover:text-primary"
                     onClick={() => onOpenStudentReview(selectedStudentId, "report")}
                   >
                     <RiArrowRightUpLine />

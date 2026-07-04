@@ -2,29 +2,19 @@
 
 Scripts de soporte para desarrollo, testing y automatización del frontend.
 
-## Archivos
+## Estado actual
 
-| Archivo | Función |
-|---------|---------|
-| [`run-node-tests.mjs`](./run-node-tests.mjs) | Busca archivos `.test.js` compilados en `.tmp-test-dist/tests/` y los ejecuta con el runner nativo de Node (`node --test`). |
+No hay scripts activos en este directorio. La suite vigente usa Vitest directamente desde `npm test` y no requiere compilar tests a `.tmp-test-dist/`.
 
-## Tests
-
-- No existe una carpeta `frontend/tests/` en la configuración actual.
-- El script `test:compile` (`npm run test:compile`) compila `src` + `tests` a `.tmp-test-dist/` usando `tsconfig.tests.json`.
-- `run-node-tests.mjs` ejecuta los tests compilados con el runner nativo de Node.
-
-## Cómo ejecutar
+## Comandos relacionados
 
 ```bash
-# Compilar tests
-npm run test:compile
-
-# Ejecutar tests
-npm test
+npm run typecheck
+npm run lint
+npm test -- --run
+npm run build
 ```
 
-## Notas
+## Convención
 
-- La suite de tests de componentes aún no está implementada.
-- La validación principal del frontend es `npm run typecheck` y `npm run build`.
+Si se añade un script nuevo, debe quedar documentado aquí con su comando, entradas, salidas y cuándo debe ejecutarse.

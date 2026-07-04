@@ -16,7 +16,7 @@ import {
 
 export type ToastTone = "success" | "info" | "warning" | "error";
 
-export interface ToastInput {
+interface ToastInput {
   title?: string;
   description: string;
   tone?: ToastTone;

@@ -15,7 +15,7 @@ import { useManagementPermissions } from '../../shared/session/useManagementPerm
 import { getErrorMessage } from '../../shared/utils/errors';
 import { computeSha256Hex } from '../../shared/utils/hash';
 
-export interface UnifiedStorageItem {
+interface UnifiedStorageItem {
   id: string;
   logicalName: string;
   sizeBytes: number;
@@ -31,9 +31,9 @@ export interface UnifiedStorageItem {
   projectId?: string | null;
 }
 
-export type DangerAction = 'DELETE' | 'PURGE';
-export type StorageSortBy = 'createdAt' | 'updatedAt' | 'logicalName' | 'sizeBytes';
-export type SortOrder = 'ASC' | 'DESC';
+type DangerAction = 'DELETE' | 'PURGE';
+type StorageSortBy = 'createdAt' | 'updatedAt' | 'logicalName' | 'sizeBytes';
+type SortOrder = 'ASC' | 'DESC';
 
 export function useStorageManagement(session: SessionRecord | null) {
   const [query, setQuery] = useState({

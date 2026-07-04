@@ -4,7 +4,7 @@ export interface SubmissionPreviewFile {
   content?: string | null;
 }
 
-export interface SubmissionValidationWarning {
+interface SubmissionValidationWarning {
   code: string;
   message: string;
 }
@@ -15,7 +15,7 @@ export interface SubmissionPreviewDiff {
   persisted: string[];
 }
 
-export interface SubmissionValidationResult {
+interface SubmissionValidationResult {
   warnings: SubmissionValidationWarning[];
   diff: SubmissionPreviewDiff;
   totalFiles: number;

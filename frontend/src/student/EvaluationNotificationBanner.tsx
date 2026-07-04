@@ -7,6 +7,7 @@ import {
   RiGraduationCapLine,
 } from "react-icons/ri";
 
+import { Alert } from "../shared/components/ui/Alert";
 import type { EvaluationNotification } from "./evaluationNotifications";
 
 interface Props {
@@ -19,9 +20,8 @@ interface Props {
 function getNotificationConfig(notification: EvaluationNotification) {
   if (notification.kind === "grade_published") {
     return {
-      icon: RiGraduationCapLine,
-      bg: "bg-emerald-50 border-emerald-200",
-      iconColor: "text-emerald-600",
+      icon: <RiGraduationCapLine />,
+      variant: "success" as const,
       label: "Nota oficial publicada",
       description:
         notification.grade !== null
@@ -32,9 +32,8 @@ function getNotificationConfig(notification: EvaluationNotification) {
 
   if (notification.outcome === "FAILED") {
     return {
-      icon: RiCloseCircleLine,
-      bg: "bg-rose-50 border-rose-200",
-      iconColor: "text-rose-600",
+      icon: <RiCloseCircleLine />,
+      variant: "danger" as const,
       label: "Informe técnico disponible",
       description: "La evaluación terminó con incidencias y ya puedes revisar el informe.",
     };
@@ -42,18 +41,16 @@ function getNotificationConfig(notification: EvaluationNotification) {
 
   if (notification.outcome === "CANCELLED") {
     return {
-      icon: RiAlertLine,
-      bg: "bg-amber-50 border-amber-200",
-      iconColor: "text-amber-600",
+      icon: <RiAlertLine />,
+      variant: "warning" as const,
       label: "Informe técnico disponible",
       description: "La evaluación quedó cancelada, pero ya tienes contexto técnico consultable.",
     };
   }
 
   return {
-    icon: RiCheckboxCircleLine,
-    bg: "bg-primary/5 border-primary/20",
-    iconColor: "text-primary",
+    icon: <RiCheckboxCircleLine />,
+    variant: "info" as const,
     label: "Informe técnico disponible",
     description: "Tu evaluación terminó y el informe técnico ya está listo para consulta.",
   };
@@ -68,10 +65,7 @@ export function EvaluationNotificationBanner({
   if (notifications.length === 0) return null;
 
   return (
-    <div
-      className="mb-6 space-y-3 duration-300"
-      aria-live="polite"
-    >
+    <div className="mb-6 space-y-3" aria-live="polite">
       {notifications.length > 1 ? (
         <div className="flex justify-end">
           <button
@@ -85,40 +79,31 @@ export function EvaluationNotificationBanner({
 
       {notifications.map((notification) => {
         const config = getNotificationConfig(notification);
-        const Icon = config.icon;
 
         return (
-          <div
-            key={notification.id}
-            className={`relative rounded-lg border p-4 transition-all ${config.bg}    duration-200`}
-          >
-            <button
-              className="absolute right-3 top-3 text-slate-400 transition hover:text-slate-500"
-              onClick={() => onDismiss(notification.id)}
-              aria-label="Descartar notificación"
-            >
-              <RiCloseLine className="text-lg" />
-            </button>
-
-            <div className="flex items-start gap-3 pr-8">
-              <Icon className={`mt-0.5 flex-shrink-0 text-2xl ${config.iconColor}`} />
-              <div className="min-w-0 flex-1">
-                <h4 className="text-sm font-bold text-slate-900">
-                  {config.label}
-                </h4>
-                <p className="mt-0.5 text-xs text-slate-500">
+          <div key={notification.id} className="relative">
+            <Alert variant={config.variant} title={config.label} icon={config.icon}>
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500">
                   <strong>v{notification.deliveryVersion}</strong> · {notification.projectTitle}
                 </p>
-                <p className="mt-1 text-xs text-slate-400">{config.description}</p>
+                <p className="text-xs text-slate-500">{config.description}</p>
                 <button
-                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary transition hover:text-primary"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-primary transition hover:text-primary-hover"
                   onClick={() => onViewReport(notification.deliveryId)}
                 >
                   <RiFileTextLine />
                   Consultar informe
                 </button>
               </div>
-            </div>
+            </Alert>
+            <button
+              className="absolute right-3 top-3 text-slate-400 transition hover:text-slate-600"
+              onClick={() => onDismiss(notification.id)}
+              aria-label="Descartar notificación"
+            >
+              <RiCloseLine className="text-lg" />
+            </button>
           </div>
         );
       })}

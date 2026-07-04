@@ -1,4 +1,4 @@
-export interface GlossaryEntry {
+interface GlossaryEntry {
   term: string;
   title: string;
   description: string;

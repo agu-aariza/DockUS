@@ -53,24 +53,30 @@ export function SectionCard({ children, className = "", title, description, head
 interface BadgeProps {
   children: ReactNode;
   variant?: "idle" | "success" | "warning" | "danger" | "info" | "running" | "closed";
+  className?: string;
+  icon?: ReactNode;
 }
 
 const BADGE_STYLES: Record<NonNullable<BadgeProps["variant"]>, string> = {
-  idle: "border-slate-200 bg-slate-100 text-slate-600",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  warning: "border-amber-200 bg-amber-50 text-amber-700",
-  danger: "border-red-200 bg-red-50 text-red-700",
-  info: "border-blue-200 bg-blue-50 text-blue-700",
-  running: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  closed: "border-slate-200 bg-slate-100 text-slate-500",
+  idle: "border-slate-200 bg-slate-50 text-slate-600",
+  closed: "border-slate-200 bg-slate-50 text-slate-500",
+  success: "border-success/20 bg-success-subtle text-success",
+  warning: "border-warning/20 bg-warning-subtle text-warning",
+  danger: "border-danger/20 bg-danger-subtle text-danger",
+  info: "border-primary/20 bg-primary-subtle text-primary",
+  running: "border-primary/20 bg-primary-subtle text-primary",
 };
 
-export function Badge({ children, variant = "idle" }: BadgeProps) {
+export function Badge({ children, variant = "idle", className = "", icon }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${BADGE_STYLES[variant]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${BADGE_STYLES[variant]} ${className}`}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" aria-hidden="true" />
+      {icon ? (
+        <span className="text-sm">{icon}</span>
+      ) : (
+        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" aria-hidden="true" />
+      )}
       {children}
     </span>
   );

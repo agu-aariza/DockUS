@@ -17,7 +17,7 @@ interface StudentWorkspacePanelProps {
   session: SessionRecord | null;
 }
 
-export type StudentTab =
+type StudentTab =
   | "resumen"
   | "proyectos"
   | "entregas"

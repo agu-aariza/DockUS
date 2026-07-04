@@ -59,7 +59,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_STYLE: Record<string, string> = {
   DRAFT: "bg-slate-100 text-slate-700 border-slate-200",
-  SUBMITTED: "bg-brand-blue/5 text-brand-blue-dark border-brand-blue/10",
+  SUBMITTED: "bg-primary-subtle text-primary border-primary/10",
   IN_REVIEW: "bg-amber-50 text-amber-700 border-amber-200",
   EVALUATED: "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
@@ -385,7 +385,7 @@ export function ProgressDashboard({
               label="Han entregado"
               value={summary.deliveredAtLeastOnce}
               icon={<RiCheckboxCircleLine />}
-              color="text-brand-blue"
+              color="text-primary"
             />
             <StatCard
               label="Con PASS"
@@ -411,11 +411,11 @@ export function ProgressDashboard({
                   Porcentaje de alumnos que ya registraron al menos una entrega.
                 </p>
               </div>
-              <span className="text-3xl font-black text-brand-blue">{rate}%</span>
+              <span className="text-3xl font-black text-primary">{rate}%</span>
             </div>
             <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full bg-brand-blue transition-all duration-1000 ease-out"
+                className="h-full bg-primary transition-all duration-1000 ease-out"
                 style={{ width: `${rate}%` }}
               />
             </div>
@@ -432,7 +432,7 @@ export function ProgressDashboard({
               <div className="mt-5 flex h-4 overflow-hidden rounded-full bg-slate-100">
                 {[
                   { key: "pending", value: summary.statusTotals.pending, color: "bg-slate-400" },
-                  { key: "submitted", value: summary.statusTotals.submitted, color: "bg-brand-blue" },
+                  { key: "submitted", value: summary.statusTotals.submitted, color: "bg-primary" },
                   { key: "inReview", value: summary.statusTotals.inReview, color: "bg-amber-500" },
                   { key: "evaluated", value: summary.statusTotals.evaluated, color: "bg-emerald-500" },
                 ].map((segment) => (
@@ -492,7 +492,7 @@ export function ProgressDashboard({
             <button
               onClick={() => setActiveTab("gradebook")}
               className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all ${activeTab === "gradebook"
-                  ? "border-b-2 border-brand-blue text-brand-blue bg-brand-blue/5"
+                  ? "border-b-2 border-primary text-primary bg-primary-subtle"
                   : "text-slate-500 hover:text-slate-900"
                 }`}
             >
@@ -502,7 +502,7 @@ export function ProgressDashboard({
             <button
               onClick={() => setActiveTab("insights")}
               className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all ${activeTab === "insights"
-                  ? "border-b-2 border-brand-maroon text-brand-maroon bg-brand-maroon/5"
+                  ? "border-b-2 border-accent text-accent bg-accent-subtle"
                   : "text-slate-500 hover:text-slate-900"
                 }`}
             >
@@ -777,7 +777,7 @@ export function ProgressDashboard({
             <div className="flex-1 overflow-y-auto p-6">
               {isLoadingHistory ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <RiLoader4Line className="text-4xl text-brand-blue animate-spin" />
+                  <RiLoader4Line className="text-4xl text-primary animate-spin" />
                   <span className="text-sm text-slate-500 font-medium">Cargando versiones...</span>
                 </div>
               ) : historyDeliveries.length === 0 ? (

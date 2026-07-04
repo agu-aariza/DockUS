@@ -5,7 +5,7 @@ import type {
   ProjectAssignmentEntity,
 } from "../shared/types";
 
-export interface StudentWorkspaceInsights {
+interface StudentWorkspaceInsights {
   activeAssignments: number;
   revokedAssignments: number;
   totalDeliveries: number;

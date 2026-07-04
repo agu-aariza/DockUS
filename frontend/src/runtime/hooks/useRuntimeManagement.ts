@@ -14,8 +14,8 @@ import type { SessionRecord } from "../../features/auth/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useBuilderRunStream } from "../../builder/hooks/useBuilderRunStream";
 
-export type NoticeTone = "info" | "warning";
-export interface NoticeState {
+type NoticeTone = "info" | "warning";
+interface NoticeState {
   text: string;
   tone: NoticeTone;
 }

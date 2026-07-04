@@ -23,8 +23,8 @@ import {
   mergeManualAndLegacyNotes,
 } from "../teacherReviewNavigation";
 
-export type NoticeTone = "info" | "warning";
-export interface NoticeState {
+type NoticeTone = "info" | "warning";
+interface NoticeState {
   text: string;
   tone: NoticeTone;
 }

@@ -2,19 +2,19 @@ import type { ProjectGradebookRow } from "../shared/types";
 
 export type TeacherDeliveryDetailTab = "overview" | "grading" | "report";
 
-export interface TeacherDeliveryReviewPathInput {
+interface TeacherDeliveryReviewPathInput {
   projectId: string;
   assignmentId: string;
   deliveryId: string;
   tab?: TeacherDeliveryDetailTab;
 }
 
-export interface TeacherDeliveryReviewTarget {
+interface TeacherDeliveryReviewTarget {
   assignmentId: string;
   deliveryId: string;
 }
 
-export interface LegacyAiEvidenceExtraction {
+interface LegacyAiEvidenceExtraction {
   manualNotes: string | null;
   legacyBlocks: string[];
   legacyRaw: string | null;

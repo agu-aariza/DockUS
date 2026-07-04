@@ -85,7 +85,7 @@ export function PipelineStepper({
           IconComponent = RiAlertLine;
           labelColor = "text-rose-600";
         } else if (isCurrent) {
-          circleClasses = "border-primary/40 bg-primary/5 text-primary ring-2 ring-brand-blue/10";
+          circleClasses = "border-primary/40 bg-primary/5 text-primary ring-2 ring-primary/10";
           labelColor = "text-primary";
         } else {
           circleClasses = "border-app-border/30 bg-slate-50/50 text-slate-400";

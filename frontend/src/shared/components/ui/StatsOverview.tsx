@@ -1,7 +1,7 @@
 import React from 'react';
 import { MetricCard } from '../MetricCard';
 
-export interface StatItem {
+interface StatItem {
   label: string;
   value: string | number;
   icon: React.ReactNode;

@@ -1,5 +1,6 @@
 import { RiFile3Line, RiFolder3Line, RiGitCommitLine, RiHistoryLine } from "react-icons/ri";
 
+import { Badge } from "../../shared/components/ui/Layout";
 import type {
   SubmissionPreviewDiff,
   SubmissionPreviewFile,
@@ -97,7 +98,7 @@ function TreeBranch({ nodes }: { nodes: TreeNode[] }): JSX.Element {
       {nodes.map((node) => (
         <li key={node.path}>
           {node.kind === "directory" ? (
-            <details open className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+            <details open className="rounded-lg border border-app-border bg-white px-3 py-2">
               <summary className="flex cursor-pointer items-center gap-2 font-medium">
                 <RiFolder3Line className="text-primary" />
                 {node.name}
@@ -109,7 +110,7 @@ function TreeBranch({ nodes }: { nodes: TreeNode[] }): JSX.Element {
               ) : null}
             </details>
           ) : (
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+            <div className="flex items-center gap-2 rounded-lg border border-app-border bg-white px-3 py-2">
               <RiFile3Line className="text-slate-400" />
               <span className="truncate">{node.name}</span>
             </div>
@@ -135,7 +136,9 @@ export function FileTreePreview({
     <section className="rounded-lg border border-app-border bg-white p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="eyebrow text-slate-400">Preview del ZIP</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Preview del ZIP
+          </div>
           <h4 className="mt-2 text-lg font-semibold text-slate-900">
             Estructura detectada antes de enviar
           </h4>
@@ -143,19 +146,16 @@ export function FileTreePreview({
             {files.length} archivo(s) · {formatBytes(totalSizeBytes)}
           </p>
         </div>
-        <div className="grid gap-2 text-xs text-slate-500 sm:grid-cols-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
-            <RiGitCommitLine />
-            +{diff.added.length} anadidos
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 font-semibold text-amber-700">
-            <RiHistoryLine />
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="success" icon={<RiGitCommitLine />}>
+            +{diff.added.length} añadidos
+          </Badge>
+          <Badge variant="warning" icon={<RiHistoryLine />}>
             {diff.persisted.length} persistentes
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 font-semibold text-rose-700">
-            <RiHistoryLine />
+          </Badge>
+          <Badge variant="danger" icon={<RiHistoryLine />}>
             -{diff.removed.length} eliminados
-          </span>
+          </Badge>
         </div>
       </div>
 

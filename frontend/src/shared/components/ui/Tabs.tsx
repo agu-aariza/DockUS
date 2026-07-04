@@ -1,6 +1,6 @@
 import React from 'react';
 
-export interface TabItem {
+interface TabItem {
   id: string;
   label: string;
   icon?: React.ElementType | React.ReactNode;

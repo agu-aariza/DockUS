@@ -28,7 +28,7 @@ export type DependencyManager =
   | "pipenv"
   | "setuptools"
   | "unknown";
-export type PythonProjectLayout =
+type PythonProjectLayout =
   | "flat-root"
   | "src-layout"
   | "package-installable"
@@ -158,13 +158,13 @@ export interface BuilderPreflightFinding {
   line?: number | null;
 }
 
-export interface PythonTestStrategy {
+interface PythonTestStrategy {
   studentTestsPresent: boolean;
   teacherTestsSupported: boolean;
   suggestedCommand: string[] | null;
 }
 
-export interface PythonHealthStrategy {
+interface PythonHealthStrategy {
   kind: "http" | "command" | "none";
   command: string[] | null;
   servicePort: number | null;

@@ -32,7 +32,7 @@ export function SubmissionSidebar({ flow }: Props) {
           }
         >
           <StudentSurfaceHeader
-            eyebrow="Ventana academica"
+            eyebrow="Ventana de entrega"
             title={activeTimeline.headline}
             description={activeTimeline.detail}
             badge={

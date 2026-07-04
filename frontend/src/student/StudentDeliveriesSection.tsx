@@ -352,7 +352,7 @@ export function StudentDeliveriesSection({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-academic-surface-variant">
+              <tbody className="divide-y divide-app-border">
                 {filteredDeliveries.map((delivery) => {
                   const { workflow, retryAction, outcome } = deriveRow(delivery);
 

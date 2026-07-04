@@ -1,4 +1,4 @@
-export type NoticeTone = "info" | "warning";
+type NoticeTone = "info" | "warning";
 
 export interface NoticeState {
   text: string;

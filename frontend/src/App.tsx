@@ -158,7 +158,7 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (_res: AuthResponse) 
   );
 }
 
-export function App(): JSX.Element {
+function App(): JSX.Element {
   const {
     activeSession,
     activeSessionId,

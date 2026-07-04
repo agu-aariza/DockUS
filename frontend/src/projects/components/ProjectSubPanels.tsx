@@ -150,16 +150,16 @@ export function ProjectAssignmentManager({
 
           {/* Quick Actions Card */}
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 opacity-[0.05] text-8xl text-brand-blue/30 pointer-events-none">
+            <div className="absolute -right-4 -top-4 opacity-[0.05] text-8xl text-primary/30 pointer-events-none">
               <RiSearchLine />
             </div>
 
             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Filtrado y Búsqueda</h4>
             <div className="space-y-4">
               <div className="relative group">
-                <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-blue transition-colors" />
+                <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
                 <input
-                  className="w-full h-12 pl-11 pr-4 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-brand-blue/20 focus:ring-4 focus:ring-brand-blue/5 transition-all text-sm font-medium"
+                  className="w-full h-12 pl-11 pr-4 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-all text-sm font-medium"
                   placeholder="Buscar grupo o código..."
                   value={searchTerm}
                   onChange={(e) => onSearchChange(e.target.value)}
@@ -187,7 +187,7 @@ export function ProjectAssignmentManager({
             <div>
               <h3 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
                 Classroom Hub
-                <span className="text-xs font-medium bg-brand-blue/5 text-brand-blue px-3 py-1 rounded-full border border-brand-blue/10 uppercase tracking-widest">
+                <span className="text-xs font-medium bg-primary-subtle text-primary px-3 py-1 rounded-full border border-primary/10 uppercase tracking-widest">
                   {filteredGroups.length} Grupos
                 </span>
               </h3>
@@ -202,7 +202,7 @@ export function ProjectAssignmentManager({
                   onClick={() => onAssignGroups(groups.map(g => g.id))}
                   disabled={groups.length === 0 || !!assignmentBusy}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-brand-blue/10 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                   <RiTeamFill className="text-lg group-hover/btn:rotate-12 transition-transform" />
                   Matricular todos los grupos
                 </button>
@@ -235,7 +235,7 @@ export function ProjectAssignmentManager({
                       isGroupAssigned
                         ? 'bg-white border-emerald-100 shadow-emerald-500/5'
                         : isFocused
-                          ? 'bg-white border-brand-blue ring-4 ring-brand-blue/5 shadow-xl'
+                          ? 'bg-white border-primary ring-4 ring-primary/5 shadow-xl'
                           : 'bg-white border-slate-100 hover:border-slate-300 hover:shadow-xl'
                     }`}
                   >
@@ -245,8 +245,8 @@ export function ProjectAssignmentManager({
                         isGroupAssigned
                           ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
                           : isFocused
-                            ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20'
-                            : 'bg-slate-50 text-slate-400 group-hover:bg-brand-blue/10 group-hover:text-brand-blue group-hover:scale-110 group-hover:rotate-3'
+                            ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                            : 'bg-slate-50 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary group-hover:scale-110 group-hover:rotate-3'
                       }`}>
                         <RiGroupLine />
                       </div>
@@ -290,9 +290,9 @@ export function ProjectAssignmentManager({
                             // Navegamos a la pestaña general de grupos
                             window.location.href = `/groups?focusedGroupId=${group.id}`;
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100 text-[10px] font-bold text-slate-600 uppercase tracking-widest hover:bg-white hover:border-brand-blue/20 hover:text-brand-blue transition-all shadow-sm flex items-center gap-2 group/btn"
+                          className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100 text-[10px] font-bold text-slate-600 uppercase tracking-widest hover:bg-white hover:border-primary/20 hover:text-primary transition-all shadow-sm flex items-center gap-2 group/btn"
                         >
-                          <RiUser3Fill className="text-slate-400 group-hover/btn:text-brand-blue" />
+                          <RiUser3Fill className="text-slate-400 group-hover/btn:text-primary" />
                           Ver alumnos
                         </button>
                       </div>
@@ -325,7 +325,7 @@ export function ProjectAssignmentManager({
                     {/* Overlay de Carga */}
                     {assignmentBusy && (assignmentBusy === `assign:groups` || assignmentBusy.startsWith('revoke:')) && (
                       <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-10 animate-in fade-in">
-                        <RiRefreshLine className="text-2xl text-brand-blue animate-spin" />
+                        <RiRefreshLine className="text-2xl text-primary animate-spin" />
                       </div>
                     )}
                   </article>

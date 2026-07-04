@@ -1,6 +1,6 @@
 import type { BuildRunEntity, DeliveryEntity } from "../shared/types";
 
-export interface StudentRetryAction {
+interface StudentRetryAction {
   enabled: boolean;
   label: string;
 }

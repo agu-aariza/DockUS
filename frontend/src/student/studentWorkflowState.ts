@@ -6,7 +6,7 @@ import type {
   StudentWorkflowState,
 } from "../shared/types";
 
-export interface StudentWorkflowPresentation {
+interface StudentWorkflowPresentation {
   state: StudentWorkflowState;
   label: string;
   description: string;

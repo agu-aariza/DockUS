@@ -51,31 +51,10 @@ export function useGroupManagement(canWrite: boolean) {
   const refreshStudents = async () => {
     try {
       setLoading(true);
-      console.log("[DockUS-DEBUG] Iniciando carga de alumnos (role=STUDENT)...");
-      
       const response = await usersApi.list({ role: "STUDENT", limit: 50 });
-      
-      console.log("[DockUS-DEBUG] Respuesta recibida:", {
-        dataLength: response.data?.length,
-        hasMeta: !!response.meta,
-        firstItem: response.data?.[0]
-      });
-
       setAllStudents(response.data || []);
-    } catch (error: any) {
-      console.error("[DockUS-DEBUG] ERROR CRÍTICO AL CARGAR ALUMNOS:", {
-        message: error.message,
-        status: error.statusCode || error.response?.status,
-        apiMessage: error.message,
-        stack: error.stack
-      });
-      
-      // Mantenemos la notificación para que el usuario sepa que falló, 
-      // pero con más detalle si está disponible.
-      setNotice({ 
-        text: `Error de API (${error.statusCode || error.response?.status || 'Red'}): No se pudieron cargar los alumnos.`, 
-        tone: "warning" 
-      });
+    } catch (error) {
+      setNotice({ text: getErrorMessage(error), tone: "warning" });
     } finally {
       setLoading(false);
     }

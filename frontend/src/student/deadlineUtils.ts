@@ -1,12 +1,12 @@
 import type { ProjectAssignmentEntity } from "../shared/types";
 
-export type AssignmentTimelineState =
+type AssignmentTimelineState =
   | "upcoming"
   | "open"
   | "open-no-deadline"
   | "late";
 
-export interface AssignmentTimelineSummary {
+interface AssignmentTimelineSummary {
   state: AssignmentTimelineState;
   headline: string;
   countdownLabel: string | null;
