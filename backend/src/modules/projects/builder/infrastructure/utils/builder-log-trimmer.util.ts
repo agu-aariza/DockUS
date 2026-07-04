@@ -55,7 +55,7 @@ export class BuilderLogTrimmer {
 
     lines.forEach((line) => {
       const lower = line.toLowerCase();
-      
+
       // Filtrar barras de progreso (pip, npm, curl, etc)
       if (/([=\-#>]{10,})|(\d+%\s+)/u.test(line)) {
         return;

@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 
-export interface CommandRunOptions {
+interface CommandRunOptions {
   cwd?: string;
   timeoutMs: number;
   maxBufferedChars?: number;
@@ -82,4 +82,3 @@ export async function runCommand(
     });
   });
 }
-

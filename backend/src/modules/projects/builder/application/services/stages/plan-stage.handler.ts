@@ -4,21 +4,27 @@ import { BuilderLlmEvaluatorService } from '../../../domain/ai/builder-llm-evalu
 import { BuilderArtifactPersister } from '../artifacts/builder-artifact-persister.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
-import { BuilderPlanContractV2, AssignmentContext } from '../../../domain/builder.types';
+import {
+  BuilderPlanContractV2,
+  AssignmentContext,
+} from '../../../domain/builder.types';
 import { requireParsedContract } from '../support/builder-fallback-assessment.util';
 
-export interface PlanStageInput {
+interface PlanStageInput {
   runId: string;
   sourceCodePayload: string;
   assignmentContext: AssignmentContext;
 }
 
-export interface PlanStageOutput {
+interface PlanStageOutput {
   planAssessment: BuilderPlanContractV2;
 }
 
 @Injectable()
-export class BuilderPlanStageHandler implements IBuilderStageHandler<PlanStageInput, PlanStageOutput> {
+export class BuilderPlanStageHandler implements IBuilderStageHandler<
+  PlanStageInput,
+  PlanStageOutput
+> {
   constructor(
     private readonly builderLlmEvaluatorService: BuilderLlmEvaluatorService,
     private readonly builderArtifactPersister: BuilderArtifactPersister,
@@ -43,11 +49,17 @@ export class BuilderPlanStageHandler implements IBuilderStageHandler<PlanStageIn
       },
       {
         onBeforeCall: async (snapshot) => {
-          await this.builderArtifactPersister.persistPromptArtifact(runId, snapshot);
+          await this.builderArtifactPersister.persistPromptArtifact(
+            runId,
+            snapshot,
+          );
         },
       },
     );
-    await this.builderArtifactPersister.persistStageTraceArtifacts(runId, planTrace);
+    await this.builderArtifactPersister.persistStageTraceArtifacts(
+      runId,
+      planTrace,
+    );
     const planAssessment = requireParsedContract(planTrace);
 
     await this.builderRunSupportService.emitEvent({

@@ -25,7 +25,7 @@ import { BuilderRunCommandsService } from './application/services/orchestration/
 import { BuilderRunQueriesService } from './application/services/orchestration/builder-run-queries.service';
 import { BuilderRunSupportService } from './application/services/orchestration/builder-run-support.service';
 import { BuilderWorkspaceService } from './application/services/workspace/builder-workspace.service';
-import { BUILDER_RUN_JOB_NAME, BUILDER_RUNS_QUEUE_NAME } from './domain/builder.constants';
+import { BUILDER_RUNS_QUEUE_NAME } from './domain/builder.constants';
 import { BuilderCacheManagerService } from './application/services/workspace/builder-cache-manager.service';
 import { BuilderPedagogicalService } from './application/services/evaluation/builder-pedagogical.service';
 import { BuilderRecipeCompiler } from './application/services/compilation/builder-recipe-compiler.service';
@@ -109,7 +109,9 @@ import { BuilderReportStageHandler } from './application/services/stages/report-
   exports: [BuilderQualityAggregationService],
 })
 export class BuilderModule implements OnModuleInit {
-  constructor(private readonly builderRunCommandsService: BuilderRunCommandsService) {}
+  constructor(
+    private readonly builderRunCommandsService: BuilderRunCommandsService,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     await this.builderRunCommandsService.failStaleRunsOnStartup();

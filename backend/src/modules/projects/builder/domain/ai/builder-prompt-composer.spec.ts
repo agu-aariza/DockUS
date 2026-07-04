@@ -19,12 +19,13 @@ describe('builder prompt composer', () => {
     expect(payload.prompt.length).toBeLessThanOrEqual(260);
     expect(payload.prompt).toContain('EXPECTED OUTPUT ORACLE');
     expect(payload.prompt).toContain('./main 7 8');
-    expect(payload.sections.find((section) => section.label === 'STUDENT WORKSPACE'))
-      .toEqual(
-        expect.objectContaining({
-          truncated: true,
-        }),
-      );
+    expect(
+      payload.sections.find((section) => section.label === 'STUDENT WORKSPACE'),
+    ).toEqual(
+      expect.objectContaining({
+        truncated: true,
+      }),
+    );
   });
 
   it('composes evaluation prompts as explicit evidence sections instead of a single blob', () => {

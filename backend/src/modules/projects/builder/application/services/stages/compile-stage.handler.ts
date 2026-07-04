@@ -7,19 +7,22 @@ import { BuilderPlanContractV2 } from '../../../domain/builder.types';
 import { StageWorkspaceResult } from '../workspace/builder-workspace.service';
 import { DEFAULT_BASE_PYTHON_IMAGE } from '../../../domain/builder.constants';
 
-export interface CompileStageInput {
+interface CompileStageInput {
   runId: string;
   planAssessment: BuilderPlanContractV2;
   workspace: StageWorkspaceResult;
 }
 
-export interface CompileStageOutput {
+interface CompileStageOutput {
   compiled: any;
   executionLogs?: string;
 }
 
 @Injectable()
-export class BuilderCompileStageHandler implements IBuilderStageHandler<CompileStageInput, CompileStageOutput> {
+export class BuilderCompileStageHandler implements IBuilderStageHandler<
+  CompileStageInput,
+  CompileStageOutput
+> {
   constructor(
     private readonly builderRecipeCompiler: BuilderRecipeCompiler,
     private readonly builderRunSupportService: BuilderRunSupportService,
@@ -28,8 +31,11 @@ export class BuilderCompileStageHandler implements IBuilderStageHandler<CompileS
   async handle(input: CompileStageInput): Promise<CompileStageOutput> {
     const { runId, planAssessment, workspace } = input;
 
-    const compiled = this.builderRecipeCompiler.compile(planAssessment, workspace.runtimeFiles);
-    
+    const compiled = this.builderRecipeCompiler.compile(
+      planAssessment,
+      workspace.runtimeFiles,
+    );
+
     if (!compiled.executable) {
       const executionLogs = `EL LLM DETERMINO QUE EL PROYECTO NO ES EJECUTABLE (${compiled.unsupportedReason ?? 'RECETA VACIA'}).`;
       await this.builderRunSupportService.emitEvent({
@@ -41,7 +47,7 @@ export class BuilderCompileStageHandler implements IBuilderStageHandler<CompileS
           : 'El planner no devolvio un comando run ejecutable.',
       });
       return { compiled, executionLogs };
-    } 
+    }
 
     if (compiled.image !== DEFAULT_BASE_PYTHON_IMAGE) {
       await this.builderRunSupportService.emitEvent({

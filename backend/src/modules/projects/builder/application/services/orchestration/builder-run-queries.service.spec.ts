@@ -4,9 +4,7 @@ import { Repository } from 'typeorm';
 import { UserRole } from '../../../../../users/entities/user.entity';
 import { buildActor } from '../../../../../../test-support/domain-builders';
 import { EvidenceArtifactPublic } from '../../../domain/builder.types';
-import {
-  BuildRunArtifactType,
-} from '../../../domain/entities/build-run-artifact.entity';
+import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
 import { BuilderRunEventsService } from '../../../domain/events/builder-run-events.service';
 import { EvidenceService } from '../../../infrastructure/evidence/evidence.service';
@@ -43,7 +41,10 @@ describe('BuilderRunQueriesService', () => {
       BuilderAccessService['assertCanAccessBuildRun']
     >;
   };
-  let builderRunEventsService: Pick<BuilderRunEventsService, 'list' | 'subscribe'>;
+  let builderRunEventsService: Pick<
+    BuilderRunEventsService,
+    'list' | 'subscribe'
+  >;
   let evidenceService: {
     listArtifacts: jest.MockedFunction<EvidenceService['listArtifacts']>;
     createArtifactDownloadUrl: jest.MockedFunction<

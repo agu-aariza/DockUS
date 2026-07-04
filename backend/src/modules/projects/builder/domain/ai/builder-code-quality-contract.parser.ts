@@ -68,18 +68,21 @@ function normalizeFinding(
   }
 
   const candidate = value as Record<string, unknown>;
-  const title = normalizeRequiredString(candidate.title, `${field}[${index}].title`);
+  const title = normalizeRequiredString(
+    candidate.title,
+    `${field}[${index}].title`,
+  );
   const detail = normalizeFindingDetail(candidate, field, index);
   const severity = normalizeSeverity(candidate.severity, field, index);
-  const file = normalizeOptionalString(candidate.file, `${field}[${index}].file`);
+  const file = normalizeOptionalString(
+    candidate.file,
+    `${field}[${index}].file`,
+  );
   const line = normalizeOptionalPositiveInteger(
     candidate.line,
     `${field}[${index}].line`,
   );
-  const codeSnippet = normalizeStringWithDefault(
-    candidate.codeSnippet,
-    '',
-  );
+  const codeSnippet = normalizeStringWithDefault(candidate.codeSnippet, '');
   const level = normalizeLevel(candidate.level);
   const conceptExplanation = normalizeStringWithDefault(
     candidate.conceptExplanation,
@@ -112,9 +115,7 @@ function normalizeFindingDetail(
   }
 
   const observation = readOptionalTrimmedString(
-    candidate.observacion ??
-      candidate['observación'] ??
-      candidate.observation,
+    candidate.observacion ?? candidate['observación'] ?? candidate.observation,
   );
   const impact = readOptionalTrimmedString(
     candidate.impacto ?? candidate.impact,

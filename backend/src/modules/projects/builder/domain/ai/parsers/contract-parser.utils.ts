@@ -3,7 +3,11 @@ import {
   EVALUATIVE_STATES,
   CONFIDENCE_LEVELS,
 } from '../../builder.types';
-import type { EvaluativeState, Confidence, BuilderLlmStage } from '../../builder.types';
+import type {
+  EvaluativeState,
+  Confidence,
+  BuilderLlmStage,
+} from '../../builder.types';
 
 export function parseRawContract(
   raw: string,
@@ -60,7 +64,9 @@ export function normalizeStage<TStage extends BuilderLlmStage>(
 ): TStage {
   const stage = normalizeString(value, 'stage').toLowerCase();
   if (stage !== expected) {
-    throw new Error(`stage inválido en ${sourceName}. Se esperaba ${expected}.`);
+    throw new Error(
+      `stage inválido en ${sourceName}. Se esperaba ${expected}.`,
+    );
   }
 
   return expected;
@@ -138,10 +144,7 @@ export function normalizeString(value: unknown, field: string): string {
   return value.trim();
 }
 
-function normalizeObservedEvidenceEntry(
-  value: unknown,
-  field: string,
-): string {
+function normalizeObservedEvidenceEntry(value: unknown, field: string): string {
   if (typeof value === 'string' && value.trim()) {
     return value.trim();
   }
@@ -180,8 +183,7 @@ function normalizeObservedEvidenceEntry(
 function stripJsonComments(text: string): string {
   return text.replace(
     /("(?:[^"\\]|\\.)*")|\/\/[^\n]*/g,
-    (match, stringLiteral: string | undefined) =>
-      stringLiteral ? match : '',
+    (match, stringLiteral: string | undefined) => (stringLiteral ? match : ''),
   );
 }
 

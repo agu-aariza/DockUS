@@ -11,7 +11,7 @@ export type BuilderLlmSchemaVersion = typeof BUILDER_LLM_SCHEMA_VERSION;
 export const BUILDER_LLM_STAGES = ['plan', 'evaluation'] as const;
 export type BuilderLlmStage = (typeof BUILDER_LLM_STAGES)[number];
 
-export type StructuralType = string;
+type StructuralType = string;
 
 export const CAPABILITY_IDS = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'] as const;
 export type CapabilityId = (typeof CAPABILITY_IDS)[number];
@@ -20,12 +20,17 @@ export const EVALUATIVE_STATES = ['E1', 'E2', 'E3', 'E4'] as const;
 export type EvaluativeState = (typeof EVALUATIVE_STATES)[number];
 
 export const ASSESSMENTS = ['yes', 'no', 'unknown'] as const;
-export type Assessment = (typeof ASSESSMENTS)[number];
+type Assessment = (typeof ASSESSMENTS)[number];
 
 export const CONFIDENCE_LEVELS = ['low', 'medium', 'high'] as const;
 export type Confidence = (typeof CONFIDENCE_LEVELS)[number];
 
-export const BUILDER_RUNTIME_FAMILIES = ['python', 'node', 'c', 'unknown'] as const;
+export const BUILDER_RUNTIME_FAMILIES = [
+  'python',
+  'node',
+  'c',
+  'unknown',
+] as const;
 export type BuilderRuntimeFamily = (typeof BUILDER_RUNTIME_FAMILIES)[number];
 
 export const BUILD_RUN_EVENT_TYPES = [
@@ -71,7 +76,7 @@ export interface BuilderRecipeV2 {
   service: BuilderServiceRecipeV2 | null;
 }
 
-export interface BuilderLlmContractV2Base {
+interface BuilderLlmContractV2Base {
   schemaVersion: BuilderLlmSchemaVersion;
   stage: BuilderLlmStage;
   thought: string;
@@ -101,8 +106,7 @@ export interface BuilderPlanContractV2 extends BuilderLlmContractV2Base {
   recommendedGrade?: undefined;
 }
 
-export interface BuilderEvaluationContractV2
-  extends BuilderLlmContractV2Base {
+export interface BuilderEvaluationContractV2 extends BuilderLlmContractV2Base {
   stage: 'evaluation';
   recommendedGrade?: number;
   gradeBreakdown: RubricGradeItem[];
@@ -113,8 +117,6 @@ export interface BuilderEvaluationContractV2
 export type BuilderLlmContractV2 =
   | BuilderPlanContractV2
   | BuilderEvaluationContractV2;
-
-export type BuilderLlmAssessment = BuilderEvaluationContractV2;
 
 export interface BuilderLlmStagePromptSnapshot {
   stage: BuilderLlmPromptStage;
@@ -197,8 +199,7 @@ export type CodeQualityCategory = (typeof CODE_QUALITY_CATEGORIES)[number];
 
 export type FindingSeverity = 'low' | 'medium' | 'high';
 
-const FINDING_LEVELS = ['basico', 'intermedio', 'avanzado'] as const;
-export type FindingLevel = (typeof FINDING_LEVELS)[number];
+export type FindingLevel = 'basico' | 'intermedio' | 'avanzado';
 
 export interface CodeQualityFinding {
   title: string;

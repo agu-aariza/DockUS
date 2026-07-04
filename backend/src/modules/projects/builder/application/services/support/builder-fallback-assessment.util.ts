@@ -11,16 +11,16 @@ import { BuilderHallucinationGuard } from '../evaluation/builder-hallucination-g
 
 const logger = new Logger('BuilderFallbackAssessment');
 
-export function requireParsedContract<TContract extends BuilderPlanContractV2 | BuilderEvaluationContractV2>(
-  trace: BuilderLlmStageTrace<TContract>,
-): TContract {
+export function requireParsedContract<
+  TContract extends BuilderPlanContractV2 | BuilderEvaluationContractV2,
+>(trace: BuilderLlmStageTrace<TContract>): TContract {
   if (trace.parsedContract) {
     return trace.parsedContract;
   }
 
   throw new Error(
     trace.error?.message ??
-    `No se pudo obtener una salida valida para la etapa ${trace.stage}.`,
+      `No se pudo obtener una salida valida para la etapa ${trace.stage}.`,
   );
 }
 
@@ -60,7 +60,7 @@ function buildFallbackObservedEvidence(
     `El evaluador LLM devolvió un contrato inválido: ${errorMessage}`,
     interestingLines[0] ?? fallbackLine,
     interestingLines[1] ??
-    `Longitud de logs capturados: ${executionLogs.length} caracteres.`,
+      `Longitud de logs capturados: ${executionLogs.length} caracteres.`,
   ];
 }
 
@@ -68,9 +68,7 @@ function buildFallbackEvaluationLimits(
   executionLogs: string,
   errorMessage: string,
 ): string[] {
-  const limits = [
-    `Contrato inválido del evaluador LLM: ${errorMessage}`,
-  ];
+  const limits = [`Contrato inválido del evaluador LLM: ${errorMessage}`];
 
   const exitCodeLine = executionLogs
     .split(/\r?\n/u)
@@ -153,8 +151,7 @@ export function resolveEvaluationAssessment(
     gradeBreakdown: [],
     studentSummary:
       'No se pudo generar un resumen porque el evaluador automatico fallo. Tu profesor revisara la entrega manualmente.',
-    teacherSummary:
-      `Evaluacion degradada. El evaluador LLM devolvio un contrato invalido: ${errorMessage}. Revision manual recomendada.`,
+    teacherSummary: `Evaluacion degradada. El evaluador LLM devolvio un contrato invalido: ${errorMessage}. Revision manual recomendada.`,
     externalRequirements: planAssessment.externalRequirements,
     runtime: planAssessment.runtime,
     recipe: planAssessment.recipe,

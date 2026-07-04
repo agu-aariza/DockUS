@@ -18,34 +18,21 @@ import type { AuthenticatedUser } from '../../../../../auth/interfaces/authentic
 import {
   BUILDER_RUN_JOB_NAME,
   BUILDER_RUNS_QUEUE_NAME,
-  DEFAULT_BASE_PYTHON_IMAGE,
   DEFAULT_STALE_RUN_THRESHOLD_MS,
 } from '../../../domain/builder.constants';
 import {
-  BuilderEvaluationContractV2,
-  BuilderCodeQualityContractV2,
-  BuilderLlmContractV2,
-  BuilderLlmStageTrace,
-  BuilderPlanContractV2,
-  BUILDER_LLM_SCHEMA_VERSION,
-} from '../../../domain/builder.types';
-import { BuildRun, BuildRunStatus } from '../../../domain/entities/build-run.entity';
-import {
-  BuildRunArtifactType,
-} from '../../../domain/entities/build-run-artifact.entity';
-import { BuilderLlmEvaluatorService } from '../../../domain/ai/builder-llm-evaluator.service';
+  BuildRun,
+  BuildRunStatus,
+} from '../../../domain/entities/build-run.entity';
 import {
   Delivery,
   DeliveryStatus,
 } from '../../../../deliveries/entities/delivery.entity';
-import { DockerExecutionService } from '../../../../../../shared/infrastructure/docker/docker-execution.service';
 import { BuilderAccessService } from '../workspace/builder-access.service';
 import {
   EnqueueBuildRunResponse,
   ExecuteBuildRunJobData,
 } from '../builder-application.types';
-import { BuilderCacheManagerService } from '../workspace/builder-cache-manager.service';
-import { BuilderPedagogicalService } from '../evaluation/builder-pedagogical.service';
 import { BuilderRunQueriesService } from './builder-run-queries.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
 import { BuilderWorkspaceService } from '../workspace/builder-workspace.service';
@@ -247,11 +234,12 @@ export class BuilderRunCommandsService {
       run.llmReasoning = `[PLANNER THOUGHT]: ${planAssessment.thought}`;
       await this.buildRunsRepository.save(run);
 
-      const { compiled, executionLogs: compileLogs } = await this.builderCompileStageHandler.handle({
-        runId: run.id,
-        planAssessment,
-        workspace,
-      });
+      const { compiled, executionLogs: compileLogs } =
+        await this.builderCompileStageHandler.handle({
+          runId: run.id,
+          planAssessment,
+          workspace,
+        });
 
       let executionLogs = compileLogs ?? '';
 
@@ -260,7 +248,8 @@ export class BuilderRunCommandsService {
           runId: run.id,
           workspace,
           compiled,
-          expectedType: delivery.assignment.project.expectedType ?? 'PYTHON_FASTAPI',
+          expectedType:
+            delivery.assignment.project.expectedType ?? 'PYTHON_FASTAPI',
         });
         executionLogs = execOutput.executionLogs;
       }
@@ -375,5 +364,4 @@ export class BuilderRunCommandsService {
     delivery.status = status;
     await this.deliveriesRepository.save(delivery);
   }
-
 }

@@ -6,7 +6,7 @@ import {
 import { BuilderPlanContractV2 } from '../../../domain/builder.types';
 import { adaptPlanToRuntimeRecipe } from './builder-plan-runtime-adapter';
 
-export interface CompiledRecipe {
+interface CompiledRecipe {
   executable: boolean;
   unsupportedReason?: string;
   image: string;
@@ -66,9 +66,10 @@ export class BuilderRecipeCompiler {
       image = DEFAULT_BASE_PYTHON_IMAGE;
     }
 
-    const builtInPackages = recipe.runtimeFamily === 'c'
-      ? ['gcc', 'g++', 'make', 'cmake', 'cpp']
-      : ['pip', 'pip3', 'python', 'python3', 'node', 'npm', 'yarn'];
+    const builtInPackages =
+      recipe.runtimeFamily === 'c'
+        ? ['gcc', 'g++', 'make', 'cmake', 'cpp']
+        : ['pip', 'pip3', 'python', 'python3', 'node', 'npm', 'yarn'];
 
     const systemPackages = (recipe.systemPackages || []).filter(
       (pkg) => !builtInPackages.includes(pkg.toLowerCase()),
@@ -82,26 +83,21 @@ export class BuilderRecipeCompiler {
     const installCmd =
       recipe.install && recipe.install.length > 0
         ? recipe.install
-          .map((commandParts) => {
-            if (
-              recipe.runtimeFamily !== 'c' &&
-              (commandParts[0] === 'pip' || commandParts[0] === 'pip3')
-            ) {
-              return [
-                'python',
-                '-m',
-                'pip',
-                ...commandParts.slice(1),
-              ].join(' ');
-            }
-            return commandParts.join(' ');
-          })
-          .join(' && ')
+            .map((commandParts) => {
+              if (
+                recipe.runtimeFamily !== 'c' &&
+                (commandParts[0] === 'pip' || commandParts[0] === 'pip3')
+              ) {
+                return ['python', '-m', 'pip', ...commandParts.slice(1)].join(
+                  ' ',
+                );
+              }
+              return commandParts.join(' ');
+            })
+            .join(' && ')
         : '';
 
-    const fullInstallCmd = [aptCmd, installCmd]
-      .filter(Boolean)
-      .join(' && ');
+    const fullInstallCmd = [aptCmd, installCmd].filter(Boolean).join(' && ');
 
     const PYTHON_MODULE_EXECUTABLES = new Set(['uvicorn', 'gunicorn', 'flask']);
     const runCmd =
@@ -115,9 +111,7 @@ export class BuilderRecipeCompiler {
     const stdinFile = workspaceFiles
       .map((f) => f.relativePath)
       .find((p) => STDIN_FILE_PATTERN.test(p));
-    const runCmdWithStdin = stdinFile
-      ? `${runCmd} < ${stdinFile}`
-      : runCmd;
+    const runCmdWithStdin = stdinFile ? `${runCmd} < ${stdinFile}` : runCmd;
 
     const testCmd =
       recipe.test && recipe.test.length > 0

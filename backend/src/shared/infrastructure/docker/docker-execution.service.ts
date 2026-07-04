@@ -75,7 +75,9 @@ export class DockerExecutionService {
     });
   }
 
-  async runEphemeralContainer(options: DockerRunOptions): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  async runEphemeralContainer(
+    options: DockerRunOptions,
+  ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
     return this.dockerContainerService.runEphemeralContainer({
       ...options,
       runtime: this.dockerRuntime,

@@ -177,7 +177,9 @@ describe('BuilderLlmEvaluatorService', () => {
               modelId: 'bedrock-plan-model',
             }),
           );
-          expect(sections.some((section) => section.label === 'STUDENT WORKSPACE')).toBe(true);
+          expect(
+            sections.some((section) => section.label === 'STUDENT WORKSPACE'),
+          ).toBe(true);
         },
       },
     );

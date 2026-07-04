@@ -73,5 +73,5 @@ docker/
   - **Responsabilidad:** Registra los servicios anteriores (`DockerContainerService`, `DockerNetworkService`, `DockerExecutionService`, etc.) y exporta la fachada principal (`DockerExecutionService`) para que esté disponible en toda la aplicación.
   - **Conexiones:** Se integra en el pipeline de Inyección de Dependencias del backend de DockUS.
 
-## Información para IA
+## Notas
 Cuando se deba crear un nuevo tipo de entorno efímero o persistente, se debe **invariablemente** modificar/consumir el `DockerExecutionService`. La seguridad es primordial: las redes deben tener la bandera `--internal` para evitar salidas externas no deseadas (ver `docker-execution.service.ts`), y los runtimes se deben inyectar leyendo del entorno (`BUILDER_DOCKER_RUNTIME`). Todo comando docker invocado usa formato JSON estricto (`--format '{{json .}}'`) parseado en los Utils, para una integración robusta.

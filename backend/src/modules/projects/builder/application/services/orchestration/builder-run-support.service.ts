@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { BuildRun, BuildRunStatus } from '../../../domain/entities/build-run.entity';
+import {
+  BuildRun,
+  BuildRunStatus,
+} from '../../../domain/entities/build-run.entity';
 import { BuildRunEventType } from '../../../domain/builder.types';
 import { BuilderRunEventsService } from '../../../domain/events/builder-run-events.service';
 
@@ -18,7 +21,9 @@ export class BuilderRunSupportService {
     buildRunId: string,
     errorMessage: string,
   ): Promise<void> {
-    const run = await this.buildRunsRepository.findOne({ where: { id: buildRunId } });
+    const run = await this.buildRunsRepository.findOne({
+      where: { id: buildRunId },
+    });
     if (!run) return;
     run.status = BuildRunStatus.FAILED;
     run.finishedAt = new Date();

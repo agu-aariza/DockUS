@@ -11,9 +11,6 @@ import { DockerExecutionService } from './docker-execution.service';
     DockerContainerService,
     DockerExecutionService,
   ],
-  exports: [
-    DockerHostService,
-    DockerExecutionService,
-  ],
+  exports: [DockerHostService, DockerExecutionService],
 })
 export class DockerInfrastructureModule {}

@@ -33,7 +33,10 @@ export function parseBuilderPlanContractV2(raw: string): BuilderPlanContractV2 {
     ),
     structuralType: normalizeString(object.structuralType, 'structuralType'),
     capabilities: normalizeCapabilities(object.capabilities),
-    evaluativeState: normalizeEvaluativeState(object.evaluativeState, sourceName),
+    evaluativeState: normalizeEvaluativeState(
+      object.evaluativeState,
+      sourceName,
+    ),
     confidence: normalizeConfidence(object.confidence, sourceName),
     rationale: normalizeOptionalString(
       object.rationale,

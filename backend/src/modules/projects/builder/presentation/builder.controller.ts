@@ -122,7 +122,10 @@ export class BuilderController {
     @Param('deliveryId', ParseUUIDPipe) deliveryId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<EnqueueBuildRunResponseDto> {
-    return this.builderRunCommandsService.enqueueDeliveryRun(deliveryId, request.user);
+    return this.builderRunCommandsService.enqueueDeliveryRun(
+      deliveryId,
+      request.user,
+    );
   }
 
   @ApiOperation({
@@ -161,7 +164,10 @@ export class BuilderController {
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<BuildRunResponseDto> {
-    const run = await this.builderRunQueriesService.getRunById(buildRunId, request.user);
+    const run = await this.builderRunQueriesService.getRunById(
+      buildRunId,
+      request.user,
+    );
     return toBuildRunResponseDto(run);
   }
 
@@ -307,7 +313,6 @@ export class BuilderController {
     @Query() query: ListBuildRunsDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<PaginatedBuildRunsResponseDto> {
-    console.log('[DEBUG] getRunsByDelivery query:', query);
     const response = await this.builderRunQueriesService.listRunsByDelivery(
       deliveryId,
       query,
@@ -354,7 +359,10 @@ export class BuilderController {
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<EvidenceArtifactDto[]> {
-    return this.builderRunQueriesService.listEvidenceArtifacts(buildRunId, request.user);
+    return this.builderRunQueriesService.listEvidenceArtifacts(
+      buildRunId,
+      request.user,
+    );
   }
 
   @ApiOperation({
@@ -388,7 +396,8 @@ export class BuilderController {
 
   @ApiOperation({
     summary: 'Obtener contenido de un artefacto de evidencia',
-    description: 'Devuelve el contenido del artefacto directamente (proxy sobre MinIO). Evita exponer URLs internas al navegador.',
+    description:
+      'Devuelve el contenido del artefacto directamente (proxy sobre MinIO). Evita exponer URLs internas al navegador.',
   })
   @ApiParam(BUILD_RUN_ID_PARAM)
   @ApiParam({
@@ -422,7 +431,8 @@ export class BuilderController {
 
   @ApiOperation({
     summary: 'Obtener insights de calidad por assignment',
-    description: 'Agrega patrones de calidad de todos los alumnos de un assignment.',
+    description:
+      'Agrega patrones de calidad de todos los alumnos de un assignment.',
   })
   @ApiParam({ name: 'assignmentId', description: 'UUID del assignment.' })
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
@@ -439,7 +449,8 @@ export class BuilderController {
 
   @ApiOperation({
     summary: 'Obtener historial de mensajes del Tutor IA',
-    description: 'Lista todos los mensajes intercambiados con el Tutor IA para este run.',
+    description:
+      'Lista todos los mensajes intercambiados con el Tutor IA para este run.',
   })
   @ApiParam(BUILD_RUN_ID_PARAM)
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
@@ -454,7 +465,8 @@ export class BuilderController {
 
   @ApiOperation({
     summary: 'Enviar pregunta al Tutor IA',
-    description: 'Envía una consulta sobre los resultados del run y recibe la respuesta del tutor.',
+    description:
+      'Envía una consulta sobre los resultados del run y recibe la respuesta del tutor.',
   })
   @ApiParam(BUILD_RUN_ID_PARAM)
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)

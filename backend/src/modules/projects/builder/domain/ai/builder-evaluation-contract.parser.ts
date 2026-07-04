@@ -42,7 +42,10 @@ export function parseBuilderEvaluationContractV2(
     ),
     structuralType: normalizeString(object.structuralType, 'structuralType'),
     capabilities: normalizeCapabilities(object.capabilities),
-    evaluativeState: normalizeEvaluativeState(object.evaluativeState, sourceName),
+    evaluativeState: normalizeEvaluativeState(
+      object.evaluativeState,
+      sourceName,
+    ),
     confidence: normalizeConfidence(object.confidence, sourceName),
     rationale: normalizeOptionalString(
       object.rationale,
@@ -177,9 +180,7 @@ function normalizeGradeBreakdown(value: unknown): RubricGradeItem[] {
     }
     const candidate = entry as Record<string, unknown>;
     const criterion =
-      typeof candidate.criterion === 'string'
-        ? candidate.criterion.trim()
-        : '';
+      typeof candidate.criterion === 'string' ? candidate.criterion.trim() : '';
     const maxPoints =
       typeof candidate.maxPoints === 'number' ? candidate.maxPoints : 0;
     const awarded =

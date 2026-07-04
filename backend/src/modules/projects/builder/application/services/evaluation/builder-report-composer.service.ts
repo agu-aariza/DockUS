@@ -90,7 +90,8 @@ export class BuilderReportComposer {
         severity: 'high',
         codeSnippet: '',
         level: 'basico',
-        conceptExplanation: 'El sistema automatico no pudo confirmar que tu entrega cumple los requisitos minimos de la rubrica.',
+        conceptExplanation:
+          'El sistema automatico no pudo confirmar que tu entrega cumple los requisitos minimos de la rubrica.',
       });
     }
 
@@ -98,20 +99,18 @@ export class BuilderReportComposer {
       this.flattenTechnicalFeedback(technicalFeedback).filter(
         (finding) =>
           !this.isStrengthFinding(finding) &&
-          !mustFix.some((mustFixItem) => this.sameFinding(mustFixItem, finding)),
+          !mustFix.some((mustFixItem) =>
+            this.sameFinding(mustFixItem, finding),
+          ),
       ),
     );
 
     return {
-      passReadiness:
-        mustFix.length > 0 ? 'BLOCKED' : 'READY_WITH_SUGGESTIONS',
+      passReadiness: mustFix.length > 0 ? 'BLOCKED' : 'READY_WITH_SUGGESTIONS',
       mustFix,
       shouldImprove,
       strengths,
-      nextAttemptChecklist: this.buildChecklist([
-        ...mustFix,
-        ...shouldImprove,
-      ]),
+      nextAttemptChecklist: this.buildChecklist([...mustFix, ...shouldImprove]),
     };
   }
 
@@ -119,6 +118,10 @@ export class BuilderReportComposer {
     assessment: BuilderEvaluationContractV2,
     coaching: { passReadiness: BuilderCoachingPassReadiness },
   ): BuilderOutcome {
+    if (assessment.evaluativeState === 'E1') {
+      return 'PASS';
+    }
+
     if (coaching.passReadiness === 'BLOCKED') {
       return assessment.evaluativeState === 'E2' ? 'PARTIAL' : 'FAIL';
     }
@@ -127,12 +130,11 @@ export class BuilderReportComposer {
       return 'PARTIAL';
     }
 
-    if (assessment.evaluativeState === 'E3' || assessment.evaluativeState === 'E4') {
+    if (
+      assessment.evaluativeState === 'E3' ||
+      assessment.evaluativeState === 'E4'
+    ) {
       return 'FAIL';
-    }
-
-    if (assessment.evaluativeState === 'E1') {
-      return 'PASS';
     }
 
     return 'UNKNOWN';
@@ -170,7 +172,8 @@ export class BuilderReportComposer {
         severity: 'high' as const,
         codeSnippet: '',
         level: 'basico' as const,
-        conceptExplanation: 'Este limite impide al sistema automatico validar tu entrega. Resuelvelo antes de reenviar.',
+        conceptExplanation:
+          'Este limite impide al sistema automatico validar tu entrega. Resuelvelo antes de reenviar.',
       }));
   }
 

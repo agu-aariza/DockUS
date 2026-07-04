@@ -7,7 +7,7 @@ Infraestructura de generación de texto con modelos de lenguaje (LLM). Abstrae l
 | Archivo | Función |
 |---------|---------|
 | `bedrock-generation.service.ts` | Cliente de AWS Bedrock Runtime para inferencia con Claude. Implementa `ILlmGenerationService`. |
-| `llm-generation.token.ts` | Token de interfaz `ILlmGenerationService`; permite inyectar el proveedor concreto en tests y servicios. |
+| `llm-generation.token.ts` | Interfaz `ILlmGenerationService`; mantiene el contrato común usado por servicios y tests. |
 | `bedrock-request.util.ts` | Helpers y clase de error `BedrockRequestError` para invocaciones a Bedrock. |
 | `prompts.json` | **Source of truth** de los prompts del pipeline builder. |
 | `prompt-registry.service.ts` | Registro y carga de prompts desde `prompts.json`. |

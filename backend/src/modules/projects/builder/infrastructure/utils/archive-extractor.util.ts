@@ -8,12 +8,12 @@ import {
 } from './builder-analysis.util';
 import { RuntimeFile } from '../../domain/builder.types';
 
-export interface ExtractionLimits {
+interface ExtractionLimits {
   maxFiles: number;
   maxBytes: number;
 }
 
-export interface ExtractionCounters {
+interface ExtractionCounters {
   files: number;
   bytes: number;
 }

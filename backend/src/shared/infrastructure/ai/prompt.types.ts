@@ -28,12 +28,18 @@ export function renderPromptBundle(bundle: PromptBundle): string {
   return sections.join('\n\n').trim();
 }
 
-function renderSection(title: string, content: string | undefined | null): string | null {
+function renderSection(
+  title: string,
+  content: string | undefined | null,
+): string | null {
   if (!content) return null;
   return `${title}\n${content.trim()}`;
 }
 
-function renderListSection(title: string, entries: string[] | undefined | null): string | null {
+function renderListSection(
+  title: string,
+  entries: string[] | undefined | null,
+): string | null {
   if (!entries || entries.length === 0) return null;
   const lines = entries
     .map((entry, index) => `${index + 1}. ${entry.trim()}`)

@@ -56,7 +56,8 @@ describe('parseBuilderCodeQualityContractV2', () => {
             {
               title: 'Manejo incompleto de argumentos',
               observacion: 'El binario requiere dos argumentos para funcionar.',
-              impacto: 'La ejecución batch falla si el pipeline no los suministra.',
+              impacto:
+                'La ejecución batch falla si el pipeline no los suministra.',
               recomendacion:
                 'Declara y documenta una invocación completa en la receta de ejecución.',
               severity: 'critical',
@@ -72,7 +73,9 @@ describe('parseBuilderCodeQualityContractV2', () => {
         title: 'Manejo incompleto de argumentos',
         severity: 'medium',
         file: 'main.c',
-        detail: expect.stringContaining('Impacto: La ejecución batch falla si el pipeline no los suministra.'),
+        detail: expect.stringContaining(
+          'Impacto: La ejecución batch falla si el pipeline no los suministra.',
+        ),
       }),
     ]);
   });
@@ -85,8 +88,9 @@ describe('parseBuilderCodeQualityContractV2', () => {
             {
               title: 'Uso de atoi sin validación',
               observacion: 'atoi devuelve 0 en entradas inválidas.',
-              impacto: 'Puede ocultar errores de entrada y producir resultados engañosos.',
-              'recomendación':
+              impacto:
+                'Puede ocultar errores de entrada y producir resultados engañosos.',
+              recomendación:
                 'Usa strtol y valida errores para distinguir números válidos de entradas corruptas.',
             },
             {

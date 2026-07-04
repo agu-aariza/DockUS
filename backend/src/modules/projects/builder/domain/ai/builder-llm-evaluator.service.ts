@@ -1,13 +1,11 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AssignmentContext,
   BuilderEvaluationContractV2,
-  BuilderLlmStageErrorInfo,
   BuilderLlmStagePromptSnapshot,
   BuilderLlmStageTrace,
   BuilderPlanContractV2,
-  BUILDER_LLM_SCHEMA_VERSION,
 } from '../builder.types';
 import {
   PromptId,
@@ -20,7 +18,6 @@ import { parseBuilderEvaluationContractV2 } from './builder-evaluation-contract.
 import { resolveBuilderModelProfile } from './builder-llm-model-profile';
 import { parseBuilderPlanContractV2 } from './builder-plan-contract.parser';
 import {
-  ComposedPromptPayload,
   composeEvaluationPrompt,
   composePlanPrompt,
 } from './builder-prompt-composer';
@@ -31,7 +28,7 @@ import {
   serializeError,
 } from './builder-llm-trace.util';
 
-export interface EvaluatorInput {
+interface EvaluatorInput {
   projectRootDir: string;
   sourceCodePayload: string;
   executionLogs: string;
@@ -125,7 +122,13 @@ export class BuilderLlmEvaluatorService {
       });
     } catch (error: unknown) {
       const serializedError = serializeError(error);
-      logStageError('evaluation', PromptId.EVAL, this.evaluationProfile, serializedError, this.logger);
+      logStageError(
+        'evaluation',
+        PromptId.EVAL,
+        this.evaluationProfile,
+        serializedError,
+        this.logger,
+      );
       return buildTrace(snapshot, null, serializedError);
     }
 
@@ -133,11 +136,14 @@ export class BuilderLlmEvaluatorService {
       const parsedContract = parseBuilderEvaluationContractV2(response);
       return buildTrace(snapshot, response, null, parsedContract);
     } catch (parseError) {
-      const serializedError = serializeError(
-        parseError,
-        'invalid_contract',
+      const serializedError = serializeError(parseError, 'invalid_contract');
+      logStageError(
+        'evaluation',
+        PromptId.EVAL,
+        this.evaluationProfile,
+        serializedError,
+        this.logger,
       );
-      logStageError('evaluation', PromptId.EVAL, this.evaluationProfile, serializedError, this.logger);
       this.logger.error(
         `Fallo al parsear respuesta del Evaluador. Respuesta bruta: ${response}`,
       );
@@ -194,7 +200,13 @@ export class BuilderLlmEvaluatorService {
       });
     } catch (error: unknown) {
       const serializedError = serializeError(error);
-      logStageError('plan', PromptId.PLAN, this.planProfile, serializedError, this.logger);
+      logStageError(
+        'plan',
+        PromptId.PLAN,
+        this.planProfile,
+        serializedError,
+        this.logger,
+      );
       return buildTrace(snapshot, null, serializedError);
     }
 
@@ -202,11 +214,14 @@ export class BuilderLlmEvaluatorService {
       const parsedContract = parseBuilderPlanContractV2(response);
       return buildTrace(snapshot, response, null, parsedContract);
     } catch (parseError) {
-      const serializedError = serializeError(
-        parseError,
-        'invalid_contract',
+      const serializedError = serializeError(parseError, 'invalid_contract');
+      logStageError(
+        'plan',
+        PromptId.PLAN,
+        this.planProfile,
+        serializedError,
+        this.logger,
       );
-      logStageError('plan', PromptId.PLAN, this.planProfile, serializedError, this.logger);
       this.logger.error(
         `Fallo al parsear respuesta del Planner. Respuesta bruta: ${response}`,
       );

@@ -13,7 +13,7 @@ import { Type } from 'class-transformer';
 import { IsEnum, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 import { BuildRunStatus } from '../../domain/entities/build-run.entity';
 
-export type SortOrder = 'ASC' | 'DESC';
+type SortOrder = 'ASC' | 'DESC';
 
 export class ListBuildRunsDto {
   @ApiPropertyOptional({

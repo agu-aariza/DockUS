@@ -116,8 +116,14 @@ describe('BuilderCodeQualityService', () => {
             }),
           );
           expect(prompt.length).toBeLessThanOrEqual(240);
-          expect(sections.some((section) => section.label === 'CURRENT ACADEMIC ASSESSMENT')).toBe(true);
-          expect(sections.some((section) => section.label === 'SOURCE EXCERPTS')).toBe(true);
+          expect(
+            sections.some(
+              (section) => section.label === 'CURRENT ACADEMIC ASSESSMENT',
+            ),
+          ).toBe(true);
+          expect(
+            sections.some((section) => section.label === 'SOURCE EXCERPTS'),
+          ).toBe(true);
         },
       },
     );

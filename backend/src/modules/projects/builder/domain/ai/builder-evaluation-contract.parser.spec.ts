@@ -93,7 +93,15 @@ describe('parseBuilderEvaluationContractV2', () => {
     const raw = JSON.stringify(
       buildEvaluationPayload({
         recipe: {
-          install: ['gcc', '-Wall', '-Wextra', '-std=c11', 'main.c', '-o', 'calculator'],
+          install: [
+            'gcc',
+            '-Wall',
+            '-Wextra',
+            '-std=c11',
+            'main.c',
+            '-o',
+            'calculator',
+          ],
           run: ['./calculator', '7', '8'],
           test: ['valgrind', './calculator', '7', '8'],
           systemPackages: ['curl'],
@@ -112,7 +120,9 @@ describe('parseBuilderEvaluationContractV2', () => {
       ['gcc', '-Wall', '-Wextra', '-std=c11', 'main.c', '-o', 'calculator'],
     ]);
     expect(contract.recipe.run).toEqual(['./calculator', '7', '8']);
-    expect(contract.recipe.test).toEqual([['valgrind', './calculator', '7', '8']]);
+    expect(contract.recipe.test).toEqual([
+      ['valgrind', './calculator', '7', '8'],
+    ]);
   });
 
   it('fails when observed evidence is insufficient', () => {
@@ -150,9 +160,24 @@ describe('parseBuilderEvaluationContractV2', () => {
       buildEvaluationPayload({
         recommendedGrade: 9,
         gradeBreakdown: [
-          { criterion: 'Compilación', maxPoints: 3, awarded: 3, justification: 'Sin warnings.' },
-          { criterion: 'Casos de prueba', maxPoints: 5, awarded: 5, justification: 'Todos superados.' },
-          { criterion: 'Gestión de memoria', maxPoints: 2, awarded: 0, justification: 'No evaluable.' },
+          {
+            criterion: 'Compilación',
+            maxPoints: 3,
+            awarded: 3,
+            justification: 'Sin warnings.',
+          },
+          {
+            criterion: 'Casos de prueba',
+            maxPoints: 5,
+            awarded: 5,
+            justification: 'Todos superados.',
+          },
+          {
+            criterion: 'Gestión de memoria',
+            maxPoints: 2,
+            awarded: 0,
+            justification: 'No evaluable.',
+          },
         ],
       }),
     );

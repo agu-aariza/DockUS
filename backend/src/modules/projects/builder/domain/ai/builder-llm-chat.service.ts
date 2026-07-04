@@ -1,13 +1,19 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 
 import { BuildRunChatMessage } from '../entities/build-run-chat-message.entity';
 import { BuildRun } from '../entities/build-run.entity';
-import { BuildRunArtifact, BuildRunArtifactType } from '../entities/build-run-artifact.entity';
+import {
+  BuildRunArtifact,
+  BuildRunArtifactType,
+} from '../entities/build-run-artifact.entity';
 import { BedrockGenerationService } from '../../../../../shared/infrastructure/ai/bedrock-generation.service';
-import { PromptRegistryService, PromptId } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
+import {
+  PromptRegistryService,
+  PromptId,
+} from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 import { MinioStorageService } from '../../../../../shared/infrastructure/storage/minio-storage.service';
 import { resolveBuilderModelProfile } from './builder-llm-model-profile';
 
@@ -56,7 +62,11 @@ export class BuilderLlmChatService {
     await this.chatMessageRepository.save(userMessage);
 
     try {
-      const assistantReplyText = await this.generateTutorReply(run, history, messageText);
+      const assistantReplyText = await this.generateTutorReply(
+        run,
+        history,
+        messageText,
+      );
 
       const assistantMessage = this.chatMessageRepository.create({
         buildRunId,
@@ -67,11 +77,14 @@ export class BuilderLlmChatService {
 
       return assistantMessage;
     } catch (error) {
-      this.logger.error(`Error generating tutor response for run ${buildRunId}: ${error.message}`);
+      this.logger.error(
+        `Error generating tutor response for run ${buildRunId}: ${error.message}`,
+      );
       const assistantMessage = this.chatMessageRepository.create({
         buildRunId,
         sender: 'assistant',
-        message: 'Disculpa, he tenido un problema interno al procesar tu consulta con el motor de IA. Por favor, inténtalo de nuevo en unos momentos.',
+        message:
+          'Disculpa, he tenido un problema interno al procesar tu consulta con el motor de IA. Por favor, inténtalo de nuevo en unos momentos.',
       });
       await this.chatMessageRepository.save(assistantMessage);
       return assistantMessage;
@@ -105,7 +118,9 @@ export class BuilderLlmChatService {
         }
       }
     } catch (error) {
-      this.logger.warn(`Could not load LLM_EVAL_PROMPT artifact: ${error.message}. Using fallback.`);
+      this.logger.warn(
+        `Could not load LLM_EVAL_PROMPT artifact: ${error.message}. Using fallback.`,
+      );
     }
 
     if (!evaluationContext) {
@@ -123,7 +138,8 @@ export class BuilderLlmChatService {
       const mustFix: unknown[] = report?.coaching?.mustFix ?? [];
       const shouldImprove: unknown[] = report?.coaching?.shouldImprove ?? [];
       const strengths: unknown[] = report?.coaching?.strengths ?? [];
-      evaluationContext = `Resultado final: ${report?.overallOutcome ?? run.status}
+      evaluationContext =
+        `Resultado final: ${report?.overallOutcome ?? run.status}
 Nota sugerida: ${llmAssessment?.recommendedGrade ?? 'Sin nota'} / 10
 
 BLOQUEOS QUE IMPIDEN APROBAR:

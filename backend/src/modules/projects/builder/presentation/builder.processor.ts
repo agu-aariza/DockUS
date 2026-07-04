@@ -19,7 +19,9 @@ import type { ExecuteBuildRunJobData } from '../application/services/builder-app
 
 @Processor(BUILDER_RUNS_QUEUE_NAME, { concurrency: 5 })
 export class BuilderProcessor extends WorkerHost {
-  constructor(private readonly builderRunCommandsService: BuilderRunCommandsService) {
+  constructor(
+    private readonly builderRunCommandsService: BuilderRunCommandsService,
+  ) {
     super();
   }
 

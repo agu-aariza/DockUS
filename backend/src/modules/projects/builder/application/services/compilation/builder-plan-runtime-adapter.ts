@@ -3,7 +3,7 @@ import {
   BuilderRuntimeFamily,
 } from '../../../domain/builder.types';
 
-export interface BuilderRuntimeExecutionRecipe {
+interface BuilderRuntimeExecutionRecipe {
   executable: boolean;
   unsupportedReason: string | null;
   runtimeFamily: BuilderRuntimeFamily;
@@ -30,14 +30,16 @@ export function adaptPlanToRuntimeRecipe(
     plan.runtime.supported && EXECUTABLE_FAMILIES.has(plan.runtime.family);
   const unsupportedReason = executable
     ? null
-    : plan.runtime.reason ?? 'Solo Python y C son ejecutables en esta iteración.';
+    : (plan.runtime.reason ??
+      'Solo Python y C son ejecutables en esta iteración.');
 
   return {
     executable: executable && plan.recipe.run !== null,
     unsupportedReason:
       executable && plan.recipe.run !== null
         ? null
-        : unsupportedReason ?? 'El plan no incluye un comando run ejecutable.',
+        : (unsupportedReason ??
+          'El plan no incluye un comando run ejecutable.'),
     runtimeFamily: plan.runtime.family,
     install: plan.recipe.install,
     run: executable ? plan.recipe.run : null,

@@ -1,4 +1,4 @@
-export type BedrockRequestErrorCode =
+type BedrockRequestErrorCode =
   | 'connectivity'
   | 'model_not_found'
   | 'timeout'
@@ -26,22 +26,9 @@ export class BedrockRequestError extends Error {
   }
 }
 
-export function createBedrockConnectivityError(error: unknown): BedrockRequestError {
-  const detail = error instanceof Error ? error.message : String(error);
-  return new BedrockRequestError({
-    code: 'connectivity',
-    message: `No se pudo conectar con Amazon Bedrock: ${detail}`,
-  });
-}
-
-export function createBedrockTimeoutError(stage: string): BedrockRequestError {
-  return new BedrockRequestError({
-    code: 'timeout',
-    message: `Timeout agotado al ejecutar la etapa "${stage}" contra Amazon Bedrock.`,
-  });
-}
-
-export function createBedrockInvalidResponseError(message: string): BedrockRequestError {
+export function createBedrockInvalidResponseError(
+  message: string,
+): BedrockRequestError {
   return new BedrockRequestError({
     code: 'invalid_response',
     message,
@@ -70,17 +57,17 @@ export function mapBedrockError(error: unknown): BedrockRequestError {
       });
     }
 
-    if (name === 'ResourceNotFoundException' || name === 'ModelNotFoundException') {
+    if (
+      name === 'ResourceNotFoundException' ||
+      name === 'ModelNotFoundException'
+    ) {
       return new BedrockRequestError({
         code: 'model_not_found',
         message: `El modelo solicitado no está disponible en Amazon Bedrock: ${error.message}`,
       });
     }
 
-    if (
-      name === 'AccessDeniedException' ||
-      name === 'UnauthorizedException'
-    ) {
+    if (name === 'AccessDeniedException' || name === 'UnauthorizedException') {
       return new BedrockRequestError({
         code: 'http_error',
         httpStatus: 403,

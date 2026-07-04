@@ -4,10 +4,7 @@ import { PromptRegistryService } from './prompt-registry.service';
 
 @Global()
 @Module({
-  providers: [
-    PromptRegistryService,
-    BedrockGenerationService,
-  ],
+  providers: [PromptRegistryService, BedrockGenerationService],
   exports: [PromptRegistryService, BedrockGenerationService],
 })
 export class AiModule {}

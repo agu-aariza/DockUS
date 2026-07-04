@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -11,9 +11,7 @@ import {
   CODE_QUALITY_CATEGORIES,
   EvidenceArtifactPublic,
 } from '../../../domain/builder.types';
-import {
-  BuildRunArtifactType,
-} from '../../../domain/entities/build-run-artifact.entity';
+import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
 import { CodeQualityFindingEntity } from '../../../domain/entities/code-quality-finding.entity';
 import { EvidenceService } from '../../../infrastructure/evidence/evidence.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
@@ -152,15 +150,15 @@ export class BuilderArtifactPersister {
     const artifactTypes =
       trace.stage === 'plan'
         ? {
-          raw: BuildRunArtifactType.LLM_PLAN_RAW_RESPONSE,
-          parsed: BuildRunArtifactType.LLM_PLAN_PARSED,
-          error: BuildRunArtifactType.LLM_PLAN_ERROR,
-        }
+            raw: BuildRunArtifactType.LLM_PLAN_RAW_RESPONSE,
+            parsed: BuildRunArtifactType.LLM_PLAN_PARSED,
+            error: BuildRunArtifactType.LLM_PLAN_ERROR,
+          }
         : {
-          raw: BuildRunArtifactType.LLM_EVAL_RAW_RESPONSE,
-          parsed: BuildRunArtifactType.LLM_EVAL_PARSED,
-          error: BuildRunArtifactType.LLM_EVAL_ERROR,
-        };
+            raw: BuildRunArtifactType.LLM_EVAL_RAW_RESPONSE,
+            parsed: BuildRunArtifactType.LLM_EVAL_PARSED,
+            error: BuildRunArtifactType.LLM_EVAL_ERROR,
+          };
 
     if (trace.rawResponse !== null) {
       await this.persistTextArtifact(

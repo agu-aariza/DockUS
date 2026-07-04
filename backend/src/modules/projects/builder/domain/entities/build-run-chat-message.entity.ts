@@ -10,7 +10,10 @@ import {
 import { BuildRun } from './build-run.entity';
 
 @Entity('build_run_chat_messages')
-@Index('IDX_build_run_chat_messages_run_created_at', ['buildRunId', 'createdAt'])
+@Index('IDX_build_run_chat_messages_run_created_at', [
+  'buildRunId',
+  'createdAt',
+])
 export class BuildRunChatMessage {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

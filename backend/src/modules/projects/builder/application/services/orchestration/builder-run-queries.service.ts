@@ -169,17 +169,29 @@ export class BuilderRunQueriesService {
     }
 
     const uniqueRuns = Array.from(latestRunsByDelivery.values());
-    const counts = new Map<string, { title: string; count: number; category: string }>();
+    const counts = new Map<
+      string,
+      { title: string; count: number; category: string }
+    >();
 
     for (const run of uniqueRuns) {
       const findings = run.codeQualityFindings as any;
-      const categories = ['quality', 'security', 'architecture', 'rubricCompliance'];
-      
+      const categories = [
+        'quality',
+        'security',
+        'architecture',
+        'rubricCompliance',
+      ];
+
       for (const cat of categories) {
         const items = findings[cat] || [];
         for (const item of items) {
           const key = `${cat}:${item.title}`;
-          const existing = counts.get(key) || { title: item.title, count: 0, category: cat };
+          const existing = counts.get(key) || {
+            title: item.title,
+            count: 0,
+            category: cat,
+          };
           existing.count++;
           counts.set(key, existing);
         }

@@ -1,13 +1,17 @@
-import type { AssignmentContext, BuilderEvaluationContractV2, BuilderPlanContractV2 } from '../builder.types';
+import type {
+  AssignmentContext,
+  BuilderEvaluationContractV2,
+  BuilderPlanContractV2,
+} from '../builder.types';
 
 export type PromptSectionPriority = 'critical' | 'high' | 'medium' | 'low';
 
-export interface PromptSectionBudget {
+interface PromptSectionBudget {
   preferredChars?: number;
   reserveChars?: number;
 }
 
-export interface PromptSectionInput {
+interface PromptSectionInput {
   label: string;
   content: string;
   priority: PromptSectionPriority;
@@ -215,7 +219,7 @@ function composePromptSections(
     };
   });
 
-  let rendered = renderPreparedSections(prepared);
+  const rendered = renderPreparedSections(prepared);
   if (rendered.length <= maxChars) {
     return buildPayload(prepared);
   }

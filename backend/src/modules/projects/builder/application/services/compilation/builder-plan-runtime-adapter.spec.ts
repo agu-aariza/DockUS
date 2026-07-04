@@ -1,7 +1,9 @@
 import type { BuilderPlanContractV2 } from '../../../domain/builder.types';
 import { adaptPlanToRuntimeRecipe } from './builder-plan-runtime-adapter';
 
-function buildPlanContract(overrides: Partial<BuilderPlanContractV2> = {}): BuilderPlanContractV2 {
+function buildPlanContract(
+  overrides: Partial<BuilderPlanContractV2> = {},
+): BuilderPlanContractV2 {
   return {
     schemaVersion: 'builder-llm/v2',
     stage: 'plan',

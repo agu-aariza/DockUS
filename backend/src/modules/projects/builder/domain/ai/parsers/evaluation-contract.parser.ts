@@ -1,4 +1,7 @@
-import type { BuilderCapabilityMap, BuilderRecipeV2 } from '../../builder.types';
+import type {
+  BuilderCapabilityMap,
+  BuilderRecipeV2,
+} from '../../builder.types';
 
 export function normalizeGrade(value: unknown): number | undefined {
   if (value === undefined || value === null) return undefined;
@@ -28,8 +31,10 @@ export function assertEvaluationSemanticConsistency(
     throw new Error('C3=yes requiere recipe.service.');
   }
 
-  if (capabilities.C5.status === 'yes' && recipe.service?.healthcheck === null) {
+  if (
+    capabilities.C5.status === 'yes' &&
+    recipe.service?.healthcheck === null
+  ) {
     throw new Error('C5=yes requiere recipe.service.healthcheck.');
   }
 }
-

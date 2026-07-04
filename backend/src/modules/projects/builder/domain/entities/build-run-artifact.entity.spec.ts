@@ -33,8 +33,8 @@ describe('BuildRunArtifactType', () => {
     expect(
       isStaffOnlyBuildRunArtifactType(BuildRunArtifactType.LLM_EVAL_ERROR),
     ).toBe(true);
-    expect(isStaffOnlyBuildRunArtifactType(BuildRunArtifactType.REPORT_JSON)).toBe(
-      false,
-    );
+    expect(
+      isStaffOnlyBuildRunArtifactType(BuildRunArtifactType.REPORT_JSON),
+    ).toBe(false);
   });
 });

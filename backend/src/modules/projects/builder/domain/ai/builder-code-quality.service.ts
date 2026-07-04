@@ -1,10 +1,9 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AssignmentContext,
   BuilderCodeQualityContractV2,
   BuilderEvaluationContractV2,
-  BuilderLlmStageErrorInfo,
   BuilderLlmStagePromptSnapshot,
   BuilderLlmStageTrace,
 } from '../builder.types';
@@ -16,10 +15,7 @@ import { BedrockGenerationService } from '../../../../../shared/infrastructure/a
 import type { LlmModelProfile } from '../../../../../shared/infrastructure/ai/llm.types';
 import { parseBuilderCodeQualityContractV2 } from './builder-code-quality-contract.parser';
 import { resolveBuilderModelProfile } from './builder-llm-model-profile';
-import {
-  ComposedPromptPayload,
-  composeQualityPrompt,
-} from './builder-prompt-composer';
+import { composeQualityPrompt } from './builder-prompt-composer';
 import {
   createPromptSnapshot,
   logStageError,
@@ -27,14 +23,14 @@ import {
   serializeError,
 } from './builder-llm-trace.util';
 
-export interface CodeQualityInput {
+interface CodeQualityInput {
   sourceCodePayload: string;
   executionLogs: string;
   assignmentContext: AssignmentContext;
   assessment: BuilderEvaluationContractV2;
 }
 
-export type BuilderCodeQualityPromptSnapshot = BuilderLlmStagePromptSnapshot;
+type BuilderCodeQualityPromptSnapshot = BuilderLlmStagePromptSnapshot;
 export type BuilderCodeQualityTrace =
   BuilderLlmStageTrace<BuilderCodeQualityContractV2>;
 
@@ -69,7 +65,9 @@ export class BuilderCodeQualityService {
     );
   }
 
-  async analyze(input: CodeQualityInput): Promise<BuilderCodeQualityContractV2> {
+  async analyze(
+    input: CodeQualityInput,
+  ): Promise<BuilderCodeQualityContractV2> {
     const trace = await this.analyzeWithTrace(input);
     if (trace.parsedContract) {
       return trace.parsedContract;
@@ -118,7 +116,13 @@ export class BuilderCodeQualityService {
       });
     } catch (error: unknown) {
       const serializedError = serializeError(error);
-      logStageError('quality', PromptId.TECHNICAL_FEEDBACK, this.modelProfile, serializedError, this.logger);
+      logStageError(
+        'quality',
+        PromptId.TECHNICAL_FEEDBACK,
+        this.modelProfile,
+        serializedError,
+        this.logger,
+      );
       return buildTrace(snapshot, null, serializedError);
     }
 
@@ -126,11 +130,14 @@ export class BuilderCodeQualityService {
       const parsedContract = parseBuilderCodeQualityContractV2(response);
       return buildTrace(snapshot, response, null, parsedContract);
     } catch (parseError: unknown) {
-      const serializedError = serializeError(
-        parseError,
-        'invalid_contract',
+      const serializedError = serializeError(parseError, 'invalid_contract');
+      logStageError(
+        'quality',
+        PromptId.TECHNICAL_FEEDBACK,
+        this.modelProfile,
+        serializedError,
+        this.logger,
       );
-      logStageError('quality', PromptId.TECHNICAL_FEEDBACK, this.modelProfile, serializedError, this.logger);
       const message =
         parseError instanceof Error ? parseError.message : String(parseError);
       this.logger.error(

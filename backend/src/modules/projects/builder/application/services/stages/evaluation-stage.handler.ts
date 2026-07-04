@@ -5,11 +5,15 @@ import { BuilderArtifactPersister } from '../artifacts/builder-artifact-persiste
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
 import { BuilderHallucinationGuard } from '../evaluation/builder-hallucination-guard.service';
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
-import { AssignmentContext, BuilderEvaluationContractV2, BuilderPlanContractV2 } from '../../../domain/builder.types';
+import {
+  AssignmentContext,
+  BuilderEvaluationContractV2,
+  BuilderPlanContractV2,
+} from '../../../domain/builder.types';
 import { resolveEvaluationAssessment } from '../support/builder-fallback-assessment.util';
 import { StageWorkspaceResult } from '../workspace/builder-workspace.service';
 
-export interface EvaluationStageInput {
+interface EvaluationStageInput {
   runId: string;
   workspace: StageWorkspaceResult;
   sourceCodePayload: string;
@@ -18,12 +22,15 @@ export interface EvaluationStageInput {
   planAssessment: BuilderPlanContractV2;
 }
 
-export interface EvaluationStageOutput {
+interface EvaluationStageOutput {
   assessment: BuilderEvaluationContractV2;
 }
 
 @Injectable()
-export class BuilderEvaluationStageHandler implements IBuilderStageHandler<EvaluationStageInput, EvaluationStageOutput> {
+export class BuilderEvaluationStageHandler implements IBuilderStageHandler<
+  EvaluationStageInput,
+  EvaluationStageOutput
+> {
   constructor(
     private readonly builderLlmEvaluatorService: BuilderLlmEvaluatorService,
     private readonly builderArtifactPersister: BuilderArtifactPersister,
@@ -32,7 +39,14 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<Evalu
   ) {}
 
   async handle(input: EvaluationStageInput): Promise<EvaluationStageOutput> {
-    const { runId, workspace, sourceCodePayload, executionLogs, assignmentContext, planAssessment } = input;
+    const {
+      runId,
+      workspace,
+      sourceCodePayload,
+      executionLogs,
+      assignmentContext,
+      planAssessment,
+    } = input;
 
     await this.builderRunSupportService.emitEvent({
       buildRunId: runId,
@@ -42,21 +56,28 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<Evalu
       payload: { studentStage: 'evaluating' },
     });
 
-    const evaluationTrace = await this.builderLlmEvaluatorService.evaluateWithTrace(
-      {
-        projectRootDir: workspace.projectRootDir,
-        sourceCodePayload,
-        executionLogs,
-        assignmentContext,
-        plannerAssessment: planAssessment,
-      },
-      {
-        onBeforeCall: async (snapshot) => {
-          await this.builderArtifactPersister.persistPromptArtifact(runId, snapshot);
+    const evaluationTrace =
+      await this.builderLlmEvaluatorService.evaluateWithTrace(
+        {
+          projectRootDir: workspace.projectRootDir,
+          sourceCodePayload,
+          executionLogs,
+          assignmentContext,
+          plannerAssessment: planAssessment,
         },
-      },
+        {
+          onBeforeCall: async (snapshot) => {
+            await this.builderArtifactPersister.persistPromptArtifact(
+              runId,
+              snapshot,
+            );
+          },
+        },
+      );
+    await this.builderArtifactPersister.persistStageTraceArtifacts(
+      runId,
+      evaluationTrace,
     );
-    await this.builderArtifactPersister.persistStageTraceArtifacts(runId, evaluationTrace);
     const assessment = resolveEvaluationAssessment(
       evaluationTrace,
       planAssessment,

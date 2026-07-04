@@ -29,17 +29,17 @@ describe('BuilderController', () => {
     const unsubscribe = jest.fn();
     const builderRunCommandsService = {} as any;
     const builderRunQueriesService = {
-      listRunEvents: jest
-        .fn()
-        .mockResolvedValueOnce({
-          events: [firstEvent],
-          latestSequence: 1,
-          hasMore: false,
-        }),
-      subscribeRunEvents: jest.fn().mockImplementation(async (_runId, _user, callback) => {
-        liveCallback = callback;
-        return unsubscribe;
+      listRunEvents: jest.fn().mockResolvedValueOnce({
+        events: [firstEvent],
+        latestSequence: 1,
+        hasMore: false,
       }),
+      subscribeRunEvents: jest
+        .fn()
+        .mockImplementation(async (_runId, _user, callback) => {
+          liveCallback = callback;
+          return unsubscribe;
+        }),
     } as any;
     const builderLlmChatService = {} as any;
 
@@ -63,12 +63,7 @@ describe('BuilderController', () => {
       end: jest.fn(),
     } as any;
 
-    await controller.getRunEventsStream(
-      'run-1',
-      0,
-      request as any,
-      response,
-    );
+    await controller.getRunEventsStream('run-1', 0, request as any, response);
 
     expect(response.setHeader).toHaveBeenCalledWith(
       'Content-Type',

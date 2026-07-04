@@ -1,5 +1,8 @@
 import { BuilderLlmChatService } from './builder-llm-chat.service';
-import { PromptRegistryService, PromptId } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
+import {
+  PromptRegistryService,
+  PromptId,
+} from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 import { ILlmGenerationService } from '../../../../../shared/infrastructure/ai/llm-generation.token';
 import { MinioStorageService } from '../../../../../shared/infrastructure/storage/minio-storage.service';
 import { ConfigService } from '@nestjs/config';
@@ -14,7 +17,11 @@ describe('BuilderLlmChatService', () => {
 
   const mockChatMessageRepo = {
     find: jest.fn(),
-    create: jest.fn((dto) => ({ id: 'temp-id', ...dto, createdAt: new Date() })),
+    create: jest.fn((dto) => ({
+      id: 'temp-id',
+      ...dto,
+      createdAt: new Date(),
+    })),
     save: jest.fn((msg) => Promise.resolve(msg)),
   } as unknown as jest.Mocked<Repository<BuildRunChatMessage>>;
 
@@ -78,19 +85,26 @@ describe('BuilderLlmChatService', () => {
     it('should throw NotFoundException if build run is missing', async () => {
       mockBuildRunRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.postChatMessage('run-id', 'hello'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.postChatMessage('run-id', 'hello')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should query history, store user message, call LLM with context, and store assistant reply', async () => {
-      const run = { id: 'run-id', status: 'SUCCESS', report: { overallOutcome: 'PASS', coaching: {} } };
+      const run = {
+        id: 'run-id',
+        status: 'SUCCESS',
+        report: { overallOutcome: 'PASS', coaching: {} },
+      };
       mockBuildRunRepo.findOne.mockResolvedValue(run as any);
       mockChatMessageRepo.find.mockResolvedValue([]);
       mockArtifactRepo.findOne.mockResolvedValue(null);
       mockLlmService.generate.mockResolvedValue('Respuesta del tutor');
 
-      const result = await service.postChatMessage('run-id', '¿Cómo soluciono mi error?');
+      const result = await service.postChatMessage(
+        'run-id',
+        '¿Cómo soluciono mi error?',
+      );
 
       expect(mockChatMessageRepo.create).toHaveBeenNthCalledWith(1, {
         buildRunId: 'run-id',
@@ -125,7 +139,10 @@ describe('BuilderLlmChatService', () => {
       const mockArtifact = { bucket: 'b', objectKey: 'k' };
       mockArtifactRepo.findOne.mockResolvedValue(mockArtifact as any);
       mockMinioService.getObjectBuffer.mockResolvedValue(
-        Buffer.from('stage: plan\n\n[USER PROMPT]\nContenido del prompt del estudiante', 'utf-8'),
+        Buffer.from(
+          'stage: plan\n\n[USER PROMPT]\nContenido del prompt del estudiante',
+          'utf-8',
+        ),
       );
       mockLlmService.generate.mockResolvedValue('Tutor response');
 
@@ -134,7 +151,9 @@ describe('BuilderLlmChatService', () => {
       expect(mockMinioService.getObjectBuffer).toHaveBeenCalledWith('b', 'k');
       expect(mockLlmService.generate).toHaveBeenCalledWith(
         expect.objectContaining({
-          prompt: expect.stringContaining('Contenido del prompt del estudiante'),
+          prompt: expect.stringContaining(
+            'Contenido del prompt del estudiante',
+          ),
         }),
       );
     });
@@ -144,7 +163,9 @@ describe('BuilderLlmChatService', () => {
       mockBuildRunRepo.findOne.mockResolvedValue(run as any);
       mockChatMessageRepo.find.mockResolvedValue([]);
       mockArtifactRepo.findOne.mockResolvedValue(null);
-      mockLlmService.generate.mockRejectedValue(new Error('Bedrock unreachable'));
+      mockLlmService.generate.mockRejectedValue(
+        new Error('Bedrock unreachable'),
+      );
 
       const result = await service.postChatMessage('run-id', 'Duda');
 

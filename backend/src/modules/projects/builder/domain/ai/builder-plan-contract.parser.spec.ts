@@ -11,7 +11,10 @@ function buildPlanPayload(overrides: Record<string, unknown> = {}) {
       C2: { status: 'yes', rationale: 'Comando de entrada detectado.' },
       C3: { status: 'no', rationale: 'No expone servicio persistente.' },
       C4: { status: 'yes', rationale: 'Suite pytest presente.' },
-      C5: { status: 'no', rationale: 'Sin healthcheck porque no hay servicio.' },
+      C5: {
+        status: 'no',
+        rationale: 'Sin healthcheck porque no hay servicio.',
+      },
       C6: { status: 'no', rationale: 'No requiere configuración externa.' },
     },
     evaluativeState: 'E2',
@@ -64,7 +67,10 @@ describe('parseBuilderPlanContractV2', () => {
           C1: { status: 'yes', rationale: 'Proyecto C compilable.' },
           C2: { status: 'yes', rationale: 'Entrada CLI detectable.' },
           C3: { status: 'no', rationale: 'No expone servicio persistente.' },
-          C4: { status: 'yes', rationale: 'Puede validarse con pruebas batch.' },
+          C4: {
+            status: 'yes',
+            rationale: 'Puede validarse con pruebas batch.',
+          },
           C5: { status: 'no', rationale: 'No aplica healthcheck.' },
           C6: { status: 'no', rationale: 'Sin configuracion externa.' },
         },
@@ -73,7 +79,9 @@ describe('parseBuilderPlanContractV2', () => {
           version: 'c11',
         },
         recipe: {
-          install: [['gcc', '-Wall', '-Wextra', '-std=c11', 'main.c', '-o', 'main']],
+          install: [
+            ['gcc', '-Wall', '-Wextra', '-std=c11', 'main.c', '-o', 'main'],
+          ],
           run: ['./main'],
           test: [['valgrind', './main']],
           systemPackages: [],
@@ -104,7 +112,10 @@ describe('parseBuilderPlanContractV2', () => {
           C1: { status: 'yes', rationale: 'Proyecto C compilable.' },
           C2: { status: 'yes', rationale: 'Entrada CLI detectable.' },
           C3: { status: 'no', rationale: 'No expone servicio persistente.' },
-          C4: { status: 'yes', rationale: 'Puede validarse con pruebas batch.' },
+          C4: {
+            status: 'yes',
+            rationale: 'Puede validarse con pruebas batch.',
+          },
           C5: { status: 'no', rationale: 'No aplica healthcheck.' },
           C6: { status: 'no', rationale: 'Sin configuracion externa.' },
         },
@@ -138,7 +149,15 @@ describe('parseBuilderPlanContractV2', () => {
           version: 'c11',
         },
         recipe: {
-          install: ['gcc', '-Wall', '-Wextra', '-std=c11', 'main.c', '-o', 'main'],
+          install: [
+            'gcc',
+            '-Wall',
+            '-Wextra',
+            '-std=c11',
+            'main.c',
+            '-o',
+            'main',
+          ],
           run: ['./main', '7', '8'],
           test: ['valgrind', './main', '7', '8'],
           systemPackages: [],
@@ -202,9 +221,15 @@ describe('parseBuilderPlanContractV2', () => {
         capabilities: {
           C1: { status: 'yes', rationale: 'Script ejecutable.' },
           C2: { status: 'yes', rationale: 'Punto de entrada detectado.' },
-          C3: { status: 'yes', rationale: 'Marcado incorrectamente como servicio.' },
+          C3: {
+            status: 'yes',
+            rationale: 'Marcado incorrectamente como servicio.',
+          },
           C4: { status: 'yes', rationale: 'Sincroniza pruebas.' },
-          C5: { status: 'yes', rationale: 'Marcado incorrectamente como healthcheck.' },
+          C5: {
+            status: 'yes',
+            rationale: 'Marcado incorrectamente como healthcheck.',
+          },
           C6: { status: 'no', rationale: 'Sin configuracion externa.' },
         },
         recipe: {

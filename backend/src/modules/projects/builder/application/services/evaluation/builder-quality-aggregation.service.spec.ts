@@ -107,7 +107,10 @@ describe('BuilderQualityAggregationService', () => {
       },
     ] as CodeQualityFindingEntity[]);
 
-    const result = await service.getFindingsForStudent('project-1', 'student-1');
+    const result = await service.getFindingsForStudent(
+      'project-1',
+      'student-1',
+    );
 
     expect(result).toEqual({
       projectId: 'project-1',

@@ -3,22 +3,29 @@ import { IBuilderStageHandler } from './builder-stage.interface';
 import { BuilderPedagogicalService } from '../evaluation/builder-pedagogical.service';
 import { BuilderReportComposer } from '../evaluation/builder-report-composer.service';
 import { BuilderArtifactPersister } from '../artifacts/builder-artifact-persister.service';
-import { BuilderEvaluationContractV2, BuilderCodeQualityContractV2, BuilderReportEntity } from '../../../domain/builder.types';
+import {
+  BuilderEvaluationContractV2,
+  BuilderCodeQualityContractV2,
+  BuilderReportEntity,
+} from '../../../domain/builder.types';
 import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
 
-export interface ReportStageInput {
+interface ReportStageInput {
   runId: string;
   assessment: BuilderEvaluationContractV2;
   qualityFindings: BuilderCodeQualityContractV2;
   executionLogs: string;
 }
 
-export interface ReportStageOutput {
+interface ReportStageOutput {
   report: BuilderReportEntity;
 }
 
 @Injectable()
-export class BuilderReportStageHandler implements IBuilderStageHandler<ReportStageInput, ReportStageOutput> {
+export class BuilderReportStageHandler implements IBuilderStageHandler<
+  ReportStageInput,
+  ReportStageOutput
+> {
   constructor(
     private readonly builderPedagogicalService: BuilderPedagogicalService,
     private readonly builderReportComposer: BuilderReportComposer,

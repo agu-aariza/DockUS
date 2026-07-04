@@ -30,12 +30,19 @@ export class PromptRegistryService {
 
     if (!existsSync(manifestPath)) {
       // Fallback for NestJS watch mode where assets copy might lag behind bootstrap
-      const srcPath = path.resolve(process.cwd(), 'src/shared/infrastructure/ai/prompts.json');
+      const srcPath = path.resolve(
+        process.cwd(),
+        'src/shared/infrastructure/ai/prompts.json',
+      );
       if (existsSync(srcPath)) {
         manifestPath = srcPath;
-        this.logger.warn(`Loaded prompts.json from src fallback: ${manifestPath}`);
+        this.logger.warn(
+          `Loaded prompts.json from src fallback: ${manifestPath}`,
+        );
       } else {
-        this.logger.error(`Prompt manifest not found at ${manifestPath} or ${srcPath}`);
+        this.logger.error(
+          `Prompt manifest not found at ${manifestPath} or ${srcPath}`,
+        );
         return;
       }
     }
@@ -45,7 +52,7 @@ export class PromptRegistryService {
       const manifest = JSON.parse(rawData) as PromptManifest;
 
       for (const [key, value] of Object.entries(manifest)) {
-        this.prompts.set(key as PromptId, value as PromptBundle);
+        this.prompts.set(key as PromptId, value);
       }
 
       this.logger.log(

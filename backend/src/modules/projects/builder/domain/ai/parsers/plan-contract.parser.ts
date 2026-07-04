@@ -35,7 +35,7 @@ import { toPosixPath } from '../../../infrastructure/utils/builder-analysis.util
 
 import { normalizeString } from './contract-parser.utils';
 
-export class CapabilityDto {
+class CapabilityDto {
   @IsEnum(['yes', 'no', 'unknown'])
   status: 'yes' | 'no' | 'unknown';
 
@@ -44,7 +44,7 @@ export class CapabilityDto {
   rationale?: string;
 }
 
-export class CapabilitiesDto {
+class CapabilitiesDto {
   @ValidateNested()
   @Type(() => CapabilityDto)
   C1: CapabilityDto;
@@ -70,7 +70,7 @@ export class CapabilitiesDto {
   C6: CapabilityDto;
 }
 
-export class RuntimeDto {
+class RuntimeDto {
   @IsEnum(BUILDER_RUNTIME_FAMILIES)
   family: BuilderRuntimeFamily;
 
@@ -87,7 +87,7 @@ export class RuntimeDto {
   reason?: string | null;
 }
 
-export class ServiceDto {
+class ServiceDto {
   @IsInt()
   @Min(1)
   @Max(65535)
@@ -99,7 +99,7 @@ export class ServiceDto {
   healthcheck?: string[] | null;
 }
 
-export class RecipeDto {
+class RecipeDto {
   @IsArray()
   @IsArray({ each: true })
   @IsOptional()
@@ -193,21 +193,27 @@ export function normalizeCapabilities(value: unknown): BuilderCapabilityMap {
       }
       target[capabilityId] = {
         status,
-        rationale: 'Autogenerado: el modelo no proporcionó justificación detallada.',
+        rationale:
+          'Autogenerado: el modelo no proporcionó justificación detallada.',
       };
     } else if (rawVal && typeof rawVal === 'object' && !Array.isArray(rawVal)) {
       if (rawVal.status === undefined) {
-        throw new Error(`capabilities.${capabilityId}.status debe ser un string no vacío.`);
+        throw new Error(
+          `capabilities.${capabilityId}.status debe ser un string no vacío.`,
+        );
       }
       const status = String(rawVal.status).toLowerCase();
       if (!ASSESSMENTS.includes(status as any)) {
-        throw new Error(`Estado inválido en ${capabilityId}: ${rawVal.status}.`);
+        throw new Error(
+          `Estado inválido en ${capabilityId}: ${rawVal.status}.`,
+        );
       }
       target[capabilityId] = {
         status,
-        rationale: rawVal.rationale !== undefined && String(rawVal.rationale).trim()
-          ? String(rawVal.rationale).trim()
-          : 'Sin justificación detallada.',
+        rationale:
+          rawVal.rationale !== undefined && String(rawVal.rationale).trim()
+            ? String(rawVal.rationale).trim()
+            : 'Sin justificación detallada.',
       };
     } else {
       throw new Error(`capabilities.${capabilityId} debe ser un objeto.`);
@@ -294,7 +300,10 @@ export function normalizeRecipe(
     systemPackages: normalizeSystemPackages(raw.systemPackages),
     cwd: normalizeWorkingDirectory(raw.cwd),
     environment: normalizeEnvironment(raw.environment),
-    service: inferServiceFromRun(run, normalizeService(raw.service, sourceName)),
+    service: inferServiceFromRun(
+      run,
+      normalizeService(raw.service, sourceName),
+    ),
   });
 
   const errors = validateSync(dto);
@@ -317,7 +326,10 @@ export function assertPlanSemanticConsistency(
     throw new Error('C3=yes requiere recipe.service.');
   }
 
-  if (capabilities.C5.status === 'yes' && recipe.service?.healthcheck === null) {
+  if (
+    capabilities.C5.status === 'yes' &&
+    recipe.service?.healthcheck === null
+  ) {
     throw new Error('C5=yes requiere recipe.service.healthcheck.');
   }
 
@@ -330,9 +342,7 @@ export function assertPlanSemanticConsistency(
   }
 }
 
-export function detectBuildSystemInRun(
-  recipe: BuilderRecipeV2,
-): string | null {
+export function detectBuildSystemInRun(recipe: BuilderRecipeV2): string | null {
   if (!recipe.run || recipe.run.length === 0) return null;
   const runExecutable = recipe.run[0];
   if (BUILD_SYSTEM_EXECUTABLES.has(runExecutable)) {
@@ -367,7 +377,8 @@ export function alignCapabilitiesWithRecipe(
   }
 
   const expectedC5Status: BuilderCapabilityMap['C5']['status'] =
-    recipe.service?.healthcheck === null || recipe.service?.healthcheck === undefined
+    recipe.service?.healthcheck === null ||
+    recipe.service?.healthcheck === undefined
       ? 'no'
       : 'yes';
   if (aligned.C5.status !== expectedC5Status) {
@@ -387,9 +398,9 @@ const C_VERSION_ALIASES: Record<string, string> = {
   'gcc-11': 'c11',
   'gcc-13': 'c17',
   'gcc-14': 'c17',
-  'gnu11': 'c11',
-  'gnu17': 'c17',
-  'gnu99': 'c99',
+  gnu11: 'c11',
+  gnu17: 'c17',
+  gnu99: 'c99',
   'std=c11': 'c11',
   'std=c99': 'c99',
   'std=c17': 'c17',
@@ -437,7 +448,11 @@ function normalizeService(
       healthcheckValue = hcObj.command;
     } else {
       const path = typeof hcObj.path === 'string' ? hcObj.path : '/';
-      healthcheckValue = ['curl', '-f', `http://localhost:${resolvedPort}${path}`];
+      healthcheckValue = [
+        'curl',
+        '-f',
+        `http://localhost:${resolvedPort}${path}`,
+      ];
     }
   }
 
@@ -538,7 +553,9 @@ function normalizeCommand(value: unknown, field: string): string[] {
     throw new Error(`${field} debe ser un array o un string de comando.`);
   }
 
-  const tokens = rawTokens.flatMap((token) => token.split(/\s+/u)).filter(Boolean);
+  const tokens = rawTokens
+    .flatMap((token) => token.split(/\s+/u))
+    .filter(Boolean);
   if (!tokens.length) {
     throw new Error(`${field} no puede estar vacío.`);
   }
@@ -637,9 +654,7 @@ function normalizeWorkingDirectory(value: unknown): string | null {
   return `/app/${relative}`;
 }
 
-function normalizeEnvironment(
-  value: unknown,
-): Record<string, string> | null {
+function normalizeEnvironment(value: unknown): Record<string, string> | null {
   if (value === undefined || value === null) {
     return null;
   }
@@ -660,7 +675,10 @@ function normalizeEnvironment(
       throw new Error(`Variable de entorno inválida: ${key}`);
     }
 
-    const parsedValue = normalizeString(entryValue, `recipe.environment.${key}`);
+    const parsedValue = normalizeString(
+      entryValue,
+      `recipe.environment.${key}`,
+    );
     if (/[\n\r]/u.test(parsedValue)) {
       throw new Error(`Valor inseguro en recipe.environment.${key}.`);
     }
@@ -687,6 +705,3 @@ function normalizePort(
 
   return parsed;
 }
-
-
-
