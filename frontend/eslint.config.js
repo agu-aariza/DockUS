@@ -31,7 +31,9 @@ export default [
     },
     rules: {
       ...jsxA11y.flatConfigs.recommended.rules,
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      // The base rule does not understand TypeScript type-only function signatures.
+      // Keep unused-export detection in knip/ts-pruner until the TS ESLint plugin is installed.
+      'no-unused-vars': 'off',
       'no-undef': 'off', // TypeScript handles undefined variables natively
       'jsx-a11y/click-events-have-key-events': 'off',
       'jsx-a11y/no-noninteractive-element-interactions': 'off',
