@@ -33,4 +33,8 @@ academic_proyects/
 skills/*
 agents/*
 frontend/.tmp-test-dist/*
-KIMI_MODIFY.md
+.github/hooks/
+.github/skills/
+.impeccable/
+audit/*
+memoria_tfg/*

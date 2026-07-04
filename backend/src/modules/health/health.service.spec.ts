@@ -8,7 +8,9 @@ import { HealthService } from './health.service';
 const mockBedrockSend = jest.fn();
 
 jest.mock('@aws-sdk/client-bedrock', () => ({
-  BedrockClient: jest.fn().mockImplementation(() => ({ send: mockBedrockSend })),
+  BedrockClient: jest
+    .fn()
+    .mockImplementation(() => ({ send: mockBedrockSend })),
   ListFoundationModelsCommand: jest.fn().mockImplementation(() => ({})),
 }));
 
@@ -31,7 +33,9 @@ describe('HealthService', () => {
       ping: jest.fn().mockResolvedValue('PONG'),
     };
     dockerHost = {
-      inspectDockerHost: jest.fn().mockResolvedValue({ ServerVersion: '27.0.0' }),
+      inspectDockerHost: jest
+        .fn()
+        .mockResolvedValue({ ServerVersion: '27.0.0' }),
     };
     configService = {
       get: jest.fn((key: string, fallback?: unknown) => {

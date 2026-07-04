@@ -71,7 +71,10 @@ export class AuthController {
     status: 500,
     description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
-  @Throttle({ global: { limit: 10, ttl: 60000 }, burst: { limit: 3, ttl: 1000 } })
+  @Throttle({
+    global: { limit: 10, ttl: 60000 },
+    burst: { limit: 3, ttl: 1000 },
+  })
   @Post('register')
   async register(@Body() dto: RegisterDto): Promise<AuthResponse> {
     return this.authService.register(dto);
@@ -103,7 +106,10 @@ export class AuthController {
     description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
   @HttpCode(200)
-  @Throttle({ global: { limit: 10, ttl: 60000 }, burst: { limit: 3, ttl: 1000 } })
+  @Throttle({
+    global: { limit: 10, ttl: 60000 },
+    burst: { limit: 3, ttl: 1000 },
+  })
   @Post('login')
   async login(@Body() dto: LoginDto): Promise<AuthResponse> {
     return this.authService.login(dto);
@@ -154,7 +160,10 @@ export class AuthController {
     description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
   @HttpCode(200)
-  @Throttle({ global: { limit: 10, ttl: 60000 }, burst: { limit: 3, ttl: 1000 } })
+  @Throttle({
+    global: { limit: 10, ttl: 60000 },
+    burst: { limit: 3, ttl: 1000 },
+  })
   @Post('refresh')
   async refresh(@Body() dto: RefreshTokenDto): Promise<AuthResponse> {
     return this.authService.refresh(dto.refreshToken);

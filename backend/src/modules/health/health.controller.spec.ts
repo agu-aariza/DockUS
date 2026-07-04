@@ -22,7 +22,9 @@ describe('HealthController', () => {
       getReadiness: jest.fn().mockResolvedValue(readiness),
     } as unknown as HealthService);
 
-    await expect(controller.getReadiness()).rejects.toBeInstanceOf(HttpException);
+    await expect(controller.getReadiness()).rejects.toBeInstanceOf(
+      HttpException,
+    );
     await expect(controller.getReadiness()).rejects.toMatchObject({
       response: readiness,
       status: HttpStatus.SERVICE_UNAVAILABLE,

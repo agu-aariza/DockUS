@@ -26,7 +26,6 @@ const ROLES_KEY = 'roles';
  */
 export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
 
-
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
