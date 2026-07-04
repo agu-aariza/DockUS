@@ -270,9 +270,12 @@ describe('StorageService', () => {
       buildStorageObject({ uploaderId: student.userId }),
     );
     storageRepository.save.mockRejectedValue(
-      Object.assign(new QueryFailedError('INSERT INTO storage_objects', [], new Error()), {
-        driverError: { code: '23505' },
-      }),
+      Object.assign(
+        new QueryFailedError('INSERT INTO storage_objects', [], new Error()),
+        {
+          driverError: { code: '23505' },
+        },
+      ),
     );
 
     await expect(

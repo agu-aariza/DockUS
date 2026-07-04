@@ -29,7 +29,7 @@ const DELIVERY_SORT_FIELDS = [
 ] as const;
 
 export type DeliverySortField = (typeof DELIVERY_SORT_FIELDS)[number];
-export type SortOrder = 'ASC' | 'DESC';
+type SortOrder = 'ASC' | 'DESC';
 
 export class ListDeliveriesQueryDto {
   @ApiPropertyOptional({

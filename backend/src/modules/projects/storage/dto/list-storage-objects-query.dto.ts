@@ -30,7 +30,7 @@ const STORAGE_SORT_FIELDS = [
 ] as const;
 
 export type StorageSortField = (typeof STORAGE_SORT_FIELDS)[number];
-export type SortOrder = 'ASC' | 'DESC';
+type SortOrder = 'ASC' | 'DESC';
 
 export class ListStorageObjectsQueryDto {
   @ApiPropertyOptional({

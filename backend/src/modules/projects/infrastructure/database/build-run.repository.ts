@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOneOptions, SelectQueryBuilder, DeepPartial } from 'typeorm';
+import {
+  Repository,
+  FindOneOptions,
+  SelectQueryBuilder,
+  DeepPartial,
+} from 'typeorm';
 import { BuildRun } from '../../builder/domain/entities/build-run.entity';
 import { IBuildRunRepository } from '../../domain/repositories/build-run.repository.interface';
 

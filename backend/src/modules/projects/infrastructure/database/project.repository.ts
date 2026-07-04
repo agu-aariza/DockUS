@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOneOptions, SelectQueryBuilder, DeepPartial } from 'typeorm';
+import {
+  Repository,
+  FindOneOptions,
+  SelectQueryBuilder,
+  DeepPartial,
+} from 'typeorm';
 import { Project } from '../../entities/project.entity';
 import { IProjectRepository } from '../../domain/repositories/project.repository.interface';
 

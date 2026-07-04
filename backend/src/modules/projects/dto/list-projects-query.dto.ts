@@ -31,7 +31,7 @@ const PROJECT_SORT_FIELDS = [
 ] as const;
 
 export type ProjectSortField = (typeof PROJECT_SORT_FIELDS)[number];
-export type SortOrder = 'ASC' | 'DESC';
+type SortOrder = 'ASC' | 'DESC';
 
 export class ListProjectsQueryDto {
   @ApiPropertyOptional({

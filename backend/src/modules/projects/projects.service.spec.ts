@@ -275,9 +275,9 @@ describe('ProjectsService', () => {
 
     const result = await service.getQualityInsights(project.id, actor);
 
-    expect(builderQualityAggregationService.getAggregatedFindings).toHaveBeenCalledWith(
-      project.id,
-    );
+    expect(
+      builderQualityAggregationService.getAggregatedFindings,
+    ).toHaveBeenCalledWith(project.id);
     expect(result.projectId).toBe(project.id);
   });
 });

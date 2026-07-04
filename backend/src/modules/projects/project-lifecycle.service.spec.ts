@@ -4,7 +4,6 @@ import { buildActor, buildProject } from '../../test-support/domain-builders';
 import { UserRole } from '../users/entities/user.entity';
 import { ProjectAssignmentsService } from './assignments/project-assignments.service';
 import { Delivery } from './deliveries/entities/delivery.entity';
-import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
 import { ProjectAccessService } from './project-access.service';

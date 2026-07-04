@@ -44,7 +44,7 @@ export class StorageUploadService {
     private readonly deliveriesRepository: Repository<Delivery>,
     private readonly minioStorageService: MinioStorageService,
     private readonly storageAccessService: StorageAccessService,
-  ) { }
+  ) {}
 
   async upload(
     dto: CreateStorageObjectDto,
@@ -74,7 +74,10 @@ export class StorageUploadService {
     const delivery = await this.storageAccessService.findDeliveryOrThrow(
       dto.deliveryId,
     );
-    await this.storageAccessService.assertCanUploadStudentSource(delivery, actor);
+    await this.storageAccessService.assertCanUploadStudentSource(
+      delivery,
+      actor,
+    );
 
     const bucket = this.minioStorageService.getBucketName();
     const objectKey = this.buildDeliveryObjectKey(delivery.id, dto.logicalName);

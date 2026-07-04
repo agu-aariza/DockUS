@@ -27,7 +27,7 @@ describe('ProjectAccessService', () => {
       projectsRepository as unknown as Repository<Project>,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
     );
-    (projectsRepository.createQueryBuilder() as any).getExists.mockResolvedValue(true);
+    projectsRepository.createQueryBuilder().getExists.mockResolvedValue(true);
   });
 
   it('permite a un teacher acceder a su propio proyecto', async () => {
@@ -45,7 +45,7 @@ describe('ProjectAccessService', () => {
     projectsRepository.findOne.mockResolvedValue(
       buildProject({ creatorId: 'teacher-2' }),
     );
-    (projectsRepository.createQueryBuilder() as any).getExists.mockResolvedValue(false);
+    projectsRepository.createQueryBuilder().getExists.mockResolvedValue(false);
 
     await expect(
       service.assertCanAccessProject('project-1', actor),

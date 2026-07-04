@@ -75,7 +75,10 @@ export class StorageQueryService {
       .leftJoinAndSelect('storage.delivery', 'deliveryRelation')
       .leftJoinAndSelect('deliveryRelation.author', 'authorRelation')
       .leftJoinAndSelect('deliveryRelation.assignment', 'assignmentRelation')
-      .leftJoinAndSelect('assignmentRelation.project', 'assignmentProjectRelation');
+      .leftJoinAndSelect(
+        'assignmentRelation.project',
+        'assignmentProjectRelation',
+      );
 
     this.storageAccessService.applyActorScope(queryBuilder, actor);
 

@@ -9,7 +9,6 @@
  */
 
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -23,7 +22,6 @@ import {
   Post,
   Query,
   Req,
-  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -34,7 +32,6 @@ import {
   ApiConsumes,
   ApiOperation,
   ApiParam,
-  ApiProduces,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -87,7 +84,8 @@ export class ProjectsController {
 
   @ApiOperation({
     summary: 'Consultar estado del runtime (efímero)',
-    description: 'Devuelve estado READY si la plataforma está operativa para ejecuciones.',
+    description:
+      'Devuelve estado READY si la plataforma está operativa para ejecuciones.',
   })
   @ApiParam(PROJECT_ID_PARAM)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)

@@ -33,7 +33,7 @@ const USER_SORT_FIELDS = [
 ] as const;
 
 export type UserSortField = (typeof USER_SORT_FIELDS)[number];
-export type SortOrder = 'ASC' | 'DESC';
+type SortOrder = 'ASC' | 'DESC';
 
 /** DTO de querystring para listado paginado de usuarios. */
 export class ListUsersQueryDto {

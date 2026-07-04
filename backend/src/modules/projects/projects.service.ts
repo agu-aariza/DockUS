@@ -44,7 +44,6 @@ export type {
   ProjectGradebookRow,
   ProjectOperationalIssuesReconcileResult,
   ProjectOperationalIssuesSummary,
-  ProjectProgressSummary,
   ProjectQualityInsightsSummary,
   ProjectStudentQualityInsights,
 } from './projects.types';
@@ -264,7 +263,9 @@ export class ProjectsService {
     actor: AuthenticatedUser,
   ): Promise<ProjectQualityInsightsSummary> {
     await this.projectAccessService.findOwnedProjectOrThrow(projectId, actor);
-    return this.builderQualityAggregationService.getAggregatedFindings(projectId);
+    return this.builderQualityAggregationService.getAggregatedFindings(
+      projectId,
+    );
   }
 
   async getQualityInsightsByCategory(

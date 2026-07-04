@@ -26,7 +26,10 @@ export class ProjectLifecycleService {
     private readonly projectAssignmentsService: ProjectAssignmentsService,
   ) {}
 
-  async create(dto: CreateProjectDto, actor: AuthenticatedUser): Promise<Project> {
+  async create(
+    dto: CreateProjectDto,
+    actor: AuthenticatedUser,
+  ): Promise<Project> {
     let project = this.projectsRepository.create({
       title: this.normalizeTitle(dto.title),
       contextAcademico: dto.contextAcademico?.trim() || null,

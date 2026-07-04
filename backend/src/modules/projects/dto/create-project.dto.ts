@@ -110,7 +110,8 @@ export class CreateProjectDto {
 
   @ApiPropertyOptional({
     example: ['550e8400-e29b-41d4-a716-446655440000'],
-    description: 'IDs de grupos academicos a los que asignar el proyecto al crearlo.',
+    description:
+      'IDs de grupos academicos a los que asignar el proyecto al crearlo.',
     type: [String],
   })
   @IsString({ each: true })

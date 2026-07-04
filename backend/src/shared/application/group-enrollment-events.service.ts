@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-export interface GroupStudentsEnrolled {
+interface GroupStudentsEnrolled {
   groupId: string;
   studentIds: string[];
 }
