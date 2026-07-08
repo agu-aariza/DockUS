@@ -1,30 +1,27 @@
-# backend/src/modules/projects/builder/application/services/
+## Propósito de la carpeta
+Contiene los sub-servicios de la capa de aplicación del Builder, categorizados por dominio (compilation, evaluation, orchestration, stages, support, workspace). 
 
-Servicios de aplicación del pipeline de evaluación. Aquí vive la orquestación de casos de uso del builder: encolar runs, preparar workspaces, compilar recetas, componer reportes y persistir artefactos.
+## Límites y Reglas Estrictas
+- Se permite inyectar servicios entre subcarpetas de `application/services` si no forman ciclos de dependencia, aunque lo ideal es que un orquestador principal (ej. `BuilderRunCommandsService`) ensamble los pasos.
+- Nunca incluir lógica de TypeORM u otras infraestructuras directamente aquí.
+- Solo pueden depender de interfaces del dominio y otros servicios de aplicación.
 
-## Servicios principales
+## Anti-Patrones y Gotchas ⚠️
+- No acoplar lógicamente los diferentes "stages" entre sí; deben poder ejecutarse de forma aislada a partir del contexto del `BuildRun`.
+- No capturar errores y fallar silenciosamente; todos los fallos deben propagarse para que el orquestador actualice el estado del BuildRun a `FAILED`.
 
-| Servicio | Función |
-|----------|---------|
-| `builder-run-commands.service.ts` | **Orquestador principal**. Coordina las fases PLAN → COMPILE → EXECUTION → EVALUATION → QUALITY → REPORT → PERSIST. |
-| `builder-recipe-compiler.service.ts` | Convierte el `BuilderPlanContractV2` del LLM en una `CompiledRecipe` con imagen base, comandos `apt`, instalación, ejecución, tests y healthcheck. |
-| `builder-hallucination-guard.service.ts` | Detecta evaluaciones positivas del LLM sin evidencia en los logs de ejecución, o con valores numéricos inconsistentes respecto al `expectedOutput`. |
-| `builder-report-composer.service.ts` | Compone el informe final: `overallOutcome`, `technicalFeedback`, `coaching` y `llmRecommendations`. |
-| `builder-artifact-persister.service.ts` | Persiste prompts, respuestas crudas, contratos parseados, errores y el reporte JSON como artefactos en MinIO; también guarda filas de hallazgos de calidad. |
-| `builder-run-queries.service.ts` | Queries de lectura de `BuildRun` con control de acceso por rol. |
-| `builder-access.service.ts` | Validación de permisos sobre deliveries, proyectos y runs. |
-| `builder-workspace.service.ts` | Prepara el workspace físico descargando fuente del alumno y suite docente desde MinIO. |
-| `builder-cache-manager.service.ts` | Calcula volúmenes de caché de dependencias reutilizables entre ejecuciones. |
-| `builder-pedagogical.service.ts` | Genera feedback pedagógico a partir de logs de ejecución. |
-| `builder-run-support.service.ts` | Helpers transversales: emitir eventos, marcar runs como fallidos, conversiones de error. |
-| `builder-plan-runtime-adapter.ts` | Adapta la receta del LLM a la estructura interna usada por el compilador. |
+## Dependencias de Contexto Asumidas
+- La persistencia y el Docker daemon son inyectados y están listos.
 
-## Tipos compartidos
+## Inputs / Outputs Esperados
+- Inputs: Contexto y DTOs de estado de la evaluación.
+- Outputs: Operaciones asíncronas de efecto secundario, actualización de trazas.
 
-- `builder-application.types.ts`: DTOs internos de la capa de aplicación (`EnqueueBuildRunResponse`, `ExecuteBuildRunJobData`).
+## Ejemplo de uso
+```typescript
+await this.builderWorkspaceService.prepareWorkspace(run.id, sourceCodeBuffer);
+```
 
-## Notas
-
-- Los servicios de esta carpeta son consumidos principalmente por `BuilderController`, `BuilderProcessor` y otros servicios de aplicación.
-- La lógica pura de interacción con el LLM vive en `domain/ai/`; aquí solo se orquesta.
-- `BuilderService` fue eliminado en la refactorización; su responsabilidad quedó repartida entre `BuilderRunCommandsService` y los nuevos servicios especializados.
+## Formato de Archivos
+- `*.service.ts` para servicios que ejecutan casos de uso.
+- Estructurados en carpetas semánticas por responsabilidad.

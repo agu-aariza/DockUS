@@ -1,31 +1,24 @@
-# backend/src/modules/health/
+## Responsabilidad del Módulo
+Provee endpoints de monitoreo para comprobar la disponibilidad y estado (liveness y readiness) del backend y de sus dependencias críticas.
 
-Módulo de health checks para liveness y readiness del backend.
+## Lo que este módulo NO hace (Anti-Goals) ⚠️
+No ejecuta procesos de reparación, no gestiona métricas complejas de negocio, ni controla el ciclo de vida de los servicios a los que hace ping.
 
-## Endpoints
+## Conceptos Clave (Glosario)
+- **Liveness**: Indica si el proceso HTTP principal está vivo y respondiendo.
+- **Readiness**: Indica si la aplicación está lista para procesar tráfico validando la conexión con sus dependencias.
 
-| Endpoint | Tipo | Descripción |
-|----------|------|-------------|
-| `GET /health/live` | Liveness | Confirma que el proceso HTTP está vivo. |
-| `GET /health/ready` | Readiness | Verifica que PostgreSQL, Redis, Docker daemon y AWS Bedrock están accesibles. |
+## Dependencias Externas Clave
+- **PostgreSQL**: Vía `DataSource` de TypeORM.
+- **Redis**: Vía `RedisClientService`.
+- **Docker daemon**: Vía `DockerHostService`.
+- **AWS Bedrock**: Valida acceso listando modelos de la región.
 
-## Archivos principales
+## Efectos Secundarios (Side Effects)
+Solo operaciones de lectura (ping) en las dependencias. No altera ningún estado en bases de datos, cachés ni servicios externos.
 
-| Archivo | Función |
-|---------|---------|
-| `health.controller.ts` | Expone los endpoints `/health/live` y `/health/ready`. |
-| `health.service.ts` | Ejecuta los chequeos reales sobre cada dependencia y reporta latencia y estado. |
-| `health.module.ts` | Módulo NestJS que registra controlador y servicio. |
+## Estado / BBDD
+No posee entidades ni estado propio.
 
-## Dependencias verificadas
-
-- **PostgreSQL**: ejecuta `SELECT 1` a través del `DataSource` de TypeORM.
-- **Redis**: envía `PING` mediante `RedisClientService`.
-- **Docker daemon**: ejecuta `docker info` mediante `DockerHostService`.
-- **AWS Bedrock**: lista modelos foundation disponibles en la región configurada.
-
-## Notas
-
-- Útil para balanceadores de carga, monitoreo y Docker health checks.
-- Cada chequeo incluye `latencyMs` y, en caso de fallo, un mensaje descriptivo.
-- El endpoint de readiness requiere credenciales AWS válidas; en entornos sin Bedrock accesible reportará `down`.
+## Puntos de Entrada (Entrypoints)
+- `health.controller.ts`: Endpoints `GET /health/live` y `GET /health/ready`.

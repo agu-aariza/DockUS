@@ -1,39 +1,28 @@
-# backend/src/
+## Propósito (TL;DR)
+Punto de entrada principal y configuración raíz de la API NestJS.
 
-Código fuente de la API NestJS. Aquí viven los módulos de dominio, la infraestructura compartida y el punto de entrada de la aplicación.
+## Arquitectura de alto nivel
+Monolito modular basado en NestJS, separando dominios de negocio (módulos) e infraestructura transversal (shared).
 
-## Estructura
+## Límites Arquitectónicos (Boundaries) ⚠️
+El código aquí (main.ts, bootstrap.ts) NUNCA debe contener lógica de negocio. Toda la lógica de dominio debe residir estrictamente dentro de `modules/`.
 
-```
-src/
-├── main.ts              # Punto de entrada HTTP
-├── bootstrap.ts         # Configuración global (CORS, Helmet, Swagger, ValidationPipe)
-├── app.module.ts        # Módulo raíz que ensambla infraestructura + dominios
-├── modules/             # Módulos de dominio de negocio
-│   ├── auth/
-│   ├── users/
-│   ├── academic/
-│   └── projects/
-├── shared/              # Infraestructura transversal y utilidades
-│   ├── config/
-│   ├── database/
-│   ├── http/
-│   ├── infrastructure/
-│   ├── utils/
-│   └── test-support/
-└── test-support/        # Builders de dominio para tests
-```
+## Flujo Principal de Datos
+Las peticiones HTTP entran por `main.ts`, pasan por los middlewares globales configurados en `bootstrap.ts` (CORS, Helmet, ValidationPipe), y son enrutadas por `app.module.ts` hacia el módulo de dominio correspondiente.
 
-## Archivos más importantes
+## Stack Tecnológico Principal
+TypeScript, NestJS.
 
-| Archivo | Función |
-|---------|---------|
-| [`main.ts`](./main.ts) | Crea la aplicación Nest y la pone a escuchar en `PORT`. |
-| [`bootstrap.ts`](./bootstrap.ts) | Aplica middleware global: CORS, Helmet, Swagger, `ValidationPipe`, rate limiting. |
-| [`app.module.ts`](./app.module.ts) | Importa `InfrastructureModule` y todos los módulos de dominio. |
+## Mapa de Directorios (Tree)
+- `main.ts`: Punto de entrada HTTP.
+- `bootstrap.ts`: Configuración de middleware global y utilidades.
+- `app.module.ts`: Módulo raíz de inyección de dependencias.
+- `modules/`: Módulos de dominio de negocio.
+- `shared/`: Infraestructura transversal y utilidades compartidas.
+- `test-support/`: Helpers y builders para tests.
 
-## Convenciones
+## Variables de Entorno Globales
+- `PORT`: Puerto de escucha del servidor HTTP.
 
-- Cada módulo de dominio agrupa su propio `controllers/`, `services/`, `dto/`, `entities/` y submódulos cuando sea necesario.
-- La carpeta `shared/` contiene solo código transversal: configuración, base de datos, colas, Docker, LLM, storage, logging, etc.
-- Los tests unitarios viven junto al código (`*.spec.ts`) salvo los e2e, que están en [`backend/test/`](../test/README.md).
+## Comandos clave
+- `npm run start:dev`: Levanta el servidor en modo desarrollo.

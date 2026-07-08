@@ -1,33 +1,24 @@
-# frontend/src/shared/components/
+## Propósito de la carpeta
+Agrupa componentes React complejos, compuestos y de negocio cruzado que son reutilizados por múltiples pantallas, como modales, visores de código y reportes.
 
-Componentes React reutilizables por todos los paneles de la aplicación.
+## Límites y Reglas Estrictas
+No deben hacer data-fetching directo que esté acoplado a un caso de uso particular (pasar datos por props). Deben ser puros respecto al negocio en la medida de lo posible.
 
-## Estructura
+## Anti-Patrones y Gotchas ⚠️
+No añadir aquí componentes muy específicos de una vista que solo se usarán una vez. Evitar acoplamiento con contextos de dominio específicos.
 
-```
-components/
-├── ui/                    # Primitivas de UI reutilizables
-│   ├── Button.tsx
-│   ├── Layout.tsx
-│   ├── PageHeader.tsx
-│   ├── Tabs.tsx
-│   └── ...
-├── AssessmentContextSummary.tsx
-├── CodePreviewModal.tsx
-├── CommandPalette.tsx
-├── ErrorBoundary.tsx
-├── GradeBreakdownChart.tsx
-├── MarkdownContent.tsx
-├── ReportView.tsx
-├── Sidebar.tsx
-├── TeacherGradingStudio.tsx
-├── TerminalViewer.tsx
-├── TutorChatBlock.tsx
-└── ...
+## Dependencias de Contexto Asumidas
+Dependen frecuentemente de `shared/components/ui` para las primitivas visuales y `shared/utils` para formateo.
+
+## Inputs / Outputs Esperados
+Componentes React que reciben `props` con datos tipados, funciones de callback para eventos (ej. `onClose`) y devuelven `JSX.Element`.
+
+## Ejemplo de uso
+```tsx
+import { TerminalViewer } from '@/shared/components/TerminalViewer';
+
+<TerminalViewer logs={buildLogs} />
 ```
 
-## Notas
-
-- `ui/` contiene primitivas básicas (botones, tabs, layout, etc.).
-- El resto de componentes son bloques de negocio reutilizables (visor de informes, chat tutor, previsualización de código, etc.).
-- Todos los componentes deben mantenerse libres de lógica de rutas específicas.
+## Formato de Archivos
+Componentes en formato PascalCase (`Component.tsx`) con sus respectivas pruebas unitarias cerca (`Component.spec.tsx`).

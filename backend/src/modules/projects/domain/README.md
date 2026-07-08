@@ -1,14 +1,29 @@
-# Dominio de Proyectos (Projects Domain Layer)
+## Propósito de la carpeta
+Definir los contratos principales (interfaces) y tipos fundamentales del dominio para el módulo Projects, siguiendo principios de Clean Architecture/Hexagonal. 
 
-Este directorio constituye el núcleo (Core) de la arquitectura del módulo de proyectos, siguiendo las premisas del Domain-Driven Design (DDD). Aquí residen las entidades de negocio puras, las reglas de dominio, las excepciones específicas y los "puertos" (interfaces) que definen cómo el dominio espera interactuar con el mundo exterior (como las bases de datos).
-Esta capa no debe tener ninguna dependencia de frameworks externos (como NestJS) ni de detalles de infraestructura (como TypeORM, Redis o HTTP).
+## Límites y Reglas Estrictas
+- NUNCA importar entidades concretas de TypeORM o controladores aquí si rompen la abstracción.
+- NUNCA incluir dependencias de base de datos concretas.
+- Solo exportar interfaces e inyectables abstractos (`IProjectRepository`, etc.).
 
-## Estructura de Directorios
+## Anti-Patrones y Gotchas ⚠️
+- Poner lógica de negocio en las interfaces.
+- Importar TypeORM o Mongoose en estas interfaces de repositorio. Deben ser agnósticas.
 
-- `repositories/`: Contiene las interfaces (puertos secundarios) que definen los contratos para la persistencia de datos. El dominio dicta *qué* operaciones de almacenamiento se necesitan, no *cómo* se implementan.
+## Dependencias de Contexto Asumidas
+- Ninguna. Esta es la capa más interna.
 
-## Archivos y Responsabilidades
+## Inputs / Outputs Esperados
+- Types e Interfaces de Typescript.
 
-### Directorio `repositories/` (Puertos de Infraestructura)
-- **`project.repository.interface.ts`**: Define el contrato (interfaz) para persistir y recuperar entidades de proyectos. Establece los métodos requeridos como `findById`, `save`, `findAll`, abstracciones puras sin importar si detrás hay un PostgreSQL, MongoDB o memoria.
-- **`build-run.repository.interface.ts`**: Define el contrato para persistir las ejecuciones de construcción o compilación asociadas a un proyecto. Permite al dominio solicitar la persistencia del estado de un entorno de ejecución sin acoplarse a la base de datos subyacente.
+## Ejemplo de uso
+```typescript
+constructor(
+  @Inject('IProjectRepository')
+  private readonly projectRepo: IProjectRepository,
+) {}
+```
+
+## Formato de Archivos
+- `*.interface.ts`
+- Carpetas como `repositories/` para contratos de persistencia.

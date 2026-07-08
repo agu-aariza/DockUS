@@ -1,16 +1,29 @@
-# backend/src/shared/infrastructure/database/
+## Propósito de la carpeta
+Alojamiento de la configuración concreta de TypeORM y la definición del `DatabaseModule` para inyectar la base de datos PostgreSQL a toda la aplicación.
 
-Configuración de la base de datos relacional con TypeORM.
+## Límites y Reglas Estrictas
+- NUNCA activar `synchronize: true` en producción. Solo es para `development` y `test`.
+- Las entidades deben auto-descubrirse o registrarse adecuadamente aquí usando rutas relativas seguras (`autoLoadEntities: true`).
 
-## Archivos principales
+## Anti-Patrones y Gotchas ⚠️
+- Incluir queries SQL manuales o repositorios concretos. Esto es solo inicialización y configuración.
 
-| Archivo | Función |
-|---------|---------|
-| `typeorm.config.ts` | Configuración de conexión a PostgreSQL y registro de entidades. |
-| `database.module.ts` | Módulo NestJS que exporta el `TypeOrmModule`. |
+## Dependencias de Contexto Asumidas
+- Depende de que las variables de entorno de BD hayan sido validadas por `ConfigModule`.
 
-## Notas
+## Inputs / Outputs Esperados
+- Define un `TypeOrmModule.forRootAsync(...)`.
 
-- La sincronización de esquema está activa en `development` y `test`.
-- En producción se desactiva la sincronización; las migraciones deben gestionarse explícitamente.
-- Todas las entidades del sistema deben registrarse aquí o en sus módulos correspondientes.
+## Ejemplo de uso
+Añadido en el módulo principal:
+```typescript
+import { DatabaseModule } from 'src/shared/infrastructure/database/database.module';
+
+@Module({
+  imports: [DatabaseModule],
+})
+export class InfrastructureModule {}
+```
+
+## Formato de Archivos
+- Ficheros de configuración de módulo de NestJS (`*.module.ts`, `*.config.ts`).

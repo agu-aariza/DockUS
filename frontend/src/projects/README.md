@@ -1,22 +1,22 @@
-# Frontend: Gestión de Proyectos
+## Responsabilidad del Módulo
+Proveer los paneles y vistas de control para que el rol Teacher cree, configure y supervise los proyectos/asignaciones que se desplegarán a los alumnos.
 
-Este módulo contiene la experiencia de profesor/admin para crear, editar, asignar y supervisar proyectos. La vista viva es `TeacherProjectsPanel.tsx`, que coordina catálogo, detalle, creación, seguimiento y ajustes desde una única superficie.
+## Lo que este módulo NO hace (Anti-Goals) ⚠️
+No es la vista desde la que el alumno realiza o entrega el proyecto (esto ocurre en `student/`). No procesa la subida de los archivos adjuntos (se delega a `storage/`).
 
-## Estructura
+## Conceptos Clave (Glosario)
+- **TeacherProjectsPanel**: Interfaz donde se configuran los metadatos y rúbricas del proyecto.
+- **ProgressDashboard**: Cuadro de mandos para ver de un vistazo el avance de una cohorte en un proyecto particular.
 
-- `TeacherProjectsPanel.tsx`: panel principal de proyectos; contiene selección, creación, detalle, asignaciones y edición.
-- `ProgressDashboard.tsx`: panel analítico de progreso por proyecto.
-- `components/ProjectSubPanels.tsx`: subpaneles auxiliares compartidos por la vista principal.
-- `hooks/useProjectManagement.ts`: CRUD y lifecycle de proyectos.
-- `hooks/useProjectAssignmentManagement.ts`: asignaciones a estudiantes/grupos.
-- `hooks/useProjectTestSuiteManagement.ts`: gestión de suite de tests docente.
-- `hooks/projectManagement.types.ts`: tipos locales de los hooks.
-- `hooks/projectManagement.utils.ts`: helpers puros de transformación/formato.
+## Dependencias Externas Clave
+Depende de `features/projects/` y componentes de visualización para gráficas y métricas (en `components/`).
 
-## Mantenibilidad
+## Efectos Secundarios (Side Effects)
+Ejecuta acciones de API (crear, actualizar, eliminar proyecto) y refresca la caché de estado local que alimenta el dashboard de progreso.
 
-- No crear componentes duplicados si solo los usa `TeacherProjectsPanel`; extraerlos únicamente cuando tengan reutilización real o reduzcan complejidad clara.
-- Mantener las llamadas HTTP detrás de `shared/api/*`; los componentes no deben usar Axios directamente.
-- Tokens válidos: `app.*`, `primary.*`, `accent.*`, `slate.*`, `bg-white`, `border-app-border`.
-- No introducir clases legacy `academic-*`, `brand-maroon`, `brand-blue` ni `shadow-academic`.
-- Si se añade un archivo en `components/` o `hooks/`, actualizar este README y verificar `npm run knip`.
+## Estado / BBDD
+Contiene estado complejo a nivel UI: configuración multi-paso (wizards) para crear proyectos, modales de confirmación, y filtros de progreso.
+
+## Puntos de Entrada (Entrypoints)
+- `TeacherProjectsPanel.tsx`: Montado en `/projects`.
+- `ProgressDashboard.tsx`: Vista de resumen incrustada o navegada desde el panel de proyectos.

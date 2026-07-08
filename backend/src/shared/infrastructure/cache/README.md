@@ -1,7 +1,29 @@
-# Caché de Infraestructura (Infrastructure Cache)
+## Propósito de la carpeta
+Implementa el cliente Redis transversal (`RedisClientService`) para operaciones ajenas al ciclo de vida de las colas de trabajo, como healthchecks o Pub/Sub.
 
-Este directorio contiene la implementación del cliente Redis compartido para servicios transversales de la plataforma DockUS. Su responsabilidad principal es centralizar la conectividad con Redis para operaciones que no deben depender del ciclo de vida de BullMQ (colas de trabajo), como healthchecks, publicación de eventos Pub/Sub y monitorización de disponibilidad del sistema.
+## Límites y Reglas Estrictas
+- Esta conexión a Redis es independiente de la conexión usada por BullMQ.
+- El cliente debe tener configuración de "fail-fast" extrema (e.g. `connectTimeout: 2000`, `maxRetriesPerRequest: 1`) para evitar bloqueos durante los healthchecks de NestJS.
+- No debe encolar comandos offline (`enableOfflineQueue: false`).
 
-## Archivos y Responsabilidades
+## Anti-Patrones y Gotchas ⚠️
+- Usar este servicio para encolar o procesar trabajos pesados (para eso usar BullMQ).
+- Bloquear el event loop principal si Redis cae. El método `withTimeout` envuelve las llamadas para mitigarlo.
 
-- **`redis-client.service.ts`**: Implementa `RedisClientService`, un servicio inyectable de NestJS decorado con `@Injectable()` que gestiona un cliente Redis independiente con configuración defensiva. Utiliza `buildRedisConnectionOptions` de `shared/config/redis.config` para obtener los datos de conexión, y añade parámetros de resiliencia: `commandTimeout` y `connectTimeout` de 2 segundos para fallar rápido en healthchecks, `enableOfflineQueue: false` para no encolar comandos cuando Redis no está disponible, `lazyConnect: true` para diferir la conexión hasta el primer uso real, y `maxRetriesPerRequest: 1` para evitar reintentos prolongados. Implementa `OnApplicationShutdown` para cerrar la conexión ordenadamente al apagar la aplicación (usando `quit()` si es posible, `disconnect()` como fallback). Expone tres métodos principales: `ping()` para verificar la disponibilidad de Redis con timeout defensivo (consumido por el healthcheck del sistema), `publish()` para publicar mensajes en canales Pub/Sub, y `createSubscriber()` para crear instancias de cliente independientes para suscripciones. Internamente, `getClient()` gestiona la reconexión automática recreando el cliente si la conexión anterior finalizó, y `withTimeout()` aplica un timeout de 2 segundos a todas las operaciones Redis mediante una Promise que rechaza si el servidor no responde a tiempo. Este servicio es intencionalmente independiente de la conexión Redis de BullMQ para permitir healthchecks fiables sin depender del estado interno de los workers de colas.
+## Dependencias de Contexto Asumidas
+- Se asume el entorno de configuración `buildRedisConnectionOptions` provisto en `shared/config/redis.config.ts`.
+
+## Inputs / Outputs Esperados
+- Provee un cliente inyectable con métodos `ping()`, `publish()`, y `createSubscriber()`.
+
+## Ejemplo de uso
+```typescript
+constructor(private readonly redisClient: RedisClientService) {}
+
+async check() {
+  await this.redisClient.ping();
+}
+```
+
+## Formato de Archivos
+- Exporta un servicio inyectable con ciclo de vida manejado por Nest (`OnApplicationShutdown`).

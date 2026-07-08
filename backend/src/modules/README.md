@@ -1,24 +1,28 @@
-# backend/src/modules/
+## Propósito de la carpeta
+Contenedor de todos los módulos de dominio de negocio del backend. Cada subcarpeta representa un contexto acotado independiente (ej. auth, users, academic).
 
-Módulos de dominio de negocio del backend. Cada carpeta representa un contexto acotado con sus controladores, servicios, entidades y DTOs.
+## Límites y Reglas Estrictas
+Cada módulo debe estar contenido en su propia carpeta y exportar un único `[Nombre]Module`. No se permite código suelto en este directorio.
 
-## Módulos
+## Anti-Patrones y Gotchas ⚠️
+Evitar dependencias circulares entre módulos. Si dos módulos se necesitan mutuamente, extraer la lógica compartida o usar eventos de dominio.
 
-| Módulo | Descripción | Archivos clave |
-|--------|-------------|----------------|
-| [`auth/`](./auth) | Autenticación JWT y autorización por roles. | `auth.controller.ts`, `auth.service.ts`, `guards/jwt-auth.guard.ts`, `strategies/jwt.strategy.ts` |
-| [`users/`](./users) | CRUD de usuarios y RBAC. | `users.controller.ts`, `users.service.ts`, `entities/user.entity.ts` |
-| [`academic/`](./academic) | Grupos de curso y matrículas masivas. | `groups.controller.ts`, `groups.service.ts`, `entities/course-group.entity.ts` |
-| [`projects/`](./projects) | Dominio principal: proyectos, asignaciones, entregas, storage, runtime y builder. | `projects.controller.ts`, `projects.service.ts`, y submódulos internos |
+## Dependencias de Contexto Asumidas
+Requiere que `app.module.ts` importe e inyecte estos módulos en la aplicación principal.
 
-## Autenticación y roles
+## Inputs / Outputs Esperados
+N/A (Carpeta estructural).
 
-- `JwtAuthGuard` protege las rutas que requieren sesión.
-- `RolesGuard` verifica que el rol del usuario (`ADMIN`, `TEACHER`, `STUDENT`) coincida con el decorador `@Roles()`.
-- Además, los servicios aplican comprobaciones de ownership (p. ej., un alumno solo ve sus propias entregas).
+## Ejemplo de uso
+```typescript
+import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
 
-## Notas
+@Module({
+  imports: [UsersModule, AuthModule],
+})
+export class AppModule {}
+```
 
-- Los DTOs usan `class-validator` y `class-transformer` para validación y serialización.
-- Las entidades TypeORM definen el esquema relacional; en desarrollo y test se sincronizan automáticamente.
-- El módulo más complejo es [`projects/`](./projects/README.md), que a su vez se divide en submódulos especializados.
+## Formato de Archivos
+Solo subdirectorios con módulos NestJS.

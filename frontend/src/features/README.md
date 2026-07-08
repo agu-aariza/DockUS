@@ -1,16 +1,20 @@
-# Frontend: Características y Estado Global (Features)
+## Responsabilidad del Módulo
+Actuar como la capa de abstracción de negocio del frontend. Contiene los tipos, interfaces, DTOs compartidos y utilidades puras mapeadas directamente a los dominios del backend.
 
-El directorio `features/` es un pilar fundamental en la arquitectura del Frontend de la aplicación. Utiliza el patrón de "Feature Slices" o "Módulos de características", comúnmente usado con gestores de estado global como Redux Toolkit (Slices) o librerías de obtención de datos como React Query / RTK Query.
+## Lo que este módulo NO hace (Anti-Goals) ⚠️
+NO renderiza componentes UI (botones, paneles, layouts). NO incluye llamadas directas a Axios o hooks de estado de React, limitándose a definiciones estáticas y utilidades puras.
 
-Su responsabilidad es alojar la **lógica de estado global, la integración con la API centralizada, y las acciones (thunks/mutations)** de los diferentes dominios de negocio, separándolos de los componentes visuales de React.
+## Conceptos Clave (Glosario)
+- **Feature Slice**: Dominio de negocio (ej. `auth`, `projects`, `groups`) organizado con sus respectivos tipos, constantes y reglas de validación.
 
-## Estructura de Directorios
+## Dependencias Externas Clave
+Dependencias mínimas. Representa los "contratos" (Types/Interfaces) entre la API y la UI de React.
 
-El directorio está organizado por "Dominios de Negocio" (Business Domains), replicando a grandes rasgos la estructura modular del Backend:
+## Efectos Secundarios (Side Effects)
+Ninguno. Este módulo contiene lógica pura (types, mappers simples, constantes).
 
-- **`auth/`**: Maneja el estado global de la sesión del usuario. Contiene llamadas a la API para Iniciar Sesión (Login), Cerrar Sesión (Logout), validación de tokens JWT y almacenamiento de la información del perfil del usuario actualmente autenticado.
-- **`projects/`**: Administra el estado global de la gestión de proyectos. Aquí se almacenan las peticiones en caché (React Query) o slices (Redux) para el CRUD de proyectos, permitiendo que cualquier componente de la app acceda a la lista de proyectos sin hacer peticiones redundantes.
-- **`deliveries/`**: Contiene la lógica centralizada para obtener el histórico de entregas, enviar nuevas entregas (mutations) y gestionar el estado global asociado a las calificaciones.
-- **`groups/`**: Estado global y llamadas a la API para la gestión de alumnos, grupos de trabajo y cohortes (relacionado con las asignaciones de proyectos).
-- **`storage/`**: Lógica y peticiones HTTP encargadas de gestionar la subida (upload) y descarga (download) de archivos estáticos (adjuntos de proyectos, entregables de alumnos) hacia los buckets o servicios de almacenamiento (S3, Minio, sistema de archivos local).
-- **`builder/`**: Centraliza el estado complejo del asistente de Inteligencia Artificial (Project Builder). Aquí se maneja el historial de mensajes del chat con la IA, el estado de la construcción en vivo (draft del proyecto), y la comunicación iterativa (posiblemente a través de WebSockets o peticiones HTTP largas) con la capa de aplicación del Builder en el Backend.
+## Estado / BBDD
+No guarda estado. Define la forma estructural de los objetos (entidades) que los Contexts o hooks consumirán.
+
+## Puntos de Entrada (Entrypoints)
+- Cada subcarpeta (`auth/`, `builder/`, `projects/`, etc.) exporta sus `types.ts` o constantes para ser importadas libremente en los componentes UI (`src/auth`, `src/projects`).

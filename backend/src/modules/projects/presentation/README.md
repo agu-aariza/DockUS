@@ -1,16 +1,30 @@
-# Capa de Presentación de Proyectos (Projects Presentation)
+## Propósito de la carpeta
+Capa de Presentación (REST API) del módulo de Proyectos. Aloja los controladores de NestJS responsables de recibir las solicitudes HTTP, aplicar Guards/Interceptors y derivar la ejecución a los servicios de negocio correspondientes.
 
-Este directorio conforma la Capa de Presentación (Presentation Layer) del módulo principal de proyectos. Su única responsabilidad es manejar las peticiones HTTP de entrada (Requests), enrutar estas peticiones a los servicios de aplicación o dominio correspondientes, y formatear las respuestas de salida (Responses) hacia el cliente web o móvil.
+## Límites y Reglas Estrictas
+- NUNCA incluir lógica de negocio aquí.
+- TODO endpoint debe tener sus respectivos decoradores de Swagger (`@ApiOperation`, `@ApiResponse`).
+- Los roles y permisos (`@Roles`, `@RequirePermissions`) deben ser definidos explícitamente en cada endpoint.
 
-Es el punto de entrada de la API para todas las operaciones relacionadas con proyectos.
+## Anti-Patrones y Gotchas ⚠️
+- Interacciones directas con la base de datos o Repositorios desde el controlador.
+- Capturar errores de forma genérica o atrapar excepciones de dominio sin mapearlas a `HttpException` de NestJS. (Se prefiere usar Exception Filters globales).
 
-## Archivos de Controladores (Controllers)
+## Dependencias de Contexto Asumidas
+- El Request de Express es inyectado. La información del usuario autenticado proviene del `@CurrentUser()` decorador.
 
-Los archivos contenidos aquí son Controladores de NestJS (`*.controller.ts`). Cada uno agrupa endpoints (rutas) relacionados por su sub-dominio funcional:
+## Inputs / Outputs Esperados
+- Inputs: DTOs, Path params, Query params.
+- Outputs: Promesas que resuelven los objetos a serializar como JSON.
 
-- **`projects.controller.ts`**: Es el controlador principal y el más grande. Maneja las operaciones CRUD fundamentales de los proyectos (Crear un proyecto, listar proyectos, ver detalles de un proyecto específico, actualizar su metadata, archivar/borrar). También puede manejar metadatos de configuración a nivel raíz del proyecto.
-- **`deliveries.controller.ts`**: Controlador dedicado exclusivamente a las entregas de los estudiantes. Expone endpoints para que un estudiante envíe (suba) su trabajo (archivos, enlaces a repositorios, imágenes docker), para listar las entregas de un proyecto, y para consultar el estado de una entrega en particular.
-- **`project-gradebook.controller.ts`**: Controlador que expone la API para el "Libro de Calificaciones". Proporciona rutas para que los profesores consulten las notas agregadas de un proyecto, asignen o modifiquen calificaciones manuales, apliquen rúbricas a una entrega y publiquen las notas finales a los estudiantes.
-- **`project-assignments.controller.ts`**: Maneja los endpoints relacionados con la asignación (quién debe hacer qué). Permite a los profesores asignar un proyecto a estudiantes individuales, a grupos enteros, a clases (aulas) completas, o gestionar fechas límite personalizadas por asignación.
+## Ejemplo de uso
+```typescript
+@Get()
+@ApiOperation({ summary: 'Listar proyectos' })
+async findAll(@Query() query: ListProjectsQueryDto, @CurrentUser() user: AuthenticatedUser) {
+  return this.projectsService.findAll(query, user);
+}
+```
 
-*Nota:* Los controladores delegan toda la lógica de negocio compleja a la capa de Servicios (`projects.service.ts`, `project-gradebook.service.ts`, etc.) ubicados en la raíz del módulo, actuando solo como mediadores HTTP.
+## Formato de Archivos
+- `*.controller.ts` (ej. `projects.controller.ts`, `deliveries.controller.ts`).

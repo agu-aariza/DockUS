@@ -1,28 +1,21 @@
-# Frontend: Resumen / Panel de Control (Summary / Dashboard)
+## Responsabilidad del Módulo
+Proporciona el panel de inicio y analíticas principales para los profesores, mostrando un resumen general de la actividad de los estudiantes y el estado de las entregas.
 
-Este directorio contiene componentes y vistas enfocadas en el análisis agregado (Analytics), reportes de alto nivel y el panel de control principal (Home Dashboard) destinado principalmente a los profesores o administradores del sistema.
+## Lo que este módulo NO hace (Anti-Goals) ⚠️
+No gestiona evaluaciones en profundidad ni el estudio de corrección individual (eso pertenece a flujos específicos de entrega/revisión).
 
-## Estructura de Directorios
+## Conceptos Clave (Glosario)
+- **TeacherHomePanel**: Vista principal del profesor.
+- **Cohort Analytics**: Métricas agregadas sobre un grupo de estudiantes o un proyecto.
 
-- `components/`: Subcomponentes visuales especializados en la representación de datos agregados (estadísticas, gráficos).
+## Dependencias Externas Clave
+Depende de `shared/components` para gráficos o tablas estadísticas y de `shared/api` para extraer agregaciones.
 
-## Archivos del Directorio Raíz
+## Efectos Secundarios (Side Effects)
+Exclusivamente lectura (fetch de datos) para presentar los tableros analíticos. No altera el estado global.
 
-- **`TeacherHomePanel.tsx`**: Vista de aterrizaje principal para docentes y administradores. Integra:
-  - Métricas globales del sistema (`StatsOverview`).
-  - Métricas de cohorte por proyecto (`CohortAnalyticsDashboard`).
-  - Auditoría de integridad y sincronización de recursos.
-  - Lista de proyectos recientes.
-  - Panel de prioridades con entregas pendientes y últimas evaluaciones.
-  - Contexto de workspace activo para navegación sincronizada.
-- **`README.md`**: Este archivo de documentación.
+## Estado / BBDD
+Consolidación de métricas e información de múltiples endpoints (entregas, usuarios, proyectos) en un estado derivado de solo lectura.
 
-## Archivos en `components/`
-
-- **`CohortAnalyticsDashboard.tsx`**: Dashboard analítico por proyecto. Muestra tasa de aprobados / éxito en tests, nota media, total de entregas, tests fallidos, distribución de calificaciones o estado de entregas, e incidencias de calidad detectadas automáticamente.
-
-## Dependencias principales
-
-- Componentes del UI Kit: `PageHeader`, `Button`, `SectionCard`, `StatusBadge`, `StatsOverview`.
-- APIs de servicio: `projectsApi`, `deliveriesApi`, `usersApi`.
-- Contextos compartidos: `WorkspaceContext`, `ToastContext`.
+## Puntos de Entrada (Entrypoints)
+- `TeacherHomePanel.tsx`

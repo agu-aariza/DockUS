@@ -1,17 +1,24 @@
-# frontend/src/shared/utils/
+## Propósito de la carpeta
+Agrupa funciones puras utilitarias para validaciones, transformaciones de texto, manejo de errores, fechas y hashing.
 
-Utilidades generales del frontend.
+## Límites y Reglas Estrictas
+Estas funciones deben ser PURAS. No pueden importar componentes de React, y no pueden mantener estado interno ni ejecutar llamadas al backend.
 
-## Archivos principales
+## Anti-Patrones y Gotchas ⚠️
+No añadir funciones relacionadas al estado global, ni mezclar lógicas que aplican únicamente a un módulo particular de negocio.
 
-| Archivo | Función |
-|---------|---------|
-| [`errors.ts`](./errors.ts) | Manejo y mensajes de error de la API. |
-| [`format.ts`](./format.ts) | Formateo de fechas, tamaños, números, etc. |
-| [`permissions.ts`](./permissions.ts) | Lógica de permisos por rol. |
-| [`hash.ts`](./hash.ts) | Helpers de hash para deduplicación. |
-| [`technicalFeedback.ts`](./technicalFeedback.ts) | Helpers para procesar feedback técnico de evaluaciones. |
+## Dependencias de Contexto Asumidas
+Ninguna. Todo debe poder ser probado de manera aislada (unit test fácil).
 
-## Notas
+## Inputs / Outputs Esperados
+Datos primitivos de entrada produciendo un dato formateado o procesado (ej. String a String).
 
-- Funciones puras sin dependencias de React; reutilizables en hooks y componentes.
+## Ejemplo de uso
+```typescript
+import { formatBytes } from '@/shared/utils/format';
+
+const sizeStr = formatBytes(1024); // "1 KB"
+```
+
+## Formato de Archivos
+Agrupaciones por temática en camelCase (ej. `format.ts`, `errors.ts`, `hash.ts`).

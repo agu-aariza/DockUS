@@ -1,7 +1,31 @@
-# Seguridad de Infraestructura (Infrastructure Security)
+## Propósito de la carpeta
+Definir las políticas de rate limiting global que protegen los endpoints de la API contra ataques de fuerza bruta y saturación de peticiones (DDoS/Flood).
 
-Este directorio contiene los componentes de seguridad transversal de la infraestructura del backend de DockUS. Su responsabilidad principal es definir las políticas de rate limiting (limitación de tasa) que protegen todos los endpoints de la API contra abusos, ataques de fuerza bruta y ráfagas excesivas de peticiones, equilibrando la protección con una experiencia de usuario legítima y fluida.
+## Límites y Reglas Estrictas
+- Se utilizan dos cubos de rate limiting con `@nestjs/throttler`: `global` (ventanas largas, e.g. 1000req/60s para navegación normal) y `burst` (ventanas cortas, e.g. 40req/1s para evitar scripts rápidos).
+- Esta configuración debe estar activa en todos los entornos productivos.
 
-## Archivos y Responsabilidades
+## Anti-Patrones y Gotchas ⚠️
+- Los endpoints de autenticación (`/auth/login`) están altamente expuestos a fuerza bruta. NUNCA deben depender solo de los límites globales, deben sobrescribir los límites usando el decorador `@Throttle()` con valores mucho más bajos (ej. 3req/1s).
+- Rate limits extremadamente estrictos en el bucket global pueden causar que paneles complejos que hacen varias peticiones GET (dashboard, workspaces) fallen repentinamente.
 
-- **`throttler.config.ts`**: Exporta la constante `throttlerConfig`, un array de configuraciones para el módulo `ThrottlerModule` de NestJS que define dos cubos de rate limiting independientes con estrategias complementarias. El cubo `global` establece una ventana deslizante de 60 segundos con un límite generoso de 1.000 peticiones, diseñado para permitir la navegación fluida del workspace donde múltiples peticiones GET se disparan simultáneamente al cambiar de proyecto, abrir paneles o cargar dashboards. El cubo `burst` define una ventana de 1 segundo con un límite de 40 peticiones, enfocado en detectar y detener scripts automatizados o ataques de flood sin afectar al usuario real durante ráfagas normales de actividad. Los endpoints de autenticación (`/auth/login`, `/auth/register`) sobreescriben estos valores mediante el decorador `@Throttle()` con límites mucho más restrictivos (10 peticiones/60s global, 3 peticiones/1s burst) para proteger contra ataques de fuerza bruta sobre credenciales. Esta configuración se registra globalmente en `AppModule` a través de `ThrottlerModule.forRoot(throttlerConfig)`.
+## Dependencias de Contexto Asumidas
+- Se asume el uso de `ThrottlerModule` de NestJS en `AppModule`.
+
+## Inputs / Outputs Esperados
+- Provee un array de configuración compatible con `ThrottlerModule.forRoot()`.
+
+## Ejemplo de uso
+```typescript
+import { throttlerConfig } from 'src/shared/infrastructure/security/throttler.config';
+
+@Module({
+  imports: [
+    ThrottlerModule.forRoot(throttlerConfig),
+  ],
+})
+export class AppModule {}
+```
+
+## Formato de Archivos
+- Exporta constantes de configuración inmutables (`*.config.ts`).

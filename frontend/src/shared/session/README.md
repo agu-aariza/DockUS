@@ -1,11 +1,25 @@
-# Gestión de Sesiones (Session Management)
+## Propósito de la carpeta
+Gestiona el estado de autenticación, el token de sesión y el proveedor global para React.
 
-Este módulo centraliza toda la lógica de sesiones de usuario en el frontend de DockUS. Se encarga de persistir múltiples sesiones simultáneas en `localStorage`, sincronizar los tokens de autenticación con la capa HTTP y exponer un contexto React que permite a cualquier componente del sistema acceder al estado de sesión activa. Además, proporciona un hook de permisos basado en roles que determina las capacidades de lectura, escritura y administración del usuario autenticado.
+## Límites y Reglas Estrictas
+Toda interacción y acceso al estado de sesión o al token desde los componentes debe realizarse a través del hook `useSession`.
 
-## Archivos y Responsabilidades
+## Anti-Patrones y Gotchas ⚠️
+Acceder al local storage o session storage directamente desde otros módulos en lugar de usar las utilidades provistas en esta carpeta.
 
-- **`SessionContext.tsx`**: Define el `SessionProvider` y el hook `useSession`, que conforman el contexto React de sesiones. El provider gestiona el estado de múltiples `SessionRecord` simultáneos, sincroniza automáticamente el `accessToken` y `refreshToken` de la sesión activa hacia la capa HTTP (`setAccessToken`/`setRefreshToken`), y escucha actualizaciones de tokens emitidas por el interceptor de auto-refresh mediante `subscribeTokenUpdate`. Expone operaciones como `addSession`, `removeSession`, `setActiveSessionId` y `clearSessions`, todas memoizadas con `useCallback` para evitar re-renderizados innecesarios. También suscribe a advertencias de autenticación (`subscribeAuthWarning`) para notificar al usuario de problemas con su sesión.
+## Dependencias de Contexto Asumidas
+El `SessionContext` debe envolver a la raíz de la aplicación para poder acceder al estado con `useSession()`.
 
-- **`sessionStore.ts`**: Implementa la capa de persistencia de sesiones utilizando `localStorage`. Ofrece funciones puras para leer y escribir la lista de sesiones (`readSessions`/`writeSessions`) y el identificador de sesión activa (`readActiveSessionId`/`writeActiveSessionId`), además de una función factoría `createSessionRecord` que transforma un `AuthResponse` del backend en un `SessionRecord` con un UUID generado por `crypto.randomUUID()`. Este archivo actúa como la fuente de verdad para la rehidratación de sesiones al recargar la aplicación, siendo consumido directamente por `SessionContext.tsx`.
+## Inputs / Outputs Esperados
+Hooks que devuelven el estado de usuario (autenticado, cargando) y funciones para el inicio y cierre de sesión.
 
-- **`useManagementPermissions.ts`**: Hook reutilizable que calcula los permisos de gestión del usuario a partir de su `SessionRecord` activa. Utiliza la utilidad `hasRole` de `shared/utils/permissions` para derivar banderas como `canRead` (cualquier sesión autenticada), `canWrite` (roles `ADMIN` o `TEACHER`), `canAdmin` (solo `ADMIN`), y alias semánticos como `canUpload` y `canTeacherOrAdmin`. Es consumido por los hooks de gestión de los paneles de almacenamiento, proyectos y entregas para controlar el acceso a operaciones protegidas.
+## Ejemplo de uso
+```tsx
+import { useSession } from '@/shared/session/SessionContext';
+
+const { user, logout } = useSession();
+```
+
+## Formato de Archivos
+- `SessionContext.tsx` para el Provider y Hook.
+- `sessionStore.ts` para persistencia e interceptores locales.

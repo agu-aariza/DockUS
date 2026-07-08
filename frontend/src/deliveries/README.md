@@ -1,31 +1,21 @@
-# Frontend: Panel de Entregas
+## Responsabilidad del Módulo
+Proporcionar la interfaz de gestión (UI) para listar, revisar, corregir y asignar calificaciones a las entregas (Deliveries) por parte de los profesores.
 
-Este módulo permite a profesores/admin listar, revisar y calificar entregas de estudiantes. La vista principal es `TeacherDeliveriesPanel.tsx`; el estado y las llamadas de dominio viven en `hooks/`.
+## Lo que este módulo NO hace (Anti-Goals) ⚠️
+No es responsable de la lógica de envío por parte del alumno (ubicada en `student/`). No contiene las definiciones base del modelo de datos de entregas.
 
-## Estructura
+## Conceptos Clave (Glosario)
+- **TeacherDeliveriesPanel**: Panel administrativo para que el profesor visualice el flujo de entregas.
+- **Review**: Acción de calificar y proporcionar feedback a una entrega específica.
 
-- `TeacherDeliveriesPanel.tsx`: vista principal de entregas.
-- `teacherReviewNavigation.ts`: navegación entre entregas y extracción de evidencias legacy.
-- `utils.ts`: helpers de presentación/formato.
-- `components/AssignmentLabel.tsx`: etiqueta de asignación individual/grupal.
-- `components/DeliveriesSidebar.tsx`: cola lateral con búsqueda, filtros y métricas.
-- `components/DeliveryDetailHeader.tsx`: encabezado de la entrega seleccionada.
-- `components/DeliveryOverview.tsx`: resumen operativo y adjuntos.
-- `components/DeliveryGrading.tsx`: calificación/manual feedback.
-- `components/DeliveryReport.tsx`: reporte técnico/pedagógico.
-- `components/DeliveryListItem.tsx`: tarjeta de entrega en la cola.
-- `components/TeacherReviewSummary.tsx`: resumen de revisión docente.
-- `hooks/useDeliveriesPanel.ts`: estado local de filtros/selección.
-- `hooks/useDeliveryManagement.ts`: integración con API de entregas.
+## Dependencias Externas Clave
+Depende de `features/deliveries/` para los DTOs y lógica de negocio. Utiliza utilidades de navegación como `teacherReviewNavigation.ts` para moverse por las interfaces de corrección.
 
-## Sistema Visual
+## Efectos Secundarios (Side Effects)
+Lanza mutaciones (peticiones API) para actualizar el estado, nota o feedback de una entrega, y refresca las tablas y paneles de la UI en consecuencia.
 
-Usa el UI kit compartido (`PageHeader`, `Button`, `Tabs`, `StatusBadge`, `SearchInput`, `MetricCard`, `EmptyState`) y los tokens institucionales (`bg-app-bg`, `bg-white`, `border-app-border`, `text-primary`, `text-accent`, `text-slate-*`).
+## Estado / BBDD
+Mantiene estado de UI para filtros, modales, vistas detalladas de entregas y formularios de corrección manual.
 
-No se usan tokens legacy (`academic-*`, `brand-maroon`, `brand-blue`, `shadow-academic`) ni microcomponentes de estado propios cuando `StatusBadge` cubre el caso.
-
-## Mantenibilidad
-
-- Mantener navegación y mapeos de review en `teacherReviewNavigation.ts`.
-- Mantener side effects y API en hooks, no en componentes presentacionales.
-- Si se añade o elimina un componente, actualizar este README y verificar `npm run knip`.
+## Puntos de Entrada (Entrypoints)
+- `TeacherDeliveriesPanel.tsx`: Componente raíz montado en la ruta `/deliveries`.

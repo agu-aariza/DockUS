@@ -1,31 +1,26 @@
-# Infrastructure: Storage (MinIO)
+## Responsabilidad del Módulo
+Abstraer el almacenamiento de objetos binarios masivos (Object Storage) proporcionando una API limpia S3-compatible (enfocada en MinIO).
 
-## Descripción General
-Este módulo de infraestructura (`StorageInfrastructureModule`) centraliza y expone un cliente reutilizable para operaciones de almacenamiento de objetos (Object Storage) compatibles con S3. Utiliza la librería `@aws-sdk/client-s3` y está configurado principalmente para interactuar con MinIO, que actúa como el proveedor de almacenamiento S3 de DockUS. 
-Su propósito es aislar los detalles técnicos de conexión, subida/bajada de archivos y generación de URLs firmadas (signed URLs), ofreciendo una API limpia para los dominios de negocio.
+## Lo que este módulo NO hace (Anti-Goals) ⚠️
+- NO procesa los archivos (no hace resize de imágenes ni antivirus).
+- NO maneja la autenticación de usuarios que intentan descargar archivos.
+- NO define entidades de TypeORM (eso pertenece al dominio que referencie la URL/ID del archivo).
 
-## Árbol de Directorios
-```text
-storage/
-├── README.md
-├── minio-storage.service.ts
-└── storage-infrastructure.module.ts
-```
+## Conceptos Clave (Glosario)
+- **Signed URL**: Una URL temporal generada criptográficamente que permite a un cliente HTTP sin credenciales acceder a un recurso privado durante un tiempo limitado.
+- **Bucket**: El contenedor raíz de almacenamiento lógico en S3/MinIO.
 
-## Detalle Exhaustivo de Ficheros
+## Dependencias Externas Clave
+- `@aws-sdk/client-s3`: Librería de AWS (100% compatible con MinIO).
+- Conexión TCP al puerto API de MinIO configurado por variables de entorno.
 
-- **`minio-storage.service.ts`**
-  - **Propósito:** Implementa el cliente S3 para gestionar los objetos en el bucket de MinIO.
-  - **Responsabilidad:** 
-    - Inicializar el cliente S3 leyendo la configuración de variables de entorno (`MINIO_ENDPOINT`, `MINIO_API_PORT`, `MINIO_ROOT_USER`, etc.) a través de `ConfigService`.
-    - Realizar el "bootstrap" automático del bucket al iniciar la aplicación (`onModuleInit()`), asegurando que el bucket configurado exista (si `STORAGE_BOOTSTRAP_ON_STARTUP` está activo).
-    - Exponer métodos de negocio limpios: `putObject` (subir un fichero), `deleteObject` (borrar), `objectExists` (verificar existencia), `createDownloadSignedUrl` (generar URL temporal de descarga) y `getObjectBuffer` (descargar archivo a memoria como Buffer).
-  - **Conexiones:** Se inyecta en servicios de dominio (por ejemplo, submódulo de proyectos, entregas académicas, o avatares de usuarios) que necesiten persistir o recuperar archivos binarios grandes.
+## Efectos Secundarios (Side Effects)
+- Crea objetos y consume espacio físico en el proveedor de almacenamiento.
+- Puede crear el bucket inicial automáticamente en el arranque (bootstrap).
 
-- **`storage-infrastructure.module.ts`**
-  - **Propósito:** Actúa como el contenedor de Inyección de Dependencias (DI) en NestJS para este submódulo.
-  - **Responsabilidad:** Importar `ConfigModule`, proveer `MinioStorageService` como un provider, y exportarlo (`exports: [MinioStorageService]`) para que cualquier módulo que importe `StorageInfrastructureModule` pueda inyectar el servicio de almacenamiento.
-  - **Conexiones:** Se importa en el root de la aplicación o a través de un `SharedModule` general para poner la infraestructura de Storage a disposición de los módulos de dominio.
+## Estado / BBDD
+- Totalmente independiente de PostgreSQL.
+- Todo el estado persistente reside en los buckets del proveedor de Object Storage.
 
-## Información de Contexto para Inteligencia Artificial (IA)
-Este módulo se acopla estrictamente a la interfaz de S3 mediante AWS SDK v3. Cualquier intento de usar un bucket en AWS real en producción funcionaría sin modificar la lógica, ya que MinIO es 100% compatible. Las descargas se gestionan mediante Buffers en memoria o URLs pre-firmadas, siendo estas últimas preferidas para servir contenido público o semi-público (como visualización de entregas) sin recargar el motor de Node.js.
+## Puntos de Entrada (Entrypoints)
+- `MinioStorageService`: Expone `putObject`, `deleteObject`, `objectExists`, `createDownloadSignedUrl`, `getObjectBuffer`.

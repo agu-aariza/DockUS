@@ -1,27 +1,31 @@
-# backend/src/shared/database/
+## Propósito de la carpeta
+Contiene utilidades puras y helpers transversales para interactuar con bases de datos relacionales, detectar errores genéricos de persistencia y abstraer códigos de error del motor subyacente.
 
-Utilidades de base de datos compartidas para todo el backend.
+## Límites y Reglas Estrictas
+- NO colocar configuración de conexión aquí (usar `shared/infrastructure/database/`).
+- NO crear repositorios o entidades aquí. Esto es estrictamente para helpers utilitarios genéricos de TypeORM/PostgreSQL.
 
-## Archivos principales
+## Anti-Patrones y Gotchas ⚠️
+- Filtrar o capturar errores genéricos sin relanzar (`throw error`) si el error no coincide con la condición buscada.
+- Usar números crudos en el código de negocio; usar los helpers de aquí para identificar violaciones de unicidad u otros errores de BD.
 
-| Archivo | Función |
-|---------|---------|
-| `unique-violation.util.ts` | Detecta violaciones de unicidad de PostgreSQL (`23505`) y las transforma en excepciones de dominio comprensibles. |
+## Dependencias de Contexto Asumidas
+- Se asume TypeORM con driver PostgreSQL (errores específicos como `23505` para unique constraint).
 
-## Uso típico
+## Inputs / Outputs Esperados
+Recibe excepciones capturadas y opcionalmente lanza excepciones de dominio preformateadas (ej. `ConflictException`).
 
-```ts
-import { throwIfUniqueViolation } from '../../shared/database/unique-violation.util';
+## Ejemplo de uso
+```typescript
+import { throwIfUniqueViolation } from 'src/shared/database/unique-violation.util';
 
 try {
-  await repository.save(entity);
+  await this.repository.save(entity);
 } catch (error) {
-  throwIfUniqueViolation(error, 'Ya existe un registro con esos datos únicos.');
-  throw error;
+  throwIfUniqueViolation(error, 'El usuario ya existe');
+  throw error; // Relanzar si no era violación de unicidad
 }
 ```
 
-## Notas
-
-- Centraliza el manejo del código de error SQL `23505`.
-- La configuración principal de TypeORM está en `shared/infrastructure/database/`.
+## Formato de Archivos
+- Funciones puras exportadas directamente (`*.util.ts`).

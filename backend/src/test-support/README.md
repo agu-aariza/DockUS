@@ -1,14 +1,30 @@
-# backend/src/test-support/
+## Propósito de la carpeta
+Contener constructores de dominio (Builders/Factories) y helpers diseñados exclusivamente para facilitar y estandarizar la creación de entidades durante los tests unitarios.
 
-Builders de dominio y helpers para tests unitarios.
+## Límites y Reglas Estrictas
+- NINGÚN archivo de aquí debe importarse en código de producción. Este directorio está excluido del build de producción en `tsconfig.build.json`.
+- Los builders de dominio no deben realizar validaciones estrictas, su propósito es retornar datos de prueba válidos rápidamente con valores por defecto sensatos.
 
-## Archivos principales
+## Anti-Patrones y Gotchas ⚠️
+- Usar datos "mágicos" inconsistentes en cada suite de tests (usar estos builders en su lugar).
+- Referenciar repositorios reales de TypeORM desde estos factories; deben devolver objetos en memoria o Data Transfer Objects de prueba.
 
-| Archivo | Función |
-|---------|---------|
-| `domain-builders.ts` | Funciones factory para crear instancias de entidades en tests. |
+## Dependencias de Contexto Asumidas
+- Entorno de ejecución `NODE_ENV=test`.
+- Importaciones de entidades de negocio del resto del backend.
 
-## Notas
+## Inputs / Outputs Esperados
+- Inputs: Sobrescituras parciales (`Partial<Entity>`).
+- Outputs: Instancias hidratadas de entidades con mock data (`Project`, `User`, `Delivery`, etc).
 
-- Facilita la creación de datos de prueba coherentes y reduce la duplicación en los `.spec.ts`.
-- No se incluye en el build de producción (`tsconfig.build.json` lo excluye).
+## Ejemplo de uso
+```typescript
+import { buildProject } from 'src/test-support/domain-builders';
+
+const project = buildProject({ name: 'Test Overriden Name' });
+expect(project.name).toBe('Test Overriden Name');
+// El resto de los atributos se rellenaron automáticamente con faker
+```
+
+## Formato de Archivos
+- Exportación de funciones puras (`domain-builders.ts`).

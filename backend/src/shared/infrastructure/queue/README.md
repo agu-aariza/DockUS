@@ -1,24 +1,28 @@
-# Infrastructure: Queue (RabbitMQ)
+## Propósito de la carpeta
+Proveer una abstracción y configuración base para la mensajería asíncrona y procesamiento en segundo plano (colas). Actual o conceptualmente maneja BullMQ / RabbitMQ.
 
-## Descripción General
-Este módulo (actualmente en definición) está destinado a gestionar la infraestructura de colas de mensajes de DockUS, basándose previsiblemente en RabbitMQ u otro bróker de mensajería compatible. Su objetivo es proporcionar un mecanismo asíncrono para la comunicación entre los distintos dominios del backend, garantizando alta disponibilidad, escalabilidad y tolerancia a fallos.
+## Límites y Reglas Estrictas
+- NINGUNA lógica de dominio (como Jobs específicos de "Evaluación" o "Compilación") debe vivir aquí.
+- Los módulos de negocio deben inyectar interfaces de productores genéricos definidos aquí, si aplica.
 
-## Responsabilidades
-- **Mensajería asíncrona:** Desacoplar procesos pesados (ej. orquestación de contenedores, compilaciones, generación de reportes).
-- **Enrutamiento y Tópicos:** Permitir que múltiples módulos escuchen eventos de dominio específicos sin conocer el origen.
-- **Fiabilidad (Reliability):** Manejo de reintentos, Dead Letter Queues (DLQ) y ack/nack de mensajes.
+## Anti-Patrones y Gotchas ⚠️
+- Mezclar la configuración de la conexión de caché genérica (PubSub/Healthcheck) con el Worker Thread que consume los mensajes de la cola (requieren bloqueos diferentes).
 
-## Árbol de Directorios
-```text
-queue/
-└── README.md
+## Dependencias de Contexto Asumidas
+- Se asume un broker activo (Redis para BullMQ, o RabbitMQ).
+
+## Inputs / Outputs Esperados
+- Provee servicios de infraestructura en forma de inyectables (ej. `QueueService`).
+
+## Ejemplo de uso
+```typescript
+// Conceptual
+constructor(private readonly queueManager: IQueueManager) {}
+
+async dispatchEvent() {
+    await this.queueManager.publish('builder_events', { action: 'start' });
+}
 ```
 
-## Detalle de Ficheros
-
-- **`README.md`**
-  - **Propósito:** Documentar el propósito y diseño del módulo de infraestructura de colas.
-  - **Responsabilidad:** Servir como guía arquitectónica para la integración de mensajería asíncrona.
-  - **Conexiones:** Relacionado conceptualmente con otros submódulos de `infrastructure` (como `docker` y `storage`), siendo un pilar fundamental para arquitecturas dirigidas por eventos (Event-Driven Architecture) en DockUS.
-
-> **Nota para Modelos de IA:** Actualmente este directorio contiene únicamente documentación. Cualquier futura implementación de servicios (ej. `RabbitMQService`, `queue-infrastructure.module.ts`) deberá adherirse al principio de inyección de dependencias de NestJS y abstraer la lógica del bróker para el resto de los módulos de dominio.
+## Formato de Archivos
+- Exporta configuración y módulos globales de NestJS para colas.

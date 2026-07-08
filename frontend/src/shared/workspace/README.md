@@ -1,17 +1,24 @@
-# Frontend: Shared Workspace
+## Propósito de la carpeta
+Contiene el contexto global de entorno de trabajo, permitiendo cambiar el scope de la aplicación (ej. de qué proyecto estamos viendo datos).
 
-`shared/workspace` centraliza la selección transversal usada por vistas de profesor y estudiante: proyecto, asignación, entrega y run activo. Es la pieza que mantiene sincronizadas barras de contexto, paneles de runtime, entregas y reportes.
+## Límites y Reglas Estrictas
+Modificar el workspace debe invalidar o recargar los datos de la vista dependiente. Toda vista que dependa de un proyecto debe suscribirse a este contexto.
 
-## Archivos
+## Anti-Patrones y Gotchas ⚠️
+No mantener el identificador del proyecto activo en estado local, ni pasarlo manualmente en un taladro de props (prop-drilling) infinito.
 
-- `WorkspaceContext.tsx`: provider React y hook `useWorkspace()` para leer/modificar la selección global.
-- `WorkspaceBar.tsx`: barra visual que refleja la selección actual y permite navegar entre contexto relacionado.
+## Dependencias de Contexto Asumidas
+Requiere que `WorkspaceContext` envuelva las rutas donde se deba poder interactuar con un entorno seleccionado (ej. dentro del AppShell).
 
-## Reglas de Mantenibilidad
+## Inputs / Outputs Esperados
+El hook retorna el `currentProject`, `currentAssignment` y funciones de mutación como `setWorkspace()`.
 
-- El flujo de datos debe seguir siendo unidireccional a través de `WorkspaceContext.tsx`.
-- No duplicar estado crítico de selección en componentes locales si otros paneles deben reaccionar a él.
-- Mantener componentes funcionales con hooks y Tailwind.
-- Usar únicamente el sistema visual institucional actual (`app.*`, `primary.*`, `accent.*`, `slate.*`, `bg-white`, `border-app-border`).
-- No reintroducir Glassmorphism/Academic ni tokens `brand-*`/`academic-*`.
-- Cualquier cambio en la forma de selección debe revisarse contra `TeacherProjectsPanel`, `TeacherDeliveriesPanel`, `TeacherRuntimePanel` y las vistas de estudiante.
+## Ejemplo de uso
+```tsx
+import { useWorkspace } from '@/shared/workspace/WorkspaceContext';
+
+const { currentProject } = useWorkspace();
+```
+
+## Formato de Archivos
+Archivos de Contexto y UI relacionada directamente con el bar de selección (`WorkspaceContext.tsx`, `WorkspaceBar.tsx`).

@@ -1,18 +1,27 @@
-# backend/src/modules/projects/deliveries/
+## Responsabilidad del Módulo
+Manejar las entregas (deliveries) que realizan los estudiantes en respuesta a un proyecto asignado. Coordina la carga de archivos, la invocación de la evaluación asíncrona y la exposición del estado final.
 
-Submódulo de entregas versionadas de los alumnos. Gestiona el almacenamiento del código entregado, su previsualización y el lanzamiento de evaluaciones.
+## Lo que este módulo NO hace (Anti-Goals) ⚠️
+- No evalúa el código. Llama al Builder para que lo haga.
+- No decide la calificación final del curso, solo la de esa entrega específica.
+- No crea proyectos ni asignaciones.
 
-## Archivos principales
+## Conceptos Clave (Glosario)
+- **Delivery**: Un intento de un estudiante para resolver un proyecto. Incluye un ID de almacenamiento temporal, metadatos, y vinculación al estudiante y proyecto.
 
-| Archivo | Función |
-|---------|---------|
-| `deliveries.controller.ts` | Endpoints para subir, listar, previsualizar y calificar entregas. |
-| `deliveries.service.ts` | Lógica de gestión de entregas. |
-| `entities/delivery.entity.ts` | Entidad `Delivery` con versión y metadatos. |
-| `dto/create-delivery.dto.ts` | DTO para crear una entrega. |
+## Dependencias Externas Clave
+- `Builder Module`: Para iniciar ejecuciones (`BuildRun`) sobre el código entregado.
+- `Storage Module`: Para guardar el ZIP o tarball subido por el estudiante.
+- Entidad `Project` y `User`.
 
-## Notas
+## Efectos Secundarios (Side Effects)
+- Almacena archivos en S3/MinIO.
+- Encola tareas de evaluación en Redis.
+- Modifica la tabla de entregas (`deliveries`).
 
-- Cada entrega pertenece a una `ProjectAssignment`.
-- El alumno puede realizar múltiples entregas hasta alcanzar el límite configurado.
-- Desde una entrega se puede lanzar un `BuildRun` para evaluarla.
+## Estado / BBDD
+- Entidad `Delivery`.
+
+## Puntos de Entrada (Entrypoints)
+- `DeliveriesController` (Crear entrega, listar historial).
+- `DeliveriesService` (Orquestación de la creación, almacenamiento y despacho al builder).

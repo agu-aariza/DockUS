@@ -1,23 +1,28 @@
-# backend/src/shared/utils/
+## Propósito de la carpeta
+Contiene utilidades puras agnósticas de dominio. Proporciona funciones helper para cálculos genéricos de paginación, conversiones de tipos y operaciones aritméticas o lógicas simples utilizadas en todo el backend.
 
-Utilidades generales reutilizables en cualquier módulo del backend.
+## Límites y Reglas Estrictas
+- NINGUNA dependencia de módulos de negocio.
+- NO pueden tener inyección de dependencias de NestJS (deben ser funciones exportadas puras, fáciles de testear).
 
-## Archivos principales
+## Anti-Patrones y Gotchas ⚠️
+- Incluir lógica de negocio encubierta o validaciones que corresponden a DTOs.
+- Crear clases complejas instanciables para utilidades puras.
 
-| Archivo | Función |
-|---------|---------|
-| `pagination.util.ts` | Helpers para construir metadatos de paginación (`page`, `limit`, `total`, `totalPages`). |
-| `to-boolean.util.ts` | Conversión robusta de strings a booleanos (`'true'`, `'1'`, `'yes'`, etc.). |
+## Dependencias de Contexto Asumidas
+- Cero dependencias externas complejas. Solo TypeScript estándar y eventualmente lodash o utilidades nativas ligeras.
 
-## Uso típico
+## Inputs / Outputs Esperados
+- Inputs primitivos, outputs predecibles sin efectos secundarios.
 
-```ts
-import { buildPaginationMeta } from '../../shared/utils/pagination.util';
+## Ejemplo de uso
+```typescript
+import { buildPaginationMeta } from 'src/shared/utils/pagination.util';
+import { toBoolean } from 'src/shared/utils/to-boolean.util';
 
-const meta = buildPaginationMeta(page, limit, total);
+const isFeatureActive = toBoolean(process.env.FEATURE_FLAG);
+const meta = buildPaginationMeta(currentPage, limit, totalItems);
 ```
 
-## Notas
-
-- Mantener estas utilidades libres de dependencias de dominio para facilitar su reutilización.
-- No incluir aquí lógica específica de negocio; para eso existen los módulos de dominio.
+## Formato de Archivos
+- Archivos pequeños con nombres descriptivos `<concepto>.util.ts`.

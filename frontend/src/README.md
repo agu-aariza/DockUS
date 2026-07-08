@@ -1,39 +1,29 @@
-# frontend/src/
+## Propósito (TL;DR)
+Aplicación SPA en React que sirve como interfaz unificada de DockUS, proporcionando vistas de gestión para profesores (Teacher) y un entorno de trabajo personal para estudiantes (Student).
 
-Código fuente de la SPA React. Aquí viven los paneles por rol, los componentes compartidos, la capa de API, la gestión de estado y los estilos.
+## Arquitectura de alto nivel
+Single Page Application (SPA) en React + Vite + TypeScript. Gestión de sesión compartida mediante Context API y renderizado condicional/enrutamiento basado en roles.
 
-## Estructura
+## Límites Arquitectónicos (Boundaries) ⚠️
+El frontend NUNCA debe comunicarse directamente con bases de datos ni con Docker/servicios internos. Todo acceso se realiza a través de la API del backend. No debe contener secretos ni claves privadas.
 
-```
-src/
-├── main.tsx              # Punto de entrada: monta React y los providers globales
-├── App.tsx               # Router principal, layout global, sidebar, workspace bar
-├── styles.css            # Tailwind directives + componentes CSS custom
-├── env.d.ts              # Tipos de Vite client
-├── auth/                 # Panel de autenticación
-├── builder/              # Visualización del pipeline builder
-├── deliveries/           # Panel de entregas y calificación
-├── groups/               # Gestión de grupos académicos
-├── projects/             # Gestión de proyectos docente
-├── summary/              # Dashboard de inicio docente
-├── runtime/              # Panel de ejecución en tiempo real
-├── shared/               # Componentes, API, estado y utilidades compartidas
-├── storage/              # Panel de almacenamiento de artefactos
-├── student/              # Espacio personal del alumno
-└── users/                # Administración de usuarios
-```
+## Flujo Principal de Datos
+El usuario ingresa credenciales, se valida vía API y el token se guarda en `SessionContext`. React Router redirige al panel correspondiente (Teacher o Student). Los componentes consumen datos mediante llamadas Axios y renderizan el estado.
 
-## Archivos más importantes
+## Stack Tecnológico Principal
+React 18, React Router v6, TypeScript, Vite, TailwindCSS.
 
-| Archivo | Función |
-|---------|---------|
-| [`main.tsx`](./main.tsx) | Monta la aplicación con `BrowserRouter`, `SessionProvider`, `ToastProvider`, `WorkspaceProvider` y `ErrorBoundary`. |
-| [`App.tsx`](./App.tsx) | Define las rutas, el layout global, la sidebar, la workspace bar, la command palette y el debug switcher (dev). |
-| [`styles.css`](./styles.css) | Directivas de Tailwind, utilidades y componentes CSS (`btn-primary`, `input-field`, `card`, etc.). |
-| [`shared/types.ts`](./shared/types.ts) | Tipos de dominio compartidos con el backend (~700 líneas). |
+## Mapa de Directorios (Tree)
+- `auth/`: Interfaz UI de login y debug.
+- `builder/`, `deliveries/`, `groups/`, `projects/`, `runtime/`, `storage/`, `users/`: Paneles y vistas de gestión para el rol Teacher.
+- `features/`: Tipos de datos, interfaces y lógica de negocio transversal de los dominios.
+- `shared/`: Componentes UI reutilizables (AppShell), contextos globales (Session, Toast) y clientes API.
+- `student/`: Panel y entorno de trabajo exclusivo para el rol Student.
+- `summary/`: Vista principal (Home) para Teachers.
 
-## Convenciones
+## Variables de Entorno Globales
+`VITE_API_URL`: URL base para interactuar con el backend.
 
-- Cada carpeta de dominio (`projects/`, `student/`, `builder/`, etc.) puede tener sus propios `components/`, `hooks/` y `utils/`.
-- `shared/` contiene código reutilizable por todos los dominios.
-- Los paneles principales se cargan con `React.lazy()` para aprovechar el code splitting de Vite.
+## Comandos clave
+- `npm run dev`: Inicia el entorno de desarrollo Vite.
+- `npm run build`: Compila los assets de producción.

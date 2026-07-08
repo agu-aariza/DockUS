@@ -1,18 +1,35 @@
-# Módulo del Constructor de Proyectos (Project Builder Module)
+## Responsabilidad del Módulo
+El motor principal de DockUS encargado de orquestar, aislar y evaluar el código fuente de los estudiantes. Ejecuta scripts, pruebas unitarias, compilación y genera reportes detallados y calificaciones basadas en las reglas definidas en cada proyecto.
 
-Este subdirectorio alberga el submódulo `Builder`, una pieza fundamental y compleja dentro del sistema de proyectos. Su propósito es proporcionar las herramientas, asistentes de Inteligencia Artificial y flujos de trabajo necesarios para ayudar a los profesores o creadores de contenido a diseñar, estructurar y construir proyectos educativos completos de forma iterativa y guiada.
+## Lo que este módulo NO hace (Anti-Goals) ⚠️
+- No administra los metadatos CRUD de los proyectos.
+- No decide si un estudiante tiene permisos para entregar.
+- No interactúa directamente con los usuarios finales; es un motor de backend invocado por eventos o controladores superiores.
 
-Al ser un dominio con mucha complejidad, sigue estrictamente los principios de Domain-Driven Design (DDD).
+## Conceptos Clave (Glosario)
+- **Builder**: El sistema completo de compilación y evaluación.
+- **Trace**: Registro cronológico estructurado de los eventos ocurridos durante una ejecución (stdout, errores, evaluaciones AI).
+- **Run / BuildRun**: Una instancia única de evaluación de una entrega específica.
+- **Recipe (Receta)**: El conjunto de instrucciones (comandos bash, imagen base, timeouts) que dictan cómo evaluar el proyecto.
+- **Evaluation Contract**: El formato estandarizado que el Builder usa para puntuar la entrega y generar feedback.
 
-## Estructura de Directorios (DDD)
+## Dependencias Externas Clave
+- **DockerHostService / DockerContainerService**: Crítico para aislar las ejecuciones (sandboxing).
+- **BullMQ / Redis**: Para orquestar la cola de trabajos intensivos de evaluación en background sin bloquear la API.
+- **Ollama / Bedrock**: Para revisiones avanzadas de código impulsadas por IA.
+- **MinIO / Storage**: Para descargar el código del estudiante en el contenedor.
 
-El constructor está dividido en capas arquitectónicas bien definidas:
+## Efectos Secundarios (Side Effects)
+- Encola y procesa trabajos en Redis (Cola de Builds).
+- Crea y destruye contenedores, volúmenes y redes temporales en Docker.
+- Escribe logs masivos (Traces) en el almacenamiento y base de datos.
+- Pide inferencia a LLMs.
 
-- `application/`: Capa de aplicación. Contiene los Casos de Uso (Use Cases) o Command/Query Handlers. Coordina el flujo de información desde la interfaz de usuario (presentation) hacia el dominio, sin contener reglas de negocio.
-- `domain/`: Capa de dominio. El corazón del Builder. Contiene las reglas de negocio, modelos (como los perfiles de IA, planes de construcción, contratos), interfaces (puertos) y excepciones específicas de la construcción de proyectos. Es independiente de frameworks y tecnologías externas.
-- `infrastructure/`: Capa de infraestructura. Implementa los puertos definidos en el dominio (ej. adaptadores para conectar con las APIs de LLMs como OpenAI, Anthropic, repositorios de bases de datos para guardar el progreso de construcción).
-- `presentation/`: Capa de presentación. Controladores REST, WebSockets o GraphQL específicos para el proceso de construcción de proyectos, manejando las interacciones iterativas del usuario con el asistente.
+## Estado / BBDD
+- `BuildRun` (Progreso y resultados de la evaluación)
+- Artefactos temporales en disco (Workspace extraction)
 
-## Archivos del Directorio Raíz
-
-- **`builder.module.ts`**: Archivo de configuración del submódulo en NestJS. Registra todos los controladores de la capa de presentación, orquesta las dependencias inyectando las implementaciones de la capa de infraestructura en los casos de uso de la capa de aplicación. Encapsula toda la funcionalidad del Builder para ser consumida por el módulo padre (`projects.module.ts`).
+## Puntos de Entrada (Entrypoints)
+- `BuilderController`
+- `BuilderService` (Servicio fachada principal)
+- `BuildRunProcessor` (Worker de BullMQ que procesa los trabajos de evaluación en background)

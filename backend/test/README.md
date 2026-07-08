@@ -1,29 +1,36 @@
-# backend/test/
+## Propósito de la carpeta
+Alojamiento principal para los tests de extremo a extremo (E2E) del backend y su configuración asociada (Jest E2E configuration y scripts runners).
 
-Tests de extremo a extremo (e2e) y configuración adicional de Jest para el backend.
+## Límites y Reglas Estrictas
+- Los tests unitarios deben estar junto a su código (`src/**/*.spec.ts`), NO aquí.
+- Los tests aquí deben cubrir interacciones de la API pública usando `Supertest` sobre una instancia completa de la aplicación NestJS.
 
-## Archivos
+## Anti-Patrones y Gotchas ⚠️
+- Hacer mocks exhaustivos en tests E2E. Solo las llamadas a servicios puramente externos de infraestructura (como llamadas HTTP a un proveedor de cobros o la propia API de AWS Bedrock) deberían simularse aquí, y preferiblemente mediante adaptadores locales (MinIO en lugar de S3).
+- Ejecutar estos tests sin una base de datos levantada y purgada, lo que causará falsos positivos o fallos intermitentes.
 
-| Archivo | Descripción |
-|---------|-------------|
-| [`jest-e2e.json`](./jest-e2e.json) | Configuración de Jest para tests e2e: busca archivos `*.e2e-spec.ts`, usa `ts-jest` y apunta al módulo raíz. |
-| [`run-jest.cjs`](./run-jest.cjs) | Wrapper para ejecutar Jest gestionando caché y paths; usado por algunos scripts de test. |
+## Dependencias de Contexto Asumidas
+- Se requiere un entorno de infraestructura levantado (PostgreSQL, Redis, Docker Dind) generalmente aprovisionado en `docker-compose`.
 
-## Cómo ejecutar
+## Inputs / Outputs Esperados
+- Manda peticiones HTTP y verifica respuestas, side effects en bases de datos y colas.
 
+## Ejemplo de uso
+Se ejecuta mediante comandos `npm`:
 ```bash
-# Desde backend/
+# E2E Tests
 npm run test:e2e
-
-# Tests unitarios (los *.spec.ts dentro de src/)
-npm test -- --runInBand
-
-# Con cobertura
-npm run test:cov
+```
+Un test típico (e.g. `app.e2e-spec.ts`):
+```typescript
+import * as request from 'supertest';
+// App setup...
+return request(app.getHttpServer())
+  .get('/health')
+  .expect(200)
+  .expect({ status: 'ok' });
 ```
 
-## Notas
-
-- Los tests unitarios viven junto al código fuente (`src/**/*.spec.ts`).
-- Los tests e2e deberían ubicarse en esta carpeta con extensión `.e2e-spec.ts`.
-- El runner `run-jest.cjs` ajusta la configuración para evitar problemas de caché y paths en entornos híbridos (Docker/host).
+## Formato de Archivos
+- Archivos `.e2e-spec.ts` para pruebas.
+- Archivos de configuración como `jest-e2e.json` y wrappers de ejecución (`run-jest.cjs`).

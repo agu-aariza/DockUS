@@ -1,21 +1,32 @@
-# backend/src/modules/projects/entities/
+## Propósito de la carpeta
+Contiene las definiciones de las entidades de dominio y modelos de persistencia (TypeORM) para el módulo de proyectos. Define la estructura real de la base de datos (tablas, columnas y relaciones).
 
-Entidades TypeORM del módulo de proyectos. Definen el esquema relacional de proyectos, asignaciones, entregas, runtime y builder.
+## Límites y Reglas Estrictas
+- Usar decoradores de TypeORM (`@Entity()`, `@Column()`, `@ManyToOne()`).
+- No debe existir lógica de negocio compleja ni métodos de orquestación dentro de las entidades (modelo anémico o ligeramente rico, pero sin inyectar servicios).
+- Asegurarse de usar `@Index()` donde el rendimiento de consultas lo requiera.
 
-## Entidades principales
+## Anti-Patrones y Gotchas ⚠️
+- Referenciar repositorios o servicios dentro de las entidades.
+- No definir las relaciones bidireccionales correctamente y generar cascadas no deseadas (`cascade: true` sin cuidado).
 
-| Entidad | Función |
-|---------|---------|
-| `project.entity.ts` | Proyecto académico con enunciado, rúbrica y metadatos. |
-| `project-assignment.entity.ts` | Vínculo proyecto-estudiante/grupo. |
-| `delivery.entity.ts` | Entrega versionada de un alumno. |
-| `runtime-session.entity.ts` | Sesión de ejecución en contenedor. |
-| `build-run.entity.ts` | Ejecución del pipeline builder. |
-| `build-run-artifact.entity.ts` | Artefacto generado por un run. |
-| `build-run-event.entity.ts` | Evento de progreso de un run. |
-| `code-quality-finding.entity.ts` | Hallazgo de calidad de código. |
+## Dependencias de Contexto Asumidas
+- TypeORM debe estar configurado globalmente en la aplicación.
 
-## Notas
+## Inputs / Outputs Esperados
+- Objetos que se mapean 1:1 con las tablas de PostgreSQL.
 
-- TypeORM sincroniza el esquema automáticamente en `development` y `test`.
-- Las entidades usan relaciones (`@ManyToOne`, `@OneToMany`) para modelar el dominio.
+## Ejemplo de uso
+```typescript
+@Entity('projects')
+export class Project {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column()
+  title: string;
+}
+```
+
+## Formato de Archivos
+- `*.entity.ts` (ej. `project.entity.ts`).
