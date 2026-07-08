@@ -5,6 +5,13 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --motion-fast: 120ms;
+    --motion-standard: 180ms;
+    --motion-state: 220ms;
+    --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   html {
     @apply scroll-smooth;
   }
@@ -41,23 +48,23 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary/50 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-300 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-transparent px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-transparent px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-300 active:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-300 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-300 active:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .input-field {
-    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 hover:border-slate-400;
+    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 hover:border-slate-400 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400;
   }
 
   .card {
@@ -65,11 +72,11 @@
   }
 
   .card-top-accent-primary {
-    @apply border-t-2 border-t-primary;
+    @apply border-t border-t-primary;
   }
 
   .card-top-accent-accent {
-    @apply border-t-2 border-t-accent;
+    @apply border-t border-t-accent;
   }
 
   .label-text {
@@ -85,19 +92,72 @@
   }
 
   .section-copy {
-    @apply text-sm leading-relaxed text-slate-500;
+    @apply text-sm leading-relaxed text-slate-600;
   }
 
   .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+    @apply text-xs font-medium uppercase tracking-wide text-slate-500;
   }
 
   .ui-label {
-    @apply text-[10px] font-semibold uppercase tracking-wider text-slate-400;
+    @apply text-[10px] font-semibold uppercase tracking-wider text-slate-500;
   }
 
   .status-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 px-2 py-0.5 text-xs font-medium;
+  }
+}
+
+@layer utilities {
+  .status-pulse {
+    --status-pulse-rgb: 37 99 235;
+    animation: dockus-status-pulse 2200ms var(--motion-ease-out) infinite;
+  }
+
+  .status-pulse-primary {
+    --status-pulse-rgb: 37 99 235;
+  }
+
+  .status-pulse-success {
+    --status-pulse-rgb: 5 150 105;
+  }
+
+  .motion-modal-backdrop {
+    animation: dockus-fade-in var(--motion-fast) var(--motion-ease-out) both;
+  }
+
+  .motion-modal-panel {
+    animation: dockus-modal-in var(--motion-standard) var(--motion-ease-out) both;
+  }
+}
+
+@keyframes dockus-status-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(var(--status-pulse-rgb) / 0.12);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 4px rgb(var(--status-pulse-rgb) / 0);
+  }
+}
+
+@keyframes dockus-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dockus-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -116,4 +176,29 @@
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .status-pulse,
+  .motion-modal-backdrop,
+  .motion-modal-panel {
+    animation: none !important;
+  }
+
+  .status-pulse {
+    box-shadow: 0 0 0 2px rgb(var(--status-pulse-rgb, 37 99 235) / 0.10);
+  }
 }
