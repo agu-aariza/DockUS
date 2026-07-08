@@ -102,7 +102,7 @@ async function extractTarGzArchive(
     const rawPath = [prefix, entryName].filter(Boolean).join('/');
     const normalizedPath = normalizeArchiveEntryPath(rawPath);
     const size = parseTarOctal(readTarString(header, 124, 12));
-    const typeFlag = String.fromCharCode(header[156] ?? 0);
+    const typeFlag = String.fromCharCode(header[156]);
 
     const paddedSize = Math.ceil(size / 512) * 512;
     if (offset + paddedSize > tarBuffer.length) {

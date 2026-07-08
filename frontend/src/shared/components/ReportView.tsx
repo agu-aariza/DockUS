@@ -275,7 +275,7 @@ export function ReportView({
       }
     }
 
-    fetchLogs();
+    void fetchLogs();
 
     return () => {
       active = false;

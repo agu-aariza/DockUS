@@ -696,7 +696,7 @@ export function ProgressDashboard({
                               <button
                                 className="btn-secondary h-9 w-9 p-0 justify-center"
                                 title="Ver código de la última entrega"
-                                onClick={() => row.latestDeliveryId && handlePreview(row.latestDeliveryId)}
+                                onClick={() => { if (row.latestDeliveryId) handlePreview(row.latestDeliveryId) }}
                                 disabled={!row.latestDeliveryId}
                               >
                                 <RiCodeSSlashLine />
@@ -734,7 +734,7 @@ export function ProgressDashboard({
                               <button
                                 className="btn-secondary h-9 w-9 p-0 justify-center"
                                 title="Ver historial de entregas"
-                                onClick={() => handleViewHistory(row.assignmentId, row.studentName)}
+                                onClick={() => void handleViewHistory(row.assignmentId, row.studentName)}
                               >
                                 <RiHistoryLine />
                               </button>

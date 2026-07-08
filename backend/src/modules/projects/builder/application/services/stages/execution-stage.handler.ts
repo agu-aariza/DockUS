@@ -49,7 +49,7 @@ export class BuilderExecutionStageHandler implements IBuilderStageHandler<
       });
     }
 
-    let executionLogs = '';
+    let executionLogs: string;
 
     try {
       await this.builderRunSupportService.emitEvent({

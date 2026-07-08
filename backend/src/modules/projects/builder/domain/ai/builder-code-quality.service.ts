@@ -103,7 +103,7 @@ export class BuilderCodeQualityService {
     );
     await hooks?.onBeforeCall?.(snapshot);
 
-    let response: string | null = null;
+    let response: string | null;
 
     try {
       response = await this.llmService.generate({

@@ -13,7 +13,9 @@ export function parseBuilderCodeQualityContractV2(
     parsed = parseRawContract(raw, 'quality LLM');
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Fallo al parsear CodeQualityContract: ${message}`);
+    throw new Error(`Fallo al parsear CodeQualityContract: ${message}`, {
+      cause: error,
+    });
   }
 
   try {
@@ -29,7 +31,9 @@ export function parseBuilderCodeQualityContractV2(
     };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Fallo al parsear CodeQualityContract: ${message}`);
+    throw new Error(`Fallo al parsear CodeQualityContract: ${message}`, {
+      cause: error,
+    });
   }
 }
 

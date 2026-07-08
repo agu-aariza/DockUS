@@ -24,7 +24,7 @@ export function useNoticeToasts(
     const currentFingerprints = new Set<string>();
 
     notices.forEach((notice) => {
-      if (!notice?.text?.trim()) {
+      if (!notice?.text.trim()) {
         return;
       }
 

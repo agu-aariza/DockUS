@@ -25,7 +25,7 @@ export class BuildRunRepository implements IBuildRunRepository {
   }
 
   save(entity: DeepPartial<BuildRun>): Promise<BuildRun> {
-    return this.repository.save(entity) as Promise<BuildRun>;
+    return this.repository.save(entity);
   }
 
   createQueryBuilder(alias?: string): SelectQueryBuilder<BuildRun> {

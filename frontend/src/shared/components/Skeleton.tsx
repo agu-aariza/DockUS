@@ -8,7 +8,7 @@ interface SkeletonProps {
 export function Skeleton({ className = "", type = "text" }: SkeletonProps) {
   const baseClasses = "animate-pulse bg-slate-200";
   
-  let shapeClasses = "";
+  let shapeClasses: string;
   switch (type) {
     case "circular":
       shapeClasses = "rounded-full";

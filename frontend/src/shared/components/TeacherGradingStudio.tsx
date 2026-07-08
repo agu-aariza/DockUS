@@ -83,7 +83,7 @@ export function TeacherGradingStudio({
 
   const handleCopy = () => {
     if (!selectedFile) return;
-    navigator.clipboard.writeText(selectedFile.content);
+    void navigator.clipboard.writeText(selectedFile.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -216,7 +216,7 @@ export function TeacherGradingStudio({
             <header className="flex items-center justify-between border-b border-app-border bg-white px-4 py-2">
               <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
                 <RiFileCodeLine className="text-accent" />
-                <span>{selectedFile?.path || "ningún archivo seleccionado"}</span>
+                <span>{selectedFile.path || "ningún archivo seleccionado"}</span>
               </div>
               
               <div className="flex items-center gap-2">

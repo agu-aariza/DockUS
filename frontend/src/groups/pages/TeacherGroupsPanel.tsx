@@ -62,8 +62,8 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
 
   // Ensure groups and students are loaded
   useEffect(() => {
-    refreshGroups();
-    refreshStudents();
+    void refreshGroups();
+    void refreshStudents();
   }, []);
 
   useNoticeToasts([notice], "Gestión de Grupos");

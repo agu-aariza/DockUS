@@ -49,7 +49,6 @@ import { BuilderLlmChatService } from '../domain/ai/builder-llm-chat.service';
 import {
   BuildRunResponseDto,
   BuildRunEventsResponseDto,
-  BuildRunEventDto,
   CancelBuildRunResponseDto,
   EvidenceArtifactDto,
   EvidenceDownloadUrlDto,
@@ -199,7 +198,7 @@ export class BuilderController {
       limit,
     );
     return {
-      events: page.events as BuildRunEventDto[],
+      events: page.events,
       latestSequence: page.latestSequence,
       hasMore: page.hasMore,
     };
@@ -224,7 +223,7 @@ export class BuilderController {
     response.setHeader('Cache-Control', 'no-cache, no-transform');
     response.setHeader('Connection', 'keep-alive');
     response.setHeader('X-Accel-Buffering', 'no');
-    response.flushHeaders?.();
+    response.flushHeaders();
 
     const firstPage = await this.builderRunQueriesService.listRunEvents(
       buildRunId,

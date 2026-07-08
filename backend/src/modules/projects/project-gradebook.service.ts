@@ -336,7 +336,7 @@ export class ProjectGradebookService {
         latestStatus,
         latestDeliveryId: latestDelivery?.id ?? null,
         latestDeliveryCreatedAt:
-          latestDelivery?.createdAt?.toISOString() ?? null,
+          latestDelivery?.createdAt.toISOString() ?? null,
         latestBuilderOutcome,
         grade: latestDelivery?.grade ?? null,
         graderNotes: latestDelivery?.graderNotes ?? null,
@@ -368,7 +368,7 @@ export class ProjectGradebookService {
   }
 
   private escapeCsv(value: string | number): string {
-    const serialized = String(value ?? '');
+    const serialized = String(value);
     return `"${serialized.replace(/"/gu, '""')}"`;
   }
 }

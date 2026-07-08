@@ -13,7 +13,7 @@ describe('DockerExecutionService', () => {
       createNetwork: jest.fn().mockResolvedValue(undefined),
       removeNetwork: jest.fn().mockResolvedValue(true),
       inspectNetwork: jest.fn().mockResolvedValue(null),
-    } as unknown as jest.Mocked<DockerNetworkService>;
+    };
     dockerContainerService = {
       runContainer: jest.fn().mockResolvedValue('container-456'),
       runDaemonContainer: jest.fn().mockResolvedValue('container-123'),
@@ -21,7 +21,7 @@ describe('DockerExecutionService', () => {
       getContainerLogs: jest.fn(),
       inspectContainer: jest.fn(),
       removeContainer: jest.fn(),
-    } as unknown as jest.Mocked<DockerContainerService>;
+    };
     service = new DockerExecutionService(
       {
         get: jest.fn((key: string, defaultValue?: unknown) => {

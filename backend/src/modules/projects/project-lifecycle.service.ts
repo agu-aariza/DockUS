@@ -41,7 +41,7 @@ export class ProjectLifecycleService {
       rubricInstructions: dto.rubricInstructions?.trim() || null,
       opensAt: this.normalizeDateInput(dto.opensAt),
       closesAt: this.normalizeDateInput(dto.closesAt),
-      teachers: [{ id: actor.userId } as any],
+      teachers: [{ id: actor.userId }],
     });
     this.assertProjectWindow(project.opensAt, project.closesAt);
 

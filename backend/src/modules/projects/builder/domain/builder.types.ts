@@ -130,9 +130,7 @@ export interface BuilderFactsContractV2 {
 }
 
 export type BuilderLlmContractV2 =
-  | BuilderPlanContractV2
-  | BuilderFactsContractV2
-  | BuilderEvaluationContractV2;
+  BuilderPlanContractV2 | BuilderFactsContractV2 | BuilderEvaluationContractV2;
 
 export interface BuilderLlmStagePromptSnapshot {
   stage: BuilderLlmPromptStage;

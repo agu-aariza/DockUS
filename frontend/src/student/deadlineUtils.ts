@@ -128,5 +128,5 @@ export function pickPrimaryAssignment(
     return new Date(leftTime).getTime() - new Date(rightTime).getTime();
   });
 
-  return datedAssignments[0] ?? assignments[0] ?? null;
+  return datedAssignments[0] ?? assignments[0];
 }

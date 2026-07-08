@@ -212,7 +212,8 @@ export function TeacherDeliveriesPanel({
           isLoadingFiles={panel.isLoadingPreview}
           onSubmitGrading={async (grade, graderNotes) => {
             try {
-              await deliveriesApi.updateGrading(panel.selectedDelivery!.id, {
+              if (!panel.selectedDelivery) return;
+              await deliveriesApi.updateGrading(panel.selectedDelivery.id, {
                 grade: grade.trim() ? Number(grade) : null,
                 graderNotes: graderNotes,
               });

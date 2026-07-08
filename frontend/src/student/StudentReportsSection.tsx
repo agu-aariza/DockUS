@@ -249,7 +249,7 @@ function ReportContainer({
               ) : null}
             </div>
             <div className="mt-2 text-sm text-slate-500">
-              {delivery.projectTitle ?? "Proyecto"} ·{" "}
+              {delivery.projectTitle} ·{" "}
               {new Date(delivery.createdAt).toLocaleString("es-ES")}
             </div>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
@@ -371,7 +371,7 @@ export function StudentReportsSection({ session, data }: Props): JSX.Element {
   }, [assignments, deliveries]);
 
   // Selected project state
-  const defaultProjectId = sortedDeliveries[0]?.projectId ?? assignments[0]?.projectId ?? null;
+  const defaultProjectId = sortedDeliveries[0]?.projectId ?? assignments[0]?.projectId;
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(defaultProjectId);
 
   // Update selected project when workspace selection changes

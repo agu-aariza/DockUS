@@ -102,8 +102,8 @@ export class UsersService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const search = query.search?.trim();
-    const sortBy = query.sortBy ?? 'lastName';
-    const sortOrder = query.sortOrder ?? 'ASC';
+    const sortBy = query.sortBy;
+    const sortOrder = query.sortOrder;
 
     const queryBuilder = this.usersRepository.createQueryBuilder('user');
 

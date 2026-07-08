@@ -25,7 +25,7 @@ export class ProjectRepository implements IProjectRepository {
   }
 
   save(entity: DeepPartial<Project>): Promise<Project> {
-    return this.repository.save(entity) as Promise<Project>;
+    return this.repository.save(entity);
   }
 
   createQueryBuilder(alias?: string): SelectQueryBuilder<Project> {

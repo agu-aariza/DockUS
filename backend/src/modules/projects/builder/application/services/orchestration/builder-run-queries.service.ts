@@ -61,7 +61,7 @@ export class BuilderRunQueriesService {
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const sortOrder = query.sortOrder ?? 'DESC';
+    const sortOrder = query.sortOrder;
 
     const queryBuilder = this.buildRunsRepository
       .createQueryBuilder('run')

@@ -104,8 +104,8 @@ export class ProjectsService {
     const search = query.search?.trim();
     const createdFrom = query.createdFrom ? new Date(query.createdFrom) : null;
     const createdTo = query.createdTo ? new Date(query.createdTo) : null;
-    const sortBy = query.sortBy ?? 'createdAt';
-    const sortOrder = query.sortOrder ?? 'DESC';
+    const sortBy = query.sortBy;
+    const sortOrder = query.sortOrder;
 
     const queryBuilder = this.projectsRepository.createQueryBuilder('project');
 

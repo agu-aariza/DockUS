@@ -122,7 +122,7 @@ export class BuilderRecipeCompiler {
         ? recipe.healthcheck.join(' ')
         : '';
 
-    let orchestratedCmd = '';
+    let orchestratedCmd: string;
     if (recipe.servicePort && recipe.servicePort > 0) {
       const waitTime = 3;
       orchestratedCmd = [

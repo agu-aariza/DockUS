@@ -56,7 +56,7 @@ function FindingList({
     <div className="space-y-3">
       {items.map((item, index) => (
         <TechnicalFindingCard
-          key={`${item.title ?? "finding"}-${index}`}
+          key={`${item.title}-${index}`}
           item={normalizeTechnicalFeedbackItem(item)}
           runtimeFamily={runtimeFamily}
           variant={variant}

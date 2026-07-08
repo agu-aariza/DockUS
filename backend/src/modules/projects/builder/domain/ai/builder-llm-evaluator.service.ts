@@ -126,7 +126,7 @@ export class BuilderLlmEvaluatorService {
     );
     await hooks?.onBeforeCall?.(snapshot);
 
-    let response: string | null = null;
+    let response: string | null;
 
     try {
       response = await this.llmService.generate({
@@ -204,7 +204,7 @@ export class BuilderLlmEvaluatorService {
     );
     await hooks?.onBeforeCall?.(snapshot);
 
-    let response: string | null = null;
+    let response: string | null;
 
     try {
       response = await this.llmService.generate({
@@ -282,7 +282,7 @@ export class BuilderLlmEvaluatorService {
     );
     await hooks?.onBeforeCall?.(snapshot);
 
-    let response: string | null = null;
+    let response: string | null;
 
     try {
       response = await this.llmService.generate({

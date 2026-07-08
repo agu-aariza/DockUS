@@ -36,7 +36,7 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
         console.error("Error fetching tutor chat history:", err);
       }
     };
-    fetchHistory();
+    void fetchHistory();
     return () => {
       active = false;
     };
@@ -205,7 +205,7 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
             {getSuggestedQuestions().map((q, idx) => (
               <button
                 key={idx}
-                onClick={() => handleSendMessage(q)}
+                onClick={() => void handleSendMessage(q)}
                 disabled={isLoading}
                 className="rounded-md border border-app-border bg-white px-3 py-1.5 text-xs font-bold text-slate-500 transition-all hover:bg-slate-50 hover:text-primary hover:border-primary/30 active:scale-95 disabled:opacity-50"
               >
@@ -221,7 +221,7 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleSendMessage(inputValue);
+            void handleSendMessage(inputValue);
           }}
           className="flex gap-2"
         >

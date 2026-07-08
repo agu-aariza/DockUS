@@ -26,7 +26,7 @@ describe('prompts.json', () => {
         }),
       );
       expect(manifest[key].hard_rules.length).toBeGreaterThan(2);
-      expect(manifest[key].decision_policy!.length).toBeGreaterThan(1);
+      expect(manifest[key].decision_policy?.length).toBeGreaterThan(1);
     }
   });
 
@@ -49,12 +49,12 @@ describe('prompts.json', () => {
   it('documents anti-hallucination planning rules for CLI, C, and service inference', () => {
     const manifest = loadManifest();
     const hardRules = manifest.plan.hard_rules.join('\n');
-    const policy = manifest.plan.decision_policy!.join('\n');
+    const policy = manifest.plan.decision_policy?.join('\n');
 
     expect(hardRules).toContain(
       'Cada comando debe ser un array de tokens de tipo string',
     );
-    const examples = manifest.plan.examples!.join('\n');
+    const examples = manifest.plan.examples?.join('\n');
     expect(policy).toContain('Makefile');
     expect(examples).toContain('.c');
     expect(hardRules).toContain('recipe.install es la fase de compilación');
@@ -73,13 +73,13 @@ describe('prompts.json', () => {
     expect(manifest.eval.hard_rules.join('\n')).toContain(
       'NUNCA inventes salida del programa',
     );
-    expect(manifest.eval.decision_policy!.join('\n')).toContain(
+    expect(manifest.eval.decision_policy?.join('\n')).toContain(
       'Antes de puntuar cualquier criterio',
     );
 
     const qualityRules = manifest['technical-feedback'].hard_rules.join('\n');
     const qualityPolicy =
-      manifest['technical-feedback'].decision_policy!.join('\n');
+      manifest['technical-feedback'].decision_policy?.join('\n');
 
     expect(qualityRules).toContain('BUENA PR');
     expect(qualityPolicy).toContain('malloc sin free');
@@ -93,7 +93,7 @@ describe('prompts.json', () => {
   it('documents anti-hallucination eval rules for fabricated output and vacuous truth', () => {
     const manifest = loadManifest();
     const evalRules = manifest.eval.hard_rules.join('\n');
-    const evalPolicy = manifest.eval.decision_policy!.join('\n');
+    const evalPolicy = manifest.eval.decision_policy?.join('\n');
 
     expect(evalRules).toContain('NUNCA inventes salida del programa');
     expect(evalRules).toContain(

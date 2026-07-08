@@ -201,7 +201,7 @@ export function useRuntimeManagement(session: SessionRecord | null) {
         artifactId,
       );
       const artifact = evidenceArtifacts.find((a) => a.id === artifactId);
-      const ext = artifact?.contentType?.includes("json") ? "json" : "txt";
+      const ext = artifact?.contentType.includes("json") ? "json" : "txt";
       const filename = `${artifact?.type ?? "artifact"}-${artifactId.slice(0, 8)}.${ext}`;
 
       const url = URL.createObjectURL(blob);

@@ -105,7 +105,7 @@ export function useGroupManagement(canWrite: boolean) {
       setBulkInput("");
       
       const enrolled = response.summary.enrolledCount + response.summary.reactivatedCount;
-      const unresolved = (response.summary.unresolvedEmails?.length || 0) + (response.summary.unresolvedNames?.length || 0);
+      const unresolved = (response.summary.unresolvedEmails.length || 0) + (response.summary.unresolvedNames?.length || 0);
       
       setNotice({ 
         text: `Procesamiento completado. ${enrolled} matriculados correctamente. ${unresolved > 0 ? `${unresolved} registros no procesados.` : ''}`, 
@@ -177,14 +177,14 @@ export function useGroupManagement(canWrite: boolean) {
 
   useEffect(() => {
     if (canWrite) {
-      refreshGroups();
-      refreshStudents();
+      void refreshGroups();
+      void refreshStudents();
     }
   }, [canWrite]);
 
   useEffect(() => {
     if (focusedGroupId) {
-      refreshEnrollments(focusedGroupId);
+      void refreshEnrollments(focusedGroupId);
     } else {
       setGroupEnrollments(null);
     }

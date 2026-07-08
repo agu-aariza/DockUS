@@ -2,7 +2,7 @@ import axios from "axios";
 import type { ApiErrorPayload } from "../types";
 
 export const apiBaseUrl =
-  import.meta.env?.VITE_API_BASE_URL?.trim() || "http://localhost:3000/api";
+  import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:3000/api";
 
 let accessToken: string | null = null;
 let refreshToken: string | null = null;

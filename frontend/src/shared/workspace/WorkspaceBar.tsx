@@ -202,7 +202,7 @@ export function WorkspaceBar(): JSX.Element | null {
             </button>
             <button
               type="button"
-              onClick={() => setProject(selection.projectId!, selection.projectTitle ?? undefined)}
+              onClick={() => { if (selection.projectId) setProject(selection.projectId, selection.projectTitle ?? undefined) }}
               className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
               title="Cerrar alumno"
               aria-label="Quitar alumno del contexto"
@@ -231,7 +231,7 @@ export function WorkspaceBar(): JSX.Element | null {
             </button>
             <button
               type="button"
-              onClick={() => setAssignment(selection.assignmentId!, selection.assignmentLabel ?? undefined)}
+              onClick={() => { if (selection.assignmentId) setAssignment(selection.assignmentId, selection.assignmentLabel ?? undefined) }}
               className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
               title="Cerrar entrega"
               aria-label="Quitar entrega del contexto"
@@ -260,7 +260,7 @@ export function WorkspaceBar(): JSX.Element | null {
             </button>
             <button
               type="button"
-              onClick={() => setDelivery(selection.deliveryId!, selection.deliveryLabel ?? undefined)}
+              onClick={() => { if (selection.deliveryId) setDelivery(selection.deliveryId, selection.deliveryLabel ?? undefined) }}
               className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
               title="Cerrar ejecución"
               aria-label="Quitar ejecución del contexto"

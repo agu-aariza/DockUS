@@ -44,9 +44,9 @@ export class BuilderArtifactPersister {
         severity: finding.severity,
         file: finding.file ?? null,
         line: finding.line ?? null,
-        codeSnippet: finding.codeSnippet ?? '',
+        codeSnippet: finding.codeSnippet,
         level: finding.level ?? 'basico',
-        conceptExplanation: finding.conceptExplanation ?? '',
+        conceptExplanation: finding.conceptExplanation,
       })),
     );
 
@@ -68,9 +68,9 @@ export class BuilderArtifactPersister {
           ? BuildRunArtifactType.LLM_FACTS_PROMPT
           : BuildRunArtifactType.LLM_EVAL_PROMPT;
     const promptId = snapshot.promptId ?? `${snapshot.stage}-legacy`;
-    const model = snapshot.model ?? 'unknown';
-    const modelProfile = snapshot.modelProfile ?? null;
-    const sections = snapshot.sections ?? [];
+    const model = snapshot.model;
+    const modelProfile = snapshot.modelProfile;
+    const sections = snapshot.sections;
     const modelId = modelProfile?.modelId ?? 'unknown';
     const profileVersion = modelProfile?.profileVersion ?? 'legacy';
 
@@ -193,8 +193,8 @@ export class BuilderArtifactPersister {
         {
           stage: trace.stage,
           promptId: trace.promptId ?? `${trace.stage}-legacy`,
-          model: trace.model ?? 'unknown',
-          modelProfile: trace.modelProfile ?? null,
+          model: trace.model,
+          modelProfile: trace.modelProfile,
           sections: trace.sections ?? [],
           code: trace.error.code ?? null,
           httpStatus: trace.error.httpStatus ?? null,

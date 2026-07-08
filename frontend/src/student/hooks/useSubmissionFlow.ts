@@ -86,7 +86,7 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
 
   const [step, setStep] = useState<Step>(1);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(
-    initialAssignment?.id ?? "",
+    initialAssignment?.id,
   );
   const [file, setFile] = useState<File | null>(null);
   const [fileSizeError, setFileSizeError] = useState(false);
@@ -311,7 +311,7 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
     setIsDragging(false);
-    handleFileSelection(event.dataTransfer.files?.[0] ?? null);
+    handleFileSelection(event.dataTransfer.files?.[0]);
   };
 
   const handleSubmit = async () => {

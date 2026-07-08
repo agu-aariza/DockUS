@@ -539,7 +539,7 @@ function normalizeCommandMatrix(value: unknown, field: string): string[][] {
 }
 
 function normalizeCommand(value: unknown, field: string): string[] {
-  let rawTokens: string[] = [];
+  let rawTokens: string[];
 
   if (typeof value === 'string') {
     rawTokens = value.trim().split(/\s+/u);

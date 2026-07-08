@@ -261,7 +261,7 @@ export function useProjectAssignmentManagement({
       await refreshGroups({ silent: true });
       const enrolledCount =
         response.summary.enrolledCount + response.summary.reactivatedCount;
-      const unresolvedCount = (response.summary.unresolvedEmails?.length || 0) + (response.summary.unresolvedNames?.length || 0);
+      const unresolvedCount = (response.summary.unresolvedEmails.length || 0) + (response.summary.unresolvedNames?.length || 0);
       setAssignmentNotice({
         text:
           unresolvedCount > 0

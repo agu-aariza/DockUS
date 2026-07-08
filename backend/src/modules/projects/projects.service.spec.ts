@@ -95,10 +95,10 @@ describe('ProjectsService', () => {
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
     );
     service = new ProjectsService(
-      projectsRepository as unknown as Repository<Project>,
+      projectsRepository,
       deliveriesRepository as unknown as Repository<Delivery>,
       projectLifecycleService as unknown as ProjectLifecycleService,
-      projectAccessService as unknown as ProjectAccessService,
+      projectAccessService,
       projectGradebookService as unknown as ProjectGradebookService,
       projectOperationalIssuesService as unknown as ProjectOperationalIssuesService,
       builderQualityAggregationService as unknown as BuilderQualityAggregationService,

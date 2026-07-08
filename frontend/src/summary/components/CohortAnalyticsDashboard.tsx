@@ -51,7 +51,7 @@ export function CohortAnalyticsDashboard({
       try {
         const [sumRes, insRes] = await Promise.all([
           projectsApi.progressSummary(selectedId!).catch(() => null),
-          projectsApi.getQualityInsights(selectedId!).catch(() => null),
+          selectedId ? projectsApi.getQualityInsights(selectedId).catch(() => null) : null,
         ]);
 
         if (!active) return;
@@ -103,7 +103,7 @@ export function CohortAnalyticsDashboard({
       : 0;
 
   const avgGradeVal = hasGrades
-    ? (gradedStudents.reduce((sum, s) => sum + s.grade!, 0) / gradedStudents.length).toFixed(2)
+    ? (gradedStudents.reduce((sum, s) => sum + (s.grade ?? 0), 0) / gradedStudents.length).toFixed(2)
     : null;
 
   const totalDeliveriesVal = summary?.perStudent.reduce((sum, s) => sum + s.deliveryCount, 0) || 0;
@@ -144,8 +144,8 @@ export function CohortAnalyticsDashboard({
   if (summary) {
     if (hasGrades) {
       const totalGraded = gradedStudents.length;
-      const sobresalientes = gradedStudents.filter((s) => s.grade! >= 9.0).length;
-      const notables = gradedStudents.filter((s) => s.grade! >= 7.0 && s.grade! < 9.0).length;
+      const sobresalientes = gradedStudents.filter((s) => s.grade != null && s.grade >= 9.0).length;
+      const notables = gradedStudents.filter((s) => s.grade != null && s.grade >= 7.0 && s.grade < 9.0).length;
       const aprobados = gradedStudents.filter((s) => s.grade! >= 5.0 && s.grade! < 7.0).length;
       const suspensos = gradedStudents.filter((s) => s.grade! < 5.0).length;
 

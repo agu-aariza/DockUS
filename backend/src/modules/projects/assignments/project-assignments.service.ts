@@ -187,7 +187,7 @@ export class ProjectAssignmentsService {
         if (!studentToGroups.has(e.studentId)) {
           studentToGroups.set(e.studentId, new Set());
         }
-        studentToGroups.get(e.studentId)!.add(groupId);
+        studentToGroups.get(e.studentId)?.add(groupId);
       });
     }
     const groupStudentIds = Array.from(studentToGroups.keys());
@@ -417,7 +417,7 @@ export class ProjectAssignmentsService {
 
     // Fetch group details for all involved group IDs
     const allGroupIds = [
-      ...new Set(assignments.flatMap((a) => a.sourceGroupIds ?? [])),
+      ...new Set(assignments.flatMap((a) => a.sourceGroupIds)),
     ];
     const groupMap = new Map<
       string,
@@ -435,12 +435,12 @@ export class ProjectAssignmentsService {
 
     return assignments.map((assignment) => {
       const deliveryCount = progressByAssignment.get(assignment.id) ?? 0;
-      const project = assignment.project ?? null;
-      const student = assignment.student ?? null;
+      const project = assignment.project;
+      const student = assignment.student;
       const maxDeliveriesPerStudent =
         project?.maxDeliveriesPerStudent ?? deliveryCount;
       const studentName = student
-        ? `${student.lastName ?? ''}, ${student.firstName ?? ''}`.trim()
+        ? `${student.lastName}, ${student.firstName}`.trim()
         : 'Alumno no disponible';
       const remainingDeliveries = Math.max(
         0,
@@ -448,30 +448,30 @@ export class ProjectAssignmentsService {
       );
 
       // Find the first matching group for labeling purposes if multiple exist
-      const primaryGroupId = assignment.sourceGroupIds?.[0];
+      const primaryGroupId = assignment.sourceGroupIds[0];
       const courseGroup = primaryGroupId ? groupMap.get(primaryGroupId) : null;
 
       return {
         id: assignment.id,
         projectId: assignment.projectId,
-        projectTitle: project?.title ?? 'Proyecto no disponible',
-        projectExpectedType: project?.expectedType ?? null,
+        projectTitle: project?.title,
+        projectExpectedType: project.expectedType ?? null,
         maxDeliveriesPerStudent,
-        sourceGroupIds: assignment.sourceGroupIds ?? [],
-        courseGroupId: primaryGroupId ?? null,
+        sourceGroupIds: assignment.sourceGroupIds,
+        courseGroupId: primaryGroupId,
         courseGroup: courseGroup ?? null,
         studentId: assignment.studentId,
-        studentEmail: student?.email ?? '',
+        studentEmail: student?.email,
         studentName,
         assignedById: assignment.assignedById,
         assignedAt: assignment.assignedAt.toISOString(),
         revokedAt: assignment.revokedAt?.toISOString() ?? null,
-        opensAt: project?.opensAt?.toISOString() ?? null,
-        closesAt: project?.closesAt?.toISOString() ?? null,
+        opensAt: project.opensAt?.toISOString() ?? null,
+        closesAt: project.closesAt?.toISOString() ?? null,
         deliveryCount,
         remainingDeliveries,
         minimumRequirementMet: deliveryCount >= 1,
-        rubricInstructions: project?.rubricInstructions ?? null,
+        rubricInstructions: project.rubricInstructions ?? null,
       };
     });
   }

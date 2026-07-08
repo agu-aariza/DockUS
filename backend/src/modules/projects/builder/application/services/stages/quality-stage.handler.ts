@@ -51,9 +51,7 @@ export class BuilderQualityStageHandler implements IBuilderStageHandler<
       delivery,
     } = input;
 
-    let qualityFindings = buildEmptyCodeQualityContract(
-      'Analisis de calidad todavia no disponible.',
-    );
+    let qualityFindings: BuilderCodeQualityContractV2;
 
     try {
       await this.builderRunSupportService.emitEvent({

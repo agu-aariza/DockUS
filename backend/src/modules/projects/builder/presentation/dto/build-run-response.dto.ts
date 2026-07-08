@@ -46,7 +46,7 @@ export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
     llmAssessment: run.llmAssessment,
     report: run.report,
     failureReason: run.failureReason,
-    warnings: run.warnings ?? [],
+    warnings: run.warnings,
     startedAt: run.startedAt?.toISOString() ?? null,
     finishedAt: run.finishedAt?.toISOString() ?? null,
     createdAt: run.createdAt.toISOString(),

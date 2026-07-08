@@ -240,7 +240,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
     return projects.filter((project) =>
       [project.title, project.contextAcademico, project.expectedType]
         .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(normalized)),
+        .some((value) => value?.toLowerCase().includes(normalized)),
     );
   }, [deferredProjectSearch, projects]);
 

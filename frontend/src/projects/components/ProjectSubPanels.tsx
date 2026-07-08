@@ -223,7 +223,7 @@ export function ProjectAssignmentManager({
                 // Determinamos si el grupo tiene alumnos ya asignados al proyecto
                 const groupAssignments = assignments.filter(a => 
                   !a.revokedAt && 
-                  (a.courseGroupId === group.id || a.sourceGroupIds?.includes(group.id))
+                  (a.courseGroupId === group.id || a.sourceGroupIds.includes(group.id))
                 );
                 const isGroupAssigned = groupAssignments.length > 0;
                 

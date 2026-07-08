@@ -108,7 +108,7 @@ export function StudentDeliveriesSection({
   const uniqueProjects = useMemo(() => {
     const seen = new Map<string, string>();
     for (const delivery of deliveries) {
-      const title = delivery.projectTitle ?? "Proyecto";
+      const title = delivery.projectTitle;
       if (!seen.has(title)) {
         seen.set(title, title);
       }
@@ -121,7 +121,7 @@ export function StudentDeliveriesSection({
 
     if (projectFilter !== "all") {
       list = list.filter(
-        (delivery) => (delivery.projectTitle ?? "Proyecto") === projectFilter,
+        (delivery) => (delivery.projectTitle) === projectFilter,
       );
     }
 
@@ -282,7 +282,7 @@ export function StudentDeliveriesSection({
                     <div>
                       <div className="eyebrow text-slate-400">Versión v{delivery.version}</div>
                       <div className="mt-2 text-lg font-semibold text-slate-900">
-                        {delivery.projectTitle ?? "Proyecto"}
+                        {delivery.projectTitle}
                       </div>
                     </div>
                     {renderGradeBadge(delivery.grade)}

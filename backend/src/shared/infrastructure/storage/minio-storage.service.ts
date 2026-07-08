@@ -218,8 +218,7 @@ export class MinioStorageService implements OnModuleInit {
       body &&
       typeof body === 'object' &&
       'transformToByteArray' in body &&
-      typeof (body as { transformToByteArray: unknown })
-        .transformToByteArray === 'function'
+      typeof body.transformToByteArray === 'function'
     ) {
       const array = await (
         body as { transformToByteArray: () => Promise<Uint8Array> }

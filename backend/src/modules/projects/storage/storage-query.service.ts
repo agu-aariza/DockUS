@@ -50,8 +50,8 @@ export class StorageQueryService {
   ): Promise<PaginatedStorageResponse> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const sortBy = query.sortBy ?? 'createdAt';
-    const sortOrder = query.sortOrder ?? 'DESC';
+    const sortBy = query.sortBy;
+    const sortOrder = query.sortOrder;
     const createdFrom = query.createdFrom ? new Date(query.createdFrom) : null;
     const createdTo = query.createdTo ? new Date(query.createdTo) : null;
 

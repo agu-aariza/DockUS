@@ -98,7 +98,7 @@ export class BuilderReportComposer {
           finding.severity === 'high' && !this.isStrengthFinding(finding),
       ),
       ...(assessment.evaluativeState !== 'E1' ? pedagogicalItems : []),
-      ...this.buildBlockingLimitFindings(assessment.evaluationLimits ?? []),
+      ...this.buildBlockingLimitFindings(assessment.evaluationLimits),
     ]);
 
     if (mustFix.length === 0 && assessment.evaluativeState !== 'E1') {
@@ -490,7 +490,7 @@ export class BuilderReportComposer {
         ? `Nota recomendada: ${assessment.recommendedGrade}. `
         : '';
     const state = `Estado evaluativo: ${assessment.evaluativeState}. `;
-    const rationale = assessment.rationale ?? 'Sin veredicto detallado.';
+    const rationale = assessment.rationale;
     return `${outcome}. ${grade}${state}${rationale}`;
   }
 
@@ -537,14 +537,14 @@ export class BuilderReportComposer {
     lines.push(
       '## Desglose de criterios',
       '',
-      ...(assessment.gradeBreakdown ?? []).map(
+      ...assessment.gradeBreakdown.map(
         (item) =>
           `- **${item.criterion}:** ${item.awarded}/${item.maxPoints} puntos — ${item.justification}`,
       ),
       '',
       '## Resumen para docentes',
       '',
-      assessment.teacherSummary ?? '—',
+      assessment.teacherSummary,
       '',
     );
 

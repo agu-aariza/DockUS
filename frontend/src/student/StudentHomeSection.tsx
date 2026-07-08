@@ -307,7 +307,7 @@ export function StudentHomeSection({
           <StudentSurface>
             <StudentSurfaceHeader
               eyebrow="Práctica activa"
-              title={activeAssignment?.projectTitle ?? "Sin práctica seleccionada"}
+              title={activeAssignment?.projectTitle}
               description={
                 activeAssignment
                   ? "Resumen del contexto académico y del margen operativo que todavía te queda en esta práctica."
@@ -319,19 +319,19 @@ export function StudentHomeSection({
               items={[
                 {
                   label: "Apertura",
-                  value: formatDate(activeAssignment?.opensAt),
+                  value: formatDate(activeAssignment.opensAt),
                 },
                 {
                   label: "Cierre",
-                  value: formatDate(activeAssignment?.closesAt),
+                  value: formatDate(activeAssignment.closesAt),
                 },
                 {
                   label: "Entregas registradas",
-                  value: activeAssignment?.deliveryCount ?? 0,
+                  value: activeAssignment?.deliveryCount,
                 },
                 {
                   label: "Intentos disponibles",
-                  value: activeAssignment?.remainingDeliveries ?? 0,
+                  value: activeAssignment?.remainingDeliveries,
                 },
               ]}
             />

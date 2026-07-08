@@ -137,8 +137,8 @@ export class DeliveriesService {
   ): Promise<PaginatedDeliveriesResponse> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const sortBy = query.sortBy ?? 'createdAt';
-    const sortOrder = query.sortOrder ?? 'DESC';
+    const sortBy = query.sortBy;
+    const sortOrder = query.sortOrder;
 
     const queryBuilder = this.deliveriesRepository
       .createQueryBuilder('delivery')
@@ -322,7 +322,7 @@ export class DeliveriesService {
     }
 
     if (dto.graderNotes !== undefined) {
-      delivery.graderNotes = dto.graderNotes?.trim() || null;
+      delivery.graderNotes = dto.graderNotes.trim() || null;
     }
 
     const saved = await this.deliveriesRepository.save(delivery);
@@ -442,9 +442,7 @@ export class DeliveriesService {
       );
     }
 
-    return assignment as ProjectAssignment & {
-      project: NonNullable<ProjectAssignment['project']>;
-    };
+    return assignment;
   }
 
   private assertCanCreateDelivery(
@@ -511,10 +509,10 @@ export class DeliveriesService {
       deliveryCountOverride ??
       (await this.resolveCurrentMaxVersion(delivery.assignmentId));
     const assignment = delivery.assignment;
-    const project = assignment?.project ?? null;
-    const student = assignment?.student ?? null;
+    const project = assignment?.project;
+    const student = assignment?.student;
     const studentName = student
-      ? `${student.lastName ?? ''}, ${student.firstName ?? ''}`.trim()
+      ? `${student.lastName}, ${student.firstName}`.trim()
       : 'Alumno no disponible';
     const maxDeliveriesPerStudent =
       project?.maxDeliveriesPerStudent ?? deliveryCount;
@@ -522,10 +520,10 @@ export class DeliveriesService {
     return {
       id: delivery.id,
       assignmentId: delivery.assignmentId,
-      projectId: assignment?.projectId ?? '',
+      projectId: assignment?.projectId,
       projectTitle: project?.title ?? 'Proyecto no disponible',
       authorId: delivery.authorId,
-      studentEmail: student?.email ?? '',
+      studentEmail: student?.email,
       studentName,
       version: delivery.version,
       status: delivery.status,
@@ -538,7 +536,7 @@ export class DeliveriesService {
       minimumRequirementMet: deliveryCount >= 1,
       createdAt: delivery.createdAt.toISOString(),
       updatedAt: delivery.updatedAt.toISOString(),
-      deletedAt: delivery.deletedAt?.toISOString() ?? null,
+      deletedAt: delivery.deletedAt?.toISOString(),
     };
   }
 }

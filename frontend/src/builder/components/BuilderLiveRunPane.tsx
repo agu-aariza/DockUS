@@ -257,7 +257,7 @@ export function BuilderLiveRunPane({
                     Network
                   </span>
                   <span className="rounded border border-app-border/40 bg-app-bg px-2 py-0.5 text-[10px] font-mono font-bold text-slate-500">
-                    {selectedRun.runtimeTarget?.executionNetworkName?.slice(0, 16) ??
+                    {selectedRun.runtimeTarget?.executionNetworkName.slice(0, 16) ??
                       "pending"}
                   </span>
                 </div>
@@ -728,7 +728,7 @@ export function BuilderLiveRunPane({
                   </div>
                 ) : (
                   timelineEvents.map((event) => {
-                    const isEvidence = event.message?.includes(
+                    const isEvidence = event.message.includes(
                       "--- HEALTHCHECK EVIDENCE ---",
                     );
                     const evidenceMatch = event.message?.match(
@@ -741,8 +741,8 @@ export function BuilderLiveRunPane({
 
                     const isError =
                       event.eventType.includes("ERROR") ||
-                      event.message?.toLowerCase().includes("error") ||
-                      event.message?.toLowerCase().includes("failed");
+                      event.message.toLowerCase().includes("error") ||
+                      event.message.toLowerCase().includes("failed");
                     const isSuccess =
                       event.eventType.includes("COMPLETED") ||
                       event.eventType.includes("SUCCESS");
@@ -750,7 +750,7 @@ export function BuilderLiveRunPane({
                       event.eventType.includes("START") ||
                       event.eventType.includes("ENQUEUED");
                     const isIA =
-                      event.message?.includes("IA") || event.message?.includes("LLM");
+                      event.message.includes("IA") || event.message?.includes("LLM");
 
                     let sidebarColor = "bg-slate-400";
                     let icon = <RiStackFill />;

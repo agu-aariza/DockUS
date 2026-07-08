@@ -66,7 +66,7 @@ export function useProjectTestSuiteManagement({
       return;
     }
     const controller = new AbortController();
-    handleFetchTestSuite(true, controller.signal);
+    void handleFetchTestSuite(true, controller.signal);
     return () => controller.abort();
   }, [selectedProjectId]);
 
