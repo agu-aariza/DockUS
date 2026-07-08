@@ -149,7 +149,7 @@ export function ProjectSelectionHub({
                   )}
                 </div>
                 
-                <div className="flex items-center gap-1 text-primary font-bold text-xs uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                <div className="flex items-center gap-1 text-primary font-bold text-xs uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                   Seleccionar <RiArrowRightLine className="text-base" />
                 </div>
               </div>

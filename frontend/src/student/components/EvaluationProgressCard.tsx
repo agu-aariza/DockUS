@@ -2,13 +2,18 @@ import {
   RiLoader4Line,
   RiSignalWifiErrorLine,
   RiTimeLine,
+  RiTerminalBoxLine,
+  RiArrowDownSLine,
+  RiArrowUpSLine,
 } from "react-icons/ri";
+import { useState, useEffect, useMemo } from "react";
 
 import { Button } from "../../shared/components/ui/Button";
 import { Alert } from "../../shared/components/ui/Alert";
 import type { BuildRunEntity, SessionRecord } from "../../shared/types";
 import { useBuildRunStream } from "../hooks/useBuildRunStream";
 import { isStageReached } from "../studentBuildRunStages";
+import { TerminalViewer } from "../../shared/components/TerminalViewer";
 
 interface EvaluationProgressCardProps {
   run: BuildRunEntity;
@@ -32,8 +37,10 @@ export function EvaluationProgressCard({
   historicalMedianMs,
   onOpenReport,
 }: EvaluationProgressCardProps): JSX.Element {
-  const { progress, streamState, streamError, elapsedMs, isActive } =
+  const { progress, streamState, streamError, elapsedMs, isActive, events } =
     useBuildRunStream(run, session);
+
+  const [showLogs, setShowLogs] = useState(false);
 
   const steps = [
     { key: "building", label: "Construir" },
@@ -48,6 +55,22 @@ export function EvaluationProgressCard({
       : streamState === "polling"
         ? "Fallback a polling"
         : "Conectando";
+
+  const logs = useMemo(() => {
+    return events
+      .filter((event) => event.eventType === "LOG_CHUNK")
+      .map((event) =>
+        typeof event.payload?.text === "string" ? event.payload.text : ""
+      )
+      .filter(Boolean)
+      .join("");
+  }, [events]);
+
+  useEffect(() => {
+    if (run.status === "FAILED") {
+      setShowLogs(true);
+    }
+  }, [run.status]);
 
   return (
     <section
@@ -169,6 +192,37 @@ export function EvaluationProgressCard({
         >
           {streamError}
         </Alert>
+      ) : null}
+
+      {logs ? (
+        <div className="mt-6 border-t border-app-border pt-5">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowLogs(!showLogs)}
+              className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-950 transition-colors focus-visible:outline-none"
+              aria-expanded={showLogs}
+            >
+              <RiTerminalBoxLine className="text-base" />
+              <span>Consola de logs ({showLogs ? "ocultar" : "mostrar"})</span>
+              {showLogs ? <RiArrowUpSLine /> : <RiArrowDownSLine />}
+            </button>
+            {run.status === "FAILED" && (
+              <span className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                La ejecución falló: revisa los logs
+              </span>
+            )}
+          </div>
+
+          {showLogs && (
+            <div className="animate-in fade-in slide-in-from-top-1 duration-150">
+              <TerminalViewer
+                content={logs}
+                title="Consola de compilación y sandbox"
+                maxHeight="300px"
+              />
+            </div>
+          )}
+        </div>
       ) : null}
     </section>
   );

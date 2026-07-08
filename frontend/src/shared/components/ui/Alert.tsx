@@ -40,7 +40,7 @@ export function Alert({
   return (
     <div
       className={`flex items-start gap-3 rounded-lg border border-app-border bg-white p-4 ${className}`}
-      role={variant === "danger" || variant === "warning" ? "alert" : undefined}
+      role={variant === "danger" || variant === "warning" ? "alert" : "status"}
     >
       <span className={`mt-0.5 shrink-0 text-lg ${ICON_COLORS[variant]}`}>
         {icon ?? ICONS[variant]}

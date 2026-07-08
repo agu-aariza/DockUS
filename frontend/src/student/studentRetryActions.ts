@@ -25,6 +25,6 @@ export function deriveStudentRetryAction(
     label:
       latestRun.report.coaching.passReadiness === "BLOCKED"
         ? "Corregir y reenviar"
-        : "Mejorar y subir nueva version",
+        : "Mejorar y subir nueva versión",
   };
 }

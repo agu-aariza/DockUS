@@ -34,7 +34,7 @@ export function Tabs({
               key={tab.id}
               disabled={tab.disabled}
               onClick={() => onTabChange(tab.id)}
-              className={`group relative inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`group relative inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 ${
                 isActive
                   ? 'border-primary text-primary'
                   : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'

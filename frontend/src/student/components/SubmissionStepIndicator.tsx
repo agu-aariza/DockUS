@@ -25,7 +25,7 @@ export function SubmissionStepIndicator({ flow }: Props) {
     <div className="border-b border-app-border bg-slate-50 px-6 py-5 sm:px-8">
       <div className="flex flex-wrap items-center gap-4">
         {[
-          { number: 1, label: "Practica" },
+          { number: 1, label: "Práctica" },
           { number: 2, label: "Archivo" },
           { number: 3, label: "Confirmar" },
         ].map((item) => {

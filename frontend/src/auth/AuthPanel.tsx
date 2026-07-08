@@ -30,7 +30,7 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
           password: form.password,
         });
         onAuthSuccess(response, form.sessionLabel);
-        setMessage(`Sesión iniciada para ${response.user.email}.`);
+        setMessage('Sesión iniciada para ' + response.user.email + '.');
       } else {
         const response = await authApi.register({
           email: form.email,
@@ -39,7 +39,7 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
           lastName: form.lastName,
         });
         onAuthSuccess(response, form.sessionLabel);
-        setMessage(`Cuenta creada e inicio de sesión automático para ${response.user.email}.`);
+        setMessage('Cuenta creada e inicio de sesión automático para ' + response.user.email + '.');
       }
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -47,6 +47,8 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
       setLoading(null);
     }
   };
+
+  const isErrorMessage = message.toLowerCase().includes('error') || message.toLowerCase().includes('inválid') || message.toLowerCase().includes('incorrect');
 
   return (
     <div className="min-h-screen bg-app-bg">
@@ -60,28 +62,42 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
                 className="h-9 w-9 rounded-xl shadow-sm"
               />
             </div>
-            <div className="flex justify-center space-x-1 mb-6 p-1 bg-app-bg-subtle rounded-2xl border border-app-border/30 w-fit mx-auto shadow-inner">
+            <div
+              className="flex justify-center space-x-1 mb-6 p-1 bg-app-bg-subtle rounded-2xl border border-app-border/30 w-fit mx-auto shadow-inner"
+              role="tablist"
+              aria-label="Modo de acceso"
+            >
               <button
                 type="button"
+                role="tab"
+                aria-selected={mode === 'LOGIN'}
+                aria-controls="auth-login-panel"
+                id="auth-login-tab"
                 onClick={() => { setMode('LOGIN'); setMessage(''); }}
-                className={`px-4 py-1.5 text-sm font-bold rounded-xl transition-all ${
-                  mode === 'LOGIN' ? 'bg-white text-primary shadow-sm border border-app-border/20' : 'text-slate-500 hover:text-slate-900'
-                }`}
+                className={[
+                  'px-4 py-1.5 text-sm font-bold rounded-xl transition-colors duration-150 motion-reduce:transition-none',
+                  mode === 'LOGIN' ? 'bg-white text-primary shadow-sm border border-app-border/20' : 'text-slate-500 hover:text-slate-900',
+                ].join(' ')}
               >
                 Entrar
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={mode === 'REGISTER'}
+                aria-controls="auth-register-panel"
+                id="auth-register-tab"
                 onClick={() => { setMode('REGISTER'); setMessage(''); }}
-                className={`px-4 py-1.5 text-sm font-bold rounded-xl transition-all ${
-                  mode === 'REGISTER' ? 'bg-white text-primary shadow-sm border border-app-border/20' : 'text-slate-500 hover:text-slate-900'
-                }`}
+                className={[
+                  'px-4 py-1.5 text-sm font-bold rounded-xl transition-colors duration-150 motion-reduce:transition-none',
+                  mode === 'REGISTER' ? 'bg-white text-primary shadow-sm border border-app-border/20' : 'text-slate-500 hover:text-slate-900',
+                ].join(' ')}
               >
                 Registro
               </button>
             </div>
             <p className="eyebrow">{mode === 'LOGIN' ? 'Acceso' : 'Bienvenida'}</p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-900 font-sans">
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 font-sans">
               {mode === 'LOGIN' ? 'Inicia sesión en DockUS' : 'Crea tu cuenta'}
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-slate-500">
@@ -91,14 +107,24 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
             </p>
           </div>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <form
+            id={mode === 'LOGIN' ? 'auth-login-panel' : 'auth-register-panel'}
+            role="tabpanel"
+            aria-labelledby={mode === 'LOGIN' ? 'auth-login-tab' : 'auth-register-tab'}
+            aria-describedby={message ? 'auth-status-message' : undefined}
+            className="space-y-5"
+            onSubmit={handleSubmit}
+          >
             {mode === 'REGISTER' && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label-text">Nombre</label>
+                  <label htmlFor="auth-first-name" className="label-text">Nombre</label>
                   <input
+                    id="auth-first-name"
+                    name="firstName"
                     type="text"
                     required
+                    autoComplete="given-name"
                     placeholder="Ej. Ana"
                     className="input-field"
                     value={form.firstName}
@@ -106,10 +132,13 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
                   />
                 </div>
                 <div>
-                  <label className="label-text">Apellidos</label>
+                  <label htmlFor="auth-last-name" className="label-text">Apellidos</label>
                   <input
+                    id="auth-last-name"
+                    name="lastName"
                     type="text"
                     required
+                    autoComplete="family-name"
                     placeholder="Ej. García"
                     className="input-field"
                     value={form.lastName}
@@ -119,10 +148,14 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
               </div>
             )}
             <div>
-              <label className="label-text">Correo institucional</label>
+              <label htmlFor="auth-email" className="label-text">Correo institucional</label>
               <input
+                id="auth-email"
+                name="email"
                 type="email"
                 required
+                autoComplete="email"
+                inputMode="email"
                 placeholder="nombre@universidad.edu"
                 className="input-field"
                 value={form.email}
@@ -130,11 +163,14 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
               />
             </div>
             <div>
-              <label className="label-text">Contraseña</label>
+              <label htmlFor="auth-password" className="label-text">Contraseña</label>
               <input
+                id="auth-password"
+                name="password"
                 type="password"
                 required
                 minLength={8}
+                autoComplete={mode === 'LOGIN' ? 'current-password' : 'new-password'}
                 placeholder="Mín. 8 chars, Mayús, Núm"
                 className="input-field"
                 value={form.password}
@@ -142,9 +178,12 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
               />
             </div>
             <div>
-              <label className="label-text">Etiqueta de sesión opcional</label>
+              <label htmlFor="auth-session-label" className="label-text">Etiqueta de sesión opcional</label>
               <input
+                id="auth-session-label"
+                name="sessionLabel"
                 type="text"
+                autoComplete="off"
                 placeholder="Ej. Alumno · Lab 1"
                 className="input-field"
                 value={form.sessionLabel}
@@ -152,7 +191,7 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
               />
             </div>
 
-            <button className="btn-primary w-full shadow-lg hover:shadow-accent/20" type="submit" disabled={loading === 'AUTH'}>
+            <button className="btn-primary w-full shadow-lg hover:shadow-accent/20" type="submit" disabled={loading === 'AUTH'} aria-busy={loading === 'AUTH'}>
               {loading === 'AUTH' 
                 ? (mode === 'LOGIN' ? 'Validando acceso...' : 'Creando cuenta...') 
                 : (mode === 'LOGIN' ? 'Entrar' : 'Registrarse')}
@@ -161,17 +200,19 @@ export function AuthPanel({ onAuthSuccess }: AuthPanelProps): JSX.Element {
 
           {message && (
             <div
-              className={`mt-5 rounded-2xl border px-4 py-3 text-sm font-semibold ${
-                message.toLowerCase().includes('error') || message.toLowerCase().includes('inválid') || message.toLowerCase().includes('incorrect')
-                  ? 'border-rose-600/10 bg-rose-50 text-rose-700'
-                  : 'border-emerald-600/10 bg-emerald-50 text-emerald-700'
-              }`}
+              id="auth-status-message"
+              role={isErrorMessage ? 'alert' : 'status'}
+              aria-live={isErrorMessage ? 'assertive' : 'polite'}
+              className={[
+                'mt-5 rounded-2xl border px-4 py-3 text-sm font-semibold',
+                isErrorMessage ? 'border-rose-600/10 bg-rose-50 text-rose-700' : 'border-emerald-600/10 bg-emerald-50 text-emerald-700',
+              ].join(' ')}
             >
               {message}
             </div>
           )}
 
-          <div className="mt-8 border-t border-slate-400/10 pt-5 text-center text-xs text-slate-500/70">
+          <div className="mt-8 border-t border-slate-400/10 pt-5 text-center text-xs text-slate-600">
             {mode === 'LOGIN' 
               ? 'Uso interno. Accede con una cuenta autorizada.' 
               : 'Al registrarte, aceptas las políticas de uso académico de DockUS.'}

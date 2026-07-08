@@ -211,6 +211,23 @@ export interface BuilderPreflightSummary {
   failureCode?: string | null;
 }
 
+export type PedagogicalNarrativeKind =
+  | "success"
+  | "gap"
+  | "bridge"
+  | "action";
+
+export interface BuilderPedagogicalNarrativeItem {
+  kind: PedagogicalNarrativeKind;
+  content: string;
+}
+
+export interface BuilderTeacherHighlights {
+  strengths: string[];
+  concerns: string[];
+  followUp: string[];
+}
+
 export interface BuilderReportEntity {
   readableText?: string;
   llmRecommendations?: string[];
@@ -218,6 +235,11 @@ export interface BuilderReportEntity {
   technicalFeedback?: TechnicalFeedbackReport;
   selfHealing?: BuilderSelfHealingReport;
   coaching?: BuilderReportCoaching;
+  learningObjective?: string;
+  professionalVerdict?: string;
+  pedagogicalNarrative?: BuilderPedagogicalNarrativeItem[];
+  teacherHighlights?: BuilderTeacherHighlights;
+  printableMarkdown?: string;
 }
 
 export interface BuildRunEntity {

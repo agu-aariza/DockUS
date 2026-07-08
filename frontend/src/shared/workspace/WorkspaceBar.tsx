@@ -159,18 +159,24 @@ export function WorkspaceBar(): JSX.Element | null {
         {selection.projectId && (
           <div className="relative flex items-center">
             <button
+              type="button"
+              aria-label="Cambiar proyecto del espacio de trabajo"
+              aria-expanded={openPicker === 'project'}
+              aria-controls="workspace-picker-listbox"
               onClick={() => togglePicker('project')}
-              className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-all text-xs font-black group ${
+              className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-colors duration-150 motion-reduce:transition-none text-xs font-bold group ${
                 openPicker === 'project' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
               }`}
             >
-              <RiStackFill className="text-accent text-base group-hover:scale-110 transition-transform" />
+              <RiStackFill className="text-accent text-base transition-colors duration-150 motion-reduce:transition-none" />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">{selection.projectTitle || "Proyecto"}</span>
             </button>
             <button
+              type="button"
               onClick={() => clearWorkspace()}
               className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
               title="Limpiar contexto"
+              aria-label="Limpiar contexto del espacio de trabajo"
             >
               <RiCloseCircleFill className="text-lg" />
             </button>
@@ -182,18 +188,24 @@ export function WorkspaceBar(): JSX.Element | null {
           <div className="relative flex items-center">
             <RiArrowRightSLine className="text-slate-700 text-lg mx-0.5" />
             <button
+              type="button"
+              aria-label="Cambiar alumno asignado del espacio de trabajo"
+              aria-expanded={openPicker === 'assignment'}
+              aria-controls="workspace-picker-listbox"
               onClick={() => togglePicker('assignment')}
-              className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-all text-xs font-black group ${
+              className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-colors duration-150 motion-reduce:transition-none text-xs font-bold group ${
                 openPicker === 'assignment' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
               }`}
             >
-              <RiLayoutGridFill className="text-amber-400 text-base group-hover:scale-110 transition-transform" />
+              <RiLayoutGridFill className="text-amber-400 text-base transition-colors duration-150 motion-reduce:transition-none" />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">{selection.assignmentLabel || "Alumno"}</span>
             </button>
             <button
+              type="button"
               onClick={() => setProject(selection.projectId!, selection.projectTitle ?? undefined)}
               className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
               title="Cerrar alumno"
+              aria-label="Quitar alumno del contexto"
             >
               <RiCloseCircleFill className="text-lg" />
             </button>
@@ -205,18 +217,24 @@ export function WorkspaceBar(): JSX.Element | null {
           <div className="relative flex items-center">
             <RiArrowRightSLine className="text-slate-700 text-lg mx-0.5" />
             <button
+              type="button"
+              aria-label="Cambiar entrega del espacio de trabajo"
+              aria-expanded={openPicker === 'delivery'}
+              aria-controls="workspace-picker-listbox"
               onClick={() => togglePicker('delivery')}
-              className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-all text-xs font-black group ${
+              className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-colors duration-150 motion-reduce:transition-none text-xs font-bold group ${
                 openPicker === 'delivery' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
               }`}
             >
-              <RiPulseFill className="text-primary text-base group-hover:scale-110 transition-transform" />
+              <RiPulseFill className="text-primary text-base transition-colors duration-150 motion-reduce:transition-none" />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">{selection.deliveryLabel || "Entrega"}</span>
             </button>
             <button
+              type="button"
               onClick={() => setAssignment(selection.assignmentId!, selection.assignmentLabel ?? undefined)}
               className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
               title="Cerrar entrega"
+              aria-label="Quitar entrega del contexto"
             >
               <RiCloseCircleFill className="text-lg" />
             </button>
@@ -228,18 +246,24 @@ export function WorkspaceBar(): JSX.Element | null {
           <div className="relative flex items-center">
             <RiArrowRightSLine className="text-slate-700 text-lg mx-0.5" />
             <button
+              type="button"
+              aria-label="Cambiar ejecución del espacio de trabajo"
+              aria-expanded={openPicker === 'run'}
+              aria-controls="workspace-picker-listbox"
               onClick={() => togglePicker('run')}
-              className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-all text-xs font-black group ${
+              className={`flex items-center gap-2.5 px-4 py-2 rounded-full transition-colors duration-150 motion-reduce:transition-none text-xs font-bold group ${
                 openPicker === 'run' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
               }`}
             >
-              <RiLoader4Line className={`text-sky-400 text-base group-hover:scale-110 transition-transform ${selection.lastRunId ? '' : 'animate-spin'}`} />
+              <RiLoader4Line className={`text-sky-400 text-base transition-colors duration-150 motion-reduce:transition-none ${selection.lastRunId ? '' : 'animate-spin motion-reduce:animate-none'}`} />
               <span className="truncate max-w-[100px] sm:max-w-[150px] uppercase tracking-wider">Run #{selection.lastRunId.slice(-4)}</span>
             </button>
             <button
+              type="button"
               onClick={() => setDelivery(selection.deliveryId!, selection.deliveryLabel ?? undefined)}
               className="pr-2 text-slate-500 hover:text-rose-400 transition-colors"
               title="Cerrar ejecución"
+              aria-label="Quitar ejecución del contexto"
             >
               <RiCloseCircleFill className="text-lg" />
             </button>
@@ -250,16 +274,20 @@ export function WorkspaceBar(): JSX.Element | null {
         <div className="h-5 w-px bg-white/15 mx-1.5 self-center" />
         
         <button
+          type="button"
+          aria-label="Minimizar barra de espacio de trabajo"
           onClick={handleMinimizeToggle}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           title="Minimizar barra"
         >
           <RiSubtractLine className="text-base" />
         </button>
 
         <button
+          type="button"
+          aria-label="Limpiar todo el contexto del espacio de trabajo"
           onClick={() => clearWorkspace()}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer mr-1"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer mr-1"
           title="Limpiar todo el contexto"
         >
           <RiCloseLine className="text-base" />
@@ -275,6 +303,8 @@ export function WorkspaceBar(): JSX.Element | null {
               <RiSearch2Line className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 autoFocus
+                aria-label="Buscar opciones del espacio de trabajo"
+                aria-controls="workspace-picker-listbox"
                 className="w-full rounded-md border-none bg-slate-800/50 py-2 pl-9 pr-4 text-xs font-bold text-white placeholder:text-slate-500 focus:ring-1 focus:ring-amber-400"
                 placeholder={`Buscar ${openPicker === 'project' ? 'proyecto' : openPicker === 'assignment' ? 'alumno' : 'entrega'}...`}
                 value={search}
@@ -285,7 +315,7 @@ export function WorkspaceBar(): JSX.Element | null {
           </div>
 
           {/* List */}
-          <div className="flex-1 overflow-y-auto no-scrollbar p-2">
+          <div id="workspace-picker-listbox" role="listbox" aria-label="Opciones del contexto de trabajo" className="flex-1 overflow-y-auto no-scrollbar p-2">
             {filteredOptions.length > 0 ? (
               filteredOptions.map((opt: PickerOption) => {
                 const id = opt.id;
@@ -327,6 +357,9 @@ export function WorkspaceBar(): JSX.Element | null {
                 return (
                   <button
                     key={id}
+                    type="button"
+                    role="option"
+                    aria-selected={active}
                     onClick={() => {
                       if (openPicker === 'project') setProject(id, label);
                       else if (openPicker === 'assignment') setAssignment(id, label);
@@ -336,7 +369,7 @@ export function WorkspaceBar(): JSX.Element | null {
                       else if (openPicker === 'run') setRun(id);
                       setOpenPicker(null);
                     }}
-                    className={`group flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left transition-all hover:bg-white/10 ${
+                    className={`group flex w-full items-center justify-between gap-3 rounded-2xl p-3 text-left transition-colors duration-150 motion-reduce:transition-none hover:bg-white/10 ${
                       active ? 'bg-white/5 border border-white/5' : ''
                     }`}
                   >
@@ -345,17 +378,17 @@ export function WorkspaceBar(): JSX.Element | null {
                         {icon}
                       </div>
                       <div className="truncate">
-                        <div className={`text-[11px] font-black uppercase tracking-wider ${active ? 'text-amber-400' : 'text-white'}`}>
+                        <div className={`text-[11px] font-bold uppercase tracking-wider ${active ? 'text-amber-400' : 'text-white'}`}>
                           {label}
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           {sub && (
-                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                               {sub}
                             </span>
                           )}
                           {subStatus && (
-                            <span className={`text-[9px] font-black uppercase tracking-widest ${statusColor(subStatus)}`}>
+                            <span className={`text-[9px] font-bold uppercase tracking-wider ${statusColor(subStatus)}`}>
                               {sub ? `· ${subStatus}` : subStatus}
                             </span>
                           )}
@@ -369,7 +402,7 @@ export function WorkspaceBar(): JSX.Element | null {
             ) : !loading && (
               <div className="py-8 text-center">
                 <RiSearch2Line className="mx-auto mb-2 text-2xl text-slate-700" />
-                <div className="text-[10px] font-black uppercase tracking-widest text-slate-600">Sin resultados</div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Sin resultados</div>
               </div>
             )}
           </div>
@@ -377,6 +410,7 @@ export function WorkspaceBar(): JSX.Element | null {
           {/* Global Actions */}
           <div className="p-2 bg-white/5 border-t border-white/5">
              <button
+               type="button"
                onClick={() => {
                  navigate(
                    openPicker === 'project' ? '/projects' :
@@ -385,7 +419,7 @@ export function WorkspaceBar(): JSX.Element | null {
                  );
                  setOpenPicker(null);
                }}
-               className="w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 transition-all text-center"
+               className="w-full py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider text-slate-400 hover:text-white hover:bg-white/5 transition-colors duration-150 motion-reduce:transition-none text-center"
              >
                Ver listado completo
              </button>

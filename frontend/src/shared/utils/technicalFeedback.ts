@@ -26,7 +26,7 @@ export function normalizeTechnicalFeedbackItem(
     title:
       typeof item?.title === "string" && item.title.trim()
         ? item.title
-        : "Observacion tecnica",
+        : "Observación técnica",
     detail: typeof item?.detail === "string" ? item.detail : "",
     severity,
     file:

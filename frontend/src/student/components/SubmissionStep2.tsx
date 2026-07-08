@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { RiAlertLine, RiArrowLeftLine, RiArrowRightLine, RiFileZipLine } from "react-icons/ri";
 import { Button } from "../../shared/components/ui/Button";
 import { FileTreePreview } from "./FileTreePreview";
@@ -29,6 +30,13 @@ export function SubmissionStep2({ flow }: Props) {
     handleDrop,
     handleNextStep,
   } = flow;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleDropZoneKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      fileInputRef.current?.click();
+    }
+  };
 
   if (step !== 2) {
     return null;
@@ -39,7 +47,7 @@ export function SubmissionStep2({ flow }: Props) {
       <div>
         <div className="eyebrow text-slate-400">Paso 2 · Archivo</div>
         <h3 className="mt-2 text-3xl font-semibold text-slate-900">
-          Adjunta el codigo de la nueva version
+          Adjunta el código de la nueva versión
         </h3>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
           Sube un archivo comprimido en formato <code>.zip</code> o <code>.tar.gz</code> con el contenido de{" "}
@@ -51,11 +59,14 @@ export function SubmissionStep2({ flow }: Props) {
         htmlFor={FILE_INPUT_ID}
         className="text-sm font-semibold text-slate-900"
       >
-        Archivo comprimido de la practica
+        Archivo comprimido de la práctica
       </label>
 
       <div
-        className={`relative rounded-lg border-2 border-dashed px-6 py-10 text-center transition-all ${
+        tabIndex={0}
+        role="button"
+        aria-label="Arrastra o selecciona un archivo"
+        className={`relative rounded-lg border-2 border-dashed px-6 py-10 text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
           isDragging
             ? "border-primary bg-primary/5 shadow-inner"
             : "border-app-border bg-slate-50 hover:border-primary/40 hover:bg-primary/5"
@@ -63,8 +74,10 @@ export function SubmissionStep2({ flow }: Props) {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        onKeyDown={handleDropZoneKeyDown}
       >
         <input
+          ref={fileInputRef}
           id={FILE_INPUT_ID}
           type="file"
           accept=".zip,.tar,.gz,.tgz"
@@ -86,14 +99,14 @@ export function SubmissionStep2({ flow }: Props) {
           <div className="mt-4">
             <div className="text-lg font-semibold text-slate-900">
               {isDragging
-                ? "Suelta el archivo aqui"
+                ? "Suelta el archivo aquí"
                 : "Haz clic o arrastra el archivo a esta zona"}
             </div>
             <div
               id={`${FILE_INPUT_ID}-hint`}
               className="mt-2 text-sm text-slate-500"
             >
-              Maximo 50 MB · Formatos admitidos: .zip, .tar.gz
+              Máximo 50 MB · Formatos admitidos: .zip, .tar.gz
             </div>
           </div>
         )}
@@ -102,7 +115,7 @@ export function SubmissionStep2({ flow }: Props) {
       {fileSizeError ? (
         <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
           <RiAlertLine className="shrink-0 text-base" />
-          El archivo no puede superar los 50 MB. Selecciona uno mas ligero antes de continuar.
+          El archivo no puede superar los 50 MB. Selecciona uno más ligero antes de continuar.
         </div>
       ) : null}
 
@@ -128,14 +141,14 @@ export function SubmissionStep2({ flow }: Props) {
 
       {previousPreviewError ? (
         <div className="rounded-lg border border-app-border/30 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-          No pudimos comparar esta version con la entrega anterior: {previousPreviewError}
+          No pudimos comparar esta versión con la entrega anterior: {previousPreviewError}
         </div>
       ) : null}
 
       {shouldWarnBeforeContinue ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
           <div className="font-semibold">
-            Detectamos senales que conviene revisar antes de seguir
+            Detectamos señales que conviene revisar antes de seguir
           </div>
           <ul className="mt-3 list-disc space-y-2 pl-5">
             {previewValidation.warnings.map((warning) => (

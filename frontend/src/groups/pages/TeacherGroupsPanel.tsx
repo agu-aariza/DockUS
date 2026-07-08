@@ -174,7 +174,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
               </div>
               <div className="space-y-3">
                 <input
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                   placeholder="Nombre del grupo (ej: 2º DAW)"
                   value={groupForm.name}
                   onChange={(e) =>
@@ -182,7 +182,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                   }
                 />
                 <input
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                   placeholder="Código corto (ej: DAW-24)"
                   value={groupForm.code}
                   onChange={(e) =>
@@ -474,7 +474,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                       electrónicos, uno por línea.
                     </p>
                     <textarea
-                      className="w-full min-h-[180px] rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      className="w-full min-h-[180px] rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                       placeholder={`Apellidos, Nombre\nGarcía, Juan\nestudiante@dockus.io`}
                       value={bulkInput}
                       onChange={(e) => setBulkInput(e.target.value)}

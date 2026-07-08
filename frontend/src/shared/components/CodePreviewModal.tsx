@@ -106,9 +106,10 @@ export function CodePreviewModal({
           )}
           <button
             onClick={onClose}
-            className="group flex h-9 w-9 items-center justify-center rounded-full bg-slate-800/50 text-slate-400 transition hover:bg-red-600 hover:text-white"
+            aria-label="Cerrar"
+            className="group flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-slate-300 transition hover:bg-red-600 hover:text-white focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:outline-none"
           >
-            <RiCloseLine className="text-xl transition group-hover:rotate-90" />
+            <RiCloseLine className="text-xl transition-colors" />
           </button>
         </div>
       </header>
@@ -122,7 +123,8 @@ export function CodePreviewModal({
               <input
                 type="text"
                 placeholder="Buscar archivo..."
-                className="w-full rounded-md bg-slate-800/50 py-2 pl-9 pr-3 text-xs text-white placeholder:text-slate-500 transition focus:outline-none focus:ring-1 focus:ring-primary/50"
+                aria-label="Buscar archivo"
+                className="w-full rounded-md bg-slate-800/50 py-2 pl-9 pr-3 text-xs text-white placeholder:text-slate-500 transition focus:outline-none focus:ring-1 focus:ring-primary/50 hover:bg-slate-800/70"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -135,7 +137,7 @@ export function CodePreviewModal({
             </div>
             {isLoading ? (
               <div className="flex flex-col items-center justify-center gap-3 py-20">
-                <RiLoader4Line className="animate-spin text-3xl text-primary" />
+                <RiLoader4Line className="animate-spin text-xl text-primary/80" />
                 <span className="text-xs font-medium text-slate-500">Leyendo ZIP...</span>
               </div>
             ) : filteredFiles.length === 0 ? (
@@ -157,7 +159,7 @@ export function CodePreviewModal({
                           : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
                       }`}
                     >
-                      <span className="shrink-0 transition group-hover:scale-110">
+                      <span className="shrink-0">
                         {getFileIcon(file.path)}
                       </span>
                       <span className="truncate text-left font-medium">{file.path}</span>
@@ -182,7 +184,7 @@ export function CodePreviewModal({
               <button
                 onClick={handleCopy}
                 disabled={!selectedFile}
-                className="flex h-8 items-center gap-2 rounded-md px-3 text-[11px] font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white disabled:opacity-30"
+                className="flex h-8 items-center gap-2 rounded-md px-3 text-[11px] font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none disabled:opacity-30"
               >
                 {copied ? <RiCheckLine className="text-emerald-400" /> : <RiFileCopyLine />}
                 {copied ? "¡Copiado!" : "Copiar"}
@@ -190,7 +192,7 @@ export function CodePreviewModal({
               <button
                 onClick={handleDownload}
                 disabled={!selectedFile}
-                className="flex h-8 items-center gap-2 rounded-md px-3 text-[11px] font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white disabled:opacity-30"
+                className="flex h-8 items-center gap-2 rounded-md px-3 text-[11px] font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none disabled:opacity-30"
               >
                 <RiDownloadLine />
                 Descargar

@@ -36,7 +36,7 @@ export function TerminalViewer({
 
     return (
       <div key={i} className="flex hover:bg-slate-800/50 px-4 py-0.5">
-        <span className="text-slate-600 select-none pr-4 text-xs min-w-[2.5rem] text-right">
+        <span className="text-slate-500 select-none pr-4 text-xs min-w-[2.5rem] text-right">
           {i + 1}
         </span>
         <span className={`${className} whitespace-pre-wrap break-all`}>
@@ -66,8 +66,9 @@ export function TerminalViewer({
         </div>
         <button 
           onClick={handleCopy}
-          className="text-slate-400 hover:text-white transition flex items-center gap-1 text-xs bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded"
+          className="text-slate-400 hover:text-white transition flex items-center gap-1 text-xs bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
           title="Copiar logs"
+          aria-label="Copiar logs"
         >
           {copied ? <RiCheckLine className="text-emerald-400" /> : <RiFileCopyLine />}
           {copied ? "Copiado" : "Copiar"}

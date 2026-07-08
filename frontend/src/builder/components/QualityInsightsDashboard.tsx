@@ -254,7 +254,7 @@ export function QualityInsightsDashboard({
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-3 rounded-3xl border border-slate-200 bg-white px-6 py-12 text-slate-500 shadow-sm">
-        <RiLoader4Line className="animate-spin text-xl text-primary" />
+        <RiLoader4Line className="animate-spin motion-reduce:animate-none text-xl text-primary" />
         Analizando patrones de calidad del proyecto...
       </div>
     );
@@ -269,17 +269,17 @@ export function QualityInsightsDashboard({
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_1fr]">
         <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-8 text-white shadow-xl">
           <div className="absolute -right-8 -top-8 text-9xl opacity-10">
             <RiTeamFill />
           </div>
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             Resumen de Calidad
           </div>
           <div className="mt-6 flex items-baseline gap-2">
-            <span className="text-6xl font-black tracking-tighter leading-none">
+            <span className="text-6xl font-bold tracking-tight leading-none">
               {summary.totalStudentsAnalyzed}
             </span>
             <span className="text-xl font-bold text-slate-400">
@@ -287,7 +287,7 @@ export function QualityInsightsDashboard({
             </span>
           </div>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-400">
-            Patrones agregados a partir de los ultimos hallazgos LLM persistidos
+            Patrones agregados a partir de los últimos hallazgos LLM persistidos
             por alumno en este proyecto.
           </p>
         </div>
@@ -295,8 +295,8 @@ export function QualityInsightsDashboard({
         <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="mb-6 flex items-center gap-2">
             <RiBarChartFill className="text-accent text-xl" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-              Distribucion de Hallazgos
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              Distribución de Hallazgos
             </span>
           </div>
           <div className="space-y-4">
@@ -317,7 +317,7 @@ export function QualityInsightsDashboard({
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                     <div
-                      className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                      className={`h-full rounded-full transition-[width] duration-300 ease-out motion-reduce:transition-none ${
                         currentCategory === "security"
                           ? "bg-rose-500"
                           : currentCategory === "quality"
@@ -342,7 +342,7 @@ export function QualityInsightsDashboard({
             key={option}
             type="button"
             onClick={() => setCategory(option)}
-            className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-[0.18em] transition-colors ${
+            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
               category === option
                 ? "bg-accent text-white shadow-sm"
                 : "bg-white text-slate-500 ring-1 ring-slate-200 hover:text-slate-900"
@@ -367,24 +367,24 @@ export function QualityInsightsDashboard({
                   className="group flex items-center justify-between rounded-2xl px-2 py-5 transition-colors hover:bg-slate-50/50"
                 >
                   <div className="flex items-center gap-5">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 transition-all duration-300 group-hover:scale-110 group-hover:shadow-sm">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 transition-colors duration-150 motion-reduce:transition-none group-hover:bg-primary/10 group-hover:text-primary">
                       {getCategoryIcon(insight.category)}
                     </div>
                     <div>
                       <div className="text-base font-bold text-slate-900 transition-colors group-hover:text-primary">
                         {insight.title}
                       </div>
-                      <div className="mt-0.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+                      <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                         {CATEGORY_LABELS[insight.category]} · {insight.severity}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="flex flex-col items-end">
-                      <span className="text-2xl font-black leading-none tracking-tighter text-slate-900">
+                      <span className="text-2xl font-bold leading-none tracking-tighter text-slate-900">
                         {insight.studentCount}
                       </span>
-                      <span className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                         Alumnos
                       </span>
                     </div>
@@ -416,7 +416,7 @@ export function QualityInsightsDashboard({
         >
           <div className="space-y-5">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                 Alumno
               </label>
               <select
@@ -455,7 +455,7 @@ export function QualityInsightsDashboard({
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-primary/30 hover:text-primary"
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 transition hover:border-primary/30 hover:text-primary"
                       onClick={() => onOpenStudentReview(selectedStudent.studentId, "report")}
                     >
                       <RiFileTextLine />
@@ -463,7 +463,7 @@ export function QualityInsightsDashboard({
                     </button>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-accent/30 hover:text-accent"
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 transition hover:border-accent/30 hover:text-accent"
                       onClick={() => onOpenStudentReview(selectedStudent.studentId, "grading")}
                     >
                       <RiFolderChartLine />
@@ -489,10 +489,10 @@ export function QualityInsightsDashboard({
                       key={currentCategory}
                       className="rounded-2xl border border-slate-200 bg-white p-3"
                     >
-                      <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                         {CATEGORY_LABELS[currentCategory]}
                       </div>
-                      <div className="mt-2 text-2xl font-black tracking-tighter text-slate-900">
+                      <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
                         {studentFindingTotals[currentCategory]}
                       </div>
                     </div>
@@ -507,7 +507,7 @@ export function QualityInsightsDashboard({
 
                     return (
                       <div key={currentCategory} className="space-y-3">
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+                        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                           {getCategoryIcon(currentCategory)}
                           {CATEGORY_LABELS[currentCategory]}
                         </div>
@@ -541,7 +541,7 @@ export function QualityInsightsDashboard({
                                 {finding.detail}
                               </p>
                               {finding.file || typeof finding.line === "number" ? (
-                                <div className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                <div className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
                                   {[finding.file, finding.line ? `linea ${finding.line}` : null]
                                     .filter(Boolean)
                                     .join(" · ")}
@@ -557,7 +557,7 @@ export function QualityInsightsDashboard({
                 {selectedStudentReviewTarget && onOpenStudentReview ? (
                   <button
                     type="button"
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700 transition hover:border-primary/30 hover:text-primary"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 transition hover:border-primary/30 hover:text-primary"
                     onClick={() => onOpenStudentReview(selectedStudentId, "report")}
                   >
                     <RiArrowRightUpLine />

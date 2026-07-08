@@ -235,6 +235,7 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
           />
           <button
             type="submit"
+            aria-label="Enviar mensaje"
             disabled={!inputValue.trim() || isLoading}
             className="flex h-11 w-11 items-center justify-center rounded-md bg-primary text-white transition-all hover:bg-primary-hover active:scale-[0.97] disabled:bg-slate-100 disabled:text-slate-400"
           >

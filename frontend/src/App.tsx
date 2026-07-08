@@ -98,24 +98,27 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (_res: AuthResponse) 
             ) : (
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {sessions.map(s => (
-                  <div
-                    key={s.id}
-                    className={`flex items-center justify-between rounded-md px-3 py-2 text-xs transition border cursor-pointer ${
-                      s.id === activeSessionId
-                        ? "bg-primary-subtle border-primary/30 text-primary"
-                        : "bg-white border-app-border text-slate-700 hover:bg-slate-50"
-                    }`}
-                    onClick={() => handleSwitch(s.id)}
-                  >
-                    <div className="min-w-0">
-                      <div className="font-semibold truncate">{s.email}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        {s.role} {s.id === activeSessionId && "· activa"}
-                      </div>
-                    </div>
+                  <div key={s.id} className="flex items-center gap-1">
                     <button
-                      onClick={(e) => { e.stopPropagation(); removeSession(s.id); }}
-                      className="text-slate-400 hover:text-red-600 text-base ml-2 shrink-0"
+                      type="button"
+                      onClick={() => handleSwitch(s.id)}
+                      className={`flex flex-1 items-center justify-between rounded-md px-3 py-2 text-xs text-left transition border ${
+                        s.id === activeSessionId
+                          ? "bg-primary-subtle border-primary/30 text-primary"
+                          : "bg-white border-app-border text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate">{s.email}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          {s.role} {s.id === activeSessionId && "· activa"}
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeSession(s.id)}
+                      className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 text-base shrink-0"
                       title="Eliminar sesión"
                       aria-label="Eliminar sesión"
                     >
@@ -132,16 +135,18 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (_res: AuthResponse) 
             <input
               type="email"
               placeholder="email"
+              aria-label="Correo para login rápido"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full rounded-md bg-white border border-slate-200 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+              className="w-full rounded-md bg-white border border-slate-200 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
             />
             <input
               type="password"
               placeholder="contraseña"
+              aria-label="Contraseña para login rápido"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full rounded-md bg-white border border-slate-200 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+              className="w-full rounded-md bg-white border border-slate-200 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
             />
             {error && <div className="text-[10px] text-red-600">{error}</div>}
             <button

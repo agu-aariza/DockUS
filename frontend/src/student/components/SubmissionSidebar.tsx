@@ -49,7 +49,7 @@ export function SubmissionSidebar({ flow }: Props) {
       <StudentSurface>
         <StudentSurfaceHeader
           eyebrow="Briefing de la practica"
-          title={activeAssignment?.projectTitle ?? "Selecciona una practica"}
+          title={activeAssignment?.projectTitle ?? "Selecciona una práctica"}
           description="Antes de subir nada, confirma que esta es la convocatoria correcta y revisa si conviene reenviar ahora o esperar otro momento."
           badge={
             <span
@@ -90,10 +90,10 @@ export function SubmissionSidebar({ flow }: Props) {
         {(noRemainingDeliveries || notYetOpen || afterDeadline) && activeAssignment ? (
           <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
             {noRemainingDeliveries
-              ? "Esta practica ya no tiene intentos restantes. Puedes seguir revisando el informe y el historial, pero no se habilitara otra subida."
+              ? "Esta práctica ya no tiene intentos restantes. Puedes seguir revisando el informe y el historial, pero no se habilitará otra subida."
               : notYetOpen
-                ? "La convocatoria sigue cerrada. En cuanto se abra, podras continuar con el asistente de subida."
-                : "La fecha de cierre ya paso. Puedes seguir entregando, pero esta version quedara marcada como fuera de plazo."}
+                ? "La convocatoria sigue cerrada. En cuanto se abra, podrás continuar con el asistente de subida."
+                : "La fecha de cierre ya pasó. Puedes seguir entregando, pero esta versión quedará marcada como fuera de plazo."}
           </div>
         ) : null}
       </StudentSurface>

@@ -3,6 +3,7 @@ import { RiArrowDownSLine, RiArrowUpSLine } from "react-icons/ri";
 
 import type { RubricGradeItem } from "../../features/builder/types";
 import { MarkdownContent } from "./MarkdownContent";
+import { ReportCard } from "./report/ReportCard";
 
 interface GradeBreakdownChartProps {
   items: RubricGradeItem[];
@@ -40,17 +41,12 @@ export function GradeBreakdownChart({
   }
 
   return (
-    <section className="rounded-lg border border-app-border bg-white p-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-          Desglose de la nota
-        </p>
-        <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
-          Como contribuye cada criterio a la evaluacion
-        </h3>
-      </div>
-
-      <div className="mt-6 space-y-4">
+    <ReportCard
+      tone="default"
+      title="Desglose de la nota"
+      description="Cómo contribuye cada criterio a la evaluación"
+    >
+      <div className="space-y-4">
         {items.map((item) => {
           const percentage =
             item.maxPoints > 0 ? Math.max(0, Math.min(1, item.awarded / item.maxPoints)) : 0;
@@ -60,7 +56,7 @@ export function GradeBreakdownChart({
           return (
             <article
               key={item.criterion}
-              className="rounded-lg border border-app-border bg-slate-50/70 p-4"
+              className="rounded-xl border border-app-border bg-slate-50/70 p-4"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -100,7 +96,7 @@ export function GradeBreakdownChart({
               </button>
 
               {isExpanded ? (
-                <div className="mt-3 rounded-lg border border-app-border bg-white p-4">
+                <div className="mt-3 rounded-xl border border-app-border bg-white p-4">
                   <MarkdownContent content={item.justification} />
                 </div>
               ) : null}
@@ -108,6 +104,6 @@ export function GradeBreakdownChart({
           );
         })}
       </div>
-    </section>
+    </ReportCard>
   );
 }

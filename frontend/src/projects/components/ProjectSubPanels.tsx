@@ -121,7 +121,7 @@ export function ProjectAssignmentManager({
   const coveragePercent = students.length > 0 ? Math.round((activeAssignmentsCount / students.length) * 100) : 0;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-8">
 
       {/* 1. Metrics Header */}
       <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -131,7 +131,7 @@ export function ProjectAssignmentManager({
           { label: "Sin Proyecto", value: pendingCount, helper: "Esperando asignación", icon: <RiSparkling2Line />, variant: "warning" as const },
           { label: "Grupos", value: groups.length, helper: "Disponibles para asignar", icon: <RiTeamFill />, variant: "info" as const },
         ].map((metric, idx) => (
-          <div key={idx} className="group/metric animate-in fade-in slide-in-from-top-4 duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
+          <div key={idx} className="group/metric">
             <MetricCard
               label={metric.label}
               value={metric.value}
@@ -154,12 +154,12 @@ export function ProjectAssignmentManager({
               <RiSearchLine />
             </div>
 
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Filtrado y Búsqueda</h4>
+            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-4">Filtrado y Búsqueda</h4>
             <div className="space-y-4">
               <div className="relative group">
                 <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
                 <input
-                  className="w-full h-12 pl-11 pr-4 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-all text-sm font-medium"
+                  className="w-full h-12 pl-11 pr-4 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-colors duration-150 motion-reduce:transition-none text-sm font-medium"
                   placeholder="Buscar grupo o código..."
                   value={searchTerm}
                   onChange={(e) => onSearchChange(e.target.value)}
@@ -168,10 +168,10 @@ export function ProjectAssignmentManager({
 
               <div className="flex gap-2">
                 <button
-                  className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/10 text-xs font-bold uppercase tracking-widest"
+                  className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/10 text-xs font-bold uppercase tracking-wider"
                   onClick={onRefreshAssignments}
                 >
-                  <RiRefreshLine className={assignmentBusy ? "animate-spin" : ""} />
+                  <RiRefreshLine className={assignmentBusy ? "animate-spin motion-reduce:animate-none" : ""} />
                   Sincronizar
                 </button>
               </div>
@@ -187,7 +187,7 @@ export function ProjectAssignmentManager({
             <div>
               <h3 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
                 Classroom Hub
-                <span className="text-xs font-medium bg-primary-subtle text-primary px-3 py-1 rounded-full border border-primary/10 uppercase tracking-widest">
+                <span className="text-xs font-medium bg-primary-subtle text-primary px-3 py-1 rounded-full border border-primary/10 uppercase tracking-wider">
                   {filteredGroups.length} Grupos
                 </span>
               </h3>
@@ -198,12 +198,12 @@ export function ProjectAssignmentManager({
 
             <div className="flex items-center gap-3">
                <button
-                  className="group/btn relative h-12 px-8 flex items-center justify-center gap-3 rounded-2xl bg-slate-950 text-white text-[11px] font-black uppercase tracking-[0.1em] hover:bg-slate-900 transition-all shadow-[0_10px_30px_-5px_rgba(15,23,42,0.2)] hover:shadow-[0_15px_35px_-5px_rgba(15,23,42,0.3)] hover:-translate-y-0.5 disabled:opacity-50 overflow-hidden"
+                  className="group/btn relative h-12 px-8 flex items-center justify-center gap-3 rounded-2xl bg-slate-950 text-white text-[11px] font-semibold uppercase tracking-wide hover:bg-slate-900 transition-colors duration-150 motion-reduce:transition-none shadow-sm disabled:opacity-50 overflow-hidden"
                   onClick={() => onAssignGroups(groups.map(g => g.id))}
                   disabled={groups.length === 0 || !!assignmentBusy}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-                  <RiTeamFill className="text-lg group-hover/btn:rotate-12 transition-transform" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-150 motion-reduce:transition-none" />
+                  <RiTeamFill className="text-lg group-hover/btn:rotate-12 transition-transform duration-150 motion-reduce:transition-none" />
                   Matricular todos los grupos
                 </button>
             </div>
@@ -231,7 +231,7 @@ export function ProjectAssignmentManager({
                   <article
                     key={group.id}
                     onClick={() => onFocusedGroupChange(group.id)}
-                    className={`group relative flex flex-col p-6 rounded-[2rem] border transition-all duration-500 cursor-pointer overflow-hidden ${
+                    className={`group relative flex flex-col p-6 rounded-[2rem] border transition-colors duration-200 motion-reduce:transition-none cursor-pointer overflow-hidden ${
                       isGroupAssigned
                         ? 'bg-white border-emerald-100 shadow-emerald-500/5'
                         : isFocused
@@ -241,12 +241,12 @@ export function ProjectAssignmentManager({
                   >
                     {/* Card Header with Status Toggle */}
                     <div className="flex items-start justify-between mb-5">
-                      <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.25rem] text-2xl transition-all duration-500 shadow-sm ${
+                      <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.25rem] text-2xl transition-colors duration-200 motion-reduce:transition-none shadow-sm ${
                         isGroupAssigned
                           ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
                           : isFocused
                             ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                            : 'bg-slate-50 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary group-hover:scale-110 group-hover:rotate-3'
+                            : 'bg-slate-50 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary'
                       }`}>
                         <RiGroupLine />
                       </div>
@@ -261,11 +261,11 @@ export function ProjectAssignmentManager({
                           }
                         }}
                         disabled={!!assignmentBusy}
-                        className={`h-7 w-12 rounded-full transition-all relative flex items-center shadow-inner ${
+                        className={`h-7 w-12 rounded-full transition-colors duration-200 motion-reduce:transition-none relative flex items-center shadow-inner ${
                           isGroupAssigned ? 'bg-emerald-500' : 'bg-slate-200 hover:bg-slate-300'
                         }`}
                       >
-                        <div className={`absolute left-1 h-5 w-5 rounded-full bg-white transition-all shadow-md flex items-center justify-center ${
+                        <div className={`absolute left-1 h-5 w-5 rounded-full bg-white transition-transform duration-200 motion-reduce:transition-none shadow-md flex items-center justify-center ${
                           isGroupAssigned ? 'translate-x-5' : 'translate-x-0'
                         }`}>
                           {isGroupAssigned && <RiCheckFill className="text-[10px] text-emerald-600 font-bold" />}
@@ -275,7 +275,7 @@ export function ProjectAssignmentManager({
 
                     {/* Group Info */}
                     <div className="min-w-0">
-                      <span className={`text-[9px] font-black uppercase tracking-widest ${
+                      <span className={`text-[9px] font-bold uppercase tracking-wider ${
                         isGroupAssigned ? 'text-emerald-500' : 'text-slate-400'
                       }`}>
                         {group.code || "SC"}
@@ -290,7 +290,7 @@ export function ProjectAssignmentManager({
                             // Navegamos a la pestaña general de grupos
                             window.location.href = `/groups?focusedGroupId=${group.id}`;
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100 text-[10px] font-bold text-slate-600 uppercase tracking-widest hover:bg-white hover:border-primary/20 hover:text-primary transition-all shadow-sm flex items-center gap-2 group/btn"
+                          className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100 text-[10px] font-bold text-slate-600 uppercase tracking-wider hover:bg-white hover:border-primary/20 hover:text-primary transition-colors duration-150 motion-reduce:transition-none shadow-sm flex items-center gap-2 group/btn"
                         >
                           <RiUser3Fill className="text-slate-400 group-hover/btn:text-primary" />
                           Ver alumnos
@@ -303,7 +303,7 @@ export function ProjectAssignmentManager({
 
                     {/* Footer con Indicador de Estado */}
                     <div className="mt-5 flex items-center justify-between pt-4 border-t border-slate-50">
-                      <span className={`text-[9px] font-black uppercase tracking-widest ${
+                      <span className={`text-[9px] font-bold uppercase tracking-wider ${
                         isGroupAssigned ? 'text-emerald-500' : 'text-slate-400'
                       }`}>
                         {isGroupAssigned ? 'Grupo Asignado' : 'Sin Matricular'}
@@ -311,7 +311,7 @@ export function ProjectAssignmentManager({
 
                       <div className="flex items-center gap-2">
                          {isGroupAssigned ? (
-                           <div className="h-6 w-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm border border-emerald-100 animate-in zoom-in-50">
+                           <div className="h-6 w-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm border border-emerald-100">
                               <RiCheckFill className="text-xs" />
                            </div>
                          ) : (
@@ -324,8 +324,8 @@ export function ProjectAssignmentManager({
                     
                     {/* Overlay de Carga */}
                     {assignmentBusy && (assignmentBusy === `assign:groups` || assignmentBusy.startsWith('revoke:')) && (
-                      <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-10 animate-in fade-in">
-                        <RiRefreshLine className="text-2xl text-primary animate-spin" />
+                      <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-10">
+                        <RiRefreshLine className="text-2xl text-primary animate-spin motion-reduce:animate-none" />
                       </div>
                     )}
                   </article>

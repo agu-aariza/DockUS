@@ -67,11 +67,11 @@ function readStudentStage(
   }
 
   const message = event.message.toLowerCase();
-  if (message.includes("analizando arquitectura") || message.includes("preparacion")) {
+  if (message.includes("analizando arquitectura") || message.includes("preparación")) {
     return "building";
   }
   if (
-    message.includes("orquestacion") ||
+    message.includes("orquestación") ||
     message.includes("servicio") ||
     message.includes("stdout") ||
     message.includes("stderr")

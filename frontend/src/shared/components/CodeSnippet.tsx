@@ -35,7 +35,7 @@ export function CodeSnippet({
 
   return (
     <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-sm">
-      <div className="flex items-center justify-between border-b border-white/10 bg-slate-900/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+      <div className="flex items-center justify-between border-b border-white/10 bg-slate-900/80 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-300">
         <span>{title}</span>
         <span>{language}</span>
       </div>

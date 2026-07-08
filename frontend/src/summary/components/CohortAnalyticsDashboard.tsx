@@ -231,7 +231,7 @@ export function CohortAnalyticsDashboard({
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className={`h-full rounded-full ${d.color} transition-all duration-500`}
+                        className={`h-full rounded-full ${d.color} transition-[width] duration-300 ease-out motion-reduce:transition-none`}
                         style={{ width: `${d.percent}%` }}
                       />
                     </div>

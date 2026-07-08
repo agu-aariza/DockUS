@@ -1,15 +1,14 @@
 import type { BuilderRuntimeFamily, BuilderReportCoaching, TechnicalFeedbackItem } from "../../features/builder/types";
 import {
   RiAlertLine,
-  RiAlarmWarningLine,
   RiCheckboxCircleLine,
-  RiInformationLine,
-  RiListCheck3,
   RiLightbulbFlashLine,
+  RiListCheck3,
   RiSparklingLine,
 } from "react-icons/ri";
-import { CodeSnippet } from "./CodeSnippet";
 import { MarkdownContent } from "./MarkdownContent";
+import { ReportCard } from "./report/ReportCard";
+import { TechnicalFindingCard } from "./report/TechnicalFindingCard";
 import { normalizeTechnicalFeedbackItem } from "../utils/technicalFeedback";
 
 interface CoachingSummaryProps {
@@ -18,83 +17,6 @@ interface CoachingSummaryProps {
   rubricItems?: TechnicalFeedbackItem[];
   variant?: "full" | "compact";
   runtimeFamily?: BuilderRuntimeFamily;
-}
-
-const SEVERITY_UI = {
-  high: {
-    label: "Severidad alta",
-    icon: RiAlarmWarningLine,
-    badge: "border-rose-200 bg-rose-50 text-rose-700",
-  },
-  medium: {
-    label: "Severidad media",
-    icon: RiInformationLine,
-    badge: "border-amber-200 bg-amber-50 text-amber-700",
-  },
-  low: {
-    label: "Severidad baja",
-    icon: RiLightbulbFlashLine,
-    badge: "border-sky-200 bg-sky-50 text-sky-700",
-  },
-} as const;
-
-function FeedbackList({
-  items,
-  runtimeFamily,
-}: {
-  items: TechnicalFeedbackItem[];
-  runtimeFamily?: BuilderRuntimeFamily;
-}): JSX.Element {
-  const normalizedItems = items.map((item) => normalizeTechnicalFeedbackItem(item));
-
-  return (
-    <div className="space-y-3">
-      {normalizedItems.map((item, index) => (
-        <article
-          key={`${item.title}-${index}`}
-          className="rounded-lg border border-app-border bg-white p-4 text-sm"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="font-semibold text-slate-900">{item.title}</div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${SEVERITY_UI[item.severity].badge}`}
-              >
-                {(() => {
-                  const Icon = SEVERITY_UI[item.severity].icon;
-                  return <Icon className="text-sm" aria-hidden="true" />;
-                })()}
-                {SEVERITY_UI[item.severity].label}
-              </span>
-              <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                {item.level}
-              </span>
-            </div>
-          </div>
-          <div className="mt-2 text-slate-700">
-            <MarkdownContent content={item.detail} />
-          </div>
-          {item.file ? (
-            <div className="mt-2 inline-block rounded bg-slate-50 px-2 py-1 font-mono text-xs text-slate-500">
-              {item.file}
-              {item.line ? `:${item.line}` : ""}
-            </div>
-          ) : null}
-          <CodeSnippet code={item.codeSnippet} runtimeFamily={runtimeFamily} />
-          {item.conceptExplanation.trim() ? (
-            <details className="mt-4 rounded-lg border border-app-border bg-slate-50 px-4 py-3">
-              <summary className="cursor-pointer text-sm font-semibold text-primary">
-                Aprende mas
-              </summary>
-              <div className="mt-3 text-slate-700">
-                <MarkdownContent content={item.conceptExplanation} />
-              </div>
-            </details>
-          ) : null}
-        </article>
-      ))}
-    </div>
-  );
 }
 
 function Checklist({
@@ -107,7 +29,7 @@ function Checklist({
       {entries.map((entry, index) => (
         <li
           key={`${entry}-${index}`}
-          className="flex gap-3 rounded-lg border border-app-border bg-white p-4"
+          className="flex gap-3 rounded-xl border border-app-border bg-white p-4"
         >
           <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
             {index + 1}
@@ -118,6 +40,29 @@ function Checklist({
         </li>
       ))}
     </ol>
+  );
+}
+
+function FindingList({
+  items,
+  runtimeFamily,
+  variant,
+}: {
+  items: TechnicalFeedbackItem[];
+  runtimeFamily?: BuilderRuntimeFamily;
+  variant?: "default" | "compact";
+}): JSX.Element {
+  return (
+    <div className="space-y-3">
+      {items.map((item, index) => (
+        <TechnicalFindingCard
+          key={`${item.title ?? "finding"}-${index}`}
+          item={normalizeTechnicalFeedbackItem(item)}
+          runtimeFamily={runtimeFamily}
+          variant={variant}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -143,64 +88,61 @@ export function CoachingSummary({
 
   if (variant === "compact") {
     return (
-      <section className="rounded-lg border border-indigo-200 bg-indigo-50 p-5">
-        <div className="flex items-center gap-2 text-indigo-800">
-          <RiListCheck3 className="text-lg" />
-          <h3 className="text-sm font-bold uppercase tracking-[0.16em]">
-            Antes de subir una nueva version
-          </h3>
-        </div>
-        <p className="mt-3 text-sm leading-6 text-indigo-900">
-          {blocked
+      <ReportCard
+        tone="indigo"
+        icon={RiListCheck3}
+        title="Antes de subir una nueva versión"
+        description={
+          blocked
             ? "Debes corregir esto antes de pasar en el siguiente intento."
-            : "Tu entrega ya funciona, pero aun puedes mejorarla antes de la siguiente version."}
-        </p>
-
+            : "Tu entrega ya funciona, pero aún puedes mejorarla antes de la siguiente versión."
+        }
+      >
         {coaching.mustFix.length > 0 ? (
           <div className="mt-4">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-rose-700">
               Debes corregir esto antes de pasar
             </div>
-            <FeedbackList
+            <FindingList
               items={coaching.mustFix.slice(0, 2)}
               runtimeFamily={runtimeFamily}
+              variant="compact"
             />
           </div>
         ) : null}
 
         {coaching.shouldImprove.length > 0 ? (
           <div className="mt-4">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-              Podrias mejorar tambien
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-amber-700">
+              Podrías mejorar también
             </div>
-            <FeedbackList
+            <FindingList
               items={coaching.shouldImprove.slice(0, 2)}
               runtimeFamily={runtimeFamily}
+              variant="compact"
             />
           </div>
         ) : null}
-      </section>
+      </ReportCard>
     );
   }
 
   return (
-    <section className="rounded-lg border border-indigo-200 bg-indigo-50 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-indigo-800">
-            <RiLightbulbFlashLine className="text-xl" />
-            <h3 className="text-sm font-bold uppercase tracking-[0.16em]">
-              {mode === "student"
-                ? "Como mejorar esta entrega"
-                : "Orientacion para la siguiente version"}
-            </h3>
-          </div>
-          <p className="mt-3 text-sm leading-6 text-indigo-900">
-            {blocked
-              ? "El sistema ha detectado bloqueos que debes resolver antes de poder pasar esta practica."
-              : "La entrega ya supera lo esencial y estas sugerencias sirven para dejarla mas limpia y mantenible."}
-          </p>
-        </div>
+    <ReportCard
+      tone="indigo"
+      icon={RiLightbulbFlashLine}
+      title={
+        mode === "student"
+          ? "Cómo mejorar esta entrega"
+          : "Orientación para la siguiente versión"
+      }
+      description={
+        blocked
+          ? "El sistema ha detectado bloqueos que debes resolver antes de poder pasar esta práctica."
+          : "La entrega ya supera lo esencial y estas sugerencias sirven para dejarla más limpia y mantenible."
+      }
+    >
+      <div className="mt-2">
         <span
           className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
             blocked
@@ -208,27 +150,27 @@ export function CoachingSummary({
               : "border-emerald-200 bg-emerald-50 text-emerald-700"
           }`}
         >
-          {blocked ? "Pendiente de correccion" : "Lista con mejoras opcionales"}
+          {blocked ? "Pendiente de corrección" : "Lista con mejoras opcionales"}
         </span>
       </div>
 
       {coaching.mustFix.length > 0 ? (
         <div className="mt-6">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-rose-700">
-            <RiAlertLine className="text-base" />
-            Que debes corregir para pasar
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-rose-700">
+            <RiAlertLine className="text-base" aria-hidden="true" />
+            Qué debes corregir para pasar
           </div>
-          <FeedbackList items={coaching.mustFix} runtimeFamily={runtimeFamily} />
+          <FindingList items={coaching.mustFix} runtimeFamily={runtimeFamily} />
         </div>
       ) : null}
 
       {coaching.shouldImprove.length > 0 ? (
         <div className="mt-6">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">
-            <RiLightbulbFlashLine className="text-base" />
-            Que podrias mejorar aunque ya funcione
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-amber-700">
+            <RiLightbulbFlashLine className="text-base" aria-hidden="true" />
+            Qué podrías mejorar aunque ya funcione
           </div>
-          <FeedbackList
+          <FindingList
             items={coaching.shouldImprove}
             runtimeFamily={runtimeFamily}
           />
@@ -237,33 +179,33 @@ export function CoachingSummary({
 
       {coaching.strengths.length > 0 ? (
         <div className="mt-6">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-emerald-700">
-            <RiSparklingLine className="text-base" />
-            Que has hecho bien
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-emerald-700">
+            <RiSparklingLine className="text-base" aria-hidden="true" />
+            Qué has hecho bien
           </div>
-          <FeedbackList items={coaching.strengths} runtimeFamily={runtimeFamily} />
+          <FindingList items={coaching.strengths} runtimeFamily={runtimeFamily} />
         </div>
       ) : null}
 
       {rubricItems.length > 0 ? (
         <div className="mt-6">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-fuchsia-700">
-            <RiCheckboxCircleLine className="text-base" />
-            Cumplimiento de rubrica
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-fuchsia-700">
+            <RiCheckboxCircleLine className="text-base" aria-hidden="true" />
+            Cumplimiento de rúbrica
           </div>
-          <FeedbackList items={rubricItems} runtimeFamily={runtimeFamily} />
+          <FindingList items={rubricItems} runtimeFamily={runtimeFamily} />
         </div>
       ) : null}
 
       {coaching.nextAttemptChecklist.length > 0 ? (
         <div className="mt-6">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-slate-700">
-            <RiListCheck3 className="text-base" />
-            Checklist para la siguiente version
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-700">
+            <RiListCheck3 className="text-base" aria-hidden="true" />
+            Checklist para la siguiente versión
           </div>
           <Checklist entries={coaching.nextAttemptChecklist} />
         </div>
       ) : null}
-    </section>
+    </ReportCard>
   );
 }

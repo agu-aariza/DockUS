@@ -110,6 +110,7 @@ export function DeliveryListItem({
             min={0}
             max={10}
             step={0.5}
+            aria-label="Nota numérica 0–10"
             value={inlineGrade}
             onChange={(e) => setInlineGrade(e.target.value)}
             onBlur={commitGrade}

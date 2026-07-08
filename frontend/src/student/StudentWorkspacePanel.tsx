@@ -18,7 +18,7 @@ interface StudentWorkspacePanelProps {
 }
 
 type StudentTab =
-  | "resumen"
+  | "summary"
   | "proyectos"
   | "entregas"
   | "subir"
@@ -28,7 +28,7 @@ export function StudentWorkspacePanel({
   session,
 }: StudentWorkspacePanelProps): JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get("tab") as StudentTab) || "resumen";
+  const activeTab = (searchParams.get("tab") as StudentTab) || "summary";
   const mainHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const seenNotificationIdsRef = useRef(new Set<string>());
 
@@ -89,7 +89,7 @@ export function StudentWorkspacePanel({
       prev !== "failed"
     ) {
       void workspaceData.refresh();
-      const currentTab = (searchParams.get("tab") as StudentTab) || "resumen";
+      const currentTab = (searchParams.get("tab") as StudentTab) || "summary";
       if (currentTab !== "subir" && currentTab !== "informes") {
         handleTabChange("informes");
       }
@@ -133,7 +133,7 @@ export function StudentWorkspacePanel({
           Contenido principal del espacio del alumno: {activeTab}
         </h2>
 
-        {activeTab === "resumen" ? (
+        {activeTab === "summary" ? (
           <StudentHomeSection
             session={session}
             data={workspaceData}

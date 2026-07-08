@@ -12,21 +12,21 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary/40",
+    "bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary/40 active:bg-blue-800",
   secondary:
-    "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-slate-300",
+    "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-slate-300 active:bg-slate-100",
   tertiary:
-    "bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-300",
+    "bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-300 active:bg-slate-300",
   ghost:
-    "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-300",
+    "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-300 active:bg-slate-200",
   danger:
-    "border border-red-300 bg-white text-red-700 hover:bg-red-50 focus-visible:ring-red-300",
+    "border border-red-300 bg-white text-red-700 hover:bg-red-50 focus-visible:ring-red-300 active:bg-red-100",
   success:
-    "bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500/40",
+    "bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500/40 active:bg-emerald-800",
 };
 
 const SIZE_STYLES: Record<ButtonSize, string> = {
-  sm: "gap-1.5 px-2.5 py-1.5 text-xs",
+  sm: "gap-1.5 px-2.5 py-1.5 text-xs min-h-6",
   md: "gap-2 px-3 py-2 text-sm",
   lg: "gap-2 px-4 py-2.5 text-sm",
 };
@@ -34,12 +34,14 @@ const SIZE_STYLES: Record<ButtonSize, string> = {
 export function Button({
   variant = "primary",
   size = "md",
+  type,
   children,
   className = "",
   ...props
 }: ButtonProps) {
   return (
     <button
+      type={type ?? "button"}
       className={`inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-app-bg disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT_STYLES[variant]} ${SIZE_STYLES[size]} ${className}`}
       {...props}
     >

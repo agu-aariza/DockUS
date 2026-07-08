@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RiMenuLine, RiCloseLine } from 'react-icons/ri';
 import { Sidebar } from '../Sidebar';
 
@@ -26,6 +26,15 @@ export const AppShell: React.FC<AppShellProps> = ({
   topBar,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mobileMenuOpen]);
 
   return (
     <div className="flex min-h-screen bg-app-bg font-sans">

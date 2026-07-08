@@ -89,7 +89,7 @@ export function DangerConfirmModal({
             <p className="mt-1 text-sm text-slate-500 leading-relaxed">{description}</p>
           </div>
           <button
-            className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:outline-none"
             onClick={onCancel}
             disabled={loading}
             aria-label="Cerrar"

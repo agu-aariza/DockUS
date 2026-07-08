@@ -229,56 +229,79 @@ export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
             <form className="space-y-6" onSubmit={uc.handleCreate}>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="space-y-4">
-                  <label className="block text-xs font-medium text-slate-500">Información de Perfil</label>
-                  <input
-                    required
-                    className="input-field"
-                    placeholder="Nombre"
-                    value={uc.createForm.firstName}
-                    onChange={(e) => uc.setCreateForm((p) => ({ ...p, firstName: e.target.value }))}
-                  />
-                  <input
-                    required
-                    className="input-field"
-                    placeholder="Apellidos"
-                    value={uc.createForm.lastName}
-                    onChange={(e) => uc.setCreateForm((p) => ({ ...p, lastName: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-4">
-                  <label className="block text-xs font-medium text-slate-500">Seguridad y Credenciales</label>
-                  <div className="relative">
-                    <RiMailFill className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <div className="text-xs font-medium text-slate-600">Información de Perfil</div>
+                  <div>
+                    <label htmlFor="create-first-name" className="label-text">Nombre</label>
                     <input
+                      id="create-first-name"
                       required
-                      className="input-field pl-10"
-                      type="email"
-                      placeholder="email@dockus.pro"
-                      value={uc.createForm.email}
-                      onChange={(e) => uc.setCreateForm((p) => ({ ...p, email: e.target.value }))}
+                      className="input-field"
+                      placeholder="Nombre"
+                      value={uc.createForm.firstName}
+                      onChange={(e) => uc.setCreateForm((p) => ({ ...p, firstName: e.target.value }))}
                     />
                   </div>
-                  <div className="relative">
-                    <RiLockPasswordFill className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <div>
+                    <label htmlFor="create-last-name" className="label-text">Apellidos</label>
                     <input
+                      id="create-last-name"
                       required
-                      className="input-field pl-10"
-                      type="password"
-                      placeholder="Establecer contraseña"
-                      value={uc.createForm.password}
-                      onChange={(e) => uc.setCreateForm((p) => ({ ...p, password: e.target.value }))}
+                      className="input-field"
+                      placeholder="Apellidos"
+                      value={uc.createForm.lastName}
+                      onChange={(e) => uc.setCreateForm((p) => ({ ...p, lastName: e.target.value }))}
                     />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="text-xs font-medium text-slate-600">Seguridad y Credenciales</div>
+                  <div>
+                    <label htmlFor="create-email" className="label-text">Correo electrónico</label>
+                    <div className="relative">
+                      <RiMailFill className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        id="create-email"
+                        required
+                        className="input-field pl-10"
+                        type="email"
+                        placeholder="email@dockus.pro"
+                        value={uc.createForm.email}
+                        onChange={(e) => uc.setCreateForm((p) => ({ ...p, email: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="create-password" className="label-text">Contraseña</label>
+                    <div className="relative">
+                      <RiLockPasswordFill className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        id="create-password"
+                        required
+                        className="input-field pl-10"
+                        type="password"
+                        placeholder="Establecer contraseña"
+                        value={uc.createForm.password}
+                        onChange={(e) => uc.setCreateForm((p) => ({ ...p, password: e.target.value }))}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="mb-3 block text-xs font-medium text-slate-500">Nivel de Autorización</label>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="mb-3 block text-xs font-medium text-slate-600">Nivel de Autorización</div>
+                <div
+                  className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+                  role="radiogroup"
+                  aria-label="Rol del usuario"
+                >
                   {USER_ROLES.map((role) => (
                     <button
                       key={role}
                       type="button"
+                      role="radio"
+                      aria-checked={uc.createForm.role === role}
+                      aria-label={ROLE_LABELS[role]}
                       onClick={() => uc.setCreateForm((p) => ({ ...p, role }))}
                       className={`flex flex-col items-center gap-2 rounded-lg border px-4 py-4 text-center transition-colors ${
                         uc.createForm.role === role

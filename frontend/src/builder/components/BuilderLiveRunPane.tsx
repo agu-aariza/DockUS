@@ -36,19 +36,19 @@ const ARTIFACT_LABELS: Record<string, string> = {
   REPORT_JSON: "Informe JSON",
   REPRODUCIBILITY_JSON: "Reproducibilidad",
   PREFLIGHT: "Preflight",
-  CLASSIFICATION: "Clasificacion",
+  CLASSIFICATION: "Clasificación",
   STRATEGY: "Estrategia",
-  STATIC_FINDINGS: "Hallazgos estaticos",
-  STATIC_REVIEW: "Revision estatica",
-  SELF_HEALING_TRACE: "Traza de autocorreccion",
+  STATIC_FINDINGS: "Hallazgos estáticos",
+  STATIC_REVIEW: "Revisión estática",
+  SELF_HEALING_TRACE: "Traza de autocorrección",
   LLM_PLAN_PROMPT: "Prompt del planner",
   LLM_PLAN_RAW_RESPONSE: "Respuesta bruta del planner",
   LLM_PLAN_PARSED: "Planner normalizado",
   LLM_PLAN_ERROR: "Error del planner",
-  LLM_EVAL_PROMPT: "Prompt de evaluacion",
-  LLM_EVAL_RAW_RESPONSE: "Respuesta bruta de evaluacion",
-  LLM_EVAL_PARSED: "Evaluacion normalizada",
-  LLM_EVAL_ERROR: "Error de evaluacion",
+  LLM_EVAL_PROMPT: "Prompt de evaluación",
+  LLM_EVAL_RAW_RESPONSE: "Respuesta bruta de evaluación",
+  LLM_EVAL_PARSED: "Evaluación normalizada",
+  LLM_EVAL_ERROR: "Error de evaluación",
   LLM_QUALITY_PROMPT: "Prompt de calidad",
   LLM_QUALITY_RAW_RESPONSE: "Respuesta bruta de calidad",
   LLM_QUALITY_PARSED: "Calidad normalizada",
@@ -158,14 +158,14 @@ export function BuilderLiveRunPane({
   const evidenceEmptyMessage = !selectedRun
     ? null
     : !selectedRun.isTerminal
-      ? "Las evidencias descargables apareceran conforme avance la ejecucion."
+      ? "Las evidencias descargables aparecerán conforme avance la ejecución."
       : selectedRun.status === "FAILED" || evaluationLimits.length > 0
         ? "El run termino con limites o fallos y no genero artefactos descargables adicionales."
         : "Este run termino sin artefactos descargables.";
 
   return (
     <Card
-      title="Ejecucion en vivo"
+      title="Ejecución en vivo"
       className="min-w-0 rounded-3xl"
       headerAction={
         <div className="flex flex-wrap items-center gap-2">
@@ -189,7 +189,7 @@ export function BuilderLiveRunPane({
     >
       <div className="mb-4 flex items-center gap-4 border-b border-app-border/40 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Contexto
           </span>
           <span className="rounded-md bg-app-bg-subtle px-2 py-0.5 text-xs font-bold text-slate-500">
@@ -198,7 +198,7 @@ export function BuilderLiveRunPane({
         </div>
         <div className="h-4 w-px bg-app-border/40" />
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Arquitectura
           </span>
           <span className="rounded-md bg-accent-subtle px-2 py-0.5 text-xs font-bold text-accent">
@@ -221,21 +221,21 @@ export function BuilderLiveRunPane({
               <div className="absolute right-0 top-0 p-3 text-4xl text-slate-900 opacity-10">
                 <RiPulseFill />
               </div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                Estado Ejecucion
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Estado Ejecución
               </div>
               <div className="mt-2 flex items-center gap-3">
                 <div
                   className={cn(
                     "h-3 w-3 rounded-full",
                     selectedRun.status === "SUCCESS"
-                      ? "bg-emerald-500 animate-pulse"
+                      ? "bg-emerald-500"
                       : selectedRun.status === "FAILED"
                         ? "bg-rose-500"
-                        : "bg-primary animate-bounce",
+                        : "bg-primary status-pulse status-pulse-primary",
                   )}
                 />
-                <span className="text-2xl font-black tracking-tighter text-slate-900">
+                <span className="text-2xl font-bold tracking-tight text-slate-900">
                   {selectedRun.status}
                 </span>
               </div>
@@ -248,7 +248,7 @@ export function BuilderLiveRunPane({
             </div>
 
             <div className="rounded-2xl border border-app-border/60 bg-white p-5 shadow-sm">
-              <div className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+              <div className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 Infraestructura
               </div>
               <div className="space-y-2">
@@ -283,15 +283,15 @@ export function BuilderLiveRunPane({
                   )}
                 />
               </div>
-              <div className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-warning">
-                Evaluacion Academica
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-warning">
+                Evaluación Académica
               </div>
 
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-baseline gap-1">
                   <span
                     className={cn(
-                      "text-4xl font-black tracking-tighter",
+                      "text-4xl font-bold tracking-tight",
                       selectedRun.llmAssessment?.evaluativeState === "E1"
                         ? "text-emerald-600"
                         : selectedRun.llmAssessment?.evaluativeState === "E2"
@@ -317,17 +317,17 @@ export function BuilderLiveRunPane({
                           : "border-red-500/40 bg-red-500/10 text-red-600",
                     )}
                   >
-                    <span className="text-[9px] font-black uppercase tracking-widest opacity-60">
+                    <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">
                       Nota Final
                     </span>
-                    <span className="text-2xl font-black leading-none">
+                    <span className="text-2xl font-bold leading-none">
                       {selectedRun.llmAssessment.recommendedGrade.toFixed(2)}
                     </span>
                   </div>
                 ) : null}
               </div>
 
-              <div className="mt-3 flex items-center justify-between border-t border-warning/10 pt-2 text-[10px] font-bold uppercase tracking-widest text-warning/50">
+              <div className="mt-3 flex items-center justify-between border-t border-warning/10 pt-2 text-[10px] font-bold uppercase tracking-wider text-warning/50">
                 <span>
                   Confianza: {selectedRun.llmAssessment?.confidence ?? "n/a"}
                 </span>
@@ -379,7 +379,7 @@ export function BuilderLiveRunPane({
                 <div className="flex flex-col items-end">
                   <div
                     className={cn(
-                      "text-2xl font-black",
+                      "text-2xl font-bold",
                       selectedRun.llmAssessment.evaluativeState === "E1"
                         ? "text-emerald-500"
                         : selectedRun.llmAssessment.evaluativeState === "E2"
@@ -402,7 +402,7 @@ export function BuilderLiveRunPane({
                   <div className="flex flex-col items-end">
                     <div
                       className={cn(
-                        "text-2xl font-black",
+                        "text-2xl font-bold",
                         selectedRun.llmAssessment.recommendedGrade >= 7
                           ? "text-emerald-500"
                           : selectedRun.llmAssessment.recommendedGrade >= 5
@@ -474,7 +474,7 @@ export function BuilderLiveRunPane({
             <section className="rounded-2xl border border-app-border bg-app-bg p-4 opacity-75 grayscale-[0.5] mb-6">
               <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
+                  <div className="text-xs font-medium uppercase tracking-wider text-slate-400">
                     Legacy Preflight (Auto-detect)
                   </div>
                   <div className="mt-2 text-lg font-semibold tracking-tight text-slate-900">
@@ -548,7 +548,7 @@ export function BuilderLiveRunPane({
                       <article
                         key={artifact.id}
                         className={cn(
-                          "rounded-2xl border p-4 transition-all duration-200",
+                          "rounded-2xl border p-4 transition-colors duration-200 motion-reduce:transition-none",
                           previewing
                             ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
                             : "border-app-border bg-app-bg hover:border-app-border",
@@ -572,7 +572,7 @@ export function BuilderLiveRunPane({
                                 onClick={() => onPreviewArtifact?.(artifact.id)}
                               >
                                 {loading ? (
-                                  <RiLoader4Line className="animate-spin" />
+                                  <RiLoader4Line className="animate-spin motion-reduce:animate-none" />
                                 ) : previewing ? (
                                   <RiEyeOffLine />
                                 ) : (
@@ -622,7 +622,7 @@ export function BuilderLiveRunPane({
                 </div>
 
                 {previewingArtifact ? (
-                  <div className="mt-4 animate-fade-in overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-xl">
+                  <div className="mt-4 overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-xl">
                     <div className="flex items-center justify-between border-b border-white/10 bg-slate-900/80 px-4 py-2.5">
                       <div className="flex items-center gap-3">
                         <div className="flex gap-1.5">
@@ -630,16 +630,18 @@ export function BuilderLiveRunPane({
                           <div className="h-2.5 w-2.5 rounded-full bg-amber-500/80" />
                           <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                           {formatArtifactLabel(previewingArtifact.type)}
                         </span>
-                        <span className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono text-slate-500">
+                        <span className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono text-slate-400">
                           {previewingArtifact.contentType}
                         </span>
                       </div>
                       <button
+                        type="button"
+                        aria-label="Cerrar previsualización"
                         onClick={onClosePreview}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-800 hover:text-white"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
                       >
                         ×
                       </button>
@@ -673,22 +675,22 @@ export function BuilderLiveRunPane({
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
                     <RiPulseFill
-                      className={streamState === "streaming" ? "animate-pulse" : ""}
+                      className={streamState === "streaming" ? "animate-pulse motion-reduce:animate-none" : ""}
                     />
                   </div>
                   <div>
                     <div className="font-sans text-sm font-bold tracking-tight text-slate-100">
                       Consola en vivo
                     </div>
-                    <div className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
                       Build & Runtime Logs
                     </div>
                   </div>
                 </div>
                 {streamState === "streaming" ? (
                   <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1">
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-                    <span className="text-[10px] font-bold uppercase text-emerald-500">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 status-pulse status-pulse-success motion-reduce:animate-none" />
+                    <span className="text-[10px] font-semibold uppercase text-emerald-600">
                       Streaming
                     </span>
                   </div>
@@ -699,7 +701,7 @@ export function BuilderLiveRunPane({
                 <pre className="custom-scrollbar max-h-[460px] max-w-full overflow-y-auto whitespace-pre-wrap break-all p-2 font-mono text-[11px] leading-6 text-emerald-300/90 selection:bg-emerald-500/30">
                   {consoleOutput || (
                     <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-400">
-                      <RiLoader4Line className="text-3xl animate-spin" />
+                      <RiLoader4Line className="text-xl animate-spin" />
                       <span className="text-xs font-medium italic">
                         Esperando rafaga de logs del orquestador...
                       </span>
@@ -712,7 +714,7 @@ export function BuilderLiveRunPane({
             <section className="min-w-0 rounded-2xl border border-app-border/60 bg-app-bg p-4 shadow-sm">
               <div className="mb-3">
                 <div className="text-sm font-medium text-slate-900">
-                  Linea temporal de la ejecucion
+                  Línea temporal de la ejecución
                 </div>
                 <div className="text-xs text-slate-400">
                   Eventos persistidos fuera del stream de consola
@@ -757,7 +759,7 @@ export function BuilderLiveRunPane({
                     if (isEvidence) {
                       sidebarColor = "bg-emerald-500";
                       icon = <RiPulseFill />;
-                      iconBg = "bg-emerald-500 text-white animate-pulse";
+                      iconBg = "bg-emerald-500 text-white";
                     } else if (isError) {
                       sidebarColor = "bg-rose-500";
                       icon = <RiStopLine />;
@@ -779,7 +781,7 @@ export function BuilderLiveRunPane({
                     return (
                       <article
                         key={event.id}
-                        className={`group relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 hover:shadow-md ${
+                        className={`group relative overflow-hidden rounded-2xl border p-4 transition-colors duration-200 motion-reduce:transition-none hover:shadow-md ${
                           isEvidence
                             ? "border-emerald-200 bg-emerald-50/30 ring-1 ring-emerald-100"
                             : isError
@@ -794,14 +796,14 @@ export function BuilderLiveRunPane({
                         <div className="ml-2 flex items-start justify-between gap-4">
                           <div className="flex gap-3">
                             <div
-                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconBg} shadow-sm transition-transform group-hover:scale-110`}
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconBg} shadow-sm transition-colors duration-150 motion-reduce:transition-none`}
                             >
                               {icon}
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
                                 <strong
-                                  className={`text-xs font-black uppercase tracking-widest ${
+                                  className={`text-xs font-bold uppercase tracking-wider ${
                                     isEvidence
                                       ? "text-emerald-700"
                                       : isError
@@ -838,7 +840,7 @@ export function BuilderLiveRunPane({
                         {isEvidence && evidenceContent ? (
                           <div className="mt-4 ml-11 overflow-hidden rounded-xl border border-emerald-200 bg-slate-950 shadow-inner">
                             <div className="flex items-center justify-between border-b border-white/5 bg-slate-900/50 px-3 py-1.5">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">
                                 Service Response Evidence
                               </span>
                               <div className="flex gap-1">
@@ -854,7 +856,7 @@ export function BuilderLiveRunPane({
 
                         {event.payload && !isEvidence ? (
                           <div className="mt-3 ml-11">
-                            <div className="mb-1 ml-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            <div className="mb-1 ml-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                               Payload Data
                             </div>
                             <pre className="max-w-full overflow-x-auto rounded-xl border border-app-border/40 bg-slate-950 p-3 text-[10px] text-slate-300 shadow-inner">
@@ -872,8 +874,8 @@ export function BuilderLiveRunPane({
         </>
       ) : (
         <div className="rounded-2xl border border-dashed border-app-border bg-app-bg px-4 py-10 text-center text-sm text-slate-400">
-          Selecciona una ejecucion del historial para abrir la consola y la
-          linea temporal.
+          Selecciona una ejecución del historial para abrir la consola y la
+          línea temporal.
         </div>
       )}
     </Card>

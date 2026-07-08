@@ -88,7 +88,7 @@ function StatCard({
       <div className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
         {value}
       </div>
-      <div className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+      <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
         {label}
       </div>
     </div>
@@ -365,7 +365,7 @@ export function ProgressDashboard({
               onClick={() => void handleLoad()}
               disabled={loading || !projectId.trim()}
             >
-              {loading ? <RiLoader4Line className="animate-spin" /> : null}
+              {loading ? <RiLoader4Line className="animate-spin motion-reduce:animate-none" /> : null}
               {loading ? "Cargando seguimiento..." : "Cargar seguimiento"}
             </button>
           </div>
@@ -373,7 +373,7 @@ export function ProgressDashboard({
       ) : null}
 
       {summary ? (
-        <div className="space-y-8 animate-fade-in">
+        <div className="space-y-8">
           <div className="grid grid-cols-2 gap-6 xl:grid-cols-4">
             <StatCard
               label="Alumnos"
@@ -404,18 +404,18 @@ export function ProgressDashboard({
           <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-900">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
                   Participación global
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
                   Porcentaje de alumnos que ya registraron al menos una entrega.
                 </p>
               </div>
-              <span className="text-3xl font-black text-primary">{rate}%</span>
+              <span className="text-3xl font-bold text-primary">{rate}%</span>
             </div>
             <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full bg-primary transition-all duration-1000 ease-out"
+                className="h-full bg-primary transition-[width] duration-300 ease-out motion-reduce:transition-none"
                 style={{ width: `${rate}%` }}
               />
             </div>
@@ -423,7 +423,7 @@ export function ProgressDashboard({
 
           <div className="grid gap-6 xl:grid-cols-2">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-900">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
                 Estados de entrega
               </h3>
               <p className="mt-1 text-sm text-slate-500">
@@ -454,7 +454,7 @@ export function ProgressDashboard({
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-900">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
                 Resultado del builder
               </h3>
               <p className="mt-1 text-sm text-slate-500">
@@ -491,7 +491,7 @@ export function ProgressDashboard({
           <div className="flex items-center gap-1 border-b border-slate-200">
             <button
               onClick={() => setActiveTab("gradebook")}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all ${activeTab === "gradebook"
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-colors duration-150 motion-reduce:transition-none ${activeTab === "gradebook"
                   ? "border-b-2 border-primary text-primary bg-primary-subtle"
                   : "text-slate-500 hover:text-slate-900"
                 }`}
@@ -501,7 +501,7 @@ export function ProgressDashboard({
             </button>
             <button
               onClick={() => setActiveTab("insights")}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all ${activeTab === "insights"
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-colors duration-150 motion-reduce:transition-none ${activeTab === "insights"
                   ? "border-b-2 border-accent text-accent bg-accent-subtle"
                   : "text-slate-500 hover:text-slate-900"
                 }`}
@@ -545,7 +545,7 @@ export function ProgressDashboard({
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
               <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-900">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
                     Gradebook del proyecto
                   </h3>
                   <p className="mt-2 text-sm text-slate-500">
@@ -563,7 +563,7 @@ export function ProgressDashboard({
               </div>
 
               <div className="grid gap-4 border-b border-slate-100 bg-slate-50 p-6 lg:grid-cols-6">
-                <div className="lg:col-span-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                <div className="lg:col-span-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
                   <RiFilter3Line />
                   Filtros operativos
                 </div>
@@ -638,7 +638,7 @@ export function ProgressDashboard({
                 <div className="overflow-x-auto">
                   <table className="min-w-full border-collapse text-left">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-white text-xs uppercase tracking-[0.16em] text-slate-500">
+                      <tr className="border-b border-slate-200 bg-white text-xs uppercase tracking-wider text-slate-500">
                         <th className="px-4 py-3 font-medium">Alumno</th>
                         <th className="px-4 py-3 font-medium">Grupos</th>
                         <th className="px-4 py-3 font-medium">Estado</th>
@@ -759,8 +759,8 @@ export function ProgressDashboard({
 
       {/* Modal de Historial de Entregas */}
       {isHistoryModalOpen && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm motion-modal-backdrop">
+          <div className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl motion-modal-panel">
             <header className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
               <div>
                 <h3 className="text-xl font-bold text-slate-950">Historial de Entregas</h3>
@@ -777,7 +777,7 @@ export function ProgressDashboard({
             <div className="flex-1 overflow-y-auto p-6">
               {isLoadingHistory ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <RiLoader4Line className="text-4xl text-primary animate-spin" />
+                  <RiLoader4Line className="text-4xl text-primary animate-spin motion-reduce:animate-none" />
                   <span className="text-sm text-slate-500 font-medium">Cargando versiones...</span>
                 </div>
               ) : historyDeliveries.length === 0 ? (
@@ -788,7 +788,7 @@ export function ProgressDashboard({
               ) : (
                 <div className="space-y-3">
                   {historyDeliveries.map((d) => (
-                    <div key={d.id} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:border-slate-200 hover:bg-white hover:shadow-sm">
+                    <div key={d.id} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-colors duration-150 motion-reduce:transition-none hover:border-slate-200 hover:bg-white hover:shadow-sm">
                       <div className="flex items-center gap-4">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">
                           v{d.version}

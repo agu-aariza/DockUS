@@ -85,7 +85,7 @@ export function BuilderRunsTable({
           <div className="hidden overflow-x-auto 2xl:block">
           <table className="min-w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
                 <th className="px-3 py-3 font-medium">Ejecución</th>
                 <th className="px-3 py-3 font-medium">Estado</th>
                 <th className="px-3 py-3 font-medium">Preflight</th>

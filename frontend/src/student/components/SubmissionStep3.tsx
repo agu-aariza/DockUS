@@ -28,13 +28,13 @@ export function SubmissionStep3({ flow }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="eyebrow text-slate-400">Paso 3 · Confirmacion</div>
+        <div className="eyebrow text-slate-400">Paso 3 · Confirmación</div>
         <h3 className="mt-2 text-3xl font-semibold text-slate-900">
-          Revisa el envio antes de registrarlo
+          Revisa el envío antes de registrarlo
         </h3>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-          Esta confirmacion cierra el asistente y registra la version en el
-          historial de la practica.
+          Esta confirmación cierra el asistente y registra la versión en el
+          historial de la práctica.
         </p>
       </div>
 
@@ -42,16 +42,16 @@ export function SubmissionStep3({ flow }: Props) {
         <StudentKeyValueList
           items={[
             {
-              label: "Practica",
-              value: activeAssignment?.projectTitle ?? "Sin practica",
+              label: "Práctica",
+              value: activeAssignment?.projectTitle ?? "Sin práctica",
             },
             { label: "Archivo", value: file?.name ?? "Sin archivo" },
             {
               label: "Ventana",
-              value: `${formatAssignmentDate(activeAssignment?.opensAt)} -> ${formatAssignmentDate(activeAssignment?.closesAt)}`,
+              value: `${formatAssignmentDate(activeAssignment?.opensAt)} → ${formatAssignmentDate(activeAssignment?.closesAt)}`,
             },
             {
-              label: "Tamano",
+              label: "Tamaño",
               value: file
                 ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
                 : "Sin archivo",
@@ -69,11 +69,11 @@ export function SubmissionStep3({ flow }: Props) {
       {previewFiles.length > 0 ? (
         <div className="rounded-lg border border-app-border/30 bg-white px-4 py-4 text-sm text-slate-500">
           <div className="font-bold text-slate-900">
-            Resumen de la comparacion con tu ultima version
+            Resumen de la comparación con tu última versión
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-              +{previewValidation.diff.added.length} anadidos
+              +{previewValidation.diff.added.length} añadidos
             </span>
             <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
               {previewValidation.diff.persisted.length} persistentes
@@ -86,14 +86,14 @@ export function SubmissionStep3({ flow }: Props) {
       ) : null}
 
       <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm leading-6 text-primary">
-        Tras enviar esta version, podras lanzar el builder en el mismo flujo
-        para obtener evaluacion tecnica y coaching de remediacion.
+        Tras enviar esta versión, podrás lanzar el builder en el mismo flujo
+        para obtener evaluación técnica y coaching de remediación.
       </div>
 
       {afterDeadline ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-          La fecha de cierre ya paso. La entrega quedara marcada como fuera
-          de plazo, aunque seguira registrada y evaluable.
+          La fecha de cierre ya pasó. La entrega quedará marcada como fuera
+          de plazo, aunque seguirá registrada y evaluable.
         </div>
       ) : null}
 

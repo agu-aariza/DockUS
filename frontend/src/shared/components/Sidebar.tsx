@@ -60,6 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return (
       <button
         onClick={() => onTabChange(item.id)}
+        aria-current={isActive ? "page" : undefined}
         className={`group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
           isActive
             ? "bg-slate-800 text-white"
@@ -82,6 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return (
       <button
         onClick={() => onStudentTabChange?.(item.id)}
+        aria-current={isActive ? "page" : undefined}
         className={`group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
           isActive
             ? "bg-slate-800 text-white"

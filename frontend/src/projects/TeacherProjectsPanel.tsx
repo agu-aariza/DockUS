@@ -489,7 +489,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Título del proyecto</label>
                     <input
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                       required
                       value={pc.createForm.title}
                       onChange={(e) => pc.setCreateForm(prev => ({ ...prev, title: e.target.value }))}
@@ -511,7 +511,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Contexto académico</label>
                   <textarea
-                    className="w-full min-h-[140px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    className="w-full min-h-[140px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                     placeholder="Describe objetivos, entregables, criterios y notas operativas."
                     value={pc.createForm.contextAcademico}
                     onChange={(e) => pc.setCreateForm(prev => ({ ...prev, contextAcademico: e.target.value }))}
@@ -531,7 +531,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Tipo esperado</label>
                     <input
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                       placeholder="CLI, Flask, FastAPI, Django simple..."
                       value={pc.createForm.expectedType}
                       onChange={(e) => pc.setCreateForm(prev => ({ ...prev, expectedType: e.target.value }))}
@@ -561,7 +561,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Salida esperada (Oracle)</label>
                   <textarea
-                    className="w-full min-h-[120px] rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    className="w-full min-h-[120px] rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                     placeholder="Pega aquí la salida esperada para que el evaluador compare stdout/stderr."
                     value={pc.createForm.expectedOutput}
                     onChange={(e) => pc.setCreateForm(prev => ({ ...prev, expectedOutput: e.target.value }))}
@@ -570,7 +570,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Instrucciones de rúbrica</label>
                   <textarea
-                    className="w-full min-h-[160px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    className="w-full min-h-[160px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                     placeholder="Indica los criterios docentes y el comportamiento esperado de la nota final."
                     value={pc.createForm.rubricInstructions}
                     onChange={(e) => pc.setCreateForm(prev => ({ ...prev, rubricInstructions: e.target.value }))}
@@ -842,7 +842,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         <div className="space-y-1.5 lg:col-span-2">
                           <label className="text-sm font-medium text-slate-700">Contexto académico y objetivos</label>
                           <textarea
-                            className="w-full min-h-[120px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full min-h-[120px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                             placeholder="Describe qué deben aprender y entregar los alumnos..."
                             value={pc.editForm.contextAcademico}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, contextAcademico: e.target.value }))}
@@ -851,7 +851,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         <div className="space-y-1.5">
                           <label className="text-sm font-medium text-slate-700">Tipo de stack esperado</label>
                           <input
-                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                             placeholder="Ej. FastAPI + PostgreSQL"
                             value={pc.editForm.expectedType}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, expectedType: e.target.value }))}
@@ -860,7 +860,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         <div className="space-y-1.5 lg:col-span-2">
                           <label className="text-sm font-medium text-slate-700">Salida esperada (Oracle)</label>
                           <textarea
-                            className="w-full min-h-[100px] rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full min-h-[100px] rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                             placeholder="Pega aquí la salida exacta que esperas que el programa imprima..."
                             value={pc.editForm.expectedOutput}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, expectedOutput: e.target.value }))}
@@ -908,7 +908,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         <div className="space-y-1.5 lg:col-span-2">
                           <label className="text-sm font-medium text-slate-700">Instrucciones de la rúbrica</label>
                           <textarea
-                            className="w-full min-h-[140px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full min-h-[140px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                             placeholder="Criterios de evaluación, penalizaciones, etc."
                             value={pc.editForm.rubricInstructions}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, rubricInstructions: e.target.value }))}
@@ -972,8 +972,9 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                                 <button
                                   type="button"
                                   onClick={() => pc.handleRemoveTeacher(selectedCanvasProject.id, teacher.id)}
-                                  className="p-1.5 rounded-md text-slate-400 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="p-1.5 rounded-md text-slate-400 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:outline-none"
                                   title="Eliminar del equipo"
+                                  aria-label="Eliminar del equipo"
                                 >
                                   <RiCloseLine size={18} />
                                 </button>
