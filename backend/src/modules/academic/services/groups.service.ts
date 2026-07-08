@@ -71,7 +71,7 @@ export class GroupsService {
   async listEnrollments(groupId: string): Promise<any[]> {
     const enrollments = await this.enrollmentsRepository.find({
       where: { groupId },
-      relations: ['student'],
+      relations: { student: true },
       order: { enrolledAt: 'DESC' },
     });
 
@@ -190,7 +190,7 @@ export class GroupsService {
     if (studentIds.length > 0) {
       foundStudents = await this.usersRepository.find({
         where: { id: In(studentIds) },
-        select: ['id', 'email', 'firstName', 'lastName'],
+        select: { id: true, email: true, firstName: true, lastName: true },
       });
     }
     const foundEmails = foundStudents.map((s) => s.email);

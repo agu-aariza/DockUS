@@ -1,150 +1,41 @@
-# DockUS
-
-Plataforma académica de evaluación automática de proyectos de programación. Permite a profesores crear proyectos, asignar estudiantes, recibir entregas y obtener informes de evaluación generados mediante un pipeline LLM que combina análisis estático, ejecución aislada en Docker y evaluación con modelos de lenguaje.
-
-> **Estado actual del stack LLM:** el backend usa exclusivamente **AWS Bedrock Runtime** (modelos Anthropic Claude). Ollama y los scripts asociados fueron eliminados del repositorio.
+## Propósito (TL;DR)
+Plataforma académica de evaluación automática de proyectos de programación que combina análisis estático, ejecución aislada en contenedores Docker y evaluación automatizada asistida por modelos de lenguaje (LLM).
 
 ## Arquitectura de alto nivel
+Arquitectura de aplicación cliente-servidor distribuida. Consiste en una Single Page Application (SPA) para la interfaz de usuario, una API monolítica modular para la gestión del dominio, y workers asíncronos orientados a tareas pesadas de inferencia LLM y ejecución de Docker.
 
-```mermaid
-graph TD
-    UI["Frontend — React 18 / Vite 5"]
-    API["Backend — NestJS 11"]
-    DB["PostgreSQL"]
-    RQ["Redis + BullMQ"]
-    S3["MinIO"]
-    LLM["AWS Bedrock / Anthropic Claude"]
-    RT["Docker Engine"]
+## Límites Arquitectónicos (Boundaries) ⚠️
+El frontend NUNCA debe comunicarse directamente con la base de datos, colas de mensajes, MinIO o servicios LLM; todo acceso debe cruzar exclusivamente a través de los endpoints REST expuestos por la API.
+El código de estudiante (entregas) NUNCA debe ejecutarse en el mismo proceso ni host que el servidor; debe aislarse estrictamente en un runtime de Docker (`runc` o preferiblemente `runsc` / gVisor) sin privilegios y sin conectividad saliente.
+Los agentes y orquestadores asíncronos no deben evadir el motor TypeORM para actualizar estados globales de la aplicación de manera imprevista.
 
-    UI -->|REST / JWT| API
-    API --> DB
-    API --> RQ
-    API --> S3
-    API --> LLM
-    API --> RT
-    RQ -->|jobs asíncronos| API
-```
+## Flujo Principal de Datos
+1. Los docentes configuran proyectos, directrices de evaluación y repositorios con tests.
+2. El estudiante sube una entrega en formato comprimido al sistema, que es persistido inmediatamente en el bucket S3 (MinIO).
+3. Se encola un trabajo asíncrono (`BuildRun`) en BullMQ gestionado por Redis.
+4. El worker backend planifica la estrategia usando LLM (Bedrock), infiere una receta Docker y ejecuta el código en un contenedor aislado.
+5. Los resultados de los tests y logs son evaluados nuevamente por el LLM para detectar alucinaciones y emitir feedback pedagógico estructurado.
+6. El informe consolidado y todo el estado se guarda en la base de datos (PostgreSQL), quedando disponible para consumo vía REST.
 
-## Componentes del repositorio
+## Stack Tecnológico Principal
+- **Frontend**: React 18, Vite 5, Tailwind CSS
+- **Backend**: NestJS 11, TypeScript, TypeORM
+- **BBDD y Estado**: PostgreSQL, Redis (BullMQ)
+- **Almacenamiento**: MinIO (S3)
+- **Motor de Evaluación**: AWS Bedrock Runtime (Claude), Docker Engine
 
-| Componente                                            | Descripción                                                                         |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| [`backend/`](./backend/README.md)                     | API NestJS: dominio académico, pipeline builder, colas BullMQ, almacenamiento MinIO |
-| [`frontend/`](./frontend/README.md)                   | SPA React: consola de trabajo para profesorado, administración y alumnado           |
-| [`docs/`](./docs/README.md)                           | Documentación detallada de arquitectura (backend, frontend, diagramas)              |
-| [`academic_proyects/`](./academic_proyects/README.md) | Proyectos académicos de demostración con enunciados y entradas                      |
-| [`docker-compose.yml`](./docker-compose.yml)          | Stack local completo para desarrollo                                                |
-| [`.github/workflows/`](./.github/workflows/)          | CI: build y tests de frontend y backend                                             |
-| [`.agents/`](./.agents/README.md)                     | Configuración y skills para agentes de IA                                           |
-| [`graphify-out/`](./graphify-out/GRAPH_REPORT.md)     | Grafo de conocimiento del código (actualizado con `graphify update .`)              |
+## Mapa de Directorios (Tree)
+- `backend/`: API NestJS principal, cola de ejecución de trabajos y orquestación del Builder.
+- `frontend/`: SPA React que provee paneles separados para estudiantes, profesores y administradores.
+- `docs/`: Documentación de arquitectura adicional y diagramas.
+- `academic_proyects/`: Proyectos de demostración y suites de prueba usados para desarrollo.
+- `docker-compose.yml`: Archivo de orquestación local de todos los servicios.
 
-## Requisitos
+## Variables de Entorno Globales
+`NODE_ENV`, `PORT`, `FRONTEND_URL`, `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `REDIS_HOST`, `MINIO_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `JWT_SECRET`, credenciales LLM (`AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) y configuración de runtime Docker.
 
-| Requisito                            | Versión mínima   |
-| ------------------------------------ | ---------------- |
-| Docker + docker compose              | Reciente estable |
-| Node.js (desarrollo fuera de Docker) | 22               |
-| npm                                  | 10+              |
-
-Para usar el builder fuera de Docker Compose se necesita además: Docker daemon accesible y `python3`.
-
-## Inicio rápido
-
-```bash
-# 1. Configurar entorno
-cp .env.example .env
-
-# 2. Levantar el stack de desarrollo
-docker compose --profile dev up --build
-
-# 3. Levantar el stack de producción (imágenes optimizadas)
-#    Requiere que el GID del grupo docker del host esté disponible:
-#    DOCKER_HOST_GID=$(stat -c '%g' /var/run/docker.sock) docker compose --profile prod up --build -d
-```
-
-| Servicio      | URL                            | Perfil |
-| ------------- | ------------------------------ | ------ |
-| Frontend      | http://localhost:5173          | dev    |
-| Backend API   | http://localhost:3000/api      | dev    |
-| Swagger UI    | http://localhost:3000/api/docs | dev    |
-| MinIO Console | http://localhost:9001          | base   |
-| Frontend prod | http://localhost:8080          | prod   |
-| Backend prod  | http://localhost:3000/api      | prod   |
-
-> Asegúrate de configurar las credenciales de AWS Bedrock en `.env` si quieres usar el pipeline LLM. Sin ellas, el builder fallará en la etapa de planificación.
-
-## Ejecución en desarrollo (sin Docker)
-
-```bash
-# Backend
-cd backend && npm install && npm run start:dev
-
-# Frontend (en otra terminal)
-cd frontend && npm install && npm run dev
-```
-
-Asegúrate de que PostgreSQL, Redis, MinIO y AWS Bedrock estén disponibles y alineados con las variables del `.env`.
-
-## Verificación
-
-```bash
-cd backend  && npm run build
-cd backend  && npm test -- --runInBand
-cd frontend && npm run build
-```
-
-Si aparecen errores `EACCES` sobre `backend/dist` al ejecutar fuera de Docker tras haberlo ejecutado dentro, elimina los artefactos generados por los contenedores:
-
-```bash
-docker compose down
-rm -rf backend/dist backend/compiled-output backend/compiled backend/build
-```
-
-## Flujo principal
-
-```
-Profesor crea proyecto  →  Asigna estudiantes  →  Sube suite de tests
-        ↓
-Alumno sube entrega (ZIP)
-        ↓
-Profesor / Alumno lanza BuildRun
-        ↓
-Pipeline builder (asíncrono, BullMQ):
-  1. Planificación LLM   — analiza código, infiere receta Docker
-  2. Ejecución Docker    — instala dependencias, lanza tests
-  3. Evaluación LLM      — genera informe con nota recomendada
-  4. Calidad de código   — análisis LLM
-        ↓
-Informe pedagógico disponible en el panel de entregas
-```
-
-## CI
-
-El workflow valida en cada push:
-
-- **frontend**: `npm ci` + `npm run lint` + `npm run typecheck` + `npm run build` + `npm test`
-- **backend**: `npm ci` + `npm run lint` + `npm run typecheck` + `npm run build` + `npm test -- --runInBand`
-
-## Estructura del repositorio
-
-```
-DockUS/
-├── backend/                # API NestJS y pipeline builder
-├── frontend/               # SPA React/Vite
-├── docs/                   # Documentación de arquitectura
-├── academic_proyects/      # Proyectos académicos de demostración
-├── .agents/                # Configuración de agentes IA
-├── .github/workflows/      # Pipelines de CI
-├── docker-compose.yml      # Stack local completo
-└── .env.example            # Plantilla de configuración
-```
-
-## Notas
-
-- El backend aplica el prefijo global `/api` a todos los endpoints.
-- Swagger (`/api/docs`) solo se expone fuera de producción.
-- El builder soporta proyectos Python y C; el soporte para Node.js está en curso.
-- Los informes finales se obtienen desde el detalle del `BuildRun`; no existe un endpoint de informe independiente.
-- En producción se recomienda `BUILDER_DOCKER_RUNTIME=runsc` (gVisor) para mayor aislamiento.
-- El servicio `backend-prod` corre como usuario no-root y necesita pertenecer al grupo Docker del host para usar el socket montado. Antes de levantarlo, exporta `DOCKER_HOST_GID` con el GID del socket (p. ej. `DOCKER_HOST_GID=$(stat -c '%g' /var/run/docker.sock)`).
-- Después de modificar código, ejecuta `graphify update .` para mantener el grafo de conocimiento actualizado.
+## Comandos clave
+`docker compose --profile dev up --build` (levanta toda la infraestructura para desarrollo local)
+`npm run start:dev` (inicia API backend con hot-reload en `backend/`)
+`npm run dev` (inicia UI frontend con Vite en `frontend/`)
+`graphify update .` (actualiza el grafo semántico tras realizar cambios arquitectónicos)
