@@ -267,7 +267,7 @@ export class ProjectGradebookService {
 
     const assignments = await this.assignmentsRepository.find({
       where: { projectId, revokedAt: IsNull() },
-      relations: ['student', 'project'],
+      relations: { student: true, project: true },
       order: { student: { lastName: 'ASC', firstName: 'ASC' } },
     });
 

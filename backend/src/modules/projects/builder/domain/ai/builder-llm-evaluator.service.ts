@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   AssignmentContext,
   BuilderEvaluationContractV2,
+  BuilderFactsContractV2,
   BuilderLlmStagePromptSnapshot,
   BuilderLlmStageTrace,
   BuilderPlanContractV2,
@@ -15,10 +16,12 @@ import { BedrockGenerationService } from '../../../../../shared/infrastructure/a
 import type { LlmModelProfile } from '../../../../../shared/infrastructure/ai/llm.types';
 import { BuilderLogTrimmer } from '../../infrastructure/utils/builder-log-trimmer.util';
 import { parseBuilderEvaluationContractV2 } from './builder-evaluation-contract.parser';
+import { parseBuilderFactsContractV2 } from './builder-facts-contract.parser';
 import { resolveBuilderModelProfile } from './builder-llm-model-profile';
 import { parseBuilderPlanContractV2 } from './builder-plan-contract.parser';
 import {
   composeEvaluationPrompt,
+  composeFactsPrompt,
   composePlanPrompt,
 } from './builder-prompt-composer';
 import {
@@ -31,9 +34,15 @@ import {
 interface EvaluatorInput {
   projectRootDir: string;
   sourceCodePayload: string;
-  executionLogs: string;
+  facts: BuilderFactsContractV2;
   assignmentContext: AssignmentContext;
   plannerAssessment?: BuilderPlanContractV2;
+}
+
+interface FactsExtractorInput {
+  sourceCodePayload: string;
+  executionLogs: string;
+  assignmentContext: AssignmentContext;
 }
 
 interface BuilderLlmTraceHooks {
@@ -46,11 +55,14 @@ interface BuilderLlmTraceHooks {
 export class BuilderLlmEvaluatorService {
   private readonly logger = new Logger(BuilderLlmEvaluatorService.name);
   private readonly planMaxInputChars: number;
+  private readonly factsMaxInputChars: number;
   private readonly evalMaxInputChars: number;
   private readonly systemPrompt: string;
   private readonly planSystemPrompt: string;
+  private readonly factsSystemPrompt: string;
   private readonly evaluationProfile: LlmModelProfile;
   private readonly planProfile: LlmModelProfile;
+  private readonly factsProfile: LlmModelProfile;
 
   constructor(
     private readonly configService: ConfigService,
@@ -62,17 +74,23 @@ export class BuilderLlmEvaluatorService {
       'BUILDER_LLM_PLAN_MAX_INPUT_CHARS',
       15000,
     );
+    this.factsMaxInputChars = this.configService.get<number>(
+      'BUILDER_LLM_FACTS_MAX_INPUT_CHARS',
+      18000,
+    );
     this.evalMaxInputChars = this.configService.get<number>(
       'BUILDER_LLM_EVAL_MAX_INPUT_CHARS',
       15000,
     );
     this.systemPrompt = this.promptRegistry.getPrompt(PromptId.EVAL);
     this.planSystemPrompt = this.promptRegistry.getPrompt(PromptId.PLAN);
+    this.factsSystemPrompt = this.promptRegistry.getPrompt(PromptId.FACTS);
     this.evaluationProfile = resolveBuilderModelProfile(
       'evaluation',
       this.configService,
     );
     this.planProfile = resolveBuilderModelProfile('plan', this.configService);
+    this.factsProfile = resolveBuilderModelProfile('facts', this.configService);
   }
 
   async evaluate(input: EvaluatorInput): Promise<BuilderEvaluationContractV2> {
@@ -93,8 +111,7 @@ export class BuilderLlmEvaluatorService {
   ): Promise<BuilderLlmStageTrace<BuilderEvaluationContractV2>> {
     const composedPrompt = composeEvaluationPrompt(
       input.sourceCodePayload,
-      this.logTrimmer.smartTrim(input.executionLogs) ||
-        'No execution logs were captured.',
+      input.facts,
       input.assignmentContext,
       input.plannerAssessment,
       this.evalMaxInputChars,
@@ -146,6 +163,84 @@ export class BuilderLlmEvaluatorService {
       );
       this.logger.error(
         `Fallo al parsear respuesta del Evaluador. Respuesta bruta: ${response}`,
+      );
+      return buildTrace(snapshot, response, serializedError);
+    }
+  }
+
+  async extractFacts(
+    input: FactsExtractorInput,
+    hooks?: BuilderLlmTraceHooks,
+  ): Promise<BuilderFactsContractV2> {
+    const trace = await this.extractFactsWithTrace(input, hooks);
+    if (trace.parsedContract) {
+      return trace.parsedContract;
+    }
+
+    throw new Error(
+      trace.error?.message ??
+        'No se pudo extraer los hechos de ejecucion del LLM.',
+    );
+  }
+
+  async extractFactsWithTrace(
+    input: FactsExtractorInput,
+    hooks?: BuilderLlmTraceHooks,
+  ): Promise<BuilderLlmStageTrace<BuilderFactsContractV2>> {
+    const composedPrompt = composeFactsPrompt(
+      input.sourceCodePayload,
+      this.logTrimmer.smartTrim(input.executionLogs) ||
+        'No execution logs were captured.',
+      input.assignmentContext,
+      this.factsMaxInputChars,
+    );
+
+    const snapshot = createPromptSnapshot(
+      'facts',
+      PromptId.FACTS,
+      this.factsProfile,
+      composedPrompt,
+      this.factsSystemPrompt,
+    );
+    await hooks?.onBeforeCall?.(snapshot);
+
+    let response: string | null = null;
+
+    try {
+      response = await this.llmService.generate({
+        stage: 'facts',
+        promptId: PromptId.FACTS,
+        prompt: composedPrompt.prompt,
+        systemPrompt: this.factsSystemPrompt,
+        profile: this.factsProfile,
+        format: 'json',
+      });
+    } catch (error: unknown) {
+      const serializedError = serializeError(error);
+      logStageError(
+        'facts',
+        PromptId.FACTS,
+        this.factsProfile,
+        serializedError,
+        this.logger,
+      );
+      return buildTrace(snapshot, null, serializedError);
+    }
+
+    try {
+      const parsedContract = parseBuilderFactsContractV2(response);
+      return buildTrace(snapshot, response, null, parsedContract);
+    } catch (parseError) {
+      const serializedError = serializeError(parseError, 'invalid_contract');
+      logStageError(
+        'facts',
+        PromptId.FACTS,
+        this.factsProfile,
+        serializedError,
+        this.logger,
+      );
+      this.logger.error(
+        `Fallo al parsear respuesta del extractor de hechos. Respuesta bruta: ${response}`,
       );
       return buildTrace(snapshot, response, serializedError);
     }

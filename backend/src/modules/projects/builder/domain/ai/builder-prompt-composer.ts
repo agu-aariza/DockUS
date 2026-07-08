@@ -1,8 +1,10 @@
 import type {
   AssignmentContext,
   BuilderEvaluationContractV2,
+  BuilderFactsContractV2,
   BuilderPlanContractV2,
 } from '../builder.types';
+import { runtimeCatalogToText } from '../../application/services/compilation/builder-plan-runtime-adapter';
 
 export type PromptSectionPriority = 'critical' | 'high' | 'medium' | 'low';
 
@@ -39,25 +41,33 @@ const PRIORITY_ORDER: PromptSectionPriority[] = [
 ];
 
 const PLAN_PROMPT_MAX_SECTION_CHARS: Record<string, PromptSectionBudget> = {
+  runtimeCatalog: { preferredChars: 1200, reserveChars: 80 },
   expectations: { preferredChars: 1600, reserveChars: 80 },
   oracle: { preferredChars: 1800, reserveChars: 80 },
   rubric: { preferredChars: 3000, reserveChars: 96 },
   workspace: { preferredChars: 12000, reserveChars: 400 },
+  fewShots: { preferredChars: 2500, reserveChars: 120 },
+};
+
+const FACTS_PROMPT_MAX_SECTION_CHARS: Record<string, PromptSectionBudget> = {
+  logs: { preferredChars: 12000, reserveChars: 400 },
+  oracle: { preferredChars: 2500, reserveChars: 96 },
+  source: { preferredChars: 6000, reserveChars: 160 },
 };
 
 const EVAL_PROMPT_MAX_SECTION_CHARS: Record<string, PromptSectionBudget> = {
-  logs: { preferredChars: 10000, reserveChars: 160 },
+  facts: { preferredChars: 6000, reserveChars: 160 },
   source: { preferredChars: 8000, reserveChars: 160 },
   rubric: { preferredChars: 3500, reserveChars: 120 },
   oracle: { preferredChars: 2500, reserveChars: 96 },
-  planner: { preferredChars: 6000, reserveChars: 120 },
+  plannerSummary: { preferredChars: 1200, reserveChars: 80 },
 };
 
 const QUALITY_PROMPT_MAX_SECTION_CHARS: Record<string, PromptSectionBudget> = {
   context: { preferredChars: 3500, reserveChars: 120 },
   assessment: { preferredChars: 7000, reserveChars: 160 },
-  logs: { preferredChars: 8000, reserveChars: 160 },
-  source: { preferredChars: 9000, reserveChars: 200 },
+  source: { preferredChars: 10000, reserveChars: 200 },
+  logs: { preferredChars: 4000, reserveChars: 120 },
 };
 
 export function composePlanPrompt(
@@ -67,6 +77,12 @@ export function composePlanPrompt(
 ): ComposedPromptPayload {
   return composePromptSections(
     [
+      {
+        label: 'RUNTIME CATALOG',
+        content: runtimeCatalogToText(),
+        priority: 'critical',
+        budget: PLAN_PROMPT_MAX_SECTION_CHARS.runtimeCatalog,
+      },
       {
         label: 'PROFESSOR EXPECTATIONS',
         content: `Expected project type:\n${assignmentContext.expectedType ?? 'Not specified.'}`,
@@ -95,16 +111,21 @@ export function composePlanPrompt(
         priority: 'high',
         budget: PLAN_PROMPT_MAX_SECTION_CHARS.workspace,
       },
+      {
+        label: 'FEW-SHOT EXAMPLES',
+        content: selectFewShotExamples(assignmentContext.expectedType),
+        priority: 'low',
+        budget: PLAN_PROMPT_MAX_SECTION_CHARS.fewShots,
+      },
     ],
     maxChars,
   );
 }
 
-export function composeEvaluationPrompt(
+export function composeFactsPrompt(
   sourceCodePayload: string,
   executionLogs: string,
   assignmentContext: AssignmentContext,
-  plannerAssessment: BuilderPlanContractV2 | undefined,
   maxChars: number,
 ): ComposedPromptPayload {
   return composePromptSections(
@@ -113,7 +134,59 @@ export function composeEvaluationPrompt(
         label: 'EXECUTION LOGS',
         content: executionLogs || 'No execution logs were captured.',
         priority: 'high',
-        budget: EVAL_PROMPT_MAX_SECTION_CHARS.logs,
+        budget: FACTS_PROMPT_MAX_SECTION_CHARS.logs,
+      },
+      {
+        label: 'EXPECTED OUTPUT ORACLE',
+        content:
+          assignmentContext.expectedOutput ??
+          'No exact expected output was defined.',
+        priority: 'critical',
+        budget: FACTS_PROMPT_MAX_SECTION_CHARS.oracle,
+      },
+      {
+        label: 'SOURCE EXCERPTS',
+        content: sourceCodePayload || 'Workspace empty.',
+        priority: 'medium',
+        budget: FACTS_PROMPT_MAX_SECTION_CHARS.source,
+      },
+    ],
+    maxChars,
+  );
+}
+
+export function composeEvaluationPrompt(
+  sourceCodePayload: string,
+  facts: BuilderFactsContractV2,
+  assignmentContext: AssignmentContext,
+  plannerAssessment: BuilderPlanContractV2 | undefined,
+  maxChars: number,
+): ComposedPromptPayload {
+  const plannerSummary = plannerAssessment
+    ? JSON.stringify(
+        {
+          runtime: plannerAssessment.runtime,
+          recipe: {
+            install: plannerAssessment.recipe.install,
+            run: plannerAssessment.recipe.run,
+            test: plannerAssessment.recipe.test,
+            systemPackages: plannerAssessment.recipe.systemPackages,
+            service: plannerAssessment.recipe.service,
+          },
+          structuralType: plannerAssessment.structuralType,
+        },
+        null,
+        2,
+      )
+    : 'Planner hypothesis unavailable.';
+
+  return composePromptSections(
+    [
+      {
+        label: 'VERIFIED FACTS',
+        content: JSON.stringify(facts, null, 2),
+        priority: 'critical',
+        budget: EVAL_PROMPT_MAX_SECTION_CHARS.facts,
       },
       {
         label: 'SOURCE EXCERPTS',
@@ -138,16 +211,32 @@ export function composeEvaluationPrompt(
         budget: EVAL_PROMPT_MAX_SECTION_CHARS.oracle,
       },
       {
-        label: 'PLANNER HYPOTHESIS',
-        content: plannerAssessment
-          ? JSON.stringify(plannerAssessment, null, 2)
-          : 'Planner hypothesis unavailable.',
+        label: 'PLANNER HYPOTHESIS SUMMARY',
+        content: plannerSummary,
         priority: 'medium',
-        budget: EVAL_PROMPT_MAX_SECTION_CHARS.planner,
+        budget: EVAL_PROMPT_MAX_SECTION_CHARS.plannerSummary,
       },
     ],
     maxChars,
   );
+}
+
+function selectFewShotExamples(expectedType: string | null): string {
+  const type = (expectedType ?? '').toLowerCase();
+
+  if (
+    type.includes('fastapi') ||
+    type.includes('flask') ||
+    type.includes('service')
+  ) {
+    return `Python service example:\n{\n  "recipe": {\n    "install": [["pip", "install", "-r", "requirements.txt"]],\n    "run": ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"],\n    "test": [],\n    "systemPackages": [],\n    "service": { "port": 8000, "healthcheck": ["curl", "-f", "http://localhost:8000/health"] }\n  },\n  "runtime": { "family": "python", "version": "3.11" }\n}`;
+  }
+
+  if (type.includes('c')) {
+    return `C CLI example with Makefile:\n{\n  "recipe": {\n    "install": [["make"]],\n    "run": ["./main"],\n    "test": [],\n    "systemPackages": ["build-essential"],\n    "service": null\n  },\n  "runtime": { "family": "c", "version": "c11" }\n}\n\nC CLI example without Makefile:\n{\n  "recipe": {\n    "install": [["gcc", "-Wall", "-Wextra", "-std=c11", "main.c", "-o", "main"]],\n    "run": ["./main"],\n    "test": [],\n    "systemPackages": ["build-essential"],\n    "service": null\n  },\n  "runtime": { "family": "c", "version": "c11" }\n}`;
+  }
+
+  return `Python CLI example:\n{\n  "recipe": {\n    "install": [["pip", "install", "-r", "requirements.txt"]],\n    "run": ["python", "main.py"],\n    "test": [],\n    "systemPackages": [],\n    "service": null\n  },\n  "runtime": { "family": "python", "version": "3.11" }\n}`;
 }
 
 export function composeQualityPrompt(
@@ -176,16 +265,16 @@ export function composeQualityPrompt(
         budget: QUALITY_PROMPT_MAX_SECTION_CHARS.assessment,
       },
       {
-        label: 'EXECUTION LOGS',
-        content: executionLogs || 'No execution logs were captured.',
-        priority: 'medium',
-        budget: QUALITY_PROMPT_MAX_SECTION_CHARS.logs,
-      },
-      {
         label: 'SOURCE EXCERPTS',
         content: sourceCodePayload || 'Workspace empty.',
         priority: 'medium',
         budget: QUALITY_PROMPT_MAX_SECTION_CHARS.source,
+      },
+      {
+        label: 'EXECUTION LOGS',
+        content: executionLogs || 'No execution logs were captured.',
+        priority: 'medium',
+        budget: QUALITY_PROMPT_MAX_SECTION_CHARS.logs,
       },
     ],
     maxChars,

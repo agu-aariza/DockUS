@@ -8,6 +8,7 @@ import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import {
   AssignmentContext,
   BuilderEvaluationContractV2,
+  BuilderFactsContractV2,
   BuilderPlanContractV2,
 } from '../../../domain/builder.types';
 import { resolveEvaluationAssessment } from '../support/builder-fallback-assessment.util';
@@ -56,12 +57,37 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<
       payload: { studentStage: 'evaluating' },
     });
 
+    const factsTrace =
+      await this.builderLlmEvaluatorService.extractFactsWithTrace(
+        {
+          sourceCodePayload,
+          executionLogs,
+          assignmentContext,
+        },
+        {
+          onBeforeCall: async (snapshot) => {
+            await this.builderArtifactPersister.persistPromptArtifact(
+              runId,
+              snapshot,
+            );
+          },
+        },
+      );
+    await this.builderArtifactPersister.persistStageTraceArtifacts(
+      runId,
+      factsTrace,
+    );
+
+    const facts =
+      factsTrace.parsedContract ??
+      this.createFallbackFacts(executionLogs, assignmentContext.expectedOutput);
+
     const evaluationTrace =
       await this.builderLlmEvaluatorService.evaluateWithTrace(
         {
           projectRootDir: workspace.projectRootDir,
           sourceCodePayload,
-          executionLogs,
+          facts,
           assignmentContext,
           plannerAssessment: planAssessment,
         },
@@ -87,5 +113,30 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<
     );
 
     return { assessment };
+  }
+
+  private createFallbackFacts(
+    executionLogs: string,
+    expectedOutput: string | null,
+  ): BuilderFactsContractV2 {
+    return {
+      schemaVersion: 'builder-llm/v2',
+      stage: 'facts',
+      thought:
+        'Fallback: no se pudo extraer hechos estructurados. Se devuelve un resumen mínimo.',
+      observedStdout: [],
+      observedStderr: [],
+      exitCode: null,
+      compilationStatus: 'not_applicable',
+      matchesOracle: false,
+      discrepancies: expectedOutput
+        ? ['No se pudo verificar la salida contra el oráculo.']
+        : [],
+      filesPresent: [],
+      executionSummary: executionLogs.slice(0, 500),
+      evidenceLimits: [
+        'Fallback: el extractor de hechos falló. La evaluación continúa con logs en bruto truncados.',
+      ],
+    };
   }
 }

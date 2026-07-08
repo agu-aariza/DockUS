@@ -7,6 +7,9 @@ import {
   BuilderCoachingPassReadiness,
   BuilderOutcome,
   BuilderTechnicalFeedbackReport,
+  BuilderPedagogicalNarrativeItem,
+  BuilderTeacherHighlights,
+  PedagogicalNarrativeKind,
 } from '../../../domain/builder.types';
 
 @Injectable()
@@ -22,13 +25,31 @@ export class BuilderReportComposer {
       technicalFeedback,
       pedagogicalItems,
     );
+    const pedagogicalNarrative = this.parsePedagogicalNarrative(
+      assessment.studentSummary,
+    );
+    const teacherHighlights = this.parseTeacherHighlights(
+      assessment.teacherSummary,
+    );
+    const professionalVerdict = this.buildProfessionalVerdict(
+      assessment,
+      coaching,
+    );
 
-    return {
+    const report: BuilderReportEntity = {
       overallOutcome: this.resolveReportOutcome(assessment, coaching),
       llmRecommendations: coaching.nextAttemptChecklist.slice(0, 3),
       technicalFeedback,
       coaching,
+      learningObjective: this.inferLearningObjective(assessment.gradeBreakdown),
+      professionalVerdict,
+      pedagogicalNarrative,
+      teacherHighlights,
     };
+
+    report.printableMarkdown = this.buildPrintableMarkdown(report, assessment);
+
+    return report;
   }
 
   private toTechnicalFeedbackReport(
@@ -249,5 +270,284 @@ export class BuilderReportComposer {
       finding.file ?? '',
       finding.line ?? '',
     ].join('|');
+  }
+
+  private parsePedagogicalNarrative(
+    studentSummary: string | undefined,
+  ): BuilderPedagogicalNarrativeItem[] {
+    if (!studentSummary?.trim()) {
+      return [];
+    }
+
+    const markers: Array<[PedagogicalNarrativeKind, RegExp]> = [
+      ['success', /^(?:##?\s*|\*\*)?(?:Logro|Fortaleza|Lo que hiciste bien)/iu],
+      [
+        'gap',
+        /^(?:##?\s*|\*\*)?(?:Diagn[oó]stico|Problema|Qu[eé] fall[oó]|Error)/iu,
+      ],
+      [
+        'bridge',
+        /^(?:##?\s*|\*\*)?(?:Puente|Conexi[oó]n|Concepto|Aprendizaje)/iu,
+      ],
+      [
+        'action',
+        /^(?:##?\s*|\*\*)?(?:Pr[oó]ximo paso|Acci[oó]n|Qu[eé] hacer|Plan)/iu,
+      ],
+    ];
+
+    const lines = studentSummary.split('\n').map((line) => line.trim());
+    const parsed: Array<{ kind: PedagogicalNarrativeKind; content: string }> =
+      [];
+    let current: { kind: PedagogicalNarrativeKind; buffer: string[] } | null =
+      null;
+
+    for (const line of lines) {
+      const match = markers.find(([, regex]) => regex.test(line));
+      if (match) {
+        if (current) {
+          parsed.push({
+            kind: current.kind,
+            content: current.buffer.join(' ').trim(),
+          });
+        }
+        current = { kind: match[0], buffer: [] };
+        continue;
+      }
+      if (current && line) {
+        current.buffer.push(line);
+      }
+    }
+
+    if (current?.buffer.length) {
+      parsed.push({
+        kind: current.kind,
+        content: current.buffer.join(' ').trim(),
+      });
+    }
+
+    if (parsed.length > 0) {
+      return parsed;
+    }
+
+    return this.fallbackPedagogicalNarrative(studentSummary);
+  }
+
+  private fallbackPedagogicalNarrative(
+    studentSummary: string,
+  ): BuilderPedagogicalNarrativeItem[] {
+    const sentences = studentSummary
+      .split(/(?<=[.!?])\s+/u)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const items: BuilderPedagogicalNarrativeItem[] = [];
+
+    if (sentences.length > 0) {
+      items.push({ kind: 'success', content: sentences[0] });
+    }
+
+    const gapIndicators =
+      /\b(falta|error|incorrecto|no cumple|debes corregir|problema|falla|bug)\b/iu;
+    const bridgeIndicators =
+      /\b(concepto|principio|aprendizaje|conectar|entender|comprender|patr[oó]n)\b/iu;
+    const actionIndicators =
+      /\b(prueba|intenta|cambia|revisa|implementa|a[nñ]ade|usa|corrige)\b/iu;
+
+    const gaps: string[] = [];
+    const bridges: string[] = [];
+    const actions: string[] = [];
+
+    for (let i = 1; i < sentences.length; i++) {
+      const sentence = sentences[i];
+      if (actionIndicators.test(sentence) && i >= sentences.length - 2) {
+        actions.push(sentence);
+      } else if (bridgeIndicators.test(sentence)) {
+        bridges.push(sentence);
+      } else if (gapIndicators.test(sentence)) {
+        gaps.push(sentence);
+      } else if (i >= sentences.length - 1) {
+        actions.push(sentence);
+      } else {
+        gaps.push(sentence);
+      }
+    }
+
+    if (gaps.length) {
+      items.push({ kind: 'gap', content: gaps.join(' ') });
+    }
+    if (bridges.length) {
+      items.push({ kind: 'bridge', content: bridges.join(' ') });
+    }
+    if (actions.length) {
+      items.push({ kind: 'action', content: actions.join(' ') });
+    }
+
+    return items;
+  }
+
+  private parseTeacherHighlights(
+    teacherSummary: string | undefined,
+  ): BuilderTeacherHighlights {
+    const empty: BuilderTeacherHighlights = {
+      strengths: [],
+      concerns: [],
+      followUp: [],
+    };
+
+    if (!teacherSummary?.trim()) {
+      return empty;
+    }
+
+    const markers: Array<keyof BuilderTeacherHighlights> = [
+      'strengths',
+      'concerns',
+      'followUp',
+    ];
+    const sectionRegex: Record<string, RegExp> = {
+      strengths: /^(?:##?\s*|\*\*)?(?:Fortalezas|Puntos fuertes|Logros)/iu,
+      concerns:
+        /^(?:##?\s*|\*\*)?(?:Preocupaciones|Incidencias|Problemas|Hallazgos)/iu,
+      followUp:
+        /^(?:##?\s*|\*\*)?(?:Seguimiento|Pr[oó]ximos pasos|Recomendaciones)/iu,
+    };
+
+    const lines = teacherSummary.split('\n').map((line) => line.trim());
+    const sections: Record<string, string[]> = {
+      strengths: [],
+      concerns: [],
+      followUp: [],
+    };
+    let current: keyof BuilderTeacherHighlights | null = null;
+
+    for (const line of lines) {
+      const match = markers.find((m) => sectionRegex[m].test(line));
+      if (match) {
+        current = match;
+        continue;
+      }
+      if (current && line) {
+        sections[current].push(line);
+      }
+    }
+
+    const result: BuilderTeacherHighlights = {
+      strengths: sections.strengths,
+      concerns: sections.concerns,
+      followUp: sections.followUp,
+    };
+
+    if (
+      result.strengths.length === 0 &&
+      result.concerns.length === 0 &&
+      result.followUp.length === 0
+    ) {
+      return this.fallbackTeacherHighlights(teacherSummary);
+    }
+
+    return result;
+  }
+
+  private fallbackTeacherHighlights(
+    teacherSummary: string,
+  ): BuilderTeacherHighlights {
+    const sentences = teacherSummary
+      .split(/(?<=[.!?])\s+/u)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const strengths: string[] = [];
+    const concerns: string[] = [];
+    const followUp: string[] = [];
+
+    const strengthIndicators =
+      /\b(limpia|sin errores|correctamente|cumple|bien|apropiado|adecuado|logra|positivo|fortaleza)\b/iu;
+    const concernIndicators =
+      /\b(error|falla|no cumple|no coincide|incorrecto|problema|falta|bloque|debe corregir)\b/iu;
+
+    for (const sentence of sentences) {
+      if (strengthIndicators.test(sentence)) {
+        strengths.push(sentence);
+      } else if (concernIndicators.test(sentence)) {
+        concerns.push(sentence);
+      } else {
+        followUp.push(sentence);
+      }
+    }
+
+    return { strengths, concerns, followUp };
+  }
+
+  private buildProfessionalVerdict(
+    assessment: BuilderEvaluationContractV2,
+    coaching: { passReadiness: BuilderCoachingPassReadiness },
+  ): string {
+    const outcome =
+      coaching.passReadiness === 'BLOCKED'
+        ? 'No apto'
+        : 'Apto con observaciones';
+    const grade =
+      assessment.recommendedGrade !== undefined
+        ? `Nota recomendada: ${assessment.recommendedGrade}. `
+        : '';
+    const state = `Estado evaluativo: ${assessment.evaluativeState}. `;
+    const rationale = assessment.rationale ?? 'Sin veredicto detallado.';
+    return `${outcome}. ${grade}${state}${rationale}`;
+  }
+
+  private inferLearningObjective(
+    gradeBreakdown: Array<{ criterion: string }> | undefined,
+  ): string | undefined {
+    if (!gradeBreakdown?.length) {
+      return undefined;
+    }
+    const criteria = gradeBreakdown.map((item) => item.criterion).join(', ');
+    return `Demostrar comprensión y aplicación de: ${criteria}.`;
+  }
+
+  private buildPrintableMarkdown(
+    report: BuilderReportEntity,
+    assessment: BuilderEvaluationContractV2,
+  ): string {
+    const lines: string[] = [
+      '# Informe de evaluación',
+      '',
+      `**Resultado:** ${report.overallOutcome ?? 'Desconocido'}`,
+      `**Veredicto profesional:** ${report.professionalVerdict ?? '—'}`,
+      '',
+      '## Objetivo de aprendizaje',
+      '',
+      report.learningObjective ?? 'No especificado.',
+      '',
+      '## Narrativa pedagógica',
+      '',
+    ];
+
+    for (const item of report.pedagogicalNarrative ?? []) {
+      const label =
+        item.kind === 'success'
+          ? 'Logro'
+          : item.kind === 'gap'
+            ? 'Brecha'
+            : item.kind === 'bridge'
+              ? 'Puente de aprendizaje'
+              : 'Acción recomendada';
+      lines.push(`### ${label}`, '', item.content, '');
+    }
+
+    lines.push(
+      '## Desglose de criterios',
+      '',
+      ...(assessment.gradeBreakdown ?? []).map(
+        (item) =>
+          `- **${item.criterion}:** ${item.awarded}/${item.maxPoints} puntos — ${item.justification}`,
+      ),
+      '',
+      '## Resumen para docentes',
+      '',
+      assessment.teacherSummary ?? '—',
+      '',
+    );
+
+    return lines.join('\n');
   }
 }

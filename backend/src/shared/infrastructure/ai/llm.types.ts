@@ -1,4 +1,9 @@
-export type BuilderLlmPromptStage = 'plan' | 'evaluation' | 'quality' | 'chat';
+export type BuilderLlmPromptStage =
+  | 'plan'
+  | 'facts'
+  | 'evaluation'
+  | 'quality'
+  | 'chat';
 
 export interface LlmModelProfile {
   profileVersion: string;

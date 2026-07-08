@@ -41,6 +41,21 @@ const validPlanResponse = JSON.stringify({
   evaluationLimits: [],
 });
 
+const validFactsResponse = JSON.stringify({
+  schemaVersion: 'builder-llm/v2',
+  stage: 'facts',
+  thought: 'Hechos validos.',
+  observedStdout: ['ok'],
+  observedStderr: [],
+  exitCode: 0,
+  compilationStatus: 'not_applicable',
+  matchesOracle: true,
+  discrepancies: [],
+  filesPresent: ['main.py'],
+  executionSummary: 'El programa ejecuto correctamente.',
+  evidenceLimits: [],
+});
+
 const validEvaluationResponse = JSON.stringify({
   schemaVersion: 'builder-llm/v2',
   stage: 'evaluation',
@@ -101,10 +116,14 @@ describe('BuilderLlmEvaluatorService', () => {
           switch (key) {
             case 'BUILDER_BEDROCK_PLAN_MODEL_ID':
               return 'bedrock-plan-model';
+            case 'BUILDER_BEDROCK_FACTS_MODEL_ID':
+              return 'bedrock-facts-model';
             case 'BUILDER_BEDROCK_EVALUATION_MODEL_ID':
               return 'bedrock-eval-model';
             case 'BUILDER_LLM_PLAN_MAX_INPUT_CHARS':
               return 260;
+            case 'BUILDER_LLM_FACTS_MAX_INPUT_CHARS':
+              return 320;
             case 'BUILDER_LLM_EVAL_MAX_INPUT_CHARS':
               return 320;
             default:
@@ -188,13 +207,47 @@ describe('BuilderLlmEvaluatorService', () => {
     expect(trace.parsedContract?.stage).toBe('plan');
   });
 
-  it('builds the evaluation prompt with explicit evidence blocks instead of a free-form blob', async () => {
+  it('extracts facts before evaluation', async () => {
+    llmService.generate.mockResolvedValue(validFactsResponse);
+
+    await service.extractFacts({
+      sourceCodePayload: 'B'.repeat(2000),
+      executionLogs: 'C'.repeat(2000),
+      assignmentContext: {
+        expectedType: 'PYTHON_FASTAPI',
+        rubricInstructions: 'Evalua el proyecto.',
+        expectedOutput: 'ok',
+      },
+    });
+
+    expect(llmService.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stage: 'facts',
+        promptId: 'facts',
+        systemPrompt: 'FACTS_PROMPT',
+        profile: expect.objectContaining({
+          modelId: 'bedrock-facts-model',
+          stage: 'facts',
+        }),
+      }),
+    );
+
+    const factsPrompt = (
+      llmService.generate.mock.calls[0][0] as { prompt: string }
+    ).prompt;
+
+    expect(factsPrompt.length).toBeLessThanOrEqual(320);
+    expect(factsPrompt).toContain('EXECUTION LOGS');
+    expect(factsPrompt).toContain('EXPECTED OUTPUT ORACLE');
+  });
+
+  it('builds the evaluation prompt with verified facts instead of raw logs', async () => {
     llmService.generate.mockResolvedValue(validEvaluationResponse);
 
     await service.evaluate({
       projectRootDir: '/tmp/project',
       sourceCodePayload: 'B'.repeat(2000),
-      executionLogs: 'C'.repeat(2000),
+      facts: JSON.parse(validFactsResponse),
       plannerAssessment: JSON.parse(validPlanResponse),
       assignmentContext: {
         expectedType: 'PYTHON_FASTAPI',
@@ -220,8 +273,8 @@ describe('BuilderLlmEvaluatorService', () => {
     ).prompt;
 
     expect(evaluationPrompt.length).toBeLessThanOrEqual(320);
-    expect(evaluationPrompt).toContain('EXECUTION LOGS');
-    expect(evaluationPrompt).toContain('PLANNER HYPOTHESIS');
+    expect(evaluationPrompt).toContain('VERIFIED FACTS');
+    expect(evaluationPrompt).toContain('PLANNER HYPOTHESIS SUMMARY');
     expect(evaluationPrompt).toContain('EXPECTED OUTPUT ORACLE');
   });
 
@@ -234,7 +287,7 @@ describe('BuilderLlmEvaluatorService', () => {
     const trace = await service.evaluateWithTrace({
       projectRootDir: '/tmp/project',
       sourceCodePayload: 'print("hello")',
-      executionLogs: 'traceback',
+      facts: JSON.parse(validFactsResponse),
       plannerAssessment: JSON.parse(validPlanResponse),
       assignmentContext: {
         expectedType: 'PYTHON_FASTAPI',

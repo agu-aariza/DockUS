@@ -10,6 +10,7 @@ import {
 
 export enum PromptId {
   PLAN = 'plan',
+  FACTS = 'facts',
   EVAL = 'eval',
   REPAIR = 'repair',
   TECHNICAL_FEEDBACK = 'technical-feedback',

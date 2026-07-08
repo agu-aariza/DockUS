@@ -31,7 +31,20 @@ describe('builder prompt composer', () => {
   it('composes evaluation prompts as explicit evidence sections instead of a single blob', () => {
     const payload = composeEvaluationPrompt(
       'print("ok")\n'.repeat(400),
-      'Traceback: boom\n'.repeat(400),
+      {
+        schemaVersion: 'builder-llm/v2',
+        stage: 'facts',
+        thought: 'Hechos.',
+        observedStdout: ['ok'],
+        observedStderr: [],
+        exitCode: 0,
+        compilationStatus: 'not_applicable',
+        matchesOracle: false,
+        discrepancies: ['Se esperaba 15 pero no se produjo salida.'],
+        filesPresent: ['main.py'],
+        executionSummary: 'El programa imprimió ok.',
+        evidenceLimits: [],
+      },
       {
         expectedType: 'PYTHON_CLI',
         rubricInstructions: 'Valida el comportamiento funcional.',
@@ -77,9 +90,9 @@ describe('builder prompt composer', () => {
     );
 
     expect(payload.prompt.length).toBeLessThanOrEqual(320);
-    expect(payload.prompt).toContain('EXECUTION LOGS');
+    expect(payload.prompt).toContain('VERIFIED FACTS');
     expect(payload.prompt).toContain('SOURCE EXCERPTS');
-    expect(payload.prompt).toContain('PLANNER HYPOTHESIS');
+    expect(payload.prompt).toContain('PLANNER HYPOTHESIS SUMMARY');
     expect(payload.prompt).toContain('EXPECTED OUTPUT ORACLE');
   });
 
@@ -139,8 +152,8 @@ describe('builder prompt composer', () => {
     expect(payload.sections.map((section) => section.label)).toEqual([
       'ASSIGNMENT CONTEXT',
       'CURRENT ACADEMIC ASSESSMENT',
-      'EXECUTION LOGS',
       'SOURCE EXCERPTS',
+      'EXECUTION LOGS',
     ]);
   });
 });

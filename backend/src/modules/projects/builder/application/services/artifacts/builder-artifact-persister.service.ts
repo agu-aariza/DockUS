@@ -64,7 +64,9 @@ export class BuilderArtifactPersister {
     const artifactType =
       snapshot.stage === 'plan'
         ? BuildRunArtifactType.LLM_PLAN_PROMPT
-        : BuildRunArtifactType.LLM_EVAL_PROMPT;
+        : snapshot.stage === 'facts'
+          ? BuildRunArtifactType.LLM_FACTS_PROMPT
+          : BuildRunArtifactType.LLM_EVAL_PROMPT;
     const promptId = snapshot.promptId ?? `${snapshot.stage}-legacy`;
     const model = snapshot.model ?? 'unknown';
     const modelProfile = snapshot.modelProfile ?? null;
@@ -154,11 +156,17 @@ export class BuilderArtifactPersister {
             parsed: BuildRunArtifactType.LLM_PLAN_PARSED,
             error: BuildRunArtifactType.LLM_PLAN_ERROR,
           }
-        : {
-            raw: BuildRunArtifactType.LLM_EVAL_RAW_RESPONSE,
-            parsed: BuildRunArtifactType.LLM_EVAL_PARSED,
-            error: BuildRunArtifactType.LLM_EVAL_ERROR,
-          };
+        : trace.stage === 'facts'
+          ? {
+              raw: BuildRunArtifactType.LLM_FACTS_RAW_RESPONSE,
+              parsed: BuildRunArtifactType.LLM_FACTS_PARSED,
+              error: BuildRunArtifactType.LLM_FACTS_ERROR,
+            }
+          : {
+              raw: BuildRunArtifactType.LLM_EVAL_RAW_RESPONSE,
+              parsed: BuildRunArtifactType.LLM_EVAL_PARSED,
+              error: BuildRunArtifactType.LLM_EVAL_ERROR,
+            };
 
     if (trace.rawResponse !== null) {
       await this.persistTextArtifact(

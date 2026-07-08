@@ -85,6 +85,9 @@ export class BuildRun {
   @Column({ type: 'text', array: true, default: () => "'{}'" })
   warnings!: string[];
 
+  @Column({ type: 'text', nullable: true })
+  promptVersion!: string | null;
+
   @Column({ type: 'timestamp', nullable: true })
   startedAt!: Date | null;
 

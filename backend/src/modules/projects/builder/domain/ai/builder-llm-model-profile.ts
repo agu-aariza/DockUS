@@ -9,6 +9,7 @@ const DEFAULT_MODEL_ID = 'us.qwen.qwen3-coder-480b-a35b-v1:0';
 
 const DEFAULT_MAX_TOKENS: Record<BuilderLlmPromptStage, number> = {
   plan: 4096,
+  facts: 4096,
   evaluation: 8192,
   quality: 8192,
   chat: 8192,
@@ -16,6 +17,7 @@ const DEFAULT_MAX_TOKENS: Record<BuilderLlmPromptStage, number> = {
 
 const DEFAULT_TEMPERATURE: Record<BuilderLlmPromptStage, number> = {
   plan: 0.1,
+  facts: 0.1,
   evaluation: 0.2,
   quality: 0.3,
   chat: 0.5,
@@ -25,6 +27,7 @@ const DEFAULT_TOP_P = 0.9;
 
 const DEFAULT_TIMEOUT_MS: Record<BuilderLlmPromptStage, number> = {
   plan: 120_000,
+  facts: 120_000,
   evaluation: 300_000,
   quality: 300_000,
   chat: 300_000,

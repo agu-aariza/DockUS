@@ -23,6 +23,46 @@ const EXECUTABLE_FAMILIES: ReadonlySet<BuilderRuntimeFamily> = new Set([
   'c',
 ]);
 
+export const RUNTIME_CATALOG = {
+  python: {
+    family: 'python',
+    executable: true,
+    defaultImage: 'python:3.11-slim',
+    allowedVersions: ['3.8', '3.9', '3.10', '3.11', '3.12'],
+    defaultInstall: [['pip', 'install', '-r', 'requirements.txt']],
+    notes:
+      'Para servicios, usar uvicorn/gunicorn/flask. Para CLI, usar python o python3.',
+  },
+  c: {
+    family: 'c',
+    executable: true,
+    defaultImage: 'gcc:13-bookworm',
+    allowedVersions: ['c99', 'c11', 'c17'],
+    defaultInstall: [
+      ['gcc', '-Wall', '-Wextra', '-std=c11', 'main.c', '-o', 'main'],
+    ],
+    notes: 'Con Makefile usar make; sin Makefile compilar main.c u otros .c.',
+  },
+  node: {
+    family: 'node',
+    executable: false,
+    defaultImage: 'node:22-alpine',
+    allowedVersions: ['16', '18', '20', '21', '22'],
+    defaultInstall: [['npm', 'install']],
+    notes:
+      'Node se detecta pero NO es ejecutable como runtime principal en esta iteración.',
+  },
+} as const;
+
+export function runtimeCatalogToText(): string {
+  return Object.values(RUNTIME_CATALOG)
+    .map(
+      (rt) =>
+        `- ${rt.family}: ejecutable=${rt.executable}, imagen=${rt.defaultImage}, versiones=${rt.allowedVersions.join(', ')}, notas=${rt.notes}`,
+    )
+    .join('\n');
+}
+
 export function adaptPlanToRuntimeRecipe(
   plan: BuilderPlanContractV2,
 ): BuilderRuntimeExecutionRecipe {

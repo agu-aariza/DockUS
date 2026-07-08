@@ -8,7 +8,7 @@ import type { PromptSectionTrace } from './ai/builder-prompt-composer';
 export const BUILDER_LLM_SCHEMA_VERSION = 'builder-llm/v2' as const;
 export type BuilderLlmSchemaVersion = typeof BUILDER_LLM_SCHEMA_VERSION;
 
-export const BUILDER_LLM_STAGES = ['plan', 'evaluation'] as const;
+export const BUILDER_LLM_STAGES = ['plan', 'facts', 'evaluation'] as const;
 export type BuilderLlmStage = (typeof BUILDER_LLM_STAGES)[number];
 
 type StructuralType = string;
@@ -114,8 +114,24 @@ export interface BuilderEvaluationContractV2 extends BuilderLlmContractV2Base {
   teacherSummary: string;
 }
 
+export interface BuilderFactsContractV2 {
+  schemaVersion: BuilderLlmSchemaVersion;
+  stage: 'facts';
+  thought: string;
+  observedStdout: string[];
+  observedStderr: string[];
+  exitCode: number | null;
+  compilationStatus: 'success' | 'failure' | 'not_applicable';
+  matchesOracle: boolean;
+  discrepancies: string[];
+  filesPresent: string[];
+  executionSummary: string;
+  evidenceLimits: string[];
+}
+
 export type BuilderLlmContractV2 =
   | BuilderPlanContractV2
+  | BuilderFactsContractV2
   | BuilderEvaluationContractV2;
 
 export interface BuilderLlmStagePromptSnapshot {
@@ -259,4 +275,22 @@ export interface BuilderReportEntity {
   technicalFeedback?: BuilderTechnicalFeedbackReport;
   selfHealing?: BuilderSelfHealingReport;
   coaching?: BuilderReportCoaching;
+  learningObjective?: string;
+  professionalVerdict?: string;
+  pedagogicalNarrative?: BuilderPedagogicalNarrativeItem[];
+  teacherHighlights?: BuilderTeacherHighlights;
+  printableMarkdown?: string;
+}
+
+export type PedagogicalNarrativeKind = 'success' | 'gap' | 'bridge' | 'action';
+
+export interface BuilderPedagogicalNarrativeItem {
+  kind: PedagogicalNarrativeKind;
+  content: string;
+}
+
+export interface BuilderTeacherHighlights {
+  strengths: string[];
+  concerns: string[];
+  followUp: string[];
 }

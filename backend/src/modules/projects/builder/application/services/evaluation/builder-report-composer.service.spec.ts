@@ -116,4 +116,96 @@ describe('BuilderReportComposer', () => {
     expect(report.overallOutcome).toBe('FAIL');
     expect(report.coaching?.passReadiness).toBe('BLOCKED');
   });
+
+  it('derives pedagogical narrative from structured student summary', () => {
+    const studentSummary = [
+      '## Logro',
+      'Has conseguido que el programa compile sin errores y produzca la primera línea de salida esperada.',
+      '## Diagnóstico',
+      'El criterio "Formato de salida" falla porque la segunda línea muestra valores invertidos.',
+      '## Puente de aprendizaje',
+      'Este error se relaciona con el orden de los índices en matrices bidimensionales.',
+      '## Próximo paso',
+      'Revisa el orden de los índices en la función de impresión antes de reenviar.',
+    ].join('\n');
+
+    const report = composer.composeReport(
+      buildAssessment({ studentSummary }),
+      emptyQualityFindings,
+      [],
+    );
+
+    expect(report.pedagogicalNarrative).toHaveLength(4);
+    expect(report.pedagogicalNarrative?.[0]).toEqual({
+      kind: 'success',
+      content: expect.stringContaining('compile sin errores'),
+    });
+    expect(report.pedagogicalNarrative?.[1]).toEqual({
+      kind: 'gap',
+      content: expect.stringContaining('Formato de salida'),
+    });
+    expect(report.pedagogicalNarrative?.[2]).toEqual({
+      kind: 'bridge',
+      content: expect.stringContaining('índices en matrices'),
+    });
+    expect(report.pedagogicalNarrative?.[3]).toEqual({
+      kind: 'action',
+      content: expect.stringContaining('Revisa el orden'),
+    });
+  });
+
+  it('derives teacher highlights from structured teacher summary', () => {
+    const teacherSummary = [
+      '## Fortalezas',
+      'La compilación fue limpia y el código está bien estructurado.',
+      '## Preocupaciones',
+      'La salida real no coincide con el oráculo en la segunda línea.',
+      '## Seguimiento',
+      'Sugerir repasar indexación de arrays antes de la siguiente entrega.',
+    ].join('\n');
+
+    const report = composer.composeReport(
+      buildAssessment({ teacherSummary }),
+      emptyQualityFindings,
+      [],
+    );
+
+    expect(report.teacherHighlights?.strengths).toHaveLength(1);
+    expect(report.teacherHighlights?.concerns).toHaveLength(1);
+    expect(report.teacherHighlights?.followUp).toHaveLength(1);
+    expect(report.teacherHighlights?.strengths[0]).toContain(
+      'compilación fue limpia',
+    );
+  });
+
+  it('builds professional verdict and learning objective', () => {
+    const report = composer.composeReport(
+      buildAssessment(),
+      emptyQualityFindings,
+      [],
+    );
+
+    expect(report.professionalVerdict).toContain('Apto con observaciones');
+    expect(report.professionalVerdict).toContain('E1');
+    expect(report.learningObjective).toContain('Funcionamiento');
+    expect(report.printableMarkdown).toContain('# Informe de evaluación');
+  });
+
+  it('falls back to heuristic parsing when summaries lack markdown markers', () => {
+    const report = composer.composeReport(
+      buildAssessment({
+        studentSummary:
+          'Has logrado compilar el proyecto. El formato de salida es incorrecto porque los índices están invertidos. Entender la indexación de matrices te ayudará. Corrige la función de impresión.',
+        teacherSummary:
+          'La compilación fue limpia. La salida no coincide con el oráculo. Repasar indexación de arrays.',
+      }),
+      emptyQualityFindings,
+      [],
+    );
+
+    expect(report.pedagogicalNarrative?.length).toBeGreaterThanOrEqual(2);
+    expect(report.teacherHighlights?.strengths.length).toBeGreaterThanOrEqual(
+      1,
+    );
+  });
 });

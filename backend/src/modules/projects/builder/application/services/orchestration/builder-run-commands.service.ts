@@ -47,6 +47,7 @@ import { BuilderReportStageHandler } from '../stages/report-stage.handler';
 export class BuilderRunCommandsService {
   private readonly logger = new Logger(BuilderRunCommandsService.name);
   private readonly staleRunThresholdMs: number;
+  private readonly promptVersion: string;
 
   constructor(
     @Inject('IBuildRunRepository')
@@ -71,6 +72,10 @@ export class BuilderRunCommandsService {
       'BUILDER_STALE_RUN_THRESHOLD_MS',
       DEFAULT_STALE_RUN_THRESHOLD_MS,
     );
+    this.promptVersion = this.configService.get<string>(
+      'BUILDER_PROMPT_VERSION',
+      '2026.07-chain-of-verification',
+    );
   }
 
   async enqueueDeliveryRun(
@@ -85,6 +90,7 @@ export class BuilderRunCommandsService {
       deliveryId,
       triggeredById: actor.userId,
       status: BuildRunStatus.QUEUED,
+      promptVersion: this.promptVersion,
     });
 
     let savedRun: BuildRun;
@@ -288,6 +294,8 @@ export class BuilderRunCommandsService {
       run.codeQualityFindings = qualityFindings;
       run.report = report;
 
+      this.logRunMetrics(run.id, assessment, qualityFindings);
+
       await fs
         .rm(workspace.projectRootDir, { recursive: true, force: true })
         .catch(() => undefined);
@@ -331,6 +339,42 @@ export class BuilderRunCommandsService {
         'RUN_STALE_AFTER_RESTART: la ejecucion quedo huerfana tras reinicio.';
       await this.buildRunsRepository.save(staleRun);
     }
+  }
+
+  private logRunMetrics(
+    runId: string,
+    assessment: {
+      recommendedGrade?: number;
+      gradeBreakdown?: { awarded: number }[];
+      evaluativeState?: string;
+      confidence?: string;
+    },
+    qualityFindings: unknown,
+  ): void {
+    const computedGrade =
+      assessment.gradeBreakdown?.reduce((sum, item) => sum + item.awarded, 0) ??
+      null;
+    const recommendedGrade = assessment.recommendedGrade ?? null;
+    const gradeMismatch =
+      computedGrade !== null &&
+      recommendedGrade !== null &&
+      Math.abs(computedGrade - recommendedGrade) > 0.01;
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'builder_run_metrics',
+        runId,
+        promptVersion: this.promptVersion,
+        evaluativeState: assessment.evaluativeState ?? null,
+        confidence: assessment.confidence ?? null,
+        recommendedGrade,
+        computedGrade,
+        gradeMismatch,
+        qualityFindingCount: Array.isArray(qualityFindings)
+          ? qualityFindings.length
+          : null,
+      }),
+    );
   }
 
   private async enqueueRunJob(
