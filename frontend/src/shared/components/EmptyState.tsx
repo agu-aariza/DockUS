@@ -20,16 +20,20 @@ export function EmptyState({
   className = ""
 }: EmptyStateProps) {
   return (
-    <div className={`flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50/50 p-10 text-center ${className}`}>
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
+    <div className={`flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/30 p-10 text-center transition-all duration-300 hover:border-slate-300/80 ${className}`}>
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-b from-white to-slate-100/80 border border-slate-200/60 text-slate-500 shadow-sm transition-transform duration-300 hover:scale-105 hover:rotate-3">
         {icon}
       </div>
-      <h3 className="mb-1 text-sm font-semibold text-slate-900">{title}</h3>
-      <p className="mb-4 max-w-sm text-sm text-slate-500">
+      <h3 className="mb-1.5 text-sm font-bold text-slate-900">{title}</h3>
+      <p className="mb-5 max-w-xs text-xs leading-relaxed text-slate-500">
         {description}
       </p>
       {actionLabel && onAction && (
-        <Button onClick={onAction} size="sm">
+        <Button 
+          onClick={onAction} 
+          size="sm"
+          className="shadow-sm hover:shadow active:scale-[0.98] transition-all"
+        >
           <RiAddLine className="text-base" />
           {actionLabel}
         </Button>

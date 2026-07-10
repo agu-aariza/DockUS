@@ -181,20 +181,9 @@ export function useBuilderRunStream(
 
     void connect();
 
-    const pollingInterval = window.setInterval(() => {
-      if (streamStateRef.current !== "streaming") {
-        void fetchBacklog().catch((error) => {
-          if (!disposed) {
-            setStreamError(getErrorMessage(error));
-          }
-        });
-      }
-    }, 3000);
-
     return () => {
       disposed = true;
       abortController.abort();
-      window.clearInterval(pollingInterval);
       if (reconnectTimer !== null) {
         window.clearTimeout(reconnectTimer);
       }

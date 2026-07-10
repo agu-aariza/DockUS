@@ -70,7 +70,7 @@ export function TeacherDeliveriesPanel({
           icon={<RiInboxArchiveLine />}
           badge={panel.dc.projects.length.toString()}
         />
-        <section className="rounded-lg border border-app-border bg-white p-6">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <ProjectSelectionHub
             projects={hubProjects}
             onSelect={(id, label) => panel.setProject(id, label)}

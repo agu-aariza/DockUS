@@ -58,24 +58,24 @@ export function DeliveryListItem({
 
   return (
     <article
-      className={`group w-full rounded-lg border p-4 text-left transition-colors relative overflow-hidden ${
+      className={`group w-full rounded-xl border p-4 text-left transition-all duration-200 relative overflow-hidden ${
         active
-          ? "border-primary bg-primary text-white"
-          : "border-app-border bg-white hover:border-slate-300 hover:bg-slate-50"
+          ? "border-primary bg-gradient-to-r from-primary to-blue-700 text-white shadow-md shadow-primary/20"
+          : "border-app-border bg-white hover:border-slate-300 hover:-translate-y-[2px] hover:shadow-md"
       }`}
     >
-      <button type="button" onClick={onSelect} className="w-full text-left">
+      <button type="button" onClick={onSelect} className="w-full text-left focus:outline-none">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className={`text-xs font-medium ${active ? "text-blue-100" : "text-slate-500"}`}>
+            <div className={`text-xs font-semibold ${active ? "text-blue-100 opacity-80" : "text-slate-400"}`}>
               v{delivery.version}
             </div>
-            <div className="mt-0.5 truncate text-sm font-semibold text-current">
+            <div className="mt-0.5 truncate text-sm font-bold text-current">
               {delivery.studentName}
             </div>
           </div>
           {active ? (
-            <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs font-medium text-white">
+            <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs font-medium text-white shadow-inner">
               {statusText(delivery.status)}
             </span>
           ) : (
@@ -85,14 +85,14 @@ export function DeliveryListItem({
           )}
         </div>
 
-        <div className={`mt-3 space-y-1 text-xs font-medium leading-tight ${active ? "text-blue-100" : "text-slate-500"}`}>
+        <div className={`mt-3 space-y-1 text-xs font-medium leading-tight ${active ? "text-blue-100/90" : "text-slate-500"}`}>
           <div className="flex items-center gap-1.5">
             <RiTimeLine className="text-sm opacity-60" />
             {formatDateTime(delivery.createdAt)}
           </div>
           <div className="flex items-center gap-1.5">
             <RiFileChartLine className="text-sm opacity-60" />
-            <span className={delivery.isLate ? "text-rose-600" : "text-emerald-600"}>
+            <span className={delivery.isLate ? "text-rose-500 font-bold" : "text-emerald-500 font-bold"}>
               {delivery.isLate ? "Retrasada" : "En plazo"}
             </span>
           </div>
@@ -116,10 +116,10 @@ export function DeliveryListItem({
             onBlur={commitGrade}
             onKeyDown={(e) => e.key === "Enter" && commitGrade()}
             placeholder="0–10"
-            className={`w-20 rounded-md border px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary ${
+            className={`w-20 rounded-lg border px-2 py-1 text-xs font-bold focus:outline-none focus:ring-2 ${
               active
-                ? "border-white/20 bg-white/10 text-white placeholder-white/40"
-                : "border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400"
+                ? "border-white/20 bg-white/10 text-white placeholder-white/40 focus:ring-white/30"
+                : "border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:ring-primary/20"
             }`}
           />
           <span className={`text-xs ${active ? "text-white/60" : "text-slate-400"}`}>/ 10</span>
@@ -127,23 +127,23 @@ export function DeliveryListItem({
       ) : (
         <div className={`mt-3 flex items-center gap-1.5 text-xs font-medium ${active ? "text-white" : "text-slate-500"}`}>
           <RiFileChartLine className="text-sm opacity-60" />
-          <span className={active ? "text-white" : "text-slate-900 font-semibold"}>
+          <span className={active ? "text-white" : "text-slate-900 font-bold"}>
             {delivery.grade !== null ? `Nota: ${delivery.grade.toFixed(2)}` : "Nota pendiente"}
           </span>
         </div>
       )}
 
-      <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
-        <div className={`flex items-center gap-1 text-xs font-medium ${active ? "text-blue-100" : "text-slate-400"}`}>
+      <div className={`mt-3 flex items-center justify-between border-t pt-3 ${active ? "border-white/10" : "border-slate-100"}`}>
+        <div className={`flex items-center gap-1 text-xs font-medium ${active ? "text-blue-100/90" : "text-slate-400"}`}>
           <RiStackLine className="text-xs" />
           {delivery.remainingDeliveries} disponibles
         </div>
         <button
           type="button"
-          className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-[0.98] ${
             active
               ? "bg-white/10 text-white hover:bg-white/20"
-              : "bg-white text-slate-700 hover:bg-slate-50 border border-app-border"
+              : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
           }`}
           onClick={(event) => {
             event.stopPropagation();

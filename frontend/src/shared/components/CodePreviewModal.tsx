@@ -177,7 +177,7 @@ export function CodePreviewModal({
           <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/40 px-4 py-2">
             <div className="flex items-center gap-2 text-[11px] text-slate-400">
               <RiFileCodeLine className="text-slate-500" />
-              <span className="font-mono">{selectedFile.path || "ningún archivo seleccionado"}</span>
+              <span className="font-mono">{selectedFile?.path || "ningún archivo seleccionado"}</span>
             </div>
 
             <div className="flex items-center gap-1">

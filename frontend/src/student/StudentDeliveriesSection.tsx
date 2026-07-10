@@ -8,7 +8,10 @@ import {
   RiSortAsc,
   RiSortDesc,
   RiUploadCloud2Line,
+  RiRocketLine,
+  RiLoader4Line,
 } from "react-icons/ri";
+import { builderApi } from "../shared/api/builderApi";
 import { Button } from "../shared/components/ui/Button";
 import { MetricCard } from "../shared/components/MetricCard";
 import { SkeletonTable } from "../shared/components/Skeleton";
@@ -100,6 +103,19 @@ export function StudentDeliveriesSection({
   onNavigate,
 }: Props): JSX.Element {
   const { setDelivery, setAssignment, setProject } = useWorkspace();
+  const [launchingId, setLaunchingId] = useState<string | null>(null);
+
+  const handleLaunchEvaluation = async (deliveryId: string) => {
+    setLaunchingId(deliveryId);
+    try {
+      await builderApi.runForDelivery(deliveryId);
+      await data.refresh();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLaunchingId(null);
+    }
+  };
   const { deliveries, assignments, latestRunByDeliveryId, loading, error } = data;
 
   const [projectFilter, setProjectFilter] = useState<string>("all");
@@ -274,7 +290,7 @@ export function StudentDeliveriesSection({
         <>
           <div className="space-y-3 md:hidden">
             {filteredDeliveries.map((delivery) => {
-              const { workflow, retryAction, outcome } = deriveRow(delivery);
+              const { workflow, retryAction, outcome, latestRun } = deriveRow(delivery);
 
               return (
                 <StudentSurface key={delivery.id} className="p-5">
@@ -326,6 +342,26 @@ export function StudentDeliveriesSection({
                       <RiFileTextLine />
                       Ver informe
                     </Button>
+                    {!latestRun && (
+                      <Button
+                        variant="primary"
+                        className="w-full"
+                        disabled={launchingId === delivery.id}
+                        onClick={() => handleLaunchEvaluation(delivery.id)}
+                      >
+                        {launchingId === delivery.id ? (
+                          <>
+                            <RiLoader4Line className="animate-spin" />
+                            Lanzando...
+                          </>
+                        ) : (
+                          <>
+                            <RiRocketLine />
+                            Evaluar ahora
+                          </>
+                        )}
+                      </Button>
+                    )}
                     {retryAction?.enabled ? (
                       <Button variant="primary" className="w-full" onClick={() => handleRetry(delivery)}>
                         <RiUploadCloud2Line />
@@ -354,7 +390,7 @@ export function StudentDeliveriesSection({
               </thead>
               <tbody className="divide-y divide-app-border">
                 {filteredDeliveries.map((delivery) => {
-                  const { workflow, retryAction, outcome } = deriveRow(delivery);
+                  const { workflow, retryAction, outcome, latestRun } = deriveRow(delivery);
 
                   return (
                     <tr key={delivery.id} className="align-top transition hover:bg-slate-50/20">
@@ -399,6 +435,21 @@ export function StudentDeliveriesSection({
                             <RiFileTextLine />
                             Ver informe
                           </Button>
+                          {!latestRun && (
+                            <Button
+                              variant="primary"
+                              className="text-xs"
+                              disabled={launchingId === delivery.id}
+                              onClick={() => handleLaunchEvaluation(delivery.id)}
+                            >
+                              {launchingId === delivery.id ? (
+                                <RiLoader4Line className="animate-spin" />
+                              ) : (
+                                <RiRocketLine />
+                              )}
+                              Evaluar ahora
+                            </Button>
+                          )}
                           {retryAction?.enabled ? (
                             <Button variant="primary" className="text-xs" onClick={() => handleRetry(delivery)}>
                               <RiUploadCloud2Line />

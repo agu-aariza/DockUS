@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   RiAlertLine,
   RiArrowRightLine,
@@ -7,7 +8,10 @@ import {
   RiFolderOpenLine,
   RiInboxArchiveLine,
   RiUploadCloud2Line,
+  RiRocketLine,
+  RiLoader4Line,
 } from "react-icons/ri";
+import { builderApi } from "../shared/api/builderApi";
 
 import type { SessionRecord, StudentWorkflowState } from "../shared/types";
 import { MetricCard } from "../shared/components/MetricCard";
@@ -104,6 +108,19 @@ export function StudentHomeSection({
   onNavigate,
 }: Props): JSX.Element {
   const { selection } = useWorkspace();
+  const [launchingId, setLaunchingId] = useState<string | null>(null);
+
+  const handleLaunchEvaluation = async (deliveryId: string) => {
+    setLaunchingId(deliveryId);
+    try {
+      await builderApi.runForDelivery(deliveryId);
+      await data.refresh();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLaunchingId(null);
+    }
+  };
   const {
     assignments,
     deliveries,
@@ -280,13 +297,34 @@ export function StudentHomeSection({
                     </Button>
                   ) : null}
                 </>
-              ) : workflowState === "QUEUED" ||
-                workflowState === "RUNNING" ||
-                workflowState === "RECEIVED" ? (
+              ) : workflowState === "QUEUED" || workflowState === "RUNNING" ? (
                 <Button variant="primary" onClick={() => onNavigate("entregas")}>
                   <RiArrowRightLine />
                   Ver estado de entrega
                 </Button>
+              ) : workflowState === "RECEIVED" ? (
+                <>
+                  <Button
+                    variant="primary"
+                    disabled={launchingId === activeDelivery?.id}
+                    onClick={() => activeDelivery && handleLaunchEvaluation(activeDelivery.id)}
+                  >
+                    {launchingId === activeDelivery?.id ? (
+                      <>
+                        <RiLoader4Line className="animate-spin" />
+                        Lanzando...
+                      </>
+                    ) : (
+                      <>
+                        <RiRocketLine />
+                        Evaluar ahora
+                      </>
+                    )}
+                  </Button>
+                  <Button variant="secondary" onClick={() => onNavigate("entregas")}>
+                    Ver detalles
+                  </Button>
+                </>
               ) : (
                 <>
                   <Button variant="primary" onClick={() => onNavigate("subir")}>
@@ -319,11 +357,11 @@ export function StudentHomeSection({
               items={[
                 {
                   label: "Apertura",
-                  value: formatDate(activeAssignment.opensAt),
+                  value: formatDate(activeAssignment?.opensAt),
                 },
                 {
                   label: "Cierre",
-                  value: formatDate(activeAssignment.closesAt),
+                  value: formatDate(activeAssignment?.closesAt),
                 },
                 {
                   label: "Entregas registradas",

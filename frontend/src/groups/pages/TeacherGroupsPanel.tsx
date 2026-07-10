@@ -158,23 +158,23 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
           className="lg:sticky lg:top-8"
         >
           {isCreating && (
-            <div className="mb-4 rounded-lg border border-app-border bg-slate-50 p-4">
+            <div className="mb-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 shadow-sm animate-in slide-in-from-top-2 duration-200">
               <div className="mb-3 flex items-center justify-between">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Crear grupo
                 </h4>
                 <button
                   type="button"
                   onClick={() => setIsCreating(false)}
-                  className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 transition-colors"
                   aria-label="Cerrar formulario"
                 >
-                  <RiCloseLine />
+                  <RiCloseLine className="text-base" />
                 </button>
               </div>
               <div className="space-y-3">
                 <input
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                   placeholder="Nombre del grupo (ej: 2º DAW)"
                   value={groupForm.name}
                   onChange={(e) =>
@@ -182,7 +182,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                   }
                 />
                 <input
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                   placeholder="Código corto (ej: DAW-24)"
                   value={groupForm.code}
                   onChange={(e) =>
@@ -192,7 +192,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                 <Button
                   variant="primary"
                   size="md"
-                  className="w-full"
+                  className="w-full shadow-sm"
                   disabled={!groupForm.name || !!busy}
                   onClick={async () => {
                     await handleCreateGroup();
@@ -213,7 +213,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
             />
           </div>
 
-          <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1 -mr-1 custom-scrollbar">
+          <div className="max-h-[60vh] space-y-2.5 overflow-y-auto pr-1 -mr-1 custom-scrollbar">
             {filteredGroups.map((group) => {
               const isSelected = focusedGroupId === group.id;
               return (
@@ -221,23 +221,23 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                   key={group.id}
                   type="button"
                   onClick={() => setFocusedGroupId(group.id)}
-                  className={`group flex w-full flex-col gap-3 rounded-md border p-4 text-left transition-colors ${
+                  className={`group flex w-full flex-col gap-3 rounded-xl border p-4 text-left transition-all duration-200 ${
                     isSelected
-                      ? "border-primary bg-primary-subtle"
-                      : "border-app-border bg-white hover:border-slate-300 hover:bg-slate-50"
+                      ? "border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10 shadow-sm ring-1 ring-primary/10"
+                      : "border-app-border bg-white hover:border-slate-300 hover:-translate-y-[2px] hover:shadow-md"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2">
                       <RiGroupLine
-                        className={
+                        className={`text-base transition-colors duration-200 ${
                           isSelected
                             ? "text-primary"
                             : "text-slate-400 group-hover:text-slate-500"
-                        }
+                        }`}
                       />
                       <span
-                        className={`line-clamp-1 text-sm font-semibold ${
+                        className={`line-clamp-1 text-sm font-bold transition-colors duration-200 ${
                           isSelected ? "text-primary" : "text-slate-900"
                         }`}
                       >
@@ -245,15 +245,15 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                       </span>
                     </div>
                     <RiArrowRightSLine
-                      className={`shrink-0 text-lg ${
+                      className={`shrink-0 text-lg transition-transform duration-200 ${
                         isSelected
-                          ? "text-primary"
-                          : "text-slate-300 group-hover:text-slate-400"
+                          ? "text-primary translate-x-0.5"
+                          : "text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5"
                       }`}
                     />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500">
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-medium text-slate-400">
                       {group.code || "Sin código"}
                     </span>
                     <StatusBadge tone={isSelected ? "info" : "idle"}>
@@ -333,14 +333,14 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                   <div className="flex items-center gap-1.5 text-slate-500">
                     <RiInformationFill className="text-slate-400" />
                     <span>Código:</span>
-                    <span className="font-medium text-slate-900">
+                    <span className="font-semibold text-slate-900">
                       {focusedGroup.code || "No asignado"}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-500">
                     <RiUser3Fill className="text-slate-400" />
                     <span>Matriculados:</span>
-                    <span className="font-medium text-slate-900">
+                    <span className="font-semibold text-slate-900">
                       {focusedGroup.studentCount}
                     </span>
                   </div>
@@ -373,7 +373,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                     </div>
                   }
                 >
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {(() => {
                       if (loading && allStudents.length === 0) {
                         return (
@@ -414,27 +414,27 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                         return (
                           <div
                             key={student.id}
-                            className={`flex items-center justify-between rounded-md border p-4 transition-colors ${
+                            className={`flex items-center justify-between rounded-xl border p-4 transition-all duration-200 ${
                               isEnrolled
-                                ? "border-primary/20 bg-primary-subtle/50"
-                                : "border-app-border bg-white hover:border-slate-300"
+                                ? "border-emerald-200 bg-emerald-50/30 shadow-sm"
+                                : "border-app-border bg-white hover:border-slate-300 hover:shadow-sm"
                             }`}
                           >
                             <div className="flex items-center gap-3">
                               <div
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-base ${
+                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base transition-colors duration-200 ${
                                   isEnrolled
-                                    ? "bg-primary text-white"
+                                    ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/10"
                                     : "bg-slate-100 text-slate-500"
                                 }`}
                               >
                                 {isEnrolled ? <RiCheckFill /> : <RiUser3Fill />}
                               </div>
                               <div>
-                                <h5 className="text-sm font-semibold text-slate-900">
+                                <h5 className="text-sm font-bold text-slate-900">
                                   {student.lastName}, {student.firstName}
                                 </h5>
-                                <p className="text-xs text-slate-500">{student.email}</p>
+                                <p className="text-xs text-slate-400">{student.email}</p>
                               </div>
                             </div>
 
@@ -448,8 +448,8 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                                 onClick={() =>
                                   handleToggleEnrollment(student.id, isEnrolled)
                                 }
-                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-                                  isEnrolled ? "bg-emerald-500" : "bg-slate-200"
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100 ${
+                                  isEnrolled ? "bg-emerald-500 shadow-lg shadow-emerald-500/20" : "bg-slate-200 hover:bg-slate-300"
                                 }`}
                               >
                                 <span
@@ -474,15 +474,15 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                       electrónicos, uno por línea.
                     </p>
                     <textarea
-                      className="w-full min-h-[180px] rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      placeholder={`Apellidos, Nombre\nGarcía, Juan\nestudiante@dockus.io`}
+                      className="w-full min-h-[180px] rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm font-mono text-slate-900 placeholder:text-slate-400 transition-all focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
+                      placeholder={`Apellidos, Nombre\nGarcía, Juan\nestudiante@educode.ai`}
                       value={bulkInput}
                       onChange={(e) => setBulkInput(e.target.value)}
                     />
                     <Button
                       variant="primary"
                       size="md"
-                      className="w-full"
+                      className="w-full shadow-sm hover:shadow"
                       disabled={!bulkInput.trim() || !!busy}
                       onClick={handleEnrollStudents}
                     >
@@ -505,7 +505,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                 />
               }
             >
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {(() => {
                   if (filteredStudents.length === 0) {
                     return (
@@ -520,21 +520,21 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                   return filteredStudents.map((student: UserEntity) => (
                     <div
                       key={student.id}
-                      className="flex items-center justify-between rounded-md border border-app-border bg-white p-4 opacity-70"
+                      className="flex items-center justify-between rounded-xl border border-app-border bg-white p-4 opacity-75 hover:border-slate-300 hover:opacity-100 transition-all duration-200"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-semibold uppercase text-slate-500">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-slate-100 to-slate-50 border border-slate-200/60 text-xs font-bold uppercase text-slate-500">
                           {student.firstName[0]}
                           {student.lastName[0]}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">
+                          <p className="text-sm font-bold text-slate-900">
                             {student.lastName}, {student.firstName}
                           </p>
-                          <p className="text-xs text-slate-500">{student.email}</p>
+                          <p className="text-xs text-slate-400">{student.email}</p>
                         </div>
                       </div>
-                      <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                      <span className="rounded-full border border-slate-100 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                         Selecciona un grupo
                       </span>
                     </div>
@@ -548,28 +548,28 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
 
       {/* Edit modal */}
       {isEditing && focusedGroup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-lg border border-app-border bg-white shadow-lg">
-            <div className="flex items-center justify-between border-b border-app-border px-6 py-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-100 bg-white shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
               <div>
-                <h4 className="text-base font-semibold text-slate-900">Editar grupo</h4>
-                <p className="text-sm text-slate-500">Modifica los datos del grupo.</p>
+                <h4 className="text-base font-bold text-slate-900">Editar grupo</h4>
+                <p className="text-xs text-slate-400 mt-0.5">Modifica los datos del grupo.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
                 aria-label="Cerrar"
               >
-                <RiCloseLine />
+                <RiCloseLine className="text-lg" />
               </button>
             </div>
 
             <div className="space-y-4 p-6">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-500">Nombre del grupo</label>
+                <label className="text-xs font-bold text-slate-500">Nombre del grupo</label>
                 <input
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                   value={editForm.name}
                   onChange={(e) =>
                     setEditForm((prev) => ({ ...prev, name: e.target.value }))
@@ -577,9 +577,9 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-500">Código identificador</label>
+                <label className="text-xs font-bold text-slate-500">Código identificador</label>
                 <input
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                   value={editForm.code}
                   onChange={(e) =>
                     setEditForm((prev) => ({ ...prev, code: e.target.value }))
@@ -587,9 +587,9 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-500">Descripción (opcional)</label>
+                <label className="text-xs font-bold text-slate-500">Descripción (opcional)</label>
                 <textarea
-                  className="w-full min-h-[100px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="w-full min-h-[100px] rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                   value={editForm.description}
                   onChange={(e) =>
                     setEditForm((prev) => ({ ...prev, description: e.target.value }))
@@ -598,7 +598,7 @@ export function TeacherGroupsPanel({ session }: { session: any }) {
               </div>
             </div>
 
-            <div className="flex gap-3 border-t border-app-border bg-slate-50 px-6 py-4">
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4">
               <Button
                 variant="secondary"
                 size="md"

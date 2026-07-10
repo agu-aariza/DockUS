@@ -537,95 +537,16 @@ export function ReportView({
 
         {activeTab === "technical" && (
           <div className="space-y-6">
-            {hasFeedback ? (
-              <div className="rounded-xl border border-app-border bg-white p-6">
-                {mode === "student" ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setTechOpen((current) => !current)}
-                      className="flex w-full items-center justify-between text-left"
-                      aria-expanded={techOpen}
-                    >
-                      <div>
-                        <h3 className="text-lg font-bold tracking-tight text-slate-900">
-                          Puntos de mejora detectados
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Despliega las pestañas para profundizar en la revisión de tu código fuente.
-                        </p>
-                      </div>
-                      <span
-                        className={`text-xl text-slate-400 transition-transform ${techOpen ? "rotate-180" : ""}`}
-                      >
-                        ▼
-                      </span>
-                    </button>
-                    {techOpen ? (
-                      <div>
-                        <FeedbackAxis
-                          title="Seguridad"
-                          items={techFeedback.security}
-                          runtimeFamily={runtimeFamily}
-                        />
-                        <FeedbackAxis
-                          title="Arquitectura"
-                          items={techFeedback.architecture}
-                          runtimeFamily={runtimeFamily}
-                        />
-                        <FeedbackAxis
-                          title="Calidad y Estilo"
-                          items={techFeedback.quality}
-                          runtimeFamily={runtimeFamily}
-                        />
-                        <FeedbackAxis
-                          title="Cumplimiento de rubrica"
-                          items={techFeedback.rubricCompliance}
-                          runtimeFamily={runtimeFamily}
-                        />
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    <h3 className="mb-1 text-lg font-bold tracking-tight text-slate-900">
-                      Feedback técnico
-                    </h3>
-                    <FeedbackAxis
-                      title="Seguridad"
-                      items={techFeedback.security}
-                      runtimeFamily={runtimeFamily}
-                    />
-                    <FeedbackAxis
-                      title="Arquitectura"
-                      items={techFeedback.architecture}
-                      runtimeFamily={runtimeFamily}
-                    />
-                    <FeedbackAxis
-                      title="Calidad"
-                      items={techFeedback.quality}
-                      runtimeFamily={runtimeFamily}
-                    />
-                    <FeedbackAxis
-                      title="Rúbrica"
-                      items={techFeedback.rubricCompliance}
-                      runtimeFamily={runtimeFamily}
-                    />
-                  </>
-                )}
-              </div>
+            {run.llmAssessment ? (
+              <AssessmentContextSummary llmAssessment={run.llmAssessment} mode={mode} />
             ) : (
               <div className="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-xl border border-dashed border-app-border text-center">
                 <RiShieldCheckLine className="text-4xl text-emerald-500 mb-2" aria-hidden="true" />
                 <p className="text-sm font-semibold text-slate-500">
-                  No se han registrado incidencias ni feedback técnico detallado para este run.
+                  No se ha registrado un resumen curado de evidencia para este run.
                 </p>
               </div>
             )}
-
-            {run.llmAssessment ? (
-              <AssessmentContextSummary llmAssessment={run.llmAssessment} mode={mode} />
-            ) : null}
           </div>
         )}
 

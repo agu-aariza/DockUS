@@ -133,7 +133,7 @@ function ProjectOverview({
         title="Control Operativo"
         description="Operaciones de gestión"
         headerAction={
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-slate-500">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 text-slate-500 border border-slate-200/40 shadow-sm">
             <RiSettings4Line className="text-lg" />
           </div>
         }
@@ -143,30 +143,30 @@ function ProjectOverview({
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
               <Button
                 variant="secondary"
-                className="justify-start"
+                className="justify-start shadow-sm hover:shadow"
                 onClick={onRefreshAssignments}
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-50 text-slate-500">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100/50 border border-slate-200/40 text-slate-600">
                   <RiRefreshLine />
                 </span>
                 Sincronizar asignaciones
               </Button>
               <Button
                 variant="secondary"
-                className="justify-start"
+                className="justify-start shadow-sm hover:shadow"
                 onClick={onFetchTestSuite}
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-50 text-slate-500">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100/50 border border-slate-200/40 text-slate-600">
                   <RiTestTubeLine />
                 </span>
                 Recuperar suite docente
               </Button>
               <Button
                 variant="secondary"
-                className="justify-start"
+                className="justify-start shadow-sm hover:shadow"
                 onClick={onOpenMonitoring}
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-50 text-slate-500">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100/50 border border-slate-200/40 text-slate-600">
                   <RiBarChart2Line />
                 </span>
                 Ver seguimiento
@@ -175,8 +175,8 @@ function ProjectOverview({
           </div>
 
           <div className="flex items-end xl:w-56 xl:shrink-0 xl:border-l xl:border-app-border xl:pl-6">
-            <Button variant="danger" className="w-full justify-start" onClick={onDelete}>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600">
+            <Button variant="danger" className="w-full justify-start shadow-sm" onClick={onDelete}>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100/60 border border-red-200/40 text-red-600">
                 <RiDeleteBin6Line />
               </span>
               Eliminar proyecto
@@ -339,22 +339,22 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
         icon={<RiFoldersLine />}
         badge={projects.length.toString()}
         actions={
-          <Button variant="primary" onClick={openNewProject}>
+          <Button variant="primary" onClick={openNewProject} className="shadow-sm">
             <RiFolderAddLine /> Nuevo Proyecto
           </Button>
         }
       />
 
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <Card className="flex flex-col h-full overflow-hidden">
+        <Card className="flex flex-col h-full overflow-hidden p-5">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Catálogo</p>
-              <h3 className="text-sm font-semibold text-slate-900">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Catálogo</p>
+              <h3 className="text-sm font-bold text-slate-900">
                 Proyectos
               </h3>
             </div>
-            <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-accent px-2 text-xs font-medium text-white">
+            <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
               {projects.length}
             </span>
           </div>
@@ -367,7 +367,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
             />
             <Button
               variant="secondary"
-              className="w-full justify-center"
+              className="w-full justify-center shadow-sm"
               onClick={() => void pc.refreshProjects("Catálogo actualizado.")}
               disabled={pc.loadingProjects}
             >
@@ -376,7 +376,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
             </Button>
           </div>
 
-          <div className="mt-6 flex-1 overflow-y-auto space-y-2 pr-1 -mr-1 custom-scrollbar">
+          <div className="mt-6 flex-1 overflow-y-auto space-y-2.5 pr-1 -mr-1 custom-scrollbar">
             {pc.loadingProjects ? (
               <>
                 <SkeletonCard />
@@ -384,9 +384,9 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 <SkeletonCard />
               </>
             ) : visibleProjects.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/50 px-4 py-10 text-center">
-                <RiFoldersLine className="mx-auto text-2xl text-slate-400 mb-2" />
-                <p className="text-xs font-medium text-slate-500">No se encontraron proyectos</p>
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/30 px-4 py-10 text-center">
+                <RiFoldersLine className="mx-auto text-3xl text-slate-400 mb-2" />
+                <p className="text-xs font-bold text-slate-500">No se encontraron proyectos</p>
               </div>
             ) : (
               visibleProjects.map((project) => {
@@ -397,32 +397,32 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 return (
                   <button
                     key={project.id}
-                    className={`group w-full rounded-lg border p-4 text-left transition-colors relative ${isSelected
-                      ? "border-primary bg-primary-subtle"
-                      : "border-app-border bg-white hover:border-slate-300 hover:bg-slate-50"
+                    className={`group w-full rounded-xl border p-4 text-left transition-all duration-200 relative ${isSelected
+                      ? "border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10 shadow-sm ring-1 ring-primary/10"
+                      : "border-app-border bg-white hover:border-slate-300 hover:-translate-y-[2px] hover:shadow-md"
                       }`}
                     onClick={() => openProject(project.id)}
                   >
                     <div className="flex items-start justify-between gap-3 relative">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <RiFoldersLine className={isSelected ? "text-primary" : "text-slate-400 group-hover:text-slate-500"} />
-                          <span className={`line-clamp-1 text-sm font-semibold ${isSelected ? "text-primary" : "text-slate-900"}`}>
+                          <RiFoldersLine className={`text-base transition-colors duration-200 ${isSelected ? "text-primary" : "text-slate-400 group-hover:text-slate-500"}`} />
+                          <span className={`line-clamp-1 text-sm font-bold transition-colors duration-200 ${isSelected ? "text-primary" : "text-slate-900"}`}>
                             {project.title}
                           </span>
                         </div>
-                        <div className="text-xs text-slate-500 line-clamp-1">
+                        <div className="text-xs font-medium text-slate-400 line-clamp-1">
                           {project.expectedType || "Sin stack definido"}
                         </div>
                       </div>
-                      <RiArrowRightSLine className={`text-lg transition-transform ${isSelected ? "text-primary translate-x-0.5" : "text-slate-300 group-hover:text-slate-400"}`} />
+                      <RiArrowRightSLine className={`text-lg transition-transform duration-200 ${isSelected ? "text-primary translate-x-0.5" : "text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5"}`} />
                     </div>
 
                     <div className="mt-4 flex items-center justify-between relative">
                       <div className="flex items-center gap-3">
-                        <span className={isSelected ? "text-white" : ""}>
+                        <span>
                           {isSelected ? (
-                            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-xs font-medium text-white">
+                            <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary shadow-sm">
                               {STATUS_LABEL[project.status]}
                             </span>
                           ) : (
@@ -431,19 +431,25 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         </span>
 
                         {project.teachers && project.teachers.length > 0 && (
-                          <div className="flex -space-x-1.5">
+                          <div className="flex -space-x-2">
                             {project.teachers.slice(0, 3).map((teacher) => (
                               <div
                                 key={teacher.id}
-                                className={`h-5 w-5 rounded-full border-2 flex items-center justify-center text-[7px] font-bold uppercase ${isSelected ? 'border-primary-subtle bg-primary text-white' : 'border-white bg-slate-100 text-slate-600'
-                                  }`}
+                                className={`h-6 w-6 rounded-full border-2 flex items-center justify-center text-[8px] font-bold uppercase transition-all duration-200 ${
+                                  isSelected 
+                                    ? 'border-blue-100 bg-gradient-to-tr from-primary to-blue-400 text-white shadow-sm' 
+                                    : 'border-white bg-gradient-to-tr from-slate-100 to-slate-50 text-slate-600 shadow-sm group-hover:border-slate-50'
+                                }`}
                                 title={`${teacher.firstName} ${teacher.lastName}`}
                               >
                                 {teacher.firstName[0]}{teacher.lastName[0]}
                               </div>
                             ))}
                             {project.teachers.length > 3 && (
-                              <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center text-[7px] font-bold ${isSelected ? 'border-primary-subtle bg-primary/80 text-white' : 'border-white bg-slate-50 text-slate-500'
+                              <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center text-[8px] font-bold shadow-sm ${
+                                isSelected 
+                                  ? 'border-blue-100 bg-gradient-to-tr from-primary/80 to-blue-500/80 text-white' 
+                                  : 'border-white bg-slate-50 text-slate-500'
                                 }`}>
                                 +{project.teachers.length - 3}
                               </div>
@@ -453,8 +459,8 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                       </div>
 
                       <div className="flex items-center gap-1.5">
-                        <RiTeamFill className={isSelected ? "text-primary/40" : "text-slate-300"} />
-                        <span className="text-xs text-slate-400">
+                        <RiTeamFill className={`text-base ${isSelected ? "text-primary/40" : "text-slate-300"}`} />
+                        <span className="text-xs font-medium text-slate-400">
                           {project.maxDeliveriesPerStudent} {project.maxDeliveriesPerStudent === 1 ? 'intento' : 'intentos'}
                         </span>
                       </div>
@@ -470,7 +476,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
           {detailMode === "new-project" ? (
             <SectionCard
               title="Parametrización de Práctica Académica"
-              description="Define el contrato académico, la ventana temporal y el tipo esperado para que el builder y el seguimiento sean coherentes desde el primer momento."
+              description="Define el contrato académico, la ventana temporal y el tipo esperado para que el evaluador y el seguimiento sean coherentes desde el primer momento."
               headerAction={
                 <Button
                   variant="secondary"
@@ -479,6 +485,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     setDetailMode("selected-project");
                     setActiveSubTab("catalog");
                   }}
+                  className="shadow-sm"
                 >
                   Volver al lienzo
                 </Button>
@@ -487,18 +494,18 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
               <form className="space-y-6" onSubmit={pc.handleCreate}>
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Título del proyecto</label>
+                    <label className="block text-xs font-bold text-slate-500 mb-1.5">Título del proyecto</label>
                     <input
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                       required
                       value={pc.createForm.title}
                       onChange={(e) => pc.setCreateForm(prev => ({ ...prev, title: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Estado</label>
+                    <label className="block text-xs font-bold text-slate-500 mb-1.5">Estado</label>
                     <select
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                       value={pc.createForm.status}
                       onChange={(e) => pc.setCreateForm(prev => ({ ...prev, status: e.target.value as ProjectStatus }))}
                     >
@@ -509,9 +516,9 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Contexto académico</label>
+                  <label className="block text-xs font-bold text-slate-500 mb-1.5">Contexto académico</label>
                   <textarea
-                    className="w-full min-h-[140px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    className="w-full min-h-[140px] rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                     placeholder="Describe objetivos, entregables, criterios y notas operativas."
                     value={pc.createForm.contextAcademico}
                     onChange={(e) => pc.setCreateForm(prev => ({ ...prev, contextAcademico: e.target.value }))}
@@ -519,19 +526,19 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 </div>
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Intentos máximos por alumno</label>
+                    <label className="block text-xs font-bold text-slate-500 mb-1.5">Intentos máximos por alumno</label>
                     <input
                       type="number"
                       min="1"
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                       value={pc.createForm.maxDeliveriesPerStudent}
                       onChange={(e) => pc.setCreateForm(prev => ({ ...prev, maxDeliveriesPerStudent: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Tipo esperado</label>
+                    <label className="block text-xs font-bold text-slate-500 mb-1.5">Tipo esperado</label>
                     <input
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                       placeholder="CLI, Flask, FastAPI, Django simple..."
                       value={pc.createForm.expectedType}
                       onChange={(e) => pc.setCreateForm(prev => ({ ...prev, expectedType: e.target.value }))}
@@ -540,37 +547,37 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 </div>
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Abre entregas en</label>
+                    <label className="block text-xs font-bold text-slate-500 mb-1.5">Abre entregas en</label>
                     <input
                       type="datetime-local"
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                       value={pc.createForm.opensAt}
                       onChange={(e) => pc.setCreateForm(prev => ({ ...prev, opensAt: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Cierra entregas en</label>
+                    <label className="block text-xs font-bold text-slate-500 mb-1.5">Cierra entregas en</label>
                     <input
                       type="datetime-local"
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                       value={pc.createForm.closesAt}
                       onChange={(e) => pc.setCreateForm(prev => ({ ...prev, closesAt: e.target.value }))}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Salida esperada (Oracle)</label>
+                  <label className="block text-xs font-bold text-slate-500 mb-1.5">Salida esperada (Oracle)</label>
                   <textarea
-                    className="w-full min-h-[120px] rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    className="w-full min-h-[120px] rounded-xl border border-slate-200 bg-slate-50/50 p-4 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                     placeholder="Pega aquí la salida esperada para que el evaluador compare stdout/stderr."
                     value={pc.createForm.expectedOutput}
                     onChange={(e) => pc.setCreateForm(prev => ({ ...prev, expectedOutput: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Instrucciones de rúbrica</label>
+                  <label className="block text-xs font-bold text-slate-500 mb-1.5">Instrucciones de rúbrica</label>
                   <textarea
-                    className="w-full min-h-[160px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    className="w-full min-h-[160px] rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                     placeholder="Indica los criterios docentes y el comportamiento esperado de la nota final."
                     value={pc.createForm.rubricInstructions}
                     onChange={(e) => pc.setCreateForm(prev => ({ ...prev, rubricInstructions: e.target.value }))}
@@ -580,8 +587,8 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 pt-6 border-t border-app-border">
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700">Asignar Grupos Académicos</label>
-                      <p className="text-xs text-slate-500 mt-1">Los alumnos de los grupos seleccionados serán matriculados automáticamente.</p>
+                      <label className="block text-xs font-bold text-slate-500">Asignar Grupos Académicos</label>
+                      <p className="text-[11px] text-slate-400 mt-1">Los alumnos de los grupos seleccionados serán matriculados automáticamente.</p>
                     </div>
                     <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1">
                       {pc.groups.map((group) => {
@@ -596,27 +603,27 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                                 : [...pc.createForm.assignedGroupIds, group.id];
                               pc.setCreateForm(prev => ({ ...prev, assignedGroupIds: newIds }));
                             }}
-                            className={`flex items-center justify-between p-3 rounded-lg border text-left transition-colors ${isSelected
-                                ? "border-accent bg-accent-subtle"
-                                : "border-app-border bg-white hover:border-slate-300 hover:bg-slate-50"
+                            className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all duration-200 ${isSelected
+                                ? "border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10 shadow-sm ring-1 ring-primary/10"
+                                : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                               }`}
                           >
                             <div className="flex items-center gap-3">
-                              <div className={`flex h-9 w-9 items-center justify-center rounded-md ${isSelected ? "bg-accent text-white" : "bg-slate-100 text-slate-500"
+                              <div className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${isSelected ? "bg-primary text-white shadow-sm shadow-primary/20" : "bg-slate-100 text-slate-500"
                                 }`}>
                                 <RiGroupLine />
                               </div>
                               <div>
-                                <p className={`text-sm font-medium ${isSelected ? "text-accent" : "text-slate-900"}`}>{group.name}</p>
+                                <p className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-slate-900"}`}>{group.name}</p>
                                 <p className="text-xs text-slate-500">{group.code || 'Sin código'}</p>
                               </div>
                             </div>
-                            {isSelected && <RiCheckFill className="text-accent text-lg" />}
+                            {isSelected && <RiCheckFill className="text-primary text-lg" />}
                           </button>
                         );
                       })}
                       {pc.groups.length === 0 && (
-                        <div className="p-6 text-center rounded-lg bg-slate-50 border border-dashed border-slate-300">
+                        <div className="p-6 text-center rounded-xl bg-slate-50 border border-dashed border-slate-300">
                           <RiGroupLine className="mx-auto text-2xl text-slate-400 mb-2" />
                           <p className="text-sm text-slate-500">No hay grupos creados todavía.</p>
                         </div>
@@ -626,14 +633,14 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
 
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700">Suite de Evaluación Inicial</label>
-                      <p className="text-xs text-slate-500 mt-1">Sube el archivo .zip con los tests docentes para este proyecto.</p>
+                      <label className="block text-xs font-bold text-slate-500">Suite de Evaluación Inicial</label>
+                      <p className="text-[11px] text-slate-400 mt-1">Sube el archivo .zip con los tests docentes para este proyecto.</p>
                     </div>
 
                     <div
-                      className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors h-[300px] ${pc.createForm.suiteFile
-                          ? "bg-emerald-50 border-emerald-200"
-                          : "bg-slate-50 border-slate-300 hover:border-slate-400"
+                      className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-300 h-[300px] ${pc.createForm.suiteFile
+                          ? "bg-emerald-50/30 border-emerald-300"
+                          : "bg-slate-50/40 border-slate-200 hover:border-slate-300/80"
                         }`}
                     >
                       <input
@@ -647,18 +654,18 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         }}
                       />
 
-                      <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-lg transition-colors ${pc.createForm.suiteFile ? "bg-emerald-500 text-white" : "bg-white text-slate-400 border border-slate-200"
+                      <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300 shadow-sm ${pc.createForm.suiteFile ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-white text-slate-400 border border-slate-200/60"
                         }`}>
                         {pc.createForm.suiteFile ? <RiCheckFill className="text-2xl" /> : <RiFolderUploadLine className="text-2xl" />}
                       </div>
 
                       {pc.createForm.suiteFile ? (
                         <>
-                          <h5 className="text-sm font-semibold text-emerald-900">{pc.createForm.suiteFile.name}</h5>
-                          <p className="mt-1 text-xs text-emerald-700">{(pc.createForm.suiteFile.size / 1024).toFixed(1)} KB listo para subir</p>
+                          <h5 className="text-sm font-bold text-emerald-900">{pc.createForm.suiteFile.name}</h5>
+                           <p className="mt-1 text-xs text-emerald-700">{(pc.createForm.suiteFile.size / 1024).toFixed(1)} KB listo para subir</p>
                           <button
                             type="button"
-                            className="mt-4 text-xs font-medium text-red-700 hover:underline"
+                            className="mt-4 text-xs font-semibold text-red-600 hover:underline"
                             onClick={() => pc.setCreateForm(prev => ({ ...prev, suiteFile: null }))}
                           >
                             Quitar archivo
@@ -666,13 +673,13 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         </>
                       ) : (
                         <>
-                          <h5 className="text-sm font-semibold text-slate-900">Seleccionar Suite (.zip)</h5>
+                          <h5 className="text-sm font-bold text-slate-900">Seleccionar Suite (.zip)</h5>
                           <p className="mt-1 text-xs text-slate-500">Haz clic para buscar en tu equipo</p>
                           <Button
                             type="button"
                             variant="secondary"
                             size="sm"
-                            className="mt-4"
+                            className="mt-4 shadow-sm"
                             onClick={() => document.getElementById('new-project-suite')?.click()}
                           >
                             Explorar archivos
@@ -684,7 +691,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 border-t border-app-border pt-5">
-                  <Button type="submit" variant="primary">
+                  <Button type="submit" variant="primary" className="shadow-sm">
                     <RiFolderAddLine />
                     Crear proyecto
                   </Button>
@@ -695,6 +702,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                       setDetailMode("selected-project");
                       setActiveSubTab("catalog");
                     }}
+                    className="shadow-sm"
                   >
                     Cancelar
                   </Button>
@@ -703,7 +711,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
             </SectionCard>
           ) : selectedCanvasProject ? (
             <>
-              <Card>
+              <Card className="p-5">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0 flex-1 pr-0 lg:pr-6">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -713,7 +721,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                       </StatusBadge>
                     </div>
 
-                    <h3 className="truncate text-lg font-semibold text-slate-900">
+                    <h3 className="truncate text-lg font-bold text-slate-900">
                       {selectedCanvasProject.title}
                     </h3>
 
@@ -781,7 +789,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
               ) : null}
 
               {activeSubTab === "monitoring" ? (
-                <Card>
+                <Card className="p-5">
                   <ProgressDashboard
                     session={session}
                     selectedProjectId={selectedCanvasProject.id}
@@ -792,7 +800,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
 
               {activeSubTab === "config" ? (
                 <div className="space-y-5">
-                  <nav className="sticky top-0 z-10 -mx-1 flex flex-wrap gap-2 rounded-lg border border-app-border bg-white/95 px-3 py-2 backdrop-blur-sm">
+                  <nav className="sticky top-0 z-10 -mx-1 flex flex-wrap gap-2 rounded-2xl border border-slate-100 bg-white/90 p-2.5 shadow-sm backdrop-blur-md animate-in slide-in-from-top-2 duration-300">
                     {[
                       { id: "section-settings", label: "Ajustes" },
                       { id: "section-plazos", label: "Plazos" },
@@ -805,7 +813,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         onClick={() =>
                           document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
                         }
-                        className="rounded-md border border-app-border bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-primary/40 hover:bg-primary-subtle hover:text-primary"
+                        className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-all hover:border-primary/30 hover:bg-primary-subtle hover:text-primary active:scale-[0.97]"
                       >
                         {label}
                       </button>
@@ -819,18 +827,18 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                       >
                       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                         <div className="space-y-1.5">
-                          <label className="text-sm font-medium text-slate-700">Título del proyecto</label>
+                          <label className="text-xs font-bold text-slate-500">Título del proyecto</label>
                           <input
-                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                             required
                             value={pc.editForm.title}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, title: e.target.value }))}
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-sm font-medium text-slate-700">Estado operativo</label>
+                          <label className="text-xs font-bold text-slate-500">Estado operativo</label>
                           <select
-                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                             value={pc.editForm.status}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, status: e.target.value as ProjectStatus }))}
                           >
@@ -840,39 +848,39 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                           </select>
                         </div>
                         <div className="space-y-1.5 lg:col-span-2">
-                          <label className="text-sm font-medium text-slate-700">Contexto académico y objetivos</label>
+                          <label className="text-xs font-bold text-slate-500">Contexto académico y objetivos</label>
                           <textarea
-                            className="w-full min-h-[120px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full min-h-[120px] rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                             placeholder="Describe qué deben aprender y entregar los alumnos..."
                             value={pc.editForm.contextAcademico}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, contextAcademico: e.target.value }))}
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-sm font-medium text-slate-700">Tipo de stack esperado</label>
+                          <label className="text-xs font-bold text-slate-500">Tipo de stack esperado</label>
                           <input
-                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                             placeholder="Ej. FastAPI + PostgreSQL"
                             value={pc.editForm.expectedType}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, expectedType: e.target.value }))}
                           />
                         </div>
                         <div className="space-y-1.5 lg:col-span-2">
-                          <label className="text-sm font-medium text-slate-700">Salida esperada (Oracle)</label>
+                          <label className="text-xs font-bold text-slate-500">Salida esperada (Oracle)</label>
                           <textarea
-                            className="w-full min-h-[100px] rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full min-h-[100px] rounded-xl border border-slate-200 bg-slate-50/50 p-4 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                             placeholder="Pega aquí la salida exacta que esperas que el programa imprima..."
                             value={pc.editForm.expectedOutput}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, expectedOutput: e.target.value }))}
                           />
-                          <p className="text-xs text-slate-400">El LLM comparará la salida real con este texto para verificar la corrección.</p>
+                          <p className="text-xs text-slate-400 mt-1">El LLM comparará la salida real con este texto para verificar la corrección.</p>
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-sm font-medium text-slate-700">Intentos por alumno</label>
+                          <label className="text-xs font-bold text-slate-500">Intentos por alumno</label>
                           <input
                             type="number"
                             min="1"
-                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                             value={pc.editForm.maxDeliveriesPerStudent}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, maxDeliveriesPerStudent: e.target.value }))}
                           />
@@ -888,27 +896,27 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                       >
                       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                         <div className="space-y-1.5">
-                          <label className="text-sm font-medium text-slate-700">Apertura de entregas</label>
+                          <label className="text-xs font-bold text-slate-500">Apertura de entregas</label>
                           <input
                             type="datetime-local"
-                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                             value={pc.editForm.opensAt}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, opensAt: e.target.value }))}
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-sm font-medium text-slate-700">Cierre de entregas</label>
+                          <label className="text-xs font-bold text-slate-500">Cierre de entregas</label>
                           <input
                             type="datetime-local"
-                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                             value={pc.editForm.closesAt}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, closesAt: e.target.value }))}
                           />
                         </div>
                         <div className="space-y-1.5 lg:col-span-2">
-                          <label className="text-sm font-medium text-slate-700">Instrucciones de la rúbrica</label>
+                          <label className="text-xs font-bold text-slate-500">Instrucciones de la rúbrica</label>
                           <textarea
-                            className="w-full min-h-[140px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full min-h-[140px] rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 hover:border-slate-300 transition-all"
                             placeholder="Criterios de evaluación, penalizaciones, etc."
                             value={pc.editForm.rubricInstructions}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, rubricInstructions: e.target.value }))}
@@ -926,7 +934,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                       <div className="space-y-5">
                         <div className="flex flex-col md:flex-row gap-3 items-end">
                           <div className="flex-1 w-full">
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            <label className="block text-xs font-bold text-slate-500 mb-1.5">
                               Añadir Colaborador
                             </label>
                             <VisualPicker
@@ -936,7 +944,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                                   id: teacher.id,
                                   label: `${teacher.firstName} ${teacher.lastName}`,
                                   description: teacher.email,
-                                  icon: <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
+                                  icon: <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-slate-100 to-slate-50 border border-slate-200/40 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
                                     {teacher.firstName[0]}{teacher.lastName[0]}
                                   </div>
                                 }))
@@ -946,7 +954,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                               placeholder="Buscar profesor por nombre o email..."
                             />
                           </div>
-                          <div className="px-3 py-2 bg-primary-subtle rounded-md border border-primary/10 text-primary text-xs font-medium h-10 flex items-center shrink-0">
+                          <div className="px-3.5 py-2 bg-primary-subtle rounded-xl border border-primary/10 text-primary text-xs font-semibold h-10 flex items-center shrink-0 shadow-sm">
                             <RiInformationFill className="mr-1.5" />
                             {pc.allTeachers.filter(t => !selectedCanvasProject.teachers?.some(st => st.id === t.id)).length} disponibles
                           </div>
@@ -956,15 +964,15 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                           {selectedCanvasProject.teachers?.map((teacher) => (
                             <div
                               key={teacher.id}
-                              className="group flex items-center justify-between p-3 rounded-lg border border-app-border bg-slate-50 hover:bg-white hover:border-slate-300 transition-colors"
+                              className="group flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all duration-200"
                             >
                               <div className="flex items-center gap-3">
-                                <div className="h-9 w-9 rounded-md bg-primary-subtle flex items-center justify-center text-xs font-bold text-primary">
+                                <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-primary to-blue-400 flex items-center justify-center text-xs font-bold text-white shadow-sm shadow-primary/20">
                                   {teacher.firstName[0]}{teacher.lastName[0]}
                                 </div>
                                 <div>
-                                  <p className="text-sm font-medium text-slate-900">{teacher.firstName} {teacher.lastName}</p>
-                                  <p className="text-xs text-slate-500">{teacher.email}</p>
+                                  <p className="text-sm font-semibold text-slate-900">{teacher.firstName} {teacher.lastName}</p>
+                                  <p className="text-xs text-slate-400">{teacher.email}</p>
                                 </div>
                               </div>
 
@@ -972,7 +980,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                                 <button
                                   type="button"
                                   onClick={() => pc.handleRemoveTeacher(selectedCanvasProject.id, teacher.id)}
-                                  className="p-1.5 rounded-md text-slate-400 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:outline-none"
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:outline-none"
                                   title="Eliminar del equipo"
                                   aria-label="Eliminar del equipo"
                                 >
@@ -994,12 +1002,12 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                       {pc.testSuiteResult && 'id' in pc.testSuiteResult ? (
                         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                           <div className="flex items-start gap-4">
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 border border-emerald-400">
                               <RiCheckFill className="text-2xl" />
                             </div>
                             <div className="space-y-0.5">
-                              <p className="text-sm font-semibold text-slate-900">{pc.testSuiteResult.logicalName}</p>
-                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                              <p className="text-sm font-bold text-slate-900">{pc.testSuiteResult.logicalName}</p>
+                              <div className="flex items-center gap-2 text-xs text-slate-400">
                                 <span>{formatBytes(pc.testSuiteResult.sizeBytes)}</span>
                                 <span className="h-1 w-1 rounded-full bg-slate-300" />
                                 <span>Subido el {new Date(pc.testSuiteResult.createdAt).toLocaleDateString()}</span>
@@ -1013,6 +1021,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                               variant="secondary"
                               size="sm"
                               onClick={handleOpenPreview}
+                              className="shadow-sm"
                             >
                               <RiEyeLine />
                               Ver tests
@@ -1022,6 +1031,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                               variant="secondary"
                               size="sm"
                               onClick={handleDownloadSuite}
+                              className="shadow-sm"
                             >
                               <RiFileDownloadLine />
                               Descargar
@@ -1032,6 +1042,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                               size="sm"
                               disabled={isUploadingSuite}
                               onClick={() => document.getElementById('suite-upload')?.click()}
+                              className="shadow-sm"
                             >
                               <RiFolderUploadLine />
                               {isUploadingSuite ? "Subiendo..." : "Reemplazar Suite"}
@@ -1039,13 +1050,13 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                           </div>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50/50 py-12 px-6 text-center">
-                          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 border border-slate-200">
+                        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/30 py-12 px-6 text-center hover:border-slate-300 transition-colors duration-200">
+                          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-400 border border-slate-200/60 shadow-sm">
                             <RiFolderUploadLine className="text-2xl" />
                           </div>
-                          <h5 className="text-sm font-semibold text-slate-900">No hay suite técnica configurada</h5>
-                          <p className="mt-1 mb-5 max-w-sm text-xs text-slate-500">
-                            Para evaluar automáticamente las entregas, sube una suite de tests compatible con <span className="font-medium text-slate-900">pytest</span>.
+                          <h5 className="text-sm font-bold text-slate-900">No hay suite técnica configurada</h5>
+                          <p className="mt-1 mb-5 max-w-xs text-xs leading-relaxed text-slate-500">
+                            Para evaluar automáticamente las entregas, sube una suite de tests compatible con <span className="font-semibold text-slate-900">pytest</span>.
                           </p>
                           <Button
                             type="button"
@@ -1053,6 +1064,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                             size="sm"
                             disabled={isUploadingSuite}
                             onClick={() => document.getElementById('suite-upload')?.click()}
+                            className="shadow-sm"
                           >
                             {isUploadingSuite ? (
                               <RiLoader4Line className="animate-spin" />
@@ -1074,14 +1086,14 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     </div>
 
                     <div className="flex flex-col items-center justify-between gap-4 pt-6 border-t border-app-border sm:flex-row">
-                      <div className="text-sm text-slate-500">
-                        Última modificación detectada: <span className="font-medium text-slate-900">Hace unos momentos</span>
+                      <div className="text-xs font-semibold text-slate-400">
+                        Última modificación detectada: <span className="font-semibold text-slate-900">Hace unos momentos</span>
                       </div>
                       <div className="flex flex-wrap gap-3 w-full sm:w-auto">
                         <Button
                           type="submit"
                           variant="primary"
-                          className="flex-1 sm:flex-none"
+                          className="flex-1 sm:flex-none shadow-sm"
                         >
                           <RiCheckFill />
                           Guardar configuración
@@ -1089,7 +1101,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                         <Button
                           type="button"
                           variant="danger"
-                          className="flex-1 sm:flex-none"
+                          className="flex-1 sm:flex-none shadow-sm"
                           onClick={() => {
                             if (selectedCanvasProject) {
                               pc.setDeleteId(selectedCanvasProject.id);

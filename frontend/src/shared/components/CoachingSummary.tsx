@@ -88,42 +88,54 @@ export function CoachingSummary({
 
   if (variant === "compact") {
     return (
-      <ReportCard
-        tone="indigo"
-        icon={RiListCheck3}
-        title="Antes de subir una nueva versión"
-        description={
-          blocked
-            ? "Debes corregir esto antes de pasar en el siguiente intento."
-            : "Tu entrega ya funciona, pero aún puedes mejorarla antes de la siguiente versión."
-        }
-      >
-        {coaching.mustFix.length > 0 ? (
-          <div className="mt-4">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-rose-700">
-              Debes corregir esto antes de pasar
-            </div>
-            <FindingList
-              items={coaching.mustFix.slice(0, 2)}
-              runtimeFamily={runtimeFamily}
-              variant="compact"
-            />
+      <details className="group rounded-2xl border border-indigo-200 bg-white shadow-sm overflow-hidden">
+        <summary className="flex cursor-pointer list-none items-start gap-3 p-5 select-none hover:bg-slate-50/50">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+            <RiListCheck3 className="text-xl" />
           </div>
-        ) : null}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600/80">
+              Antes de subir una nueva versión
+            </p>
+            <h3 className="mt-1 text-sm font-semibold tracking-tight text-slate-900 pr-6 relative">
+              {blocked
+                ? "Debes corregir esto antes de pasar en el siguiente intento."
+                : "Tu entrega ya funciona, pero aún puedes mejorarla antes de la siguiente versión."}
+            </h3>
+          </div>
+          <span className="text-slate-400 transition-transform group-open:rotate-180 text-lg mt-2">
+            ▼
+          </span>
+        </summary>
 
-        {coaching.shouldImprove.length > 0 ? (
-          <div className="mt-4">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-amber-700">
-              Podrías mejorar también
+        <div className="border-t border-indigo-100 p-5 bg-slate-50/20 space-y-4">
+          {coaching.mustFix.length > 0 ? (
+            <div>
+              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-rose-600">
+                Debes corregir esto antes de pasar
+              </div>
+              <FindingList
+                items={coaching.mustFix.slice(0, 2)}
+                runtimeFamily={runtimeFamily}
+                variant="compact"
+              />
             </div>
-            <FindingList
-              items={coaching.shouldImprove.slice(0, 2)}
-              runtimeFamily={runtimeFamily}
-              variant="compact"
-            />
-          </div>
-        ) : null}
-      </ReportCard>
+          ) : null}
+
+          {coaching.shouldImprove.length > 0 ? (
+            <div>
+              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-600">
+                Podrías mejorar también
+              </div>
+              <FindingList
+                items={coaching.shouldImprove.slice(0, 2)}
+                runtimeFamily={runtimeFamily}
+                variant="compact"
+              />
+            </div>
+          ) : null}
+        </div>
+      </details>
     );
   }
 

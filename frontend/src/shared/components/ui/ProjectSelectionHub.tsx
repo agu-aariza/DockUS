@@ -63,8 +63,8 @@ export function ProjectSelectionHub({
             {subtitle}
           </p>
         </div>
-        <div className="rounded-lg border-2 border-dashed border-app-border bg-slate-50/70 px-8 py-16 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-slate-200/60 text-slate-500">
+        <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/30 px-8 py-16 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white border border-slate-200/60 text-slate-400 shadow-sm">
             <RiTeamFill className="text-2xl" />
           </div>
           <h3 className="text-lg font-bold tracking-tight text-slate-900">
@@ -97,11 +97,11 @@ export function ProjectSelectionHub({
             <button
               key={project.id}
               onClick={() => onSelect(project.id, project.title)}
-              className="group relative flex flex-col text-left bg-white border border-app-border rounded-lg p-8 transition-all hover:border-primary/30 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="group relative flex flex-col text-left bg-white border border-slate-200/80 rounded-2xl p-8 transition-all duration-300 hover:border-primary/40 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-primary/10 shadow-sm"
             >
               {/* Header */}
               <div className="flex items-start justify-between mb-6">
-                <div className={`p-4 rounded-lg ${status.iconWrap} group-hover:bg-primary/10 group-hover:text-primary transition-colors`}>
+                <div className={`p-4 rounded-xl ${status.iconWrap} group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300 shadow-sm`}>
                   <RiStackFill className="text-3xl" />
                 </div>
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${status.chip}`}>
@@ -119,7 +119,7 @@ export function ProjectSelectionHub({
               </p>
 
               {/* Stats Footer */}
-              <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">
+              <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between w-full">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5 text-slate-400">
                     <RiUser3Fill className="text-base" />
@@ -134,14 +134,14 @@ export function ProjectSelectionHub({
                       {project.teachers.slice(0, 3).map((teacher) => (
                         <div 
                           key={teacher.id}
-                          className="h-6 w-6 rounded-full border-2 border-white bg-primary/10 flex items-center justify-center text-[8px] font-bold text-primary uppercase"
+                          className="h-6 w-6 rounded-full border-2 border-white bg-gradient-to-tr from-primary to-blue-400 flex items-center justify-center text-[8px] font-bold text-white uppercase shadow-sm"
                           title={`${teacher.firstName} ${teacher.lastName}`}
                         >
                           {teacher.firstName[0]}{teacher.lastName[0]}
                         </div>
                       ))}
                       {project.teachers.length > 3 && (
-                        <div className="h-6 w-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-400">
+                        <div className="h-6 w-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-400 shadow-sm">
                           +{project.teachers.length - 3}
                         </div>
                       )}

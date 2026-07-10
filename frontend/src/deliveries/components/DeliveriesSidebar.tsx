@@ -62,18 +62,18 @@ export function DeliveriesSidebar({
   handleQuickGrade: (_id: string, _grade: number) => void;
 }) {
   return (
-    <aside className="flex flex-col h-full rounded-lg border border-app-border bg-white p-5 overflow-hidden lg:sticky lg:top-24">
+    <aside className="flex flex-col h-full rounded-2xl border border-slate-200 bg-white p-5 overflow-hidden lg:sticky lg:top-24 shadow-sm">
       <div className="flex items-center justify-between gap-3 mb-5">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">
+          <h3 className="text-sm font-bold text-slate-900">
             Cola Operativa
           </h3>
-          <p className="mt-0.5 text-xs text-slate-500">Entregas</p>
+          <p className="mt-0.5 text-xs text-slate-400 font-medium">Entregas</p>
         </div>
         <Button
           variant="secondary"
           size="sm"
-          className="h-9 w-9 !p-0"
+          className="h-9 w-9 !p-0 shadow-sm"
           onClick={onRefreshDeliveries}
           disabled={!selectedAssignmentId}
         >
@@ -83,7 +83,7 @@ export function DeliveriesSidebar({
 
       <div className="space-y-4">
         <div>
-          <label className="label-text">Proyecto</label>
+          <label className="label-text text-xs font-bold text-slate-500 mb-1.5 block">Proyecto</label>
           <VisualPicker
             options={projectOptions}
             value={selectedProjectId}
@@ -94,7 +94,7 @@ export function DeliveriesSidebar({
         </div>
 
         <div>
-          <label className="label-text">Asignación</label>
+          <label className="label-text text-xs font-bold text-slate-500 mb-1.5 block">Asignación</label>
           <VisualPicker
             options={assignmentOptions}
             value={selectedAssignmentId}
@@ -117,10 +117,10 @@ export function DeliveriesSidebar({
               key={key}
               type="button"
               onClick={() => onQuickFilterChange(key)}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-[0.97] hover:shadow-sm ${
                 quickFilterKey === key
-                  ? "bg-primary text-white"
-                  : "border border-app-border bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  ? "bg-primary text-white shadow-sm shadow-primary/20"
+                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
               }`}
             >
               {label}
@@ -155,23 +155,23 @@ export function DeliveriesSidebar({
         </div>
       </div>
 
-      <div className="mt-5 border-t border-app-border pt-4">
-        <div className="flex items-center justify-between gap-3">
+      <div className="mt-5 border-t border-slate-100 pt-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Selección actual
             </p>
-            <div className="mt-1 text-sm text-slate-900">
+            <div className="mt-1 text-sm font-semibold text-slate-900">
               <AssignmentLabel assignment={selectedAssignment} />
             </div>
           </div>
         </div>
 
-        <div className="mt-3 space-y-2">
+        <div className="space-y-2.5">
           {loadingDeliveries ? (
             <SkeletonTable rows={4} />
           ) : visibleDeliveries.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-app-border bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/30 px-4 py-8 text-center text-xs font-semibold text-slate-400 leading-relaxed">
               {!selectedAssignmentId
                 ? "Selecciona una asignación para cargar entregas."
                 : "No hay entregas con los filtros actuales."}
