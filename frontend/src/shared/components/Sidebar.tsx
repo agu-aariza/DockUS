@@ -33,6 +33,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { selection, isMinimized, setIsMinimized } = useWorkspace();
   const isWorkspaceActive = Boolean(selection.projectId || selection.assignmentId || selection.deliveryId);
 
+  const userInitial = userEmail ? userEmail.charAt(0).toUpperCase() : 'U';
+
   const teacherMainNavigation = [
     { id: 'summary', label: 'Panel de Control', icon: RiLayoutGridLine },
     { id: 'groups', label: 'Grupos', icon: RiGroupLine },
@@ -61,17 +63,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <button
         onClick={() => onTabChange(item.id)}
         aria-current={isActive ? "page" : undefined}
-        className={`group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+        className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
           isActive
-            ? "bg-slate-800 text-white"
-            : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+            ? "bg-white/10 text-white shadow-sm ring-1 ring-white/5"
+            : "text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:translate-x-1"
         }`}
       >
-        <span className={`flex items-center justify-center ${isActive ? 'text-primary' : 'text-slate-500 group-hover:text-slate-300'}`}>
+        {/* Active side indicator */}
+        {isActive && (
+          <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-md bg-primary" aria-hidden="true" />
+        )}
+        <span className={`flex items-center justify-center transition-colors duration-200 ${isActive ? 'text-primary' : 'text-slate-500 group-hover:text-slate-300'}`}>
           <Icon className="text-lg" />
         </span>
-        {item.label}
-        {isActive && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />}
+        <span className="transition-transform duration-200">{item.label}</span>
       </button>
     );
   };
@@ -84,16 +89,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <button
         onClick={() => onStudentTabChange?.(item.id)}
         aria-current={isActive ? "page" : undefined}
-        className={`group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+        className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
           isActive
-            ? "bg-slate-800 text-white"
-            : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+            ? "bg-white/10 text-white shadow-sm ring-1 ring-white/5"
+            : "text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:translate-x-1"
         }`}
       >
-        <span className={`flex items-center justify-center ${isActive ? 'text-primary' : 'text-slate-500 group-hover:text-slate-300'}`}>
+        {/* Active side indicator */}
+        {isActive && (
+          <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-md bg-primary" aria-hidden="true" />
+        )}
+        <span className={`flex items-center justify-center transition-colors duration-200 ${isActive ? 'text-primary' : 'text-slate-500 group-hover:text-slate-300'}`}>
           <Icon className="text-lg" />
         </span>
-        <span className="flex-1 text-left">{item.label}</span>
+        <span className="flex-1 text-left transition-transform duration-200">{item.label}</span>
         {showBadge && <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" aria-hidden="true" />}
       </button>
     );
@@ -101,34 +110,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-950 xl:flex">
-      <div className="border-b border-slate-800 px-4 py-4">
+      {/* Brand Header */}
+      <div className="border-b border-slate-800 px-5 py-5">
         <div className="flex items-center gap-3">
-          <img src="/logos/Logo01.png" alt="DockUS" className="h-9 w-9 rounded-md border border-slate-700" />
+          <img
+            src="/logos/Logo01.png"
+            alt="EduCode AI"
+            className="h-10 w-10 rounded-full shadow-md shadow-black/30 border border-slate-800"
+          />
           <div>
-            <h1 className="text-base font-semibold tracking-tight text-white">DockUS</h1>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            <h1 className="text-base font-bold tracking-wider text-white">EduCode AI</h1>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
               {isStudent ? 'Espacio alumno' : 'Gestión académica'}
             </span>
           </div>
         </div>
       </div>
 
+      {/* Navigation Links */}
       <div className="flex-1 overflow-y-auto p-3 space-y-6">
         {isStudent ? (
-          <nav className="space-y-0.5" aria-label="Navegación de alumno">
+          <nav className="space-y-1" aria-label="Navegación de alumno">
             {studentTabNavigation.map(item => <StudentTabItem key={item.id} item={item} />)}
           </nav>
         ) : (
           <>
-            <nav className="space-y-0.5" aria-label="Navegación principal">
+            <nav className="space-y-1" aria-label="Navegación principal">
               {teacherMainNavigation.map(item => <NavItem key={item.id} item={item} />)}
             </nav>
 
-            <div>
-              <div className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+            <div className="space-y-1">
+              <div className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
                 Administración
               </div>
-              <nav className="space-y-0.5" aria-label="Navegación de administración">
+              <nav className="space-y-1" aria-label="Navegación de administración">
                 {adminNavigation.map(item => <NavItem key={item.id} item={item} />)}
               </nav>
             </div>
@@ -136,11 +151,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      <div className="mt-auto border-t border-slate-800 px-3 py-3 space-y-3">
+      {/* Footer Section */}
+      <div className="mt-auto border-t border-slate-800 p-3 space-y-3">
         {isWorkspaceActive && isMinimized && (
           <button
             onClick={() => setIsMinimized(false)}
-            className="flex w-full items-center gap-3 rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-left transition-colors hover:border-slate-700"
+            className="flex w-full items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-left transition-colors hover:border-slate-700"
             title="Expandir espacio de trabajo"
           >
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -157,22 +173,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         )}
 
-        <div className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2.5">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-            Sesión
+        {/* User Session Profile Widget */}
+        <div className="flex items-center gap-3 rounded-xl border border-slate-800/80 bg-slate-900/50 p-3 shadow-inner">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-blue-400 text-sm font-bold text-white shadow">
+            {userInitial}
           </div>
-          <div className="mt-1 truncate text-sm font-medium text-slate-200">{userEmail}</div>
-          <div className="text-[10px] text-slate-500">
-            {userRole}
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-xs font-semibold text-slate-200" title={userEmail}>
+              {userEmail}
+            </div>
+            <div className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+              {userRole}
+            </div>
           </div>
         </div>
 
+        {/* Logout button */}
         <button
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-200"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-400 group"
           onClick={onLogout}
         >
-          <RiLogoutBoxRLine className="text-lg" />
-          Cerrar sesión
+          <RiLogoutBoxRLine className="text-lg text-slate-500 group-hover:text-red-400 transition-colors duration-200" />
+          <span>Cerrar sesión</span>
         </button>
       </div>
     </aside>

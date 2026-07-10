@@ -188,8 +188,8 @@ function App(): JSX.Element {
     clearAuthWarning();
   }, [authWarning, clearAuthWarning, pushToast]);
 
-  const handleAuthSuccess = (response: AuthResponse, label?: string) => {
-    addSession(response, label);
+  const handleAuthSuccess = (response: AuthResponse) => {
+    addSession(response);
     if (response.user.role === 'STUDENT') {
       navigate("/mi-espacio");
     } else {

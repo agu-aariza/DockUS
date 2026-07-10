@@ -38,3 +38,6 @@ frontend/.tmp-test-dist/*
 .impeccable/
 audit/*
 memoria_tfg/*
+diagramas_tfg/
+ai_context/
+memoria_tfg.zip

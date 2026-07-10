@@ -86,8 +86,8 @@ export const AppShell: React.FC<AppShellProps> = ({
               <RiMenuLine className="text-2xl" />
             </button>
             <div className="flex items-center gap-2">
-              <img src="/logos/Logo01.png" alt="" className="h-7 w-7 rounded-md border border-app-border" />
-              <span className="font-semibold tracking-tight text-slate-900">DockUS</span>
+              <img src="/logos/Logo01.png" alt="" className="h-7 w-7 rounded-full shadow-sm" />
+              <span className="font-bold tracking-tight text-slate-900">EduCode AI</span>
             </div>
           </div>
           {userEmail && (

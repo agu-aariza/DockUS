@@ -178,6 +178,102 @@
   background: #94a3b8;
 }
 
+/* ── Auth Panel Animations ──────────────────────────────────── */
+
+@keyframes auth-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+@keyframes auth-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes auth-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes auth-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes auth-particle-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+  25% { transform: translate(30px, -50px) scale(1.2); opacity: 0.7; }
+  50% { transform: translate(-20px, -100px) scale(0.8); opacity: 0.3; }
+  75% { transform: translate(40px, -60px) scale(1.1); opacity: 0.6; }
+}
+
+@keyframes auth-particle-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+  33% { transform: translate(-40px, -70px) scale(1.3); opacity: 0.6; }
+  66% { transform: translate(20px, -40px) scale(0.9); opacity: 0.5; }
+}
+
+@keyframes auth-particle-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  20% { transform: translate(50px, -30px) scale(0.7); opacity: 0.3; }
+  40% { transform: translate(-10px, -80px) scale(1.4); opacity: 0.7; }
+  60% { transform: translate(30px, -120px) scale(0.6); opacity: 0.4; }
+  80% { transform: translate(-30px, -50px) scale(1.1); opacity: 0.6; }
+}
+
+@keyframes auth-gradient-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes auth-check-pop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes auth-glow-pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes auth-tab-bounce {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(1.08); }
+}
+
+.auth-shake {
+  animation: auth-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.auth-slide-up {
+  animation: auth-slide-up 0.7s var(--motion-ease-out) both;
+}
+
+.auth-slide-right {
+  animation: auth-slide-right 0.7s var(--motion-ease-out) both;
+}
+
+.auth-shimmer-btn {
+  background-size: 200% auto;
+  animation: auth-shimmer 3s linear infinite;
+}
+
+/* ── / Auth Panel Animations ───────────────────────────────── */
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -194,7 +290,11 @@
 
   .status-pulse,
   .motion-modal-backdrop,
-  .motion-modal-panel {
+  .motion-modal-panel,
+  .auth-shake,
+  .auth-slide-up,
+  .auth-slide-right,
+  .auth-shimmer-btn {
     animation: none !important;
   }
 
