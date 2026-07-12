@@ -97,14 +97,27 @@ export class ProjectAssignmentsService {
     if (assignmentsWithGroup.length === 0) return;
 
     // 2. For each project, ensure all new students have an assignment.
+    const projectIds = assignmentsWithGroup.map((a) => a.projectId);
+    const existings = await this.assignmentsRepository.find({
+      where: {
+        projectId: In(projectIds),
+        studentId: In(studentIds),
+      },
+    });
+
+    const existingMap = new Map<string, ProjectAssignment>(
+      existings.map((e) => [`${e.projectId}_${e.studentId}`, e]),
+    );
+
+    const toSave: ProjectAssignment[] = [];
+
     for (const { projectId, assignedById } of assignmentsWithGroup) {
       for (const studentId of studentIds) {
-        const existing = await this.assignmentsRepository.findOne({
-          where: { projectId, studentId },
-        });
+        const key = `${projectId}_${studentId}`;
+        const existing = existingMap.get(key);
 
         if (!existing) {
-          await this.assignmentsRepository.save(
+          toSave.push(
             this.assignmentsRepository.create({
               projectId,
               studentId,
@@ -115,13 +128,24 @@ export class ProjectAssignmentsService {
           );
         } else {
           // If assignment exists, ensure groupId is in sourceGroupIds
+          let changed = false;
           if (!existing.sourceGroupIds.includes(groupId)) {
             existing.sourceGroupIds.push(groupId);
-            existing.revokedAt = null; // Reactivate if it was revoked
-            await this.assignmentsRepository.save(existing);
+            changed = true;
+          }
+          if (existing.revokedAt !== null) {
+            existing.revokedAt = null;
+            changed = true;
+          }
+          if (changed) {
+            toSave.push(existing);
           }
         }
       }
+    }
+
+    if (toSave.length > 0) {
+      await this.assignmentsRepository.save(toSave);
     }
   }
 
@@ -230,21 +254,28 @@ export class ProjectAssignmentsService {
       }
     }
 
+    const studentIds = students.map((s) => s.id);
+    const existingAssignments = await this.assignmentsRepository.find({
+      where: {
+        projectId: project.id,
+        studentId: In(studentIds),
+      },
+    });
+
+    const assignmentMap = new Map(
+      existingAssignments.map((a) => [a.studentId, a]),
+    );
+    const assignmentsToSave: ProjectAssignment[] = [];
     let assignedCount = 0;
     let reactivatedCount = 0;
     let alreadyActiveCount = 0;
-    for (const student of students) {
-      const existing = await this.assignmentsRepository.findOne({
-        where: {
-          projectId: project.id,
-          studentId: student.id,
-        },
-      });
 
+    for (const student of students) {
+      const existing = assignmentMap.get(student.id);
       const sourceGroups = Array.from(studentToGroups.get(student.id) || []);
 
       if (!existing) {
-        await this.assignmentsRepository.save(
+        assignmentsToSave.push(
           this.assignmentsRepository.create({
             projectId: project.id,
             studentId: student.id,
@@ -255,32 +286,31 @@ export class ProjectAssignmentsService {
           }),
         );
         assignedCount += 1;
-        continue;
-      }
-
-      if (existing.revokedAt) {
+      } else if (existing.revokedAt) {
         existing.assignedById = actor.userId;
         existing.assignedAt = new Date();
         existing.revokedAt = null;
         existing.sourceGroupIds = sourceGroups;
-        await this.assignmentsRepository.save(existing);
+        assignmentsToSave.push(existing);
         reactivatedCount += 1;
-        continue;
-      }
-
-      // If already active, we might want to append new source groups
-      let changed = false;
-      for (const gid of sourceGroups) {
-        if (!existing.sourceGroupIds.includes(gid)) {
-          existing.sourceGroupIds.push(gid);
-          changed = true;
+      } else {
+        // If already active, we might want to append new source groups
+        let changed = false;
+        for (const gid of sourceGroups) {
+          if (!existing.sourceGroupIds.includes(gid)) {
+            existing.sourceGroupIds.push(gid);
+            changed = true;
+          }
         }
+        if (changed) {
+          assignmentsToSave.push(existing);
+        }
+        alreadyActiveCount += 1;
       }
-      if (changed) {
-        await this.assignmentsRepository.save(existing);
-      }
+    }
 
-      alreadyActiveCount += 1;
+    if (assignmentsToSave.length > 0) {
+      await this.assignmentsRepository.save(assignmentsToSave);
     }
 
     const assignments = await this.listByProject(project.id, actor);

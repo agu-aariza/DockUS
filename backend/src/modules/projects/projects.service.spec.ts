@@ -205,20 +205,22 @@ describe('ProjectsService', () => {
   });
 
   it('debe aplicar soft delete al eliminar proyecto', async () => {
+    const actor = buildActor(UserRole.ADMIN);
     const project = buildProject();
     projectLifecycleService.remove.mockResolvedValue({
       message: 'Proyecto marcado como eliminado correctamente.',
     });
 
-    const result = await service.remove(project.id);
+    const result = await service.remove(project.id, actor);
 
-    expect(projectLifecycleService.remove).toHaveBeenCalledWith(project.id);
+    expect(projectLifecycleService.remove).toHaveBeenCalledWith(project.id, actor);
     expect(result).toEqual({
       message: 'Proyecto marcado como eliminado correctamente.',
     });
   });
 
   it('debe restaurar proyecto eliminado y devolver registro activo', async () => {
+    const actor = buildActor(UserRole.ADMIN);
     const deletedProject = buildProject({
       deletedAt: new Date('2026-03-08T00:00:00.000Z'),
     });
@@ -228,21 +230,23 @@ describe('ProjectsService', () => {
 
     projectLifecycleService.restore.mockResolvedValue(restoredProject);
 
-    const result = await service.restore(deletedProject.id);
+    const result = await service.restore(deletedProject.id, actor);
 
     expect(projectLifecycleService.restore).toHaveBeenCalledWith(
       deletedProject.id,
+      actor,
     );
     expect(result.id).toBe(restoredProject.id);
   });
 
   it('debe lanzar conflicto al restaurar un proyecto ya activo', async () => {
+    const actor = buildActor(UserRole.ADMIN);
     const activeProject = buildProject({
       deletedAt: undefined as unknown as Date,
     });
     projectLifecycleService.restore.mockRejectedValue(new ConflictException());
 
-    await expect(service.restore(activeProject.id)).rejects.toBeInstanceOf(
+    await expect(service.restore(activeProject.id, actor)).rejects.toBeInstanceOf(
       ConflictException,
     );
   });

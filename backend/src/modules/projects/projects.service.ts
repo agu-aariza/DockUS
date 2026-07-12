@@ -186,8 +186,11 @@ export class ProjectsService {
     return this.projectLifecycleService.updateStatus(id, status, actor);
   }
 
-  async remove(id: string): Promise<{ message: string }> {
-    return this.projectLifecycleService.remove(id);
+  async remove(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ message: string }> {
+    return this.projectLifecycleService.remove(id, actor);
   }
 
   async getOperationalIssues(
@@ -238,8 +241,8 @@ export class ProjectsService {
     );
   }
 
-  async restore(id: string): Promise<Project> {
-    return this.projectLifecycleService.restore(id);
+  async restore(id: string, actor: AuthenticatedUser): Promise<Project> {
+    return this.projectLifecycleService.restore(id, actor);
   }
 
   async addTeacher(

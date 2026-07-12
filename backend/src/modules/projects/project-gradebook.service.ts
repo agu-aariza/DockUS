@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { BuildRun } from './builder/domain/entities/build-run.entity';
 import {
@@ -276,13 +276,8 @@ export class ProjectGradebookService {
       assignmentIds.length === 0
         ? []
         : await this.deliveriesRepository.find({
-            where: assignmentIds.map((assignmentId) => ({ assignmentId })),
-            relations: {
-              assignment: {
-                project: true,
-                student: true,
-              },
-            },
+            where: { assignmentId: In(assignmentIds) },
+            relations: {},
             order: {
               createdAt: 'ASC',
             },
@@ -302,7 +297,7 @@ export class ProjectGradebookService {
       deliveryIds.length === 0
         ? []
         : await this.buildRunsRepository.find({
-            where: deliveryIds.map((deliveryId) => ({ deliveryId })),
+            where: { deliveryId: In(deliveryIds) },
             order: { createdAt: 'DESC' },
           });
     const latestRunByDeliveryId = new Map<string, BuildRun>();

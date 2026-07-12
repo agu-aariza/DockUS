@@ -7,6 +7,7 @@ describe('ProjectAssignmentsService', () => {
     const assignmentsRepository = {
       create: jest.fn((input) => input),
       findOne: jest.fn().mockResolvedValue(null),
+      find: jest.fn().mockResolvedValue([]),
       save: jest.fn(async (input) => input),
     } as any;
     const usersRepository = {

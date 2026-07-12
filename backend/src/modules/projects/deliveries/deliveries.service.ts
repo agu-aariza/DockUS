@@ -179,9 +179,31 @@ export class DeliveriesService {
 
     const [deliveries, total] = await queryBuilder.getManyAndCount();
 
+    const assignmentIds = Array.from(
+      new Set(deliveries.map((d) => d.assignmentId).filter(Boolean)),
+    );
+    const maxVersionsMap = new Map<string, number>();
+
+    if (assignmentIds.length > 0) {
+      const results = await this.deliveriesRepository
+        .createQueryBuilder('delivery')
+        .withDeleted()
+        .select('delivery.assignmentId', 'assignmentId')
+        .addSelect('MAX(delivery.version)', 'maxVersion')
+        .where('delivery.assignmentId IN (:...assignmentIds)', { assignmentIds })
+        .groupBy('delivery.assignmentId')
+        .getRawMany<{ assignmentId: string; maxVersion: string | null }>();
+
+      for (const r of results) {
+        maxVersionsMap.set(r.assignmentId, Number.parseInt(r.maxVersion ?? '0', 10) || 0);
+      }
+    }
+
     return {
       data: await Promise.all(
-        deliveries.map((delivery) => this.toResponse(delivery)),
+        deliveries.map((delivery) =>
+          this.toResponse(delivery, maxVersionsMap.get(delivery.assignmentId)),
+        ),
       ),
       meta: buildPaginationMeta(page, limit, total),
     };
