@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { MinioStorageService } from '../../shared/infrastructure/storage/minio-storage.service';
 import { UserRole } from '../users/entities/user.entity';
@@ -140,11 +140,29 @@ export class ProjectOperationalIssuesService {
     } satisfies Record<ReconcileOperationalIssueCategory, number>;
     const actions: ProjectOperationalIssuesReconcileResult['actions'] = [];
 
-    for (const candidate of candidates.orphanAssignments) {
-      if (!requestedCategories.includes('orphanAssignments')) {
-        continue;
+    if (requestedCategories.includes('orphanAssignments') && mode === 'apply') {
+      const assignmentIds = candidates.orphanAssignments.map((c) => c.id);
+      if (assignmentIds.length > 0) {
+        await this.assignmentsRepository.update(
+          { id: In(assignmentIds), revokedAt: IsNull() },
+          { revokedAt: new Date() },
+        );
+        applied.orphanAssignments = assignmentIds.length;
+        for (const candidate of candidates.orphanAssignments) {
+          actions.push({
+            category: 'orphanAssignments',
+            targetId: candidate.id,
+            action: 'revoke_assignment',
+            outcome: 'applied',
+            detail: 'Asignación revocada para excluirla del flujo operativo.',
+          });
+        }
       }
-      if (mode === 'dry-run') {
+    } else {
+      for (const candidate of candidates.orphanAssignments) {
+        if (!requestedCategories.includes('orphanAssignments')) {
+          continue;
+        }
         actions.push({
           category: 'orphanAssignments',
           targetId: candidate.id,
@@ -152,39 +170,34 @@ export class ProjectOperationalIssuesService {
           outcome: 'would_apply',
           detail: 'La asignación se marcaría como revocada.',
         });
-        continue;
       }
-
-      const assignment = await this.assignmentsRepository.findOne({
-        where: { id: candidate.id },
-      });
-      if (!assignment) {
-        actions.push({
-          category: 'orphanAssignments',
-          targetId: candidate.id,
-          action: 'revoke_assignment',
-          outcome: 'failed',
-          detail: 'La asignación ya no existe en la base de datos.',
-        });
-        continue;
-      }
-      assignment.revokedAt = assignment.revokedAt ?? new Date();
-      await this.assignmentsRepository.save(assignment);
-      applied.orphanAssignments += 1;
-      actions.push({
-        category: 'orphanAssignments',
-        targetId: candidate.id,
-        action: 'revoke_assignment',
-        outcome: 'applied',
-        detail: 'Asignación revocada para excluirla del flujo operativo.',
-      });
     }
 
-    for (const candidate of candidates.orphanDeliveries) {
-      if (!requestedCategories.includes('orphanDeliveries')) {
-        continue;
+    if (requestedCategories.includes('orphanDeliveries') && mode === 'apply') {
+      const deliveryIds = candidates.orphanDeliveries.map((c) => c.id);
+      if (deliveryIds.length > 0) {
+        const deliveriesToSoftRemove = await this.deliveriesRepository.find({
+          where: { id: In(deliveryIds) },
+        });
+        if (deliveriesToSoftRemove.length > 0) {
+          await this.deliveriesRepository.softRemove(deliveriesToSoftRemove);
+          applied.orphanDeliveries = deliveriesToSoftRemove.length;
+        }
+        for (const candidate of candidates.orphanDeliveries) {
+          actions.push({
+            category: 'orphanDeliveries',
+            targetId: candidate.id,
+            action: 'soft_delete_delivery',
+            outcome: 'applied',
+            detail: 'Entrega marcada como eliminada para evitar ruido operativo.',
+          });
+        }
       }
-      if (mode === 'dry-run') {
+    } else {
+      for (const candidate of candidates.orphanDeliveries) {
+        if (!requestedCategories.includes('orphanDeliveries')) {
+          continue;
+        }
         actions.push({
           category: 'orphanDeliveries',
           targetId: candidate.id,
@@ -192,38 +205,40 @@ export class ProjectOperationalIssuesService {
           outcome: 'would_apply',
           detail: 'La entrega se marcaría como eliminada.',
         });
-        continue;
       }
-
-      const delivery = await this.deliveriesRepository.findOne({
-        where: { id: candidate.id },
-      });
-      if (!delivery) {
-        actions.push({
-          category: 'orphanDeliveries',
-          targetId: candidate.id,
-          action: 'soft_delete_delivery',
-          outcome: 'failed',
-          detail: 'La entrega ya no existe en la base de datos.',
-        });
-        continue;
-      }
-      await this.deliveriesRepository.softRemove(delivery);
-      applied.orphanDeliveries += 1;
-      actions.push({
-        category: 'orphanDeliveries',
-        targetId: candidate.id,
-        action: 'soft_delete_delivery',
-        outcome: 'applied',
-        detail: 'Entrega marcada como eliminada para evitar ruido operativo.',
-      });
     }
 
-    for (const candidate of candidates.orphanStorageObjects) {
-      if (!requestedCategories.includes('orphanStorageObjects')) {
-        continue;
+    if (requestedCategories.includes('orphanStorageObjects') && mode === 'apply') {
+      const storageIds = candidates.orphanStorageObjects.map((c) => c.id);
+      if (storageIds.length > 0) {
+        const storageObjects = await this.storageObjectsRepository.find({
+          where: { id: In(storageIds) },
+        });
+        for (const obj of storageObjects) {
+          await this.minioStorageService
+            .deleteObject(obj.bucket, obj.objectKey)
+            .catch(() => undefined);
+        }
+        if (storageObjects.length > 0) {
+          await this.storageObjectsRepository.softRemove(storageObjects);
+          applied.orphanStorageObjects = storageObjects.length;
+        }
+        for (const candidate of candidates.orphanStorageObjects) {
+          actions.push({
+            category: 'orphanStorageObjects',
+            targetId: candidate.id,
+            action: 'soft_delete_storage_object',
+            outcome: 'applied',
+            detail:
+              'Objeto físico eliminado cuando fue posible y registro marcado como eliminado.',
+          });
+        }
       }
-      if (mode === 'dry-run') {
+    } else {
+      for (const candidate of candidates.orphanStorageObjects) {
+        if (!requestedCategories.includes('orphanStorageObjects')) {
+          continue;
+        }
         actions.push({
           category: 'orphanStorageObjects',
           targetId: candidate.id,
@@ -232,36 +247,7 @@ export class ProjectOperationalIssuesService {
           detail:
             'Se intentaría borrar el objeto físico y después marcar el registro como eliminado.',
         });
-        continue;
       }
-
-      const storageObject = await this.storageObjectsRepository.findOne({
-        where: { id: candidate.id },
-      });
-      if (!storageObject) {
-        actions.push({
-          category: 'orphanStorageObjects',
-          targetId: candidate.id,
-          action: 'soft_delete_storage_object',
-          outcome: 'failed',
-          detail: 'El objeto de storage ya no existe en la base de datos.',
-        });
-        continue;
-      }
-
-      await this.minioStorageService
-        .deleteObject(storageObject.bucket, storageObject.objectKey)
-        .catch(() => undefined);
-      await this.storageObjectsRepository.softRemove(storageObject);
-      applied.orphanStorageObjects += 1;
-      actions.push({
-        category: 'orphanStorageObjects',
-        targetId: candidate.id,
-        action: 'soft_delete_storage_object',
-        outcome: 'applied',
-        detail:
-          'Objeto físico eliminado cuando fue posible y registro marcado como eliminado.',
-      });
     }
 
     return {
