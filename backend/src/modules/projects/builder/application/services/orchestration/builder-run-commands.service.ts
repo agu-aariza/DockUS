@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JobsOptions, Queue } from 'bullmq';
 import * as fs from 'fs/promises';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
 
 import { throwIfUniqueViolation } from '../../../../../../shared/database/unique-violation.util';
@@ -35,7 +35,10 @@ import {
 } from '../builder-application.types';
 import { BuilderRunQueriesService } from './builder-run-queries.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
-import { BuilderWorkspaceService } from '../workspace/builder-workspace.service';
+import {
+  BuilderWorkspaceService,
+  StageWorkspaceResult,
+} from '../workspace/builder-workspace.service';
 import { BuilderPlanStageHandler } from '../stages/plan-stage.handler';
 import { BuilderCompileStageHandler } from '../stages/compile-stage.handler';
 import { BuilderExecutionStageHandler } from '../stages/execution-stage.handler';
@@ -67,6 +70,7 @@ export class BuilderRunCommandsService {
     private readonly builderQualityStageHandler: BuilderQualityStageHandler,
     private readonly builderReportStageHandler: BuilderReportStageHandler,
     private readonly configService: ConfigService,
+    private readonly dataSource: DataSource,
   ) {
     this.staleRunThresholdMs = this.configService.get<number>(
       'BUILDER_STALE_RUN_THRESHOLD_MS',
@@ -93,31 +97,40 @@ export class BuilderRunCommandsService {
       promptVersion: this.promptVersion,
     });
 
-    let savedRun: BuildRun;
+    let savedRun: BuildRun | undefined = undefined;
     try {
-      savedRun = await this.buildRunsRepository.save(run);
+      await this.dataSource.transaction(async (transactionalEntityManager) => {
+        savedRun = await transactionalEntityManager.save(run);
+        await this.enqueueRunJob(savedRun.id, delivery.id, actor);
+      });
     } catch (error) {
+      const runToMark = savedRun as BuildRun | undefined;
+      if (runToMark) {
+        await this.builderRunSupportService
+          .markRunAsFailed(
+            runToMark.id,
+            this.builderRunSupportService.toErrorMessage(error),
+          )
+          .catch(() => undefined);
+      }
       throwIfUniqueViolation(
         error,
         'Ya existe una ejecucion activa para esta entrega.',
       );
-      throw error;
+      throw new ServiceUnavailableException(
+        'No se pudo registrar y encolar la ejecucion de builder de forma atomica.',
+      );
     }
 
-    try {
-      await this.enqueueRunJob(savedRun.id, delivery.id, actor);
-    } catch (error) {
-      await this.builderRunSupportService.markRunAsFailed(
-        savedRun.id,
-        this.builderRunSupportService.toErrorMessage(error),
-      );
+    const finalRun = savedRun as BuildRun | undefined;
+    if (!finalRun) {
       throw new ServiceUnavailableException(
-        'No se pudo encolar la ejecucion de builder.',
+        'No se pudo registrar y encolar la ejecucion de builder de forma atomica.',
       );
     }
 
     await this.builderRunSupportService.emitEvent({
-      buildRunId: savedRun.id,
+      buildRunId: finalRun.id,
       eventType: 'RUN_ENQUEUED',
       runStatus: BuildRunStatus.QUEUED,
       message: 'Run estandar encolado.',
@@ -125,7 +138,7 @@ export class BuilderRunCommandsService {
     });
 
     return {
-      buildRunId: savedRun.id,
+      buildRunId: finalRun.id,
       status: BuildRunStatus.QUEUED,
       deliveryId: delivery.id,
     };
@@ -182,6 +195,8 @@ export class BuilderRunCommandsService {
       payload: { studentStage: 'building' },
     });
 
+    let workspace: StageWorkspaceResult | undefined = undefined;
+
     try {
       await this.builderRunSupportService.emitEvent({
         buildRunId: run.id,
@@ -200,28 +215,27 @@ export class BuilderRunCommandsService {
         expectedOutput: delivery.assignment.project.expectedOutput ?? null,
       };
 
-      const workspace = await workspacePromise;
+      workspace = await workspacePromise;
 
-      const fileReadPromises = workspace.runtimeFiles.map(async (file) => {
+      const sourceCodePayloadParts: string[] = [];
+      for (const file of workspace.runtimeFiles) {
         if (
           String(file.absolutePath).includes('node_modules') ||
           String(file.absolutePath).includes('__pycache__')
         ) {
-          return null;
+          continue;
         }
 
         try {
           const content = await fs.readFile(String(file.absolutePath), 'utf8');
-          return `\n--- Archivo: ${file.relativePath} ---\n${content}\n`;
+          sourceCodePayloadParts.push(
+            `\n--- Archivo: ${file.relativePath} ---\n${content}\n`,
+          );
         } catch {
-          return null;
+          // Ignorar silenciosamente
         }
-      });
-
-      const sourceCodePayloadParts = await Promise.all(fileReadPromises);
-      const sourceCodePayload = sourceCodePayloadParts
-        .filter((part): part is string => part !== null)
-        .join('');
+      }
+      const sourceCodePayload = sourceCodePayloadParts.join('');
 
       await this.builderRunSupportService.emitEvent({
         buildRunId: run.id,
@@ -296,9 +310,6 @@ export class BuilderRunCommandsService {
 
       this.logRunMetrics(run.id, assessment, qualityFindings);
 
-      await fs
-        .rm(workspace.projectRootDir, { recursive: true, force: true })
-        .catch(() => undefined);
       await this.buildRunsRepository.save(run);
 
       await this.updateDeliveryStatus(delivery.id, DeliveryStatus.EVALUATED);
@@ -317,6 +328,16 @@ export class BuilderRunCommandsService {
       );
       await this.updateDeliveryStatus(delivery.id, DeliveryStatus.EVALUATED);
       throw error;
+    } finally {
+      if (workspace?.workspaceRoot) {
+        await fs
+          .rm(workspace.workspaceRoot, { recursive: true, force: true })
+          .catch((cleanupError) => {
+            this.logger.warn(
+              `No se pudo limpiar el workspace ${workspace?.workspaceRoot}: ${this.builderRunSupportService.toErrorMessage(cleanupError)}`,
+            );
+          });
+      }
     }
   }
 
@@ -332,13 +353,18 @@ export class BuilderRunCommandsService {
       })
       .getMany();
 
+    if (staleRuns.length === 0) {
+      return;
+    }
+
     for (const staleRun of staleRuns) {
       staleRun.status = BuildRunStatus.FAILED;
       staleRun.finishedAt = new Date();
       staleRun.failureReason =
         'RUN_STALE_AFTER_RESTART: la ejecucion quedo huerfana tras reinicio.';
-      await this.buildRunsRepository.save(staleRun);
     }
+
+    await this.buildRunsRepository.save(staleRuns);
   }
 
   private logRunMetrics(

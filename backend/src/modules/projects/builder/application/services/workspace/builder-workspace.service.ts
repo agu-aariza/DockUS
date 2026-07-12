@@ -56,6 +56,7 @@ export interface StageWorkspaceResult {
   runtimeFiles: RuntimeFile[];
   teacherTestRuntimeFiles: RuntimeFile[];
   hasTeacherTests: boolean;
+  workspaceRoot: string;
   projectRootDir: string;
   warnings: string[];
 }
@@ -226,6 +227,7 @@ export class BuilderWorkspaceService {
       runtimeFiles,
       teacherTestRuntimeFiles,
       hasTeacherTests: teacherTestRuntimeFiles.length > 0,
+      workspaceRoot,
       projectRootDir,
       warnings,
     };

@@ -24,8 +24,10 @@ export class BuildRunRepository implements IBuildRunRepository {
     return this.repository.create(entityLike);
   }
 
-  save(entity: DeepPartial<BuildRun>): Promise<BuildRun> {
-    return this.repository.save(entity);
+  save(entity: DeepPartial<BuildRun>): Promise<BuildRun>;
+  save(entities: DeepPartial<BuildRun>[]): Promise<BuildRun[]>;
+  save(entityOrEntities: any): Promise<any> {
+    return this.repository.save(entityOrEntities);
   }
 
   createQueryBuilder(alias?: string): SelectQueryBuilder<BuildRun> {
