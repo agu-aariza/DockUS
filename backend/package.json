@@ -51,6 +51,7 @@
     "@nestjs/swagger": "^11.4.5",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.3",
+    "@smithy/util-retry": "^4.5.8",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.79.3",
     "class-transformer": "^0.5.1",

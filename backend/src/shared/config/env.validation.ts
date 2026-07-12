@@ -55,6 +55,15 @@ export const envValidationSchema = Joi.object({
   AWS_ACCESS_KEY_ID: Joi.string().optional(),
   AWS_SECRET_ACCESS_KEY: Joi.string().optional(),
   AWS_SESSION_TOKEN: Joi.string().optional(),
+  BUILDER_BEDROCK_MAX_ATTEMPTS: Joi.number()
+    .integer()
+    .min(1)
+    .max(10)
+    .default(3),
+  BUILDER_BEDROCK_RETRY_BASE_DELAY_MS: Joi.number()
+    .integer()
+    .min(50)
+    .default(250),
   BUILDER_BEDROCK_PLAN_MODEL_ID: Joi.string().default(
     'anthropic.claude-3-5-haiku-20241022-v1:0',
   ),

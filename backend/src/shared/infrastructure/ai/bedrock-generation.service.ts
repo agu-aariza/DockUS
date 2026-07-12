@@ -4,6 +4,7 @@ import {
   BedrockRuntimeClient,
   ConverseCommand,
 } from '@aws-sdk/client-bedrock-runtime';
+import { ConfiguredRetryStrategy } from '@smithy/util-retry';
 import type { ILlmGenerationService } from './llm-generation.token';
 import type { LlmGenerateRequest } from './llm.types';
 import {
@@ -20,7 +21,22 @@ export class BedrockGenerationService implements ILlmGenerationService {
 
   constructor(private readonly configService: ConfigService) {
     this.region = this.configService.get<string>('AWS_REGION', 'us-east-1');
-    this.client = new BedrockRuntimeClient({ region: this.region });
+    const maxAttempts = this.configService.get<number>(
+      'BUILDER_BEDROCK_MAX_ATTEMPTS',
+      3,
+    );
+    const retryBaseDelayMs = this.configService.get<number>(
+      'BUILDER_BEDROCK_RETRY_BASE_DELAY_MS',
+      250,
+    );
+
+    this.client = new BedrockRuntimeClient({
+      region: this.region,
+      retryStrategy: new ConfiguredRetryStrategy(
+        maxAttempts,
+        (attempt) => retryBaseDelayMs * 2 ** attempt,
+      ),
+    });
   }
 
   getRuntimeConfig(): { region: string } {

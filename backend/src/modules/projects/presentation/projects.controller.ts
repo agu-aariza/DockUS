@@ -431,8 +431,11 @@ export class ProjectsController {
   @Roles(UserRole.ADMIN)
   @Delete(':id')
   @HttpCode(204)
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    await this.projectsService.remove(id);
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<void> {
+    await this.projectsService.remove(id, request.user);
   }
 
   /**
@@ -461,7 +464,10 @@ export class ProjectsController {
   })
   @Roles(UserRole.ADMIN)
   @Patch(':id/restore')
-  async restore(@Param('id', ParseUUIDPipe) id: string): Promise<Project> {
-    return this.projectsService.restore(id);
+  async restore(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<Project> {
+    return this.projectsService.restore(id, request.user);
   }
 }
