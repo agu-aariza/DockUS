@@ -28,6 +28,8 @@ export class ErrorBoundary extends Component<
 
   private handleReset = (): void => {
     this.setState({ hasError: false, error: null });
+    window.location.hash = "/";
+    window.location.reload();
   };
 
   render() {

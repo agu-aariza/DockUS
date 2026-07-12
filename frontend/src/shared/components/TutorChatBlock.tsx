@@ -23,6 +23,12 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const activeRunIdRef = useRef(buildRunId);
+
+  useEffect(() => {
+    activeRunIdRef.current = buildRunId;
+  }, [buildRunId]);
+
   // Fetch initial history
   useEffect(() => {
     let active = true;
@@ -54,6 +60,7 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
 
+    const runIdAtSend = buildRunId;
     setError(null);
     setIsLoading(true);
     setInputValue("");
@@ -61,7 +68,7 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
     // Optimistic user message update
     const tempUserMessage: BuildRunChatMessage = {
       id: `temp-user-${Date.now()}`,
-      buildRunId,
+      buildRunId: runIdAtSend,
       sender: "user",
       message: text,
       createdAt: new Date().toISOString(),
@@ -72,20 +79,24 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
     setIsTyping(true);
 
     try {
-      const responseMessage = await builderApi.sendChatMessage(buildRunId, text);
+      const responseMessage = await builderApi.sendChatMessage(runIdAtSend, text);
+      if (activeRunIdRef.current !== runIdAtSend) return;
       setMessages((prev) => {
         // Remove the temp user message if we get the real ones, or just replace/update
         // To be safe and keep dates clean, we can retrieve fresh messages or just append the response
         return [...prev.filter((m) => !m.id.startsWith("temp-")), responseMessage];
       });
     } catch (err: any) {
+      if (activeRunIdRef.current !== runIdAtSend) return;
       console.error("Error sending message to tutor:", err);
       setError("No se pudo enviar el mensaje. Inténtalo de nuevo.");
       // Remove temp message on error so state stays clean
       setMessages((prev) => prev.filter((m) => !m.id.startsWith("temp-")));
     } finally {
-      setIsLoading(false);
-      setIsTyping(false);
+      if (activeRunIdRef.current === runIdAtSend) {
+        setIsLoading(false);
+        setIsTyping(false);
+      }
     }
   };
 

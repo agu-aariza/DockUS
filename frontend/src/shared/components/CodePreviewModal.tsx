@@ -11,7 +11,7 @@ import {
   RiInformationLine,
   RiCheckLine,
 } from "react-icons/ri";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 interface CodePreviewModalProps {
   isOpen: boolean;
@@ -34,6 +34,14 @@ export function CodePreviewModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (files.length === 0) {
+      setSelectedFileIdx(0);
+    } else if (selectedFileIdx >= files.length) {
+      setSelectedFileIdx(0);
+    }
+  }, [files, selectedFileIdx]);
+
   const filteredFiles = useMemo(() => {
     return files.filter((f) =>
       f.path.toLowerCase().includes(searchQuery.toLowerCase())
@@ -41,6 +49,12 @@ export function CodePreviewModal({
   }, [files, searchQuery]);
 
   const selectedFile = files[selectedFileIdx];
+
+  const lineNumbers = useMemo(() => {
+    if (!selectedFile?.content) return "";
+    const totalLines = selectedFile.content.split("\n").length;
+    return Array.from({ length: totalLines }, (_, i) => i + 1).join("\n");
+  }, [selectedFile?.content]);
 
   const getFileIcon = (path: string) => {
     const ext = path.split(".").pop()?.toLowerCase();
@@ -204,17 +218,9 @@ export function CodePreviewModal({
             {selectedFile ? (
               <div className="flex min-h-full">
                 {/* Line Numbers Gutter */}
-                <div className="shrink-0 border-r border-slate-800 bg-slate-900/20 px-4 py-6 text-right select-none">
-                  {selectedFile.content.split("\n").map((_, i) => (
-                    <div key={i} className="font-mono text-[11px] leading-6 text-slate-600">
-                      {i + 1}
-                    </div>
-                  ))}
-                </div>
+                <pre className="shrink-0 border-r border-slate-800 bg-slate-900/20 px-4 py-6 text-right select-none font-mono text-[11px] leading-6 text-slate-600 whitespace-pre">{lineNumbers}</pre>
                 {/* Code Content */}
-                <pre className="flex-1 overflow-visible px-6 py-6 font-mono text-[13px] leading-6 text-slate-300 selection:bg-primary/30">
-                  <code>{selectedFile.content}</code>
-                </pre>
+                <pre className="flex-1 overflow-visible px-6 py-6 font-mono text-[13px] leading-6 text-slate-300 selection:bg-primary/30"><code>{selectedFile.content}</code></pre>
               </div>
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-4 text-slate-600">

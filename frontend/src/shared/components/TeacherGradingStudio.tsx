@@ -14,7 +14,7 @@ import {
   RiAwardFill,
   RiSave2Line,
 } from "react-icons/ri";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { DeliveryEntity } from "../../features/deliveries/types";
 import type { BuildRunEntity } from "../../features/builder/types";
 import { Button } from "./ui/Button";
@@ -51,6 +51,14 @@ export function TeacherGradingStudio({
   const [graderNotes, setGraderNotes] = useState(initialNotes);
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    if (files.length === 0) {
+      setSelectedFileIdx(0);
+    } else if (selectedFileIdx >= files.length) {
+      setSelectedFileIdx(0);
+    }
+  }, [files, selectedFileIdx]);
+
   const filteredFiles = useMemo(() => {
     return files.filter((f) =>
       f.path.toLowerCase().includes(searchQuery.toLowerCase())
@@ -58,6 +66,12 @@ export function TeacherGradingStudio({
   }, [files, searchQuery]);
 
   const selectedFile = files[selectedFileIdx];
+
+  const lineNumbers = useMemo(() => {
+    if (!selectedFile?.content) return "";
+    const totalLines = selectedFile.content.split("\n").length;
+    return Array.from({ length: totalLines }, (_, i) => i + 1).join("\n");
+  }, [selectedFile?.content]);
 
   const getFileIcon = (path: string) => {
     const ext = path.split(".").pop()?.toLowerCase();
@@ -243,17 +257,9 @@ export function TeacherGradingStudio({
               {selectedFile ? (
                 <div className="flex min-h-full">
                   {/* Line Numbers */}
-                  <div className="flex-shrink-0 border-r border-white/5 bg-slate-900/40 px-3 py-4 text-right select-none">
-                    {selectedFile.content.split("\n").map((_, i) => (
-                      <div key={i} className="text-[10px] leading-5 text-slate-500 font-mono">
-                        {i + 1}
-                      </div>
-                    ))}
-                  </div>
+                  <pre className="flex-shrink-0 border-r border-white/5 bg-slate-900/40 px-3 py-4 text-right select-none font-mono text-[10px] leading-5 text-slate-500 whitespace-pre">{lineNumbers}</pre>
                   {/* Code */}
-                  <pre className="flex-1 px-5 py-4 text-[12px] leading-5 text-slate-200 font-mono overflow-visible select-text">
-                    <code>{selectedFile.content}</code>
-                  </pre>
+                  <pre className="flex-1 px-5 py-4 text-[12px] leading-5 text-slate-200 font-mono overflow-visible select-text"><code>{selectedFile.content}</code></pre>
                 </div>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center text-slate-400 gap-4">

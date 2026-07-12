@@ -52,6 +52,8 @@ export function CommandPalette(): JSX.Element | null {
     }
   }, [isOpen]);
 
+  const projectTitle = selection.projectTitle;
+
   const commands: CommandItem[] = useMemo(() => [
     {
       id: 'nav-projects',
@@ -72,12 +74,12 @@ export function CommandPalette(): JSX.Element | null {
     {
       id: 'p1',
       category: 'Proyectos',
-      label: selection.projectTitle || 'Seleccionar Proyecto Actual',
+      label: projectTitle || 'Seleccionar Proyecto Actual',
       description: 'Ver detalles del proyecto activo',
       icon: <RiStackFill className="text-primary" />,
       action: () => navigate('/projects'),
     },
-  ], [navigate, selection]);
+  ], [navigate, projectTitle]);
 
   const filteredCommands = useMemo(() => {
     const query = search.toLowerCase().trim();

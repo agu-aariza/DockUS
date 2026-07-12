@@ -23,12 +23,15 @@ export function useBuilderRunStream(
   const latestSequenceRef = useRef(0);
   const streamStateRef = useRef<StreamState>("idle");
 
+  const isTerminalRef = useRef(false);
+
   useEffect(() => {
     setEvents([]);
     setStreamError(null);
     setStreamState(runId && session ? "connecting" : "idle");
     streamStateRef.current = runId && session ? "connecting" : "idle";
     latestSequenceRef.current = 0;
+    isTerminalRef.current = false;
   }, [runId, session?.accessToken]);
 
   useEffect(() => {
@@ -57,6 +60,15 @@ export function useBuilderRunStream(
           page.latestSequence,
         );
         return;
+      }
+
+      const containsTerminal = page.events.some((e) =>
+        e.eventType === "RUN_COMPLETED" ||
+        e.eventType === "RUN_FAILED" ||
+        e.eventType === "RUN_CANCELLED"
+      );
+      if (containsTerminal) {
+        isTerminalRef.current = true;
       }
 
       latestSequenceRef.current = Math.max(
@@ -109,6 +121,13 @@ export function useBuilderRunStream(
           latestSequenceRef.current,
           parsed.sequence,
         );
+        if (
+          parsed.eventType === "RUN_COMPLETED" ||
+          parsed.eventType === "RUN_FAILED" ||
+          parsed.eventType === "RUN_CANCELLED"
+        ) {
+          isTerminalRef.current = true;
+        }
         setEvents((current) => mergeEvents(current, [parsed]));
       } catch {
         // Ignore malformed event frames.
@@ -157,25 +176,31 @@ export function useBuilderRunStream(
           }
         }
 
-        if (!disposed) {
+        if (!disposed && !isTerminalRef.current) {
           updateStreamState("polling");
           reconnectTimer = window.setTimeout(() => {
             if (!disposed) {
               void connect();
             }
           }, 2000);
+        } else if (!disposed) {
+          updateStreamState("idle");
         }
       } catch (error) {
         if (disposed || abortController.signal.aborted) {
           return;
         }
         setStreamError(getErrorMessage(error));
-        updateStreamState("polling");
-        reconnectTimer = window.setTimeout(() => {
-          if (!disposed) {
-            void connect();
-          }
-        }, 2500);
+        if (!isTerminalRef.current) {
+          updateStreamState("polling");
+          reconnectTimer = window.setTimeout(() => {
+            if (!disposed) {
+              void connect();
+            }
+          }, 2500);
+        } else {
+          updateStreamState("idle");
+        }
       }
     };
 
