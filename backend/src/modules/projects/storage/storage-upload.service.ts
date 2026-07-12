@@ -150,12 +150,6 @@ export class StorageUploadService {
         assetRole: StorageAssetRole.TEACHER_TESTS,
       },
     });
-    if (existing) {
-      await this.minioStorageService
-        .deleteObject(existing.bucket, existing.objectKey)
-        .catch(() => undefined);
-      await this.storageRepository.delete({ id: existing.id });
-    }
 
     const logicalName =
       path.posix.basename(file.originalname ?? 'teacher-tests.zip') ||
@@ -174,21 +168,36 @@ export class StorageUploadService {
       contentType: file.mimetype || 'application/octet-stream',
     });
 
-    const saved = await this.storageRepository.save(
-      this.storageRepository.create({
-        assetRole: StorageAssetRole.TEACHER_TESTS,
-        projectId,
-        deliveryId: null,
-        logicalName,
-        logicalPath: logicalName,
-        contentType: file.mimetype || 'application/octet-stream',
-        sizeBytes: file.size,
-        hash,
-        bucket,
-        objectKey,
-        uploaderId: actor.userId,
-      }),
-    );
+    let saved: StorageObject;
+    try {
+      saved = await this.storageRepository.save(
+        this.storageRepository.create({
+          assetRole: StorageAssetRole.TEACHER_TESTS,
+          projectId,
+          deliveryId: null,
+          logicalName,
+          logicalPath: logicalName,
+          contentType: file.mimetype || 'application/octet-stream',
+          sizeBytes: file.size,
+          hash,
+          bucket,
+          objectKey,
+          uploaderId: actor.userId,
+        }),
+      );
+    } catch (dbError) {
+      await this.minioStorageService
+        .deleteObject(bucket, objectKey)
+        .catch(() => undefined);
+      throw dbError;
+    }
+
+    if (existing) {
+      await this.minioStorageService
+        .deleteObject(existing.bucket, existing.objectKey)
+        .catch(() => undefined);
+      await this.storageRepository.delete({ id: existing.id });
+    }
 
     return toStorageObjectResponse(saved);
   }

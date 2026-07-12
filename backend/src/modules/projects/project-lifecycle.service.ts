@@ -129,13 +129,19 @@ export class ProjectLifecycleService {
     return this.projectsRepository.save(project);
   }
 
-  async remove(id: string): Promise<{ message: string }> {
-    const project = await this.projectAccessService.findProjectOrThrow(id);
+  async remove(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<{ message: string }> {
+    const project = await this.projectAccessService.findOwnedProjectOrThrow(
+      id,
+      actor,
+    );
     await this.projectsRepository.softRemove(project);
     return { message: 'Proyecto marcado como eliminado correctamente.' };
   }
 
-  async restore(id: string): Promise<Project> {
+  async restore(id: string, actor: AuthenticatedUser): Promise<Project> {
     const project = await this.projectsRepository.findOne({
       where: { id },
       withDeleted: true,
@@ -143,6 +149,8 @@ export class ProjectLifecycleService {
     if (!project) {
       throw new NotFoundException('No se encontro un proyecto con ese ID.');
     }
+
+    await this.projectAccessService.assertCanManageProject(project, actor);
 
     if (!project.deletedAt) {
       throw new ConflictException('El proyecto ya se encuentra activo.');

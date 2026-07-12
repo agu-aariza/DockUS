@@ -125,6 +125,42 @@ describe('DockerContainerService', () => {
       ]),
     );
   });
+
+  it('fuerza la eliminacion del contenedor cuando la ejecucion hace timeout', async () => {
+    mockedRunCommand
+      .mockResolvedValueOnce({
+        exitCode: -1,
+        stdout: '',
+        stderr: '',
+        timedOut: true,
+      })
+      .mockResolvedValueOnce({
+        exitCode: 0,
+        stdout: '',
+        stderr: '',
+        timedOut: false,
+      });
+
+    const result = await service.runEphemeralContainer({
+      containerName: 'timeout-run-123',
+      imageTag: 'python:3.11-slim',
+      command: ['python', '-c', 'while True: pass'],
+      runtime: 'runc',
+      networkMode: 'none',
+      timeoutMs: 5_000,
+    });
+
+    expect(result.exitCode).toBe(-1);
+    expect(result.stderr).toContain('[TIMEOUT]');
+
+    // Segunda llamada debe ser la limpieza forzada del contenedor
+    expect(mockedRunCommand).toHaveBeenNthCalledWith(
+      2,
+      'docker',
+      expect.arrayContaining(['container', 'rm', '-f', 'timeout-run-123']),
+      expect.objectContaining({ timeoutMs: 5_000 }),
+    );
+  });
 });
 
 describe('DockerExecutionService', () => {

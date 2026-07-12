@@ -6,10 +6,19 @@ import { BuilderCacheManagerService } from '../workspace/builder-cache-manager.s
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import { StageWorkspaceResult } from '../workspace/builder-workspace.service';
 
+interface CompiledOutput {
+  image: string;
+  finalCommand: string[];
+  servicePort?: number;
+  workingDirectory?: string;
+  environment?: Record<string, string>;
+  executable: boolean;
+}
+
 interface ExecutionStageInput {
   runId: string;
   workspace: StageWorkspaceResult;
-  compiled: any;
+  compiled: CompiledOutput;
   expectedType: string;
 }
 
@@ -71,6 +80,7 @@ export class BuilderExecutionStageHandler implements IBuilderStageHandler<
           binds: [`${workspace.projectRootDir}:/app`, ...extraBinds],
           workingDir: compiled.workingDirectory ?? '/app',
           environment: compiled.environment ?? undefined,
+          networkMode: 'none',
           onStdoutChunk: (chunk) => {
             if (chunk.includes('--- HEALTHCHECK EVIDENCE ---')) {
               capturingEvidence = true;

@@ -76,6 +76,23 @@ export class DockerContainerService {
       onStderrChunk: options.onStderrChunk,
     });
 
+    if (result.timedOut) {
+      // Forzar la eliminación del contenedor en el daemon. Matar el proceso
+      // CLI de docker no garantiza que el daemon detenga el contenedor
+      // inmediatamente, especialmente bajo carga o con bucles infinitos.
+      await this.removeContainer(options.containerName, {
+        force: true,
+        timeoutMs: 5_000,
+      }).catch(() => undefined);
+
+      return {
+        exitCode: -1,
+        stdout: result.stdout,
+        stderr:
+          `${result.stderr}\n[TIMEOUT] La ejecucion supero el limite de tiempo y fue cancelada.`.trim(),
+      };
+    }
+
     return {
       exitCode: result.exitCode,
       stdout: result.stdout,
