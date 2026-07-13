@@ -147,6 +147,7 @@ export const envValidationSchema = Joi.object({
   BUILDER_PROMPT_MAX_CHARS: Joi.number().integer().min(1000).default(180000),
   BUILDER_BATCH_CPU_LIMIT: Joi.string().default('0.5'),
   BUILDER_BATCH_MEMORY_LIMIT: Joi.string().default('512m'),
+  BUILDER_EXEC_PIDS_LIMIT: Joi.number().integer().min(16).default(256),
   BUILDER_SERVICE_CPU_LIMIT: Joi.string().default('0.7'),
   BUILDER_SERVICE_MEMORY_LIMIT: Joi.string().default('768m'),
   BUILDER_TEST_CPU_LIMIT: Joi.string().default('0.3'),

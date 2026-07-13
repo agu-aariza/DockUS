@@ -128,6 +128,67 @@ services:
     networks:
       - dockus-network
 
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.backend
+      target: dev
+    image: dockus-backend:dev
+    container_name: dockus-worker
+    restart: unless-stopped
+    profiles: ["dev"]
+    working_dir: /app
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      MINIO_ENDPOINT: minio
+      MINIO_API_PORT: ${MINIO_API_PORT:-9000}
+      DOCKER_HOST: unix:///var/run/docker.sock
+      BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runc}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+      - /var/run/docker.sock:/var/run/docker.sock
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 2G
+    command: >
+      sh -c '
+        if [ ! -d node_modules ] || [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
+          npm install --legacy-peer-deps &&
+          cp package-lock.json node_modules/.package-lock.json;
+        fi &&
+        npm run start:worker:dev
+      '
+    healthcheck:
+      # El worker refresca /tmp/dockus-worker.heartbeat cada 10s. Se considera
+      # sano si el fichero se ha tocado en los últimos 60s: un proceso colgado o
+      # en crash-loop deja de refrescarlo y el healthcheck pasa a unhealthy.
+      test:
+        [
+          "CMD-SHELL",
+          "test $(( $(date +%s) - $(stat -c %Y /tmp/dockus-worker.heartbeat 2>/dev/null || echo 0) )) -lt 60",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    networks:
+      - dockus-network
+
   backend-prod:
     build:
       context: .
@@ -174,6 +235,58 @@ services:
       timeout: 5s
       retries: 5
       start_period: 45s
+    networks:
+      - dockus-network
+
+  worker-prod:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.prod
+      target: production
+    image: dockus-backend:prod
+    container_name: dockus-worker-prod
+    restart: unless-stopped
+    profiles: ["prod"]
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      MINIO_ENDPOINT: minio
+      MINIO_API_PORT: ${MINIO_API_PORT:-9000}
+      DOCKER_HOST: unix:///var/run/docker.sock
+      BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runc}
+      FRONTEND_URL: ${FRONTEND_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 2G
+    group_add:
+      - ${DOCKER_HOST_GID:-999}
+    command: ["node", "dist/worker"]
+    healthcheck:
+      # Frescura del heartbeat del worker (véase el servicio `worker` de dev).
+      test:
+        [
+          "CMD-SHELL",
+          "test $(( $(date +%s) - $(stat -c %Y /tmp/dockus-worker.heartbeat 2>/dev/null || echo 0) )) -lt 60",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     networks:
       - dockus-network
 
