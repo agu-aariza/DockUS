@@ -9,17 +9,9 @@
  */
 
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import {
-  IsEnum,
-  IsIn,
-  IsInt,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsString } from 'class-validator';
 import { UserRole, UserStatus } from '../entities/user.entity';
+import { PaginatedQueryDto } from '../../../shared/dto/paginated-query.dto';
 
 /** Whitelist de columnas permitidas para ordenamiento seguro desde querystring. */
 const USER_SORT_FIELDS = [
@@ -33,34 +25,9 @@ const USER_SORT_FIELDS = [
 ] as const;
 
 export type UserSortField = (typeof USER_SORT_FIELDS)[number];
-type SortOrder = 'ASC' | 'DESC';
 
 /** DTO de querystring para listado paginado de usuarios. */
-export class ListUsersQueryDto {
-  @ApiPropertyOptional({
-    description: 'Pagina solicitada.',
-    default: 1,
-    minimum: 1,
-  })
-  @Type(() => Number)
-  @IsInt({ message: 'La pagina debe ser un numero entero.' })
-  @Min(1, { message: 'La pagina minima es 1.' })
-  @IsOptional()
-  page = 1;
-
-  @ApiPropertyOptional({
-    description: 'Tamano de pagina.',
-    default: 20,
-    minimum: 1,
-    maximum: 100,
-  })
-  @Type(() => Number)
-  @IsInt({ message: 'El limite debe ser un numero entero.' })
-  @Min(1, { message: 'El limite minimo es 1.' })
-  @Max(100, { message: 'El limite maximo es 100.' })
-  @IsOptional()
-  limit = 20;
-
+export class ListUsersQueryDto extends PaginatedQueryDto {
   @ApiPropertyOptional({
     description: 'Filtro por rol.',
     enum: UserRole,
@@ -92,13 +59,4 @@ export class ListUsersQueryDto {
   @IsIn(USER_SORT_FIELDS, { message: 'Campo de orden invalido.' })
   @IsOptional()
   sortBy: UserSortField = 'createdAt';
-
-  @ApiPropertyOptional({
-    description: 'Direccion de orden.',
-    enum: ['ASC', 'DESC'],
-    default: 'DESC',
-  })
-  @IsIn(['ASC', 'DESC'], { message: 'Direccion de orden invalida.' })
-  @IsOptional()
-  sortOrder: SortOrder = 'DESC';
 }

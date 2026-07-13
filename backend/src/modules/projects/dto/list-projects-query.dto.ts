@@ -9,19 +9,16 @@
  */
 
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import {
   IsEnum,
   IsIn,
-  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   IsDateString,
-  Max,
-  Min,
 } from 'class-validator';
 import { ProjectStatus } from '../entities/project.entity';
+import { PaginatedQueryDto } from '../../../shared/dto/paginated-query.dto';
 
 const PROJECT_SORT_FIELDS = [
   'createdAt',
@@ -31,33 +28,8 @@ const PROJECT_SORT_FIELDS = [
 ] as const;
 
 export type ProjectSortField = (typeof PROJECT_SORT_FIELDS)[number];
-type SortOrder = 'ASC' | 'DESC';
 
-export class ListProjectsQueryDto {
-  @ApiPropertyOptional({
-    description: 'Pagina solicitada.',
-    default: 1,
-    minimum: 1,
-  })
-  @Type(() => Number)
-  @IsInt({ message: 'La pagina debe ser un numero entero.' })
-  @Min(1, { message: 'La pagina minima es 1.' })
-  @IsOptional()
-  page = 1;
-
-  @ApiPropertyOptional({
-    description: 'Tamano de pagina.',
-    default: 20,
-    minimum: 1,
-    maximum: 100,
-  })
-  @Type(() => Number)
-  @IsInt({ message: 'El limite debe ser un numero entero.' })
-  @Min(1, { message: 'El limite minimo es 1.' })
-  @Max(100, { message: 'El limite maximo es 100.' })
-  @IsOptional()
-  limit = 20;
-
+export class ListProjectsQueryDto extends PaginatedQueryDto {
   @ApiPropertyOptional({
     description: 'Filtro por estado de proyecto.',
     enum: ProjectStatus,
@@ -113,13 +85,4 @@ export class ListProjectsQueryDto {
   @IsIn(PROJECT_SORT_FIELDS, { message: 'Campo de orden invalido.' })
   @IsOptional()
   sortBy: ProjectSortField = 'createdAt';
-
-  @ApiPropertyOptional({
-    description: 'Direccion de orden.',
-    enum: ['ASC', 'DESC'],
-    default: 'DESC',
-  })
-  @IsIn(['ASC', 'DESC'], { message: 'Direccion de orden invalida.' })
-  @IsOptional()
-  sortOrder: SortOrder = 'DESC';
 }

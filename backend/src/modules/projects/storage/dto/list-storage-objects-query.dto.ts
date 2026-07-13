@@ -9,18 +9,9 @@
  */
 
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import {
-  IsEnum,
-  IsDateString,
-  IsIn,
-  IsInt,
-  IsOptional,
-  IsUUID,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsDateString, IsIn, IsOptional, IsUUID } from 'class-validator';
 import { StorageAssetRole } from '../entities/storage-object.entity';
+import { PaginatedQueryDto } from '../../../../shared/dto/paginated-query.dto';
 
 const STORAGE_SORT_FIELDS = [
   'createdAt',
@@ -30,33 +21,8 @@ const STORAGE_SORT_FIELDS = [
 ] as const;
 
 export type StorageSortField = (typeof STORAGE_SORT_FIELDS)[number];
-type SortOrder = 'ASC' | 'DESC';
 
-export class ListStorageObjectsQueryDto {
-  @ApiPropertyOptional({
-    description: 'Pagina solicitada.',
-    default: 1,
-    minimum: 1,
-  })
-  @Type(() => Number)
-  @IsInt({ message: 'La pagina debe ser un numero entero.' })
-  @Min(1, { message: 'La pagina minima es 1.' })
-  @IsOptional()
-  page = 1;
-
-  @ApiPropertyOptional({
-    description: 'Tamano de pagina.',
-    default: 20,
-    minimum: 1,
-    maximum: 100,
-  })
-  @Type(() => Number)
-  @IsInt({ message: 'El limite debe ser un numero entero.' })
-  @Min(1, { message: 'El limite minimo es 1.' })
-  @Max(100, { message: 'El limite maximo es 100.' })
-  @IsOptional()
-  limit = 20;
-
+export class ListStorageObjectsQueryDto extends PaginatedQueryDto {
   @ApiPropertyOptional({
     description: 'Filtro por entrega.',
     example: '550e8400-e29b-41d4-a716-446655440000',
@@ -119,13 +85,4 @@ export class ListStorageObjectsQueryDto {
   @IsIn(STORAGE_SORT_FIELDS, { message: 'Campo de orden invalido.' })
   @IsOptional()
   sortBy: StorageSortField = 'createdAt';
-
-  @ApiPropertyOptional({
-    description: 'Direccion de orden.',
-    enum: ['ASC', 'DESC'],
-    default: 'DESC',
-  })
-  @IsIn(['ASC', 'DESC'], { message: 'Direccion de orden invalida.' })
-  @IsOptional()
-  sortOrder: SortOrder = 'DESC';
 }
