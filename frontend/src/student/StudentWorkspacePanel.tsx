@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { useToast } from "../shared/toast/ToastContext";
-import type { SessionRecord } from "../shared/types";
+import { useSession } from "../shared/session/SessionContext";
 import { EvaluationNotificationBanner } from "./EvaluationNotificationBanner";
 import { StudentAssignmentsSection } from "./StudentAssignmentsSection";
 import { StudentDeliveriesSection } from "./StudentDeliveriesSection";
@@ -13,10 +13,6 @@ import { useBuildRunStream } from "./hooks/useBuildRunStream";
 import { useEvaluationNotifications } from "./hooks/useEvaluationNotifications";
 import { useStudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 
-interface StudentWorkspacePanelProps {
-  session: SessionRecord | null;
-}
-
 type StudentTab =
   | "summary"
   | "proyectos"
@@ -24,14 +20,13 @@ type StudentTab =
   | "subir"
   | "informes";
 
-export function StudentWorkspacePanel({
-  session,
-}: StudentWorkspacePanelProps): JSX.Element {
+export function StudentWorkspacePanel(): JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get("tab") as StudentTab) || "summary";
   const mainHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const seenNotificationIdsRef = useRef(new Set<string>());
 
+  const { activeSession } = useSession();
   const workspaceData = useStudentWorkspaceData();
   const { pushToast } = useToast();
 
@@ -39,7 +34,7 @@ export function StudentWorkspacePanel({
     workspaceData.deliveries
       .map((delivery) => workspaceData.latestRunByDeliveryId[delivery.id] ?? null)
       .find((run) => Boolean(run && !run.isTerminal)) ?? null;
-  const runMonitor = useBuildRunStream(activeMonitoringRun, session);
+  const runMonitor = useBuildRunStream(activeMonitoringRun, activeSession);
   const { notifications, dismissNotification, dismissAll } =
     useEvaluationNotifications({
       pollIntervalMs: runMonitor.streamState === "streaming" ? 60_000 : 15_000,
@@ -135,34 +130,30 @@ export function StudentWorkspacePanel({
 
         {activeTab === "summary" ? (
           <StudentHomeSection
-            session={session}
             data={workspaceData}
             onNavigate={handleTabChange}
           />
         ) : null}
         {activeTab === "proyectos" ? (
           <StudentAssignmentsSection
-            session={session}
             data={workspaceData}
             onNavigate={handleTabChange}
           />
         ) : null}
         {activeTab === "entregas" ? (
           <StudentDeliveriesSection
-            session={session}
             data={workspaceData}
             onNavigate={handleTabChange}
           />
         ) : null}
         {activeTab === "subir" ? (
           <StudentSubmissionFlow
-            session={session}
             data={workspaceData}
             onNavigate={handleTabChange}
           />
         ) : null}
         {activeTab === "informes" ? (
-          <StudentReportsSection session={session} data={workspaceData} />
+          <StudentReportsSection data={workspaceData} />
         ) : null}
       </main>
     </div>

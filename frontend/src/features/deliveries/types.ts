@@ -1,4 +1,15 @@
-export type DeliveryStatus = "DRAFT" | "SUBMITTED" | "IN_REVIEW" | "EVALUATED";
+/**
+ * Shapes compartidas con el backend: fuente única en `@dockus/contracts`.
+ * `DeliveryEntity` es el nombre local del `DeliveryResponse` del contrato.
+ */
+export type {
+  DeliveryStatus,
+  DeliveryResponse as DeliveryEntity,
+} from "@dockus/contracts";
+
+// ---------------------------------------------------------------------------
+// Shapes exclusivas del frontend
+// ---------------------------------------------------------------------------
 
 export type StudentWorkflowState =
   | "NOT_ASSIGNED"
@@ -11,25 +22,3 @@ export type StudentWorkflowState =
   | "REPORT_READY"
   | "AWAITING_TEACHER_REVIEW"
   | "GRADED";
-
-export interface DeliveryEntity {
-  id: string;
-  assignmentId: string;
-  projectId: string;
-  projectTitle: string;
-  authorId: string;
-  studentEmail: string;
-  studentName: string;
-  version: number;
-  status: DeliveryStatus;
-  notes: string | null;
-  isLate: boolean;
-  grade: number | null;
-  graderNotes: string | null;
-  deliveryCount: number;
-  remainingDeliveries: number;
-  minimumRequirementMet: boolean;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt?: string | null;
-}

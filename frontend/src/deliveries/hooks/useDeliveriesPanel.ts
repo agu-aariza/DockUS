@@ -7,13 +7,13 @@ import { useToast } from "../../shared/toast/ToastContext";
 import { useNoticeToasts } from "../../shared/toast/useNoticeToasts";
 import { useDeliveryManagement } from "./useDeliveryManagement";
 import { normalizeTeacherDeliveryTab } from "../teacherReviewNavigation";
-import { DeliveryEntity, SessionRecord } from "../../shared/types";
+import { DeliveryEntity } from "../../shared/types";
 
 export type DetailTab = "overview" | "grading" | "report";
 
-export function useDeliveriesPanel(session: SessionRecord | null) {
+export function useDeliveriesPanel() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const dc = useDeliveryManagement(session, { initialDeliveryId: searchParams.get("deliveryId") });
+  const dc = useDeliveryManagement({ initialDeliveryId: searchParams.get("deliveryId") });
   const { selection, setProject, setAssignment, setDelivery } = useWorkspace();
   const lastSyncedRef = useRef<{
     projectId: string | null;

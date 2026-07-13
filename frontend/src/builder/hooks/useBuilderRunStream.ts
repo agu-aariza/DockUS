@@ -42,6 +42,7 @@ export function useBuilderRunStream(
     let disposed = false;
     const abortController = new AbortController();
     let reconnectTimer: number | null = null;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined = undefined;
 
     const updateStreamState = (next: StreamState) => {
       streamStateRef.current = next;
@@ -156,7 +157,7 @@ export function useBuilderRunStream(
         }
 
         updateStreamState("streaming");
-        const reader = response.body.getReader();
+        reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
 
@@ -209,6 +210,11 @@ export function useBuilderRunStream(
     return () => {
       disposed = true;
       abortController.abort();
+      if (reader) {
+        void reader.cancel().catch(() => undefined);
+        reader.releaseLock();
+        reader = undefined;
+      }
       if (reconnectTimer !== null) {
         window.clearTimeout(reconnectTimer);
       }

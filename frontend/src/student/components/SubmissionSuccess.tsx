@@ -10,16 +10,14 @@ import { Button } from "../../shared/components/ui/Button";
 import { MetricCard } from "../../shared/components/MetricCard";
 import { StudentKeyValueList, StudentSurface, StudentSurfaceHeader } from "./StudentWorkspaceSurface";
 import { EvaluationProgressCard } from "./EvaluationProgressCard";
-import type { SessionRecord } from "../../shared/types";
 import type { SubmissionFlowState } from "../hooks/useSubmissionFlow";
 
 interface Props {
-  session: SessionRecord | null;
   flow: SubmissionFlowState;
   onNavigate: (tab: any) => void;
 }
 
-export function SubmissionSuccess({ session, flow, onNavigate }: Props) {
+export function SubmissionSuccess({ flow, onNavigate }: Props) {
   const {
     createdVersion,
     file,
@@ -98,7 +96,6 @@ export function SubmissionSuccess({ session, flow, onNavigate }: Props) {
               {createdRun ? (
                 <EvaluationProgressCard
                   run={createdRun}
-                  session={session}
                   historicalMedianMs={historicalMedianMs}
                   onOpenReport={() => onNavigate("informes")}
                 />

@@ -14,7 +14,6 @@ import {
   RiArrowRightLine,
   RiAddLine,
 } from "react-icons/ri";
-import type { SessionRecord } from "../features/auth/types";
 import type { ProjectEntity, ProjectOperationalIssuesReconcileResult as ProjectOperationalIssuesSyncResult, ProjectOperationalIssuesSummary } from "../features/projects/types";
 import type { DeliveryEntity } from "../features/deliveries/types";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
@@ -31,11 +30,7 @@ import { SectionCard } from "../shared/components/ui/Layout";
 import { StatusBadge, type StatusTone } from "../shared/components/ui/StatusBadge";
 import { EmptyState } from "../shared/components/EmptyState";
 
-interface TeacherHomePanelProps {
-  session: SessionRecord | null;
-}
-
-export function TeacherHomePanel({ session: _session }: TeacherHomePanelProps): JSX.Element {
+export function TeacherHomePanel(): JSX.Element {
   const { selection, setProject, setDelivery } = useWorkspace();
   const navigate = useNavigate();
   const { pushToast } = useToast();

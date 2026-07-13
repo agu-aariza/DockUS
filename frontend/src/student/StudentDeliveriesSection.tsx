@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { SessionRecord, DeliveryEntity } from "../shared/types";
+import type { DeliveryEntity } from "../shared/types";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
 import {
   RiFileTextLine,
@@ -25,7 +25,6 @@ import { StudentSurface } from "./components/StudentWorkspaceSurface";
 import { deriveStudentWorkspaceInsights, resolveStudentRunOutcome } from "./studentWorkspaceInsights";
 
 interface Props {
-  session: SessionRecord | null;
   data: StudentWorkspaceData;
   onNavigate: (_tab: any) => void;
 }
@@ -98,7 +97,6 @@ function renderOutcomeBadge(outcome: ReturnType<typeof resolveStudentRunOutcome>
 }
 
 export function StudentDeliveriesSection({
-  session: _session,
   data,
   onNavigate,
 }: Props): JSX.Element {

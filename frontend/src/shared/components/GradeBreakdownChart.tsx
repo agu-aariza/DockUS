@@ -40,11 +40,17 @@ export function GradeBreakdownChart({
     return null;
   }
 
+  const hasWeights = items.some((item) => typeof item.weight === "number");
+
   return (
     <ReportCard
       tone="default"
       title="Desglose de la nota"
-      description="Cómo contribuye cada criterio a la evaluación"
+      description={
+        hasWeights
+          ? "Rúbrica ponderada del proyecto: peso y puntuación de cada criterio"
+          : "Cómo contribuye cada criterio a la evaluación"
+      }
     >
       <div className="space-y-4">
         {items.map((item) => {
@@ -60,9 +66,19 @@ export function GradeBreakdownChart({
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-900">
-                    {item.criterion}
-                  </h4>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-sm font-semibold text-slate-900">
+                      {item.criterion}
+                    </h4>
+                    {typeof item.weight === "number" ? (
+                      <span className="inline-flex w-fit rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-500">
+                        Peso {item.weight}%
+                      </span>
+                    ) : null}
+                  </div>
+                  {item.description ? (
+                    <p className="mt-1 text-xs text-slate-500">{item.description}</p>
+                  ) : null}
                   <p className="mt-1 text-xs text-slate-500">
                     {item.awarded.toFixed(2)} / {item.maxPoints.toFixed(2)} puntos
                   </p>

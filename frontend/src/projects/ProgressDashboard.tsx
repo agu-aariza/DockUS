@@ -34,12 +34,11 @@ import type { TeacherDeliveryDetailTab } from "../deliveries/teacherReviewNaviga
 import type { BuilderOutcome, BuildRunEntity } from "../features/builder/types";
 import type { DeliveryEntity, DeliveryStatus } from "../features/deliveries/types";
 import type { ProjectEntity, ProjectGradebookRow, ProjectProgressSummary } from "../features/projects/types";
-import type { SessionRecord } from "../features/auth/types";
+import { useSession } from "../shared/session/SessionContext";
 import { useToast } from "../shared/toast/ToastContext";
 import { getErrorMessage } from "../shared/utils/errors";
 
 interface ProgressDashboardProps {
-  session: SessionRecord | null;
   projectOptions?: ProjectEntity[];
   selectedProjectId?: string;
   embedded?: boolean;
@@ -111,11 +110,11 @@ function toGroupOptions(rows: ProjectGradebookRow[]): GroupOption[] {
 }
 
 export function ProgressDashboard({
-  session,
   projectOptions = [],
   selectedProjectId = "",
   embedded = false,
 }: ProgressDashboardProps): JSX.Element {
+  const { activeSession: session } = useSession();
   const navigate = useNavigate();
   const { pushToast } = useToast();
   const [projectId, setProjectId] = useState(selectedProjectId);

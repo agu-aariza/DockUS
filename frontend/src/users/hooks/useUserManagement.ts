@@ -1,11 +1,13 @@
 import { type FormEvent, useState } from 'react';
 import { usersApi } from '../../shared/api/services';
 import type { PaginatedResponse, UserRole } from "../../shared/types";
-import type { SessionRecord, UserEntity, UserStatus } from "../../features/auth/types";
+import type { UserEntity, UserStatus } from "../../features/auth/types";
+import { useSession } from '../../shared/session/SessionContext';
 import { useManagementPermissions } from '../../shared/session/useManagementPermissions';
 import { getErrorMessage } from '../../shared/utils/errors';
 
-export function useUserManagement(session: SessionRecord | null) {
+export function useUserManagement() {
+  const { activeSession: session } = useSession();
   const [query, setQuery] = useState({ page: '1', limit: '20', role: '', status: '', search: '' });
   const [listResponse, setListResponse] = useState<PaginatedResponse<UserEntity> | null>(null);
   const [detailId, setDetailId] = useState('');

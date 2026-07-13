@@ -16,6 +16,7 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@dockus/contracts": "file:../shared/contracts",
     "anser": "^2.3.5",
     "axios": "^1.18.1",
     "jszip": "^3.10.1",

@@ -8,9 +8,9 @@ import {
 } from '../../shared/api/services';
 import type { DownloadUrlResponse, StorageObjectEntity } from "../../features/storage/types";
 import type { PaginatedResponse } from "../../shared/types";
-import type { SessionRecord } from "../../features/auth/types";
 import type { DeliveryEntity } from "../../features/deliveries/types";
 import type { BuildRunEntity } from "../../features/builder/types";
+import { useSession } from '../../shared/session/SessionContext';
 import { useManagementPermissions } from '../../shared/session/useManagementPermissions';
 import { getErrorMessage } from '../../shared/utils/errors';
 import { computeSha256Hex } from '../../shared/utils/hash';
@@ -35,7 +35,8 @@ type DangerAction = 'DELETE' | 'PURGE';
 type StorageSortBy = 'createdAt' | 'updatedAt' | 'logicalName' | 'sizeBytes';
 type SortOrder = 'ASC' | 'DESC';
 
-export function useStorageManagement(session: SessionRecord | null) {
+export function useStorageManagement() {
+  const { activeSession: session } = useSession();
   const [query, setQuery] = useState({
     page: '1',
     limit: '20',

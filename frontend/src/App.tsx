@@ -259,20 +259,20 @@ function App(): JSX.Element {
             <Routes>
               {isStudent && (
                 <>
-                  <Route path="/mi-espacio" element={<StudentWorkspacePanel session={activeSession} />} />
+                  <Route path="/mi-espacio" element={<StudentWorkspacePanel />} />
                   <Route path="*" element={<Navigate to="/mi-espacio" replace />} />
                 </>
               )}
 
               {!isStudent && (
                 <>
-                  <Route path="/summary" element={<TeacherHomePanel session={activeSession} />} />
-                  <Route path="/users" element={<UsersPanel session={activeSession} />} />
-                  <Route path="/groups" element={<TeacherGroupsPanel session={activeSession} />} />
-                  <Route path="/projects" element={<TeacherProjectsPanel session={activeSession} />} />
-                  <Route path="/deliveries" element={<TeacherDeliveriesPanel session={activeSession} />} />
-                  <Route path="/storage" element={<StoragePanel session={activeSession} />} />
-                  <Route path="/runtime" element={<TeacherRuntimePanel session={activeSession} />} />
+                  <Route path="/summary" element={<TeacherHomePanel />} />
+                  <Route path="/users" element={<UsersPanel />} />
+                  <Route path="/groups" element={<TeacherGroupsPanel />} />
+                  <Route path="/projects" element={<TeacherProjectsPanel />} />
+                  <Route path="/deliveries" element={<TeacherDeliveriesPanel />} />
+                  <Route path="/storage" element={<StoragePanel />} />
+                  <Route path="/runtime" element={<TeacherRuntimePanel />} />
                   <Route path="/builder" element={<Navigate to="/runtime" replace />} />
                   <Route path="*" element={<Navigate to="/summary" replace />} />
                 </>

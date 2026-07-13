@@ -14,9 +14,9 @@ import type {
   PaginatedResponse,
   ProjectAssignmentEntity,
   ProjectEntity,
-  SessionRecord,
 } from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
+import { useSession } from "../../shared/session/SessionContext";
 import { useManagementPermissions } from "../../shared/session/useManagementPermissions";
 import {
   extractLegacyAiEvidence,
@@ -30,9 +30,9 @@ interface NoticeState {
 }
 
 export function useDeliveryManagement(
-  session: SessionRecord | null,
   options?: { initialDeliveryId?: string | null },
 ) {
+  const { activeSession: session } = useSession();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectEntity[]>([]);
   const [assignments, setAssignments] = useState<ProjectAssignmentEntity[]>([]);

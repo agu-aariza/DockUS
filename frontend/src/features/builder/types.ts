@@ -113,6 +113,10 @@ export interface RubricGradeItem {
   maxPoints: number;
   awarded: number;
   justification: string;
+  /** Peso (%) del criterio en la rúbrica configurada del proyecto, si existe. */
+  weight?: number;
+  /** Descripción del criterio tomada de la rúbrica configurada, si existe. */
+  description?: string | null;
 }
 
 export interface TechnicalFeedbackItem {

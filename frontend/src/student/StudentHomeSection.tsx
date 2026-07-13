@@ -13,7 +13,7 @@ import {
 } from "react-icons/ri";
 import { builderApi } from "../shared/api/builderApi";
 
-import type { SessionRecord, StudentWorkflowState } from "../shared/types";
+import type { StudentWorkflowState } from "../shared/types";
 import { MetricCard } from "../shared/components/MetricCard";
 import { Button } from "../shared/components/ui/Button";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
@@ -29,7 +29,6 @@ import { PipelineStepper } from "./PipelineStepper";
 import { deriveStudentWorkspaceInsights, resolveStudentRunOutcome } from "./studentWorkspaceInsights";
 
 interface Props {
-  session: SessionRecord | null;
   data: StudentWorkspaceData;
   onNavigate: (_tab: any) => void;
 }
@@ -103,7 +102,6 @@ function timelineStyle(state: string): string {
 }
 
 export function StudentHomeSection({
-  session: _session,
   data,
   onNavigate,
 }: Props): JSX.Element {

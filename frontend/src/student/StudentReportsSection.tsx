@@ -16,7 +16,6 @@ import { Button } from "../shared/components/ui/Button";
 import type {
   BuildRunEntity,
   DeliveryEntity,
-  SessionRecord,
 } from "../shared/types";
 import { getErrorMessage } from "../shared/utils/errors";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
@@ -54,7 +53,6 @@ function computeMedianDurationMs(
 }
 
 interface Props {
-  session: SessionRecord | null;
   data: StudentWorkspaceData;
 }
 
@@ -336,7 +334,7 @@ function ReportContainer({
   );
 }
 
-export function StudentReportsSection({ session, data }: Props): JSX.Element {
+export function StudentReportsSection({ data }: Props): JSX.Element {
   const { selection } = useWorkspace();
   const { assignments, deliveries, latestRunByDeliveryId, loading, error } = data;
   const [displayLimit, setDisplayLimit] = useState(10);
@@ -591,7 +589,6 @@ export function StudentReportsSection({ session, data }: Props): JSX.Element {
           {activeEvaluationRun ? (
             <EvaluationProgressCard
               run={activeEvaluationRun}
-              session={session}
               historicalMedianMs={historicalMedianMs}
             />
           ) : null}

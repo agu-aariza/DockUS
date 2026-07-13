@@ -14,7 +14,6 @@ import { useState, useEffect, useMemo } from "react";
 import { BuilderLiveRunPane } from "../builder/components/BuilderLiveRunPane";
 import { BuilderRunsTable } from "../builder/components/BuilderRunsTable";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";
-import type { SessionRecord } from "../features/auth/types";
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
 import { useToast } from "../shared/toast/ToastContext";
 import { useRuntimeManagement } from "./hooks/useRuntimeManagement";
@@ -29,10 +28,6 @@ import { PageHeader } from "../shared/components/ui/PageHeader";
 import { Button } from "../shared/components/ui/Button";
 import { Tabs } from "../shared/components/ui/Tabs";
 
-interface TeacherRuntimePanelProps {
-  session: SessionRecord | null;
-}
-
 type RuntimeTab = "control" | "history" | "live";
 
 function formatStudentName(name?: string, email?: string) {
@@ -40,8 +35,8 @@ function formatStudentName(name?: string, email?: string) {
   return name;
 }
 
-export function TeacherRuntimePanel({ session }: TeacherRuntimePanelProps): JSX.Element {
-  const rc = useRuntimeManagement(session);
+export function TeacherRuntimePanel(): JSX.Element {
+  const rc = useRuntimeManagement();
   const { selection, setProject, setAssignment, setDelivery, setRun } = useWorkspace();
   const [activeTab, setActiveTab] = useState<RuntimeTab>("control");
   const { pushToast } = useToast();

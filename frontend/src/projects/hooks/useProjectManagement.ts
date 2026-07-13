@@ -8,9 +8,10 @@ import type {
   PaginatedResponse,
   ProjectEntity,
   ProjectStatus,
-  SessionRecord,
+  RubricCriterion,
   UserEntity,
 } from "../../shared/types";
+import { useSession } from "../../shared/session/SessionContext";
 import { useManagementPermissions } from "../../shared/session/useManagementPermissions";
 import { getErrorMessage } from "../../shared/utils/errors";
 import type { NoticeState } from "./projectManagement.types";
@@ -21,6 +22,33 @@ import {
 } from "./projectManagement.utils";
 import { useProjectAssignmentManagement } from "./useProjectAssignmentManagement";
 import { useProjectTestSuiteManagement } from "./useProjectTestSuiteManagement";
+
+/**
+ * Sanea los criterios de rúbrica del formulario: descarta los que no tienen
+ * nombre y normaliza la descripción vacía a `null`. Devuelve `undefined` cuando
+ * no queda ninguno, para omitir el campo del payload.
+ */
+export function normalizeRubricCriteria(
+  criteria: RubricCriterion[],
+): RubricCriterion[] | undefined {
+  const cleaned = criteria
+    .map((criterion) => ({
+      name: criterion.name.trim(),
+      weight: criterion.weight,
+      description: criterion.description?.trim() || null,
+    }))
+    .filter((criterion) => criterion.name.length > 0);
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
+/** Suma de los pesos de los criterios con nombre. */
+export function sumRubricWeights(criteria: RubricCriterion[]): number {
+  return criteria.reduce(
+    (total, criterion) =>
+      criterion.name.trim().length > 0 ? total + (criterion.weight || 0) : total,
+    0,
+  );
+}
 
 function useAutoDismissNotice(
   notice: NoticeState | null,
@@ -33,7 +61,8 @@ function useAutoDismissNotice(
   }, [clearNotice, notice]);
 }
 
-export function useProjectManagement(session: SessionRecord | null) {
+export function useProjectManagement() {
+  const { activeSession: session } = useSession();
   const [projects, setProjects] =
     useState<PaginatedResponse<ProjectEntity> | null>(null);
   const [students, setStudents] = useState<UserEntity[]>([]);
@@ -46,6 +75,7 @@ export function useProjectManagement(session: SessionRecord | null) {
     expectedType: "",
     expectedOutput: "",
     rubricInstructions: "",
+    rubricCriteria: [] as RubricCriterion[],
     opensAt: "",
     closesAt: "",
     assignedGroupIds: [] as string[],
@@ -59,6 +89,7 @@ export function useProjectManagement(session: SessionRecord | null) {
     expectedType: "",
     expectedOutput: "",
     rubricInstructions: "",
+    rubricCriteria: [] as RubricCriterion[],
     opensAt: "",
     closesAt: "",
   });
@@ -152,6 +183,15 @@ export function useProjectManagement(session: SessionRecord | null) {
     event.preventDefault();
     if (!canWrite) return;
 
+    const rubricCriteria = normalizeRubricCriteria(createForm.rubricCriteria);
+    if (rubricCriteria && sumRubricWeights(rubricCriteria) !== 100) {
+      setEditorNotice({
+        text: "Los pesos de la rúbrica deben sumar 100.",
+        tone: "warning",
+      });
+      return;
+    }
+
     try {
       const response = await projectsApi.create({
         title: createForm.title,
@@ -161,6 +201,7 @@ export function useProjectManagement(session: SessionRecord | null) {
         expectedType: normalizeOptionalText(createForm.expectedType),
         expectedOutput: normalizeOptionalText(createForm.expectedOutput),
         rubricInstructions: normalizeOptionalText(createForm.rubricInstructions),
+        rubricCriteria,
         opensAt: normalizeOptionalDateTime(createForm.opensAt),
         closesAt: normalizeOptionalDateTime(createForm.closesAt),
         assignedGroupIds: createForm.assignedGroupIds,
@@ -178,6 +219,7 @@ export function useProjectManagement(session: SessionRecord | null) {
         expectedType: "",
         expectedOutput: "",
         rubricInstructions: "",
+        rubricCriteria: [],
         opensAt: "",
         closesAt: "",
         assignedGroupIds: [],
@@ -196,6 +238,15 @@ export function useProjectManagement(session: SessionRecord | null) {
     event.preventDefault();
     if (!canWrite || !selectedProject) return;
 
+    const rubricCriteria = normalizeRubricCriteria(editForm.rubricCriteria);
+    if (rubricCriteria && sumRubricWeights(rubricCriteria) !== 100) {
+      setEditorNotice({
+        text: "Los pesos de la rúbrica deben sumar 100.",
+        tone: "warning",
+      });
+      return;
+    }
+
     try {
       const response = await projectsApi.update(selectedProject.id, {
         title: editForm.title,
@@ -205,6 +256,7 @@ export function useProjectManagement(session: SessionRecord | null) {
         expectedType: normalizeOptionalText(editForm.expectedType),
         expectedOutput: normalizeOptionalText(editForm.expectedOutput),
         rubricInstructions: normalizeOptionalText(editForm.rubricInstructions),
+        rubricCriteria: rubricCriteria ?? [],
         opensAt: normalizeOptionalDateTime(editForm.opensAt),
         closesAt: normalizeOptionalDateTime(editForm.closesAt),
       });
@@ -276,6 +328,9 @@ export function useProjectManagement(session: SessionRecord | null) {
       expectedType: selectedProject.expectedType ?? "",
       expectedOutput: selectedProject.expectedOutput ?? "",
       rubricInstructions: selectedProject.rubricInstructions ?? "",
+      rubricCriteria: selectedProject.rubricCriteria
+        ? selectedProject.rubricCriteria.map((criterion) => ({ ...criterion }))
+        : [],
       opensAt: toDateTimeLocalValue(selectedProject.opensAt),
       closesAt: toDateTimeLocalValue(selectedProject.closesAt),
     });

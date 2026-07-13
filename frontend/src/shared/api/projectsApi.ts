@@ -2,7 +2,7 @@ import { http } from "./http";
 import { toParams } from "./query-params";
 import type { BuilderOutcome, QualityInsightCategory } from "../../features/builder/types";
 import type { DeliveryStatus } from "../../features/deliveries/types";
-import type { ProjectEntity, ProjectGradebookRow, ProjectOperationalIssuesReconcileResult, ProjectOperationalIssuesSummary, ProjectProgressSummary, ProjectQualityInsightsResponse, ProjectStatus, ProjectStudentQualityInsightsResponse } from "../../features/projects/types";
+import type { ProjectEntity, ProjectGradebookRow, ProjectOperationalIssuesReconcileResult, ProjectOperationalIssuesSummary, ProjectProgressSummary, ProjectQualityInsightsResponse, ProjectStatus, ProjectStudentQualityInsightsResponse, RubricCriterion } from "../../features/projects/types";
 import type { PaginatedResponse } from "../types";
 import type { StorageObjectEntity } from "../../features/storage/types";
 
@@ -38,6 +38,7 @@ export const projectsApi = {
     expectedType?: string;
     expectedOutput?: string;
     rubricInstructions?: string;
+    rubricCriteria?: RubricCriterion[];
     opensAt?: string;
     closesAt?: string;
     assignedGroupIds?: string[];
@@ -56,6 +57,7 @@ export const projectsApi = {
       expectedType: string;
       expectedOutput: string;
       rubricInstructions: string;
+      rubricCriteria: RubricCriterion[];
       opensAt: string;
       closesAt: string;
     }>,

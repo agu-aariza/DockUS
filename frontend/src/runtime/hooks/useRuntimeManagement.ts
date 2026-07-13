@@ -10,8 +10,8 @@ import type { BuildRunEntity, EvidenceArtifactDto } from "../../features/builder
 import type { DeliveryEntity } from "../../features/deliveries/types";
 import type { PaginatedResponse } from "../../shared/types";
 import type { ProjectAssignmentEntity, ProjectEntity } from "../../features/projects/types";
-import type { SessionRecord } from "../../features/auth/types";
 import { getErrorMessage } from "../../shared/utils/errors";
+import { useSession } from "../../shared/session/SessionContext";
 import { useBuilderRunStream } from "../../builder/hooks/useBuilderRunStream";
 
 type NoticeTone = "info" | "warning";
@@ -20,7 +20,8 @@ interface NoticeState {
   tone: NoticeTone;
 }
 
-export function useRuntimeManagement(session: SessionRecord | null) {
+export function useRuntimeManagement() {
+  const { activeSession: session } = useSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const [projectOptions, setProjectOptions] = useState<ProjectEntity[]>([]);
   const [assignmentOptions, setAssignmentOptions] = useState<ProjectAssignmentEntity[]>([]);

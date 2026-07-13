@@ -1,5 +1,6 @@
 import { RiRefreshLine, RiInboxArchiveLine, RiPulseLine, RiCheckFill } from "react-icons/ri";
 import { DeliveryEntity, ProjectAssignmentEntity } from "../../shared/types";
+import { useWorkspace } from "../../shared/workspace/WorkspaceContext";
 import { Button } from "../../shared/components/ui/Button";
 import { VisualPicker, VisualPickerOption } from "../../shared/components/ui/VisualPicker";
 import { SearchInput } from "../../shared/components/ui/SearchInput";
@@ -17,9 +18,6 @@ const QUICK_FILTERS: { key: "all" | "late" | "ungraded" | "fail" | "pass"; label
 ];
 
 export function DeliveriesSidebar({
-  selectedProjectId,
-  selectedAssignmentId,
-  selectedDeliveryId,
   projectOptions,
   assignmentOptions,
   deliverySearch,
@@ -39,9 +37,6 @@ export function DeliveriesSidebar({
   handleViewReport,
   handleQuickGrade,
 }: {
-  selectedProjectId: string | null;
-  selectedAssignmentId: string | null;
-  selectedDeliveryId: string | null;
   projectOptions: VisualPickerOption[];
   assignmentOptions: VisualPickerOption[];
   deliverySearch: string;
@@ -61,6 +56,11 @@ export function DeliveriesSidebar({
   handleViewReport: (_id: string) => void;
   handleQuickGrade: (_id: string, _grade: number) => void;
 }) {
+  const { selection } = useWorkspace();
+  const selectedProjectId = selection.projectId ?? "";
+  const selectedAssignmentId = selection.assignmentId ?? "";
+  const selectedDeliveryId = selection.deliveryId ?? "";
+
   return (
     <aside className="flex flex-col h-full rounded-2xl border border-slate-200 bg-white p-5 overflow-hidden lg:sticky lg:top-24 shadow-sm">
       <div className="flex items-center justify-between gap-3 mb-5">

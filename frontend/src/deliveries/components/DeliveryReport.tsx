@@ -1,5 +1,6 @@
 import { RiFileTextLine, RiLoader4Line } from "react-icons/ri";
 import { DeliveryEntity } from "../../shared/types";
+import { useWorkspace } from "../../shared/workspace/WorkspaceContext";
 import { Button } from "../../shared/components/ui/Button";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { ReportView } from "../../shared/components/ReportView";
@@ -11,7 +12,6 @@ export function DeliveryReport({
   reportDeliveryVersion,
   reportLoading,
   selectedDeliveryReviewNotes,
-  selectedDeliveryId,
   onHandleViewReport,
 }: {
   selectedDelivery: DeliveryEntity;
@@ -19,9 +19,11 @@ export function DeliveryReport({
   reportDeliveryVersion: number | undefined;
   reportLoading: boolean;
   selectedDeliveryReviewNotes: { manualNotes?: string | null; legacyBlocks?: any };
-  selectedDeliveryId: string | null;
   onHandleViewReport: (_id?: string, _options?: { force?: boolean }) => void;
 }) {
+  const { selection } = useWorkspace();
+  const selectedDeliveryId = selection.deliveryId;
+
   return (
     <section className="rounded-lg border border-app-border bg-white p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

@@ -14,6 +14,7 @@ import {
   RiCloseLine,
 } from "react-icons/ri";
 import { useGroupManagement } from "../hooks/useGroupManagement";
+import { useSession } from "../../shared/session/SessionContext";
 import { UserEntity } from "../../features/auth/types";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { useNoticeToasts } from "../../shared/toast/useNoticeToasts";
@@ -26,8 +27,9 @@ import { Badge } from "../../shared/components/ui/Layout";
 import { SearchInput } from "../../shared/components/ui/SearchInput";
 import { StatusBadge } from "../../shared/components/ui/StatusBadge";
 
-export function TeacherGroupsPanel({ session }: { session: any }) {
-  const canWrite = ["TEACHER", "ADMIN"].includes(session.role);
+export function TeacherGroupsPanel() {
+  const { activeSession } = useSession();
+  const canWrite = ["TEACHER", "ADMIN"].includes(activeSession?.role ?? "");
   const location = useLocation();
   const {
     groups,

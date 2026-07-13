@@ -1,11 +1,9 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { DangerConfirmModal } from "../shared/components/DangerConfirmModal";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";
-import type {
-  ProjectStatus,
-  SessionRecord,
-} from "../shared/types";
+import type { ProjectStatus } from "../shared/types";
 import { ProgressDashboard } from "./ProgressDashboard";
+import { RubricEditor } from "./components/RubricEditor";
 import { useProjectManagement } from "./hooks/useProjectManagement";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
 import {
@@ -48,9 +46,6 @@ import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import { SearchInput } from "../shared/components/ui/SearchInput";
 import { Card, SectionCard } from "../shared/components/ui/Layout";
 
-interface TeacherProjectsPanelProps {
-  session: SessionRecord | null;
-}
 
 type SubTab = 'catalog' | 'assignments' | 'config' | 'monitoring';
 type DetailMode = "selected-project" | "new-project";
@@ -188,8 +183,8 @@ function ProjectOverview({
   );
 }
 
-export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JSX.Element {
-  const pc = useProjectManagement(session);
+export function TeacherProjectsPanel(): JSX.Element {
+  const pc = useProjectManagement();
   const { selection, setProject, clearWorkspace } = useWorkspace();
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('catalog');
   const [detailMode, setDetailMode] = useState<DetailMode>("selected-project");
@@ -261,6 +256,7 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
       expectedType: "",
       expectedOutput: "",
       rubricInstructions: "",
+      rubricCriteria: [],
       opensAt: "",
       closesAt: "",
       assignedGroupIds: [],
@@ -583,6 +579,12 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                     onChange={(e) => pc.setCreateForm(prev => ({ ...prev, rubricInstructions: e.target.value }))}
                   />
                 </div>
+                <div className="pt-2">
+                  <RubricEditor
+                    criteria={pc.createForm.rubricCriteria}
+                    onChange={(rubricCriteria) => pc.setCreateForm(prev => ({ ...prev, rubricCriteria }))}
+                  />
+                </div>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 pt-6 border-t border-app-border">
                   <div className="space-y-3">
@@ -791,7 +793,6 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
               {activeSubTab === "monitoring" ? (
                 <Card className="p-5">
                   <ProgressDashboard
-                    session={session}
                     selectedProjectId={selectedCanvasProject.id}
                     embedded
                   />
@@ -920,6 +921,12 @@ export function TeacherProjectsPanel({ session }: TeacherProjectsPanelProps): JS
                             placeholder="Criterios de evaluación, penalizaciones, etc."
                             value={pc.editForm.rubricInstructions}
                             onChange={e => pc.setEditForm(prev => ({ ...prev, rubricInstructions: e.target.value }))}
+                          />
+                        </div>
+                        <div className="lg:col-span-2">
+                          <RubricEditor
+                            criteria={pc.editForm.rubricCriteria}
+                            onChange={(rubricCriteria) => pc.setEditForm(prev => ({ ...prev, rubricCriteria }))}
                           />
                         </div>
                       </div>

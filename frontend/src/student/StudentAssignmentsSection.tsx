@@ -5,7 +5,7 @@ import {
   RiTimeLine,
 } from "react-icons/ri";
 
-import type { SessionRecord, ProjectAssignmentEntity } from "../shared/types";
+import type { ProjectAssignmentEntity } from "../shared/types";
 import { EmptyState } from "../shared/components/EmptyState";
 import { Skeleton } from "../shared/components/Skeleton";
 import { useWorkspace } from "../shared/workspace/WorkspaceContext";
@@ -13,7 +13,6 @@ import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { describeAssignmentTimeline } from "./deadlineUtils";
 
 interface Props {
-  session: SessionRecord | null;
   data: StudentWorkspaceData;
   onNavigate: (_tab: any) => void;
 }
@@ -66,7 +65,6 @@ function formatDate(value?: string | null): string {
 }
 
 export function StudentAssignmentsSection({
-  session: _session,
   data,
   onNavigate,
 }: Props): JSX.Element {

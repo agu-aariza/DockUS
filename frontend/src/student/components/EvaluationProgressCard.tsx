@@ -10,14 +10,14 @@ import { useState, useEffect, useMemo } from "react";
 
 import { Button } from "../../shared/components/ui/Button";
 import { Alert } from "../../shared/components/ui/Alert";
-import type { BuildRunEntity, SessionRecord } from "../../shared/types";
+import type { BuildRunEntity } from "../../shared/types";
+import { useSession } from "../../shared/session/SessionContext";
 import { useBuildRunStream } from "../hooks/useBuildRunStream";
 import { isStageReached } from "../studentBuildRunStages";
 import { TerminalViewer } from "../../shared/components/TerminalViewer";
 
 interface EvaluationProgressCardProps {
   run: BuildRunEntity;
-  session: SessionRecord | null;
   historicalMedianMs?: number | null;
   onOpenReport?: () => void;
 }
@@ -33,12 +33,12 @@ function formatDuration(durationMs: number): string {
 
 export function EvaluationProgressCard({
   run,
-  session,
   historicalMedianMs,
   onOpenReport,
 }: EvaluationProgressCardProps): JSX.Element {
+  const { activeSession } = useSession();
   const { progress, streamState, streamError, elapsedMs, isActive, events } =
-    useBuildRunStream(run, session);
+    useBuildRunStream(run, activeSession);
 
   const [showLogs, setShowLogs] = useState(false);
 

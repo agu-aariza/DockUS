@@ -12,7 +12,7 @@ import { DangerConfirmModal } from '../shared/components/DangerConfirmModal';
 import { EmptyState } from '../shared/components/EmptyState';
 import { PageHeader } from '../shared/components/ui/PageHeader';
 import { useToast } from '../shared/toast/ToastContext';
-import type { SessionRecord, UserEntity, UserStatus } from '../features/auth/types';
+import type { UserEntity, UserStatus } from '../features/auth/types';
 import type { UserRole } from '../shared/types';
 import { useUserManagement } from './hooks/useUserManagement';
 import { Button, IconButton } from '../shared/components/ui/Button';
@@ -24,10 +24,6 @@ import { StatusBadge } from '../shared/components/ui/StatusBadge';
 import { SearchInput } from '../shared/components/ui/SearchInput';
 import { DataTable } from '../shared/components/ui/DataTable';
 import type { Column } from '../shared/components/ui/DataTable';
-
-interface UsersPanelProps {
-  session: SessionRecord | null;
-}
 
 type UsersTab = 'consulta' | 'alta';
 
@@ -47,8 +43,8 @@ const STATUS_TONE: Record<UserStatus, import('../shared/components/ui/StatusBadg
   PENDING_VERIFICATION: 'pending',
 };
 
-export function UsersPanel({ session }: UsersPanelProps): JSX.Element {
-  const uc = useUserManagement(session);
+export function UsersPanel(): JSX.Element {
+  const uc = useUserManagement();
   const [activeTab, setActiveTab] = useState<UsersTab>('consulta');
   const { pushToast } = useToast();
 

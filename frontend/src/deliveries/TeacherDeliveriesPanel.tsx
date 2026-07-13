@@ -12,7 +12,6 @@ import { ProjectSelectionHub, type ProjectHubOption } from "../shared/components
 import { deliveriesApi } from "../shared/api/services";
 import { getErrorMessage } from "../shared/utils/errors";
 import { useToast } from "../shared/toast/ToastContext";
-import type { SessionRecord } from "../shared/types";
 import { PageHeader } from "../shared/components/ui/PageHeader";
 
 import { useDeliveriesPanel } from "./hooks/useDeliveriesPanel";
@@ -22,14 +21,8 @@ import { DeliveryOverview } from "./components/DeliveryOverview";
 import { DeliveryGrading } from "./components/DeliveryGrading";
 import { DeliveryReport } from "./components/DeliveryReport";
 
-interface TeacherDeliveriesPanelProps {
-  session: SessionRecord | null;
-}
-
-export function TeacherDeliveriesPanel({
-  session,
-}: TeacherDeliveriesPanelProps): JSX.Element {
-  const panel = useDeliveriesPanel(session);
+export function TeacherDeliveriesPanel(): JSX.Element {
+  const panel = useDeliveriesPanel();
   const { pushToast } = useToast();
 
   const projectOptions: VisualPickerOption[] = useMemo(() => 
@@ -101,9 +94,6 @@ export function TeacherDeliveriesPanel({
 
       <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] items-start relative max-w-full">
         <DeliveriesSidebar
-          selectedProjectId={panel.dc.selectedProjectId}
-          selectedAssignmentId={panel.dc.selectedAssignmentId}
-          selectedDeliveryId={panel.dc.selectedDeliveryId}
           projectOptions={projectOptions}
           assignmentOptions={assignmentOptions}
           deliverySearch={panel.deliverySearch}
@@ -194,7 +184,6 @@ export function TeacherDeliveriesPanel({
                   reportDeliveryVersion={panel.dc.reportDelivery?.version}
                   reportLoading={panel.dc.reportLoading}
                   selectedDeliveryReviewNotes={panel.dc.selectedDeliveryReviewNotes}
-                  selectedDeliveryId={panel.dc.selectedDeliveryId}
                   onHandleViewReport={(id, options) => void panel.dc.handleViewReport(id, options)}
                 />
               )}

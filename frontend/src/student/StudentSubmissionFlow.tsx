@@ -1,4 +1,3 @@
-import type { SessionRecord } from "../shared/types";
 import { StudentSurface } from "./components/StudentWorkspaceSurface";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { useSubmissionFlow } from "./hooks/useSubmissionFlow";
@@ -11,13 +10,11 @@ import { SubmissionStep2 } from "./components/SubmissionStep2";
 import { SubmissionStep3 } from "./components/SubmissionStep3";
 
 interface Props {
-  session: SessionRecord | null;
   data: StudentWorkspaceData;
   onNavigate: (tab: any) => void;
 }
 
 export function StudentSubmissionFlow({
-  session,
   data,
   onNavigate,
 }: Props): JSX.Element {
@@ -29,9 +26,7 @@ export function StudentSubmissionFlow({
   }
 
   if (step === 4) {
-    return (
-      <SubmissionSuccess session={session} flow={flow} onNavigate={onNavigate} />
-    );
+    return <SubmissionSuccess flow={flow} onNavigate={onNavigate} />;
   }
 
   return (

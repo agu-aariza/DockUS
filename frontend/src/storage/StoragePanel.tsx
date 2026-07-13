@@ -8,21 +8,16 @@ import { DangerConfirmModal } from '../shared/components/DangerConfirmModal';
 import { PageHeader } from '../shared/components/ui/PageHeader';
 import { StatsOverview } from '../shared/components/ui/StatsOverview';
 import { useToast } from '../shared/toast/ToastContext';
-import type { SessionRecord } from "../features/auth/types";
 import { useStorageManagement } from './hooks/useStorageManagement';
 import { Button } from '../shared/components/ui/Button';
 import { Tabs } from '../shared/components/ui/Tabs';
 import { StatusBadge } from '../shared/components/ui/StatusBadge';
 import { EmptyState } from '../shared/components/EmptyState';
 
-interface StoragePanelProps {
-  session: SessionRecord | null;
-}
-
 type StorageTab = 'subida' | 'consulta' | 'inventario';
 
-export function StoragePanel({ session }: StoragePanelProps): JSX.Element {
-  const sc = useStorageManagement(session);
+export function StoragePanel(): JSX.Element {
+  const sc = useStorageManagement();
   const [activeTab, setActiveTab] = useState<StorageTab>('subida');
   const { pushToast } = useToast();
 
