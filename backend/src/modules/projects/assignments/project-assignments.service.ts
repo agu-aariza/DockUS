@@ -16,48 +16,16 @@ import { ProjectAssignment } from './entities/project-assignment.entity';
 import { GROUP_ROSTER_READER } from '../../../shared/application/group-roster-reader.port';
 import type { GroupRosterReader } from '../../../shared/application/group-roster-reader.port';
 
-export interface ProjectAssignmentResponse {
-  id: string;
-  projectId: string;
-  projectTitle: string;
-  projectExpectedType: string | null;
-  maxDeliveriesPerStudent: number;
-  sourceGroupIds: string[];
-  studentId: string;
-  studentEmail: string;
-  studentName: string;
-  assignedById: string;
-  assignedAt: string;
-  revokedAt: string | null;
-  opensAt: string | null;
-  closesAt: string | null;
-  deliveryCount: number;
-  remainingDeliveries: number;
-  minimumRequirementMet: boolean;
-  rubricInstructions: string | null;
-  courseGroupId: string | null;
-  courseGroup: {
-    id: string;
-    name: string;
-    code: string | null;
-  } | null;
-}
-
-export interface BulkAssignSummary {
-  requestedIds: string[];
-  requestedEmails: string[];
-  requestedGroupIds: string[];
-  resolvedStudentIds: string[];
-  assignedCount: number;
-  reactivatedCount: number;
-  alreadyActiveCount: number;
-  unresolvedEmails: string[];
-}
-
-export interface BulkAssignResponse {
-  assignments: ProjectAssignmentResponse[];
-  summary: BulkAssignSummary;
-}
+// Shapes compartidas con el frontend: fuente única en @dockus/contracts.
+export type {
+  ProjectAssignmentResponse,
+  BulkAssignSummary,
+  BulkAssignResponse,
+} from '@dockus/contracts';
+import type {
+  ProjectAssignmentResponse,
+  BulkAssignResponse,
+} from '@dockus/contracts';
 
 @Injectable()
 export class ProjectAssignmentsService {
