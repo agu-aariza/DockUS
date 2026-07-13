@@ -72,6 +72,13 @@ const BUILD_RUN_ID_PARAM = {
   example: '550e8400-e29b-41d4-a716-446655440000',
 } as const;
 
+/**
+ * Tope de páginas al drenar el backlog inicial del SSE (200 eventos por página).
+ * Cubre runs con historial extenso sin permitir que el bucle gire para siempre
+ * sobre un run que aún está produciendo eventos.
+ */
+const MAX_BACKLOG_DRAIN_PAGES = 50;
+
 @ApiTags('Builder')
 @ApiBearerAuth()
 @Controller('builder')
@@ -240,8 +247,14 @@ export class BuilderController {
       response.write(`event: run-event\ndata: ${JSON.stringify(event)}\n\n`);
     }
 
+    // Drena el backlog con un tope de páginas: sobre un run activo y verboso, el
+    // worker inserta eventos más rápido de lo que se leen y el bucle no
+    // terminaría, martilleando Postgres y sin llegar nunca al subscribe(). Los
+    // eventos que lleguen entre medias los recoge la suscripción, y el cliente
+    // deduplica por `sequence`.
     let hasMore = firstPage.hasMore;
-    while (hasMore) {
+    let drainedPages = 0;
+    while (hasMore && drainedPages < MAX_BACKLOG_DRAIN_PAGES) {
       const page = await this.builderRunQueriesService.listRunEvents(
         buildRunId,
         request.user,
@@ -250,6 +263,7 @@ export class BuilderController {
       );
       latestSequence = Math.max(latestSequence, page.latestSequence);
       hasMore = page.hasMore;
+      drainedPages += 1;
       for (const event of page.events) {
         response.write(`event: run-event\ndata: ${JSON.stringify(event)}\n\n`);
       }
