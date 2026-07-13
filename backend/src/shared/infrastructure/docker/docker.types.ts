@@ -24,6 +24,12 @@ export interface DockerContainerRunOptions extends DockerLabelledTimeoutOptions 
   networkAlias?: string;
   cpus?: string;
   memory?: string;
+  /** Límite de procesos. Sin él, una fork bomb agota los PIDs del anfitrión. */
+  pidsLimit?: number;
+  /** `uid:gid` con el que corre el proceso dentro del contenedor. */
+  user?: string;
+  /** Deja el sistema de ficheros raíz en solo lectura (los binds no se ven afectados). */
+  readOnlyRootfs?: boolean;
   ports?: Array<{
     containerPort: number;
     hostPort?: number;
@@ -44,6 +50,17 @@ export type DockerCreateNetworkInfo = Omit<
   DockerCreateNetworkOptions,
   'timeoutMs' | 'maxBufferedChars'
 >;
+
+export interface DockerImageBuildOptions extends DockerLabelledTimeoutOptions {
+  imageTag: string;
+  contextDir: string;
+  dockerfilePath?: string;
+}
+
+export interface DockerImageInspectOptions {
+  timeoutMs: number;
+  maxBufferedChars?: number;
+}
 
 export interface DockerWaitOptions {
   timeoutMs: number;
@@ -70,4 +87,5 @@ export interface DockerHostInfo {
 
 export const DEFAULT_DOCKER_CHECK_TIMEOUT_MS = 15000;
 export const DEFAULT_DOCKER_EPHEMERAL_TIMEOUT_MS = 300000;
+export const DEFAULT_DOCKER_BUILD_TIMEOUT_MS = 600000;
 export const DEFAULT_DOCKER_RUNTIME = 'runc';

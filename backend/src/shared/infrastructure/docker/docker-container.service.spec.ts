@@ -86,7 +86,7 @@ describe('DockerContainerService', () => {
     );
   });
 
-  it('ejecuta contenedores efimeros sin filesystem de solo lectura', async () => {
+  it('endurece los contenedores efimeros que ejecutan codigo del alumno', async () => {
     mockedRunCommand.mockResolvedValueOnce({
       exitCode: 0,
       stdout: 'ok\n',
@@ -97,10 +97,19 @@ describe('DockerContainerService', () => {
     await service.runEphemeralContainer({
       containerName: 'ephemeral-run-123',
       imageTag: 'python:3.11-slim',
-      command: ['python', '-m', 'pip', 'install', '-r', 'requirements.txt'],
+      command: ['python', 'main.py'],
       runtime: 'runc',
-      binds: ['/tmp/workspace:/app'],
+      binds: [
+        '/tmp/workspace:/app',
+        '/tmp/teacher-tests:/app/.dockus/teacher-tests:ro',
+      ],
       workingDir: '/app',
+      networkMode: 'none',
+      readOnlyRootfs: true,
+      pidsLimit: 256,
+      user: '65534:65534',
+      memory: '512m',
+      cpus: '0.5',
       timeoutMs: 15_000,
     });
 
@@ -108,19 +117,29 @@ describe('DockerContainerService', () => {
 
     expect(args).toContain('container');
     expect(args).toContain('run');
-    expect(args).not.toContain('--read-only');
-    expect(args).not.toContain('--cap-drop');
-    expect(args).not.toContain('ALL');
     expect(args).toEqual(
       expect.arrayContaining([
         '--security-opt',
         'no-new-privileges',
+        // Sin CAP_DAC_OVERRIDE los bits de permiso dejan de ser evitables.
+        '--cap-drop',
+        'ALL',
+        '--read-only',
+        '--pids-limit',
+        '256',
+        '--user',
+        '65534:65534',
+        '--network',
+        'none',
+        '--memory',
+        '512m',
+        '--cpus',
+        '0.5',
         '--tmpfs',
         '/tmp',
+        // La suite docente se monta aparte y en solo lectura.
         '-v',
-        '/tmp/workspace:/app',
-        '-w',
-        '/app',
+        '/tmp/teacher-tests:/app/.dockus/teacher-tests:ro',
         'python:3.11-slim',
       ]),
     );

@@ -13,16 +13,12 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { access, chmod, mkdir, mkdtemp, writeFile } from 'fs/promises';
+import { access, chmod, mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { IsNull, Repository } from 'typeorm';
-import {
-  DEFAULT_MAX_EXTRACTED_BYTES,
-  DEFAULT_MAX_EXTRACTED_FILES,
-} from '../../../domain/builder.constants';
+
 import { RuntimeFile } from '../../../domain/builder.types';
 import { Delivery } from '../../../../deliveries/entities/delivery.entity';
 import {
@@ -30,6 +26,8 @@ import {
   StorageObject,
 } from '../../../../storage/entities/storage-object.entity';
 import { MinioStorageService } from '../../../../../../shared/infrastructure/storage/minio-storage.service';
+import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
+import { toErrorMessage } from '../../../../../../shared/utils/error-message.util';
 import { extractArchiveToWorkspace } from '../../../infrastructure/utils/archive-extractor.util';
 import {
   buildSafeDestination,
@@ -58,8 +56,18 @@ export interface StageWorkspaceResult {
   hasTeacherTests: boolean;
   workspaceRoot: string;
   projectRootDir: string;
+  /**
+   * Directorio hermano de `projectRootDir`, nunca anidado dentro de él: el
+   * contenedor de ejecución monta `projectRootDir` en escritura, de modo que
+   * cualquier cosa contenida ahí es modificable por el código del alumno. La
+   * suite docente se monta aparte y en solo lectura.
+   */
+  teacherTestsRootDir: string;
   warnings: string[];
 }
+
+/** Ruta lógica bajo la que la suite docente se presenta dentro del contenedor. */
+const TEACHER_TESTS_RELATIVE_PREFIX = '.dockus/teacher-tests';
 
 @Injectable()
 export class BuilderWorkspaceService {
@@ -72,16 +80,10 @@ export class BuilderWorkspaceService {
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
     private readonly minioStorageService: MinioStorageService,
-    private readonly configService: ConfigService,
+    private readonly builderConfigProvider: BuilderConfigProvider,
   ) {
-    this.maxExtractedFiles = this.configService.get<number>(
-      'BUILDER_MAX_EXTRACTED_FILES',
-      DEFAULT_MAX_EXTRACTED_FILES,
-    );
-    this.maxExtractedBytes = this.configService.get<number>(
-      'BUILDER_MAX_EXTRACTED_BYTES',
-      DEFAULT_MAX_EXTRACTED_BYTES,
-    );
+    this.maxExtractedFiles = this.builderConfigProvider.maxExtractedFiles;
+    this.maxExtractedBytes = this.builderConfigProvider.maxExtractedBytes;
   }
 
   async prepareWorkspace(deliveryId: string): Promise<StageWorkspaceResult> {
@@ -170,11 +172,7 @@ export class BuilderWorkspaceService {
     );
     const projectRootDir = path.join(workspaceRoot, 'project');
     await mkdir(projectRootDir, { recursive: true });
-    const teacherTestsRootDir = path.join(
-      projectRootDir,
-      '.dockus',
-      'teacher-tests',
-    );
+    const teacherTestsRootDir = path.join(workspaceRoot, 'teacher-tests');
     await mkdir(teacherTestsRootDir, { recursive: true });
 
     const warnings: string[] = [];
@@ -184,7 +182,7 @@ export class BuilderWorkspaceService {
     await this.materializeInputObjects({
       inputObjects: studentInputObjects,
       outputRootDir: projectRootDir,
-      projectRootDir,
+      relativeBaseDir: projectRootDir,
       counters,
       warnings,
       runtimeFiles,
@@ -193,7 +191,8 @@ export class BuilderWorkspaceService {
     await this.materializeInputObjects({
       inputObjects: teacherTestObjects,
       outputRootDir: teacherTestsRootDir,
-      projectRootDir,
+      relativeBaseDir: teacherTestsRootDir,
+      relativePrefix: TEACHER_TESTS_RELATIVE_PREFIX,
       counters,
       warnings,
       runtimeFiles: teacherTestRuntimeFiles,
@@ -229,6 +228,7 @@ export class BuilderWorkspaceService {
       hasTeacherTests: teacherTestRuntimeFiles.length > 0,
       workspaceRoot,
       projectRootDir,
+      teacherTestsRootDir,
       warnings,
     };
   }
@@ -236,12 +236,21 @@ export class BuilderWorkspaceService {
   private async materializeInputObjects(input: {
     inputObjects: WorkspaceInputObject[];
     outputRootDir: string;
-    projectRootDir: string;
+    relativeBaseDir: string;
+    relativePrefix?: string;
     counters: { files: number; bytes: number };
     warnings: string[];
     runtimeFiles: RuntimeFile[];
     mode: 'student_source' | 'teacher_tests';
   }): Promise<void> {
+    const toRelativePath = (destination: string): string =>
+      toPosixPath(
+        path.join(
+          input.relativePrefix ?? '',
+          path.relative(input.relativeBaseDir, destination),
+        ),
+      );
+
     const archives = input.inputObjects.filter((item) =>
       this.isArchive(item.logicalName),
     );
@@ -263,7 +272,12 @@ export class BuilderWorkspaceService {
           maxBytes: this.maxExtractedBytes,
         },
       });
-      input.runtimeFiles.push(...extractedFiles);
+      input.runtimeFiles.push(
+        ...extractedFiles.map((extractedFile) => ({
+          ...extractedFile,
+          relativePath: toRelativePath(extractedFile.absolutePath),
+        })),
+      );
       input.warnings.push(
         input.mode === 'teacher_tests'
           ? `Se extrajo suite docente ${archiveObject.logicalName} (${extractedFiles.length} archivos).`
@@ -299,9 +313,7 @@ export class BuilderWorkspaceService {
       await mkdir(path.dirname(destination), { recursive: true });
       await writeFile(destination, objectBuffer);
       input.runtimeFiles.push({
-        relativePath: toPosixPath(
-          path.relative(input.projectRootDir, destination),
-        ),
+        relativePath: toRelativePath(destination),
         absolutePath: destination,
         sizeBytes: objectBuffer.length,
       });
@@ -318,7 +330,7 @@ export class BuilderWorkspaceService {
       );
     } catch (error) {
       throw new UnprocessableEntityException(
-        `No se pudo leer el objeto ${inputObject.storageObjectId}: ${this.toErrorMessage(error)}`,
+        `No se pudo leer el objeto ${inputObject.storageObjectId}: ${toErrorMessage(error, 'Error no tipado en preparación de workspace.')}`,
       );
     }
   }
@@ -369,6 +381,28 @@ export class BuilderWorkspaceService {
     }
   }
 
+  /**
+   * Defensa en profundidad, no la defensa principal: los bits de permiso son
+   * evitables desde dentro del contenedor por cualquier proceso con
+   * CAP_DAC_OVERRIDE. Lo que realmente impide que el alumno reescriba la suite
+   * docente es que su directorio vive fuera de `projectRootDir` y se monta con
+   * `:ro`, restricción que impone el kernel (véase `BuilderExecutionStageHandler`).
+   */
+  /**
+   * Elimina el árbol temporal del workspace. La limpieza vive aquí, donde nace
+   * el workspace, y no en el orquestador de runs: cierra el ciclo de vida en el
+   * mismo servicio que lo abre. Nunca lanza: un fallo de limpieza no debe alterar
+   * el resultado del run.
+   */
+  async cleanup(workspace: Pick<StageWorkspaceResult, 'workspaceRoot'>): Promise<void> {
+    if (!workspace?.workspaceRoot) {
+      return;
+    }
+    await rm(workspace.workspaceRoot, { recursive: true, force: true }).catch(
+      () => undefined,
+    );
+  }
+
   private async makeReadOnly(
     rootDir: string,
     runtimeFiles: RuntimeFile[],
@@ -383,10 +417,4 @@ export class BuilderWorkspaceService {
     await chmod(rootDir, 0o555).catch(() => undefined);
   }
 
-  private toErrorMessage(error: unknown): string {
-    if (error instanceof Error) {
-      return error.message;
-    }
-    return 'Error no tipado en preparación de workspace.';
-  }
 }

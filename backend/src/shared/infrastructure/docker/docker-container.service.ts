@@ -42,6 +42,10 @@ export class DockerContainerService {
       ([key, value]) => ['-e', `${key}=${value}`],
     );
 
+    // Este contenedor ejecuta código del alumno: es el proceso más hostil del
+    // sistema y debe ser el más restringido. `--cap-drop ALL` retira, entre
+    // otras, CAP_DAC_OVERRIDE, sin la cual los bits de permiso de los binds
+    // dejan de ser evitables; `--pids-limit` acota las fork bombs.
     const args = [
       'container',
       'run',
@@ -56,6 +60,11 @@ export class DockerContainerService {
       options.runtime,
       '--security-opt',
       'no-new-privileges',
+      '--cap-drop',
+      'ALL',
+      ...(options.readOnlyRootfs ? ['--read-only'] : []),
+      ...(options.pidsLimit ? ['--pids-limit', String(options.pidsLimit)] : []),
+      ...(options.user ? ['--user', options.user] : []),
       '--tmpfs',
       '/tmp',
       ...buildDockerLabelArgs(options.labels),

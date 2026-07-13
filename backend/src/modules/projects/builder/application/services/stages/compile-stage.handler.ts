@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { IBuilderStageHandler } from './builder-stage.interface';
-import { BuilderRecipeCompiler } from '../compilation/builder-recipe-compiler.service';
+import {
+  BuilderRecipeCompiler,
+  CompiledRecipe,
+} from '../compilation/builder-recipe-compiler.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import { BuilderPlanContractV2 } from '../../../domain/builder.types';
@@ -14,7 +17,7 @@ interface CompileStageInput {
 }
 
 interface CompileStageOutput {
-  compiled: any;
+  compiled: CompiledRecipe;
   executionLogs?: string;
 }
 
@@ -63,16 +66,25 @@ export class BuilderCompileStageHandler implements IBuilderStageHandler<
         buildRunId: runId,
         eventType: 'RUN_STATUS_CHANGED',
         runStatus: BuildRunStatus.RUNNING,
-        message: `Instalando dependencias de sistema: ${compiled.systemPackages.join(', ')}`,
+        message: `Paquetes de sistema requeridos: ${compiled.systemPackages.join(', ')}`,
       });
     }
 
-    if (compiled.installCmd) {
+    if (compiled.dependencyInstallCmd) {
       await this.builderRunSupportService.emitEvent({
         buildRunId: runId,
         eventType: 'RUN_STATUS_CHANGED',
         runStatus: BuildRunStatus.RUNNING,
-        message: 'Sincronizando dependencias del lenguaje...',
+        message: 'Preparando imagen de entorno con las dependencias declaradas...',
+      });
+    }
+
+    if (compiled.buildCmd) {
+      await this.builderRunSupportService.emitEvent({
+        buildRunId: runId,
+        eventType: 'RUN_STATUS_CHANGED',
+        runStatus: BuildRunStatus.RUNNING,
+        message: `Compilacion detectada: ${compiled.buildCmd}`,
       });
     }
 

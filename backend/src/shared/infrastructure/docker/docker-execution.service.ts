@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DockerContainerService } from './docker-container.service';
+import { DockerImageService } from './docker-image.service';
 import { DockerNetworkService } from './docker-network.service';
 import {
   DockerCreateNetworkInfo,
   DockerRunOptions,
+  DEFAULT_DOCKER_BUILD_TIMEOUT_MS,
   DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
   DEFAULT_DOCKER_EPHEMERAL_TIMEOUT_MS,
   DEFAULT_DOCKER_RUNTIME,
@@ -13,17 +15,42 @@ import {
 @Injectable()
 export class DockerExecutionService {
   private readonly dockerRuntime: string;
+  private readonly imageBuildTimeoutMs: number;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly dockerNetworkService: DockerNetworkService,
     private readonly dockerContainerService: DockerContainerService,
+    private readonly dockerImageService: DockerImageService,
   ) {
     this.dockerRuntime =
       this.configService.get<string>(
         'BUILDER_DOCKER_RUNTIME',
         DEFAULT_DOCKER_RUNTIME,
       ) ?? DEFAULT_DOCKER_RUNTIME;
+    this.imageBuildTimeoutMs = this.configService.get<number>(
+      'BUILDER_DOCKER_BUILD_TIMEOUT_MS',
+      DEFAULT_DOCKER_BUILD_TIMEOUT_MS,
+    );
+  }
+
+  async imageExists(imageTag: string): Promise<boolean> {
+    return this.dockerImageService.imageExists(imageTag, {
+      timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
+      maxBufferedChars: 250000,
+    });
+  }
+
+  async buildImage(options: {
+    imageTag: string;
+    contextDir: string;
+    labels?: Record<string, string>;
+  }): Promise<void> {
+    return this.dockerImageService.buildImage({
+      ...options,
+      timeoutMs: this.imageBuildTimeoutMs,
+      maxBufferedChars: 1_000_000,
+    });
   }
 
   async createNetwork(
