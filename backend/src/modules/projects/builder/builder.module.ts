@@ -26,7 +26,7 @@ import { BuilderRunQueriesService } from './application/services/orchestration/b
 import { BuilderRunSupportService } from './application/services/orchestration/builder-run-support.service';
 import { BuilderWorkspaceService } from './application/services/workspace/builder-workspace.service';
 import { BUILDER_RUNS_QUEUE_NAME } from './domain/builder.constants';
-import { BuilderCacheManagerService } from './application/services/workspace/builder-cache-manager.service';
+import { BuilderEnvironmentImageService } from './application/services/workspace/builder-environment-image.service';
 import { BuilderPedagogicalService } from './application/services/evaluation/builder-pedagogical.service';
 import { BuilderRecipeCompiler } from './application/services/compilation/builder-recipe-compiler.service';
 import { BuilderHallucinationGuard } from './application/services/evaluation/builder-hallucination-guard.service';
@@ -38,13 +38,13 @@ import { BuildRunEventEntity } from './domain/entities/build-run-event.entity';
 import { BuildRun } from './domain/entities/build-run.entity';
 import { CodeQualityFindingEntity } from './domain/entities/code-quality-finding.entity';
 import { BuildRunChatMessage } from './domain/entities/build-run-chat-message.entity';
+import { BuilderConfigProvider } from './domain/builder-config.provider';
 import { BuilderLlmEvaluatorService } from './domain/ai/builder-llm-evaluator.service';
 import { BuilderLlmChatService } from './domain/ai/builder-llm-chat.service';
 import { BuilderRunEventsService } from './domain/events/builder-run-events.service';
 import { EvidenceService } from './infrastructure/evidence/evidence.service';
 import { BuilderLogTrimmer } from './infrastructure/utils/builder-log-trimmer.util';
 import { BuilderController } from './presentation/builder.controller';
-import { BuilderProcessor } from './presentation/builder.processor';
 import { BuilderCodeQualityService } from './domain/ai/builder-code-quality.service';
 import { BuilderQualityAggregationService } from './application/services/evaluation/builder-quality-aggregation.service';
 import { BuilderPlanStageHandler } from './application/services/stages/plan-stage.handler';
@@ -53,6 +53,9 @@ import { BuilderExecutionStageHandler } from './application/services/stages/exec
 import { BuilderEvaluationStageHandler } from './application/services/stages/evaluation-stage.handler';
 import { BuilderQualityStageHandler } from './application/services/stages/quality-stage.handler';
 import { BuilderReportStageHandler } from './application/services/stages/report-stage.handler';
+import { BuilderPipelineOrchestrator } from './application/services/orchestration/builder-pipeline-orchestrator.service';
+import { BuilderRunMetricsService } from './application/services/orchestration/builder-run-metrics.service';
+import { BuilderStaleRunRecoveryService } from './application/services/orchestration/builder-stale-run-recovery.service';
 
 @Module({
   imports: [
@@ -80,18 +83,18 @@ import { BuilderReportStageHandler } from './application/services/stages/report-
       provide: 'IBuildRunRepository',
       useClass: BuildRunRepository,
     },
+    BuilderConfigProvider,
     BuilderAccessService,
     BuilderWorkspaceService,
     BuilderRunQueriesService,
     BuilderRunCommandsService,
     BuilderRunSupportService,
-    BuilderProcessor,
     BuilderLlmEvaluatorService,
     BuilderLlmChatService,
     BuilderRunEventsService,
     EvidenceService,
     BuilderLogTrimmer,
-    BuilderCacheManagerService,
+    BuilderEnvironmentImageService,
     BuilderPedagogicalService,
     BuilderCodeQualityService,
     BuilderQualityAggregationService,
@@ -105,6 +108,9 @@ import { BuilderReportStageHandler } from './application/services/stages/report-
     BuilderEvaluationStageHandler,
     BuilderQualityStageHandler,
     BuilderReportStageHandler,
+    BuilderPipelineOrchestrator,
+    BuilderRunMetricsService,
+    BuilderStaleRunRecoveryService,
   ],
   exports: [BuilderQualityAggregationService],
 })
@@ -114,6 +120,12 @@ export class BuilderModule implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    // El barrido de runs huérfanos solo lo dispara el worker: un reinicio de la
+    // API no debe marcar FAILED un run que el worker está procesando (véase
+    // BuilderStaleRunRecoveryService y la señal DOCKUS_ROLE en worker.ts).
+    if (process.env.DOCKUS_ROLE !== 'worker') {
+      return;
+    }
     await this.builderRunCommandsService.failStaleRunsOnStartup();
   }
 }

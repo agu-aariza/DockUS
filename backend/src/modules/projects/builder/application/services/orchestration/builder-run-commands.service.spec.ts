@@ -5,19 +5,15 @@ import { Queue } from 'bullmq';
 import { BuilderRunCommandsService } from './builder-run-commands.service';
 import { BuilderRunQueriesService } from './builder-run-queries.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
-import { BuilderWorkspaceService } from '../workspace/builder-workspace.service';
 import { BuilderAccessService } from '../workspace/builder-access.service';
-import { BuilderPlanStageHandler } from '../stages/plan-stage.handler';
-import { BuilderCompileStageHandler } from '../stages/compile-stage.handler';
-import { BuilderExecutionStageHandler } from '../stages/execution-stage.handler';
-import { BuilderEvaluationStageHandler } from '../stages/evaluation-stage.handler';
-import { BuilderQualityStageHandler } from '../stages/quality-stage.handler';
-import { BuilderReportStageHandler } from '../stages/report-stage.handler';
+import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
+import { BuilderPipelineOrchestrator } from './builder-pipeline-orchestrator.service';
+import { BuilderRunMetricsService } from './builder-run-metrics.service';
+import { BuilderStaleRunRecoveryService } from './builder-stale-run-recovery.service';
 import {
   BuildRun,
   BuildRunStatus,
 } from '../../../domain/entities/build-run.entity';
-
 import {
   Delivery,
   DeliveryStatus,
@@ -65,32 +61,16 @@ describe('BuilderRunCommandsService', () => {
     emitEvent: jest.fn().mockResolvedValue(undefined),
   };
 
-  const builderWorkspaceService = {
-    prepareWorkspace: jest.fn(),
+  const builderPipelineOrchestrator = {
+    runPipeline: jest.fn(),
   };
 
-  const planStageHandler = {
-    handle: jest.fn(),
+  const builderRunMetricsService = {
+    logRunMetrics: jest.fn(),
   };
 
-  const compileStageHandler = {
-    handle: jest.fn(),
-  };
-
-  const executionStageHandler = {
-    handle: jest.fn(),
-  };
-
-  const evaluationStageHandler = {
-    handle: jest.fn(),
-  };
-
-  const qualityStageHandler = {
-    handle: jest.fn(),
-  };
-
-  const reportStageHandler = {
-    handle: jest.fn(),
+  const builderStaleRunRecoveryService = {
+    failStaleRunsOnStartup: jest.fn(),
   };
 
   const buildProject = (): Project =>
@@ -121,16 +101,29 @@ describe('BuilderRunCommandsService', () => {
       status: BuildRunStatus.RUNNING,
     }) as BuildRun;
 
+  const buildPipelineResult = (
+    overrides: Partial<{
+      workspaceRoot: string;
+      planAssessment: any;
+      assessment: any;
+      qualityFindings: any;
+      report: any;
+    }> = {},
+  ) => ({
+    planAssessment: { thought: 'plan ok' },
+    assessment: { thought: 'eval ok', gradeBreakdown: [] },
+    qualityFindings: [],
+    report: { summary: 'ok' },
+    executionLogs: '',
+    warnings: [],
+    ...overrides,
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
 
     buildRunRepository.findOne.mockResolvedValue(buildRun());
     builderAccessService.findDeliveryOrThrow.mockResolvedValue(buildDelivery());
-    builderWorkspaceService.prepareWorkspace.mockResolvedValue({
-      workspaceRoot,
-      runtimeFiles: [],
-      warnings: [],
-    });
     deliveriesRepository.findOne.mockResolvedValue(buildDelivery());
 
     service = new BuilderRunCommandsService(
@@ -140,76 +133,88 @@ describe('BuilderRunCommandsService', () => {
       builderAccessService as unknown as BuilderAccessService,
       builderRunQueriesService,
       builderRunSupportService as unknown as BuilderRunSupportService,
-      builderWorkspaceService as unknown as BuilderWorkspaceService,
-      planStageHandler as unknown as BuilderPlanStageHandler,
-      compileStageHandler as unknown as BuilderCompileStageHandler,
-      executionStageHandler as unknown as BuilderExecutionStageHandler,
-      evaluationStageHandler as unknown as BuilderEvaluationStageHandler,
-      qualityStageHandler as unknown as BuilderQualityStageHandler,
-      reportStageHandler as unknown as BuilderReportStageHandler,
-      { get: jest.fn((_key: string, fallback?: unknown) => fallback) } as any,
+      {
+        planMaxInputChars: 15000,
+        factsMaxInputChars: 18000,
+        evalMaxInputChars: 15000,
+        maxExtractedFiles: 1500,
+        maxExtractedBytes: 104857600,
+        staleRunThresholdMs: 600000,
+        promptVersion: '2026.07-chain-of-verification',
+      } as BuilderConfigProvider,
+      builderPipelineOrchestrator as unknown as BuilderPipelineOrchestrator,
+      builderRunMetricsService as unknown as BuilderRunMetricsService,
+      builderStaleRunRecoveryService as unknown as BuilderStaleRunRecoveryService,
       {} as DataSource,
     );
   });
 
   describe('processBuildRunJob', () => {
-    it('limpia el workspace incluso cuando una etapa del pipeline falla', async () => {
-      jest.mocked(rm).mockResolvedValue(undefined);
-      planStageHandler.handle.mockRejectedValue(
-        new Error('Planificacion fallida'),
+    it('marca el run como fallido y saca la entrega de revision cuando el pipeline falla', async () => {
+      builderPipelineOrchestrator.runPipeline.mockRejectedValue(
+        new Error('Pipeline fallido'),
       );
 
       await expect(
         service.processBuildRunJob({ buildRunId: runId, deliveryId } as any),
-      ).rejects.toThrow('Planificacion fallida');
+      ).rejects.toThrow('Pipeline fallido');
 
       expect(builderRunSupportService.markRunAsFailed).toHaveBeenCalledWith(
         runId,
-        'Planificacion fallida',
+        'Pipeline fallido',
       );
       const evaluatedCall = deliveriesRepository.save.mock.calls.find(
         ([delivery]) =>
           (delivery as Delivery).status === DeliveryStatus.EVALUATED,
       );
       expect(evaluatedCall).toBeTruthy();
-      expect(rm).toHaveBeenCalledWith(workspaceRoot, {
-        recursive: true,
-        force: true,
-      });
     });
 
-    it('limpia el workspace despues de una ejecucion exitosa', async () => {
-      jest.mocked(rm).mockResolvedValue(undefined);
-
-      planStageHandler.handle.mockResolvedValue({
-        planAssessment: { thought: 'todo ok' },
-      });
-      compileStageHandler.handle.mockResolvedValue({
-        compiled: { executable: false },
-        executionLogs: '',
-      });
-      evaluationStageHandler.handle.mockResolvedValue({
-        assessment: {
-          thought: 'evaluacion ok',
-          gradeBreakdown: [],
-        },
-      });
-      qualityStageHandler.handle.mockResolvedValue({
-        qualityFindings: [],
-      });
-      reportStageHandler.handle.mockResolvedValue({
-        report: { summary: 'ok' },
-      });
+    it('no limpia el workspace: ese ciclo de vida pertenece al orquestador', async () => {
+      builderPipelineOrchestrator.runPipeline.mockResolvedValue(
+        buildPipelineResult(),
+      );
 
       await service.processBuildRunJob({
         buildRunId: runId,
         deliveryId,
       } as any);
 
-      expect(rm).toHaveBeenCalledWith(workspaceRoot, {
-        recursive: true,
-        force: true,
-      });
+      expect(rm).not.toHaveBeenCalled();
+    });
+
+    it('persiste el resultado del pipeline en el run y actualiza la entrega', async () => {
+      builderPipelineOrchestrator.runPipeline.mockResolvedValue(
+        buildPipelineResult({
+          planAssessment: { thought: 'planner thought' },
+          assessment: {
+            thought: 'auditor thought',
+            gradeBreakdown: [{ awarded: 8 }],
+          },
+          qualityFindings: { security: [] },
+          report: { summary: 'final report' },
+        }),
+      );
+
+      await service.processBuildRunJob({
+        buildRunId: runId,
+        deliveryId,
+      } as any);
+
+      const savedRunCall = buildRunRepository.save.mock.calls.find(
+        ([run]) => (run as BuildRun).status === BuildRunStatus.SUCCESS,
+      );
+      expect(savedRunCall).toBeTruthy();
+      const savedRun = savedRunCall![0] as BuildRun;
+      expect(savedRun.llmReasoning).toContain('planner thought');
+      expect(savedRun.llmReasoning).toContain('auditor thought');
+      expect(savedRun.report).toEqual({ summary: 'final report' });
+
+      const evaluatedCall = deliveriesRepository.save.mock.calls.find(
+        ([delivery]) =>
+          (delivery as Delivery).status === DeliveryStatus.EVALUATED,
+      );
+      expect(evaluatedCall).toBeTruthy();
     });
   });
 });

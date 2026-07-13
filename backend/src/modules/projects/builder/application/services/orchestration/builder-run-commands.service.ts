@@ -6,10 +6,9 @@ import {
   ServiceUnavailableException,
   Inject,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+
 import { InjectRepository } from '@nestjs/typeorm';
 import { JobsOptions, Queue } from 'bullmq';
-import * as fs from 'fs/promises';
 import { DataSource, Repository } from 'typeorm';
 import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
 
@@ -18,7 +17,6 @@ import type { AuthenticatedUser } from '../../../../../auth/interfaces/authentic
 import {
   BUILDER_RUN_JOB_NAME,
   BUILDER_RUNS_QUEUE_NAME,
-  DEFAULT_STALE_RUN_THRESHOLD_MS,
 } from '../../../domain/builder.constants';
 import {
   BuildRun,
@@ -35,21 +33,14 @@ import {
 } from '../builder-application.types';
 import { BuilderRunQueriesService } from './builder-run-queries.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
-import {
-  BuilderWorkspaceService,
-  StageWorkspaceResult,
-} from '../workspace/builder-workspace.service';
-import { BuilderPlanStageHandler } from '../stages/plan-stage.handler';
-import { BuilderCompileStageHandler } from '../stages/compile-stage.handler';
-import { BuilderExecutionStageHandler } from '../stages/execution-stage.handler';
-import { BuilderEvaluationStageHandler } from '../stages/evaluation-stage.handler';
-import { BuilderQualityStageHandler } from '../stages/quality-stage.handler';
-import { BuilderReportStageHandler } from '../stages/report-stage.handler';
+import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
+import { BuilderPipelineOrchestrator } from './builder-pipeline-orchestrator.service';
+import { BuilderRunMetricsService } from './builder-run-metrics.service';
+import { BuilderStaleRunRecoveryService } from './builder-stale-run-recovery.service';
 
 @Injectable()
 export class BuilderRunCommandsService {
   private readonly logger = new Logger(BuilderRunCommandsService.name);
-  private readonly staleRunThresholdMs: number;
   private readonly promptVersion: string;
 
   constructor(
@@ -62,24 +53,13 @@ export class BuilderRunCommandsService {
     private readonly builderAccessService: BuilderAccessService,
     private readonly builderRunQueriesService: BuilderRunQueriesService,
     private readonly builderRunSupportService: BuilderRunSupportService,
-    private readonly builderWorkspaceService: BuilderWorkspaceService,
-    private readonly builderPlanStageHandler: BuilderPlanStageHandler,
-    private readonly builderCompileStageHandler: BuilderCompileStageHandler,
-    private readonly builderExecutionStageHandler: BuilderExecutionStageHandler,
-    private readonly builderEvaluationStageHandler: BuilderEvaluationStageHandler,
-    private readonly builderQualityStageHandler: BuilderQualityStageHandler,
-    private readonly builderReportStageHandler: BuilderReportStageHandler,
-    private readonly configService: ConfigService,
+    private readonly builderConfigProvider: BuilderConfigProvider,
+    private readonly builderPipelineOrchestrator: BuilderPipelineOrchestrator,
+    private readonly builderRunMetricsService: BuilderRunMetricsService,
+    private readonly builderStaleRunRecoveryService: BuilderStaleRunRecoveryService,
     private readonly dataSource: DataSource,
   ) {
-    this.staleRunThresholdMs = this.configService.get<number>(
-      'BUILDER_STALE_RUN_THRESHOLD_MS',
-      DEFAULT_STALE_RUN_THRESHOLD_MS,
-    );
-    this.promptVersion = this.configService.get<string>(
-      'BUILDER_PROMPT_VERSION',
-      '2026.07-chain-of-verification',
-    );
+    this.promptVersion = this.builderConfigProvider.promptVersion;
   }
 
   async enqueueDeliveryRun(
@@ -88,7 +68,7 @@ export class BuilderRunCommandsService {
   ): Promise<EnqueueBuildRunResponse> {
     const delivery =
       await this.builderAccessService.findDeliveryOrThrow(deliveryId);
-    this.builderAccessService.assertCanManageDelivery(delivery, actor);
+    await this.builderAccessService.assertCanManageDelivery(delivery, actor);
 
     const run = this.buildRunsRepository.create({
       deliveryId,
@@ -195,120 +175,26 @@ export class BuilderRunCommandsService {
       payload: { studentStage: 'building' },
     });
 
-    let workspace: StageWorkspaceResult | undefined = undefined;
-
     try {
-      await this.builderRunSupportService.emitEvent({
-        buildRunId: run.id,
-        eventType: 'LOG_CHUNK',
-        runStatus: BuildRunStatus.RUNNING,
-        message: 'Iniciando preparacion de entorno y analisis...',
-      });
-
-      const workspacePromise = this.builderWorkspaceService.prepareWorkspace(
-        delivery.id,
+      const pipelineResult = await this.builderPipelineOrchestrator.runPipeline(
+        run,
+        delivery,
       );
-
-      const assignmentContext = {
-        expectedType: delivery.assignment.project.expectedType,
-        rubricInstructions: delivery.assignment.project.rubricInstructions,
-        expectedOutput: delivery.assignment.project.expectedOutput ?? null,
-      };
-
-      workspace = await workspacePromise;
-
-      const sourceCodePayloadParts: string[] = [];
-      for (const file of workspace.runtimeFiles) {
-        if (
-          String(file.absolutePath).includes('node_modules') ||
-          String(file.absolutePath).includes('__pycache__')
-        ) {
-          continue;
-        }
-
-        try {
-          const content = await fs.readFile(String(file.absolutePath), 'utf8');
-          sourceCodePayloadParts.push(
-            `\n--- Archivo: ${file.relativePath} ---\n${content}\n`,
-          );
-        } catch {
-          // Ignorar silenciosamente
-        }
-      }
-      const sourceCodePayload = sourceCodePayloadParts.join('');
-
-      await this.builderRunSupportService.emitEvent({
-        buildRunId: run.id,
-        eventType: 'RUN_STATUS_CHANGED',
-        runStatus: BuildRunStatus.RUNNING,
-        message: 'Analizando arquitectura del proyecto con IA...',
-        payload: { studentStage: 'building' },
-      });
-
-      const { planAssessment } = await this.builderPlanStageHandler.handle({
-        runId: run.id,
-        sourceCodePayload,
-        assignmentContext,
-      });
-
-      run.llmReasoning = `[PLANNER THOUGHT]: ${planAssessment.thought}`;
-      await this.buildRunsRepository.save(run);
-
-      const { compiled, executionLogs: compileLogs } =
-        await this.builderCompileStageHandler.handle({
-          runId: run.id,
-          planAssessment,
-          workspace,
-        });
-
-      let executionLogs = compileLogs ?? '';
-
-      if (compiled.executable) {
-        const execOutput = await this.builderExecutionStageHandler.handle({
-          runId: run.id,
-          workspace,
-          compiled,
-          expectedType:
-            delivery.assignment.project.expectedType ?? 'PYTHON_FASTAPI',
-        });
-        executionLogs = execOutput.executionLogs;
-      }
-
-      const { assessment } = await this.builderEvaluationStageHandler.handle({
-        runId: run.id,
-        workspace,
-        sourceCodePayload,
-        executionLogs,
-        assignmentContext,
-        planAssessment,
-      });
 
       run.status = BuildRunStatus.SUCCESS;
       run.finishedAt = new Date();
-      run.llmAssessment = assessment;
-      run.llmReasoning = `[PLANNER THOUGHT]: ${planAssessment.thought}\n\n[AUDITOR THOUGHT]: ${assessment.thought}`;
-      run.warnings = workspace.warnings;
+      run.llmAssessment = pipelineResult.assessment;
+      run.llmReasoning = `[PLANNER THOUGHT]: ${pipelineResult.planAssessment.thought}\n\n[AUDITOR THOUGHT]: ${pipelineResult.assessment.thought}`;
+      run.warnings = pipelineResult.warnings;
+      run.codeQualityFindings = pipelineResult.qualityFindings;
+      run.report = pipelineResult.report;
 
-      const { qualityFindings } = await this.builderQualityStageHandler.handle({
-        runId: run.id,
-        sourceCodePayload,
-        executionLogs,
-        assignmentContext,
-        assessment,
-        delivery,
-      });
-
-      const { report } = await this.builderReportStageHandler.handle({
-        runId: run.id,
-        assessment,
-        qualityFindings,
-        executionLogs,
-      });
-
-      run.codeQualityFindings = qualityFindings;
-      run.report = report;
-
-      this.logRunMetrics(run.id, assessment, qualityFindings);
+      this.builderRunMetricsService.logRunMetrics(
+        run.id,
+        this.promptVersion,
+        pipelineResult.assessment,
+        pipelineResult.qualityFindings,
+      );
 
       await this.buildRunsRepository.save(run);
 
@@ -326,81 +212,17 @@ export class BuilderRunCommandsService {
         run.id,
         this.builderRunSupportService.toErrorMessage(error),
       );
+      // La entrega se marca EVALUATED aunque el run falle, deliberadamente:
+      // sacarla de IN_REVIEW evita que quede colgada. El estado real del
+      // intento se lee del BuildRun (FAILED), no del Delivery.
       await this.updateDeliveryStatus(delivery.id, DeliveryStatus.EVALUATED);
       throw error;
-    } finally {
-      if (workspace?.workspaceRoot) {
-        await fs
-          .rm(workspace.workspaceRoot, { recursive: true, force: true })
-          .catch((cleanupError) => {
-            this.logger.warn(
-              `No se pudo limpiar el workspace ${workspace?.workspaceRoot}: ${this.builderRunSupportService.toErrorMessage(cleanupError)}`,
-            );
-          });
-      }
     }
+    // El workspace lo limpia el propio orquestador (posee su ciclo de vida).
   }
 
   async failStaleRunsOnStartup(): Promise<void> {
-    const staleThresholdDate = new Date(Date.now() - this.staleRunThresholdMs);
-    const staleRuns = await this.buildRunsRepository
-      .createQueryBuilder('run')
-      .where('run.status IN (:...statuses)', {
-        statuses: [BuildRunStatus.QUEUED, BuildRunStatus.RUNNING],
-      })
-      .andWhere('run.updatedAt < :staleThresholdDate', {
-        staleThresholdDate: staleThresholdDate.toISOString(),
-      })
-      .getMany();
-
-    if (staleRuns.length === 0) {
-      return;
-    }
-
-    for (const staleRun of staleRuns) {
-      staleRun.status = BuildRunStatus.FAILED;
-      staleRun.finishedAt = new Date();
-      staleRun.failureReason =
-        'RUN_STALE_AFTER_RESTART: la ejecucion quedo huerfana tras reinicio.';
-    }
-
-    await this.buildRunsRepository.save(staleRuns);
-  }
-
-  private logRunMetrics(
-    runId: string,
-    assessment: {
-      recommendedGrade?: number;
-      gradeBreakdown?: { awarded: number }[];
-      evaluativeState?: string;
-      confidence?: string;
-    },
-    qualityFindings: unknown,
-  ): void {
-    const computedGrade =
-      assessment.gradeBreakdown?.reduce((sum, item) => sum + item.awarded, 0) ??
-      null;
-    const recommendedGrade = assessment.recommendedGrade ?? null;
-    const gradeMismatch =
-      computedGrade !== null &&
-      recommendedGrade !== null &&
-      Math.abs(computedGrade - recommendedGrade) > 0.01;
-
-    this.logger.log(
-      JSON.stringify({
-        event: 'builder_run_metrics',
-        runId,
-        promptVersion: this.promptVersion,
-        evaluativeState: assessment.evaluativeState ?? null,
-        confidence: assessment.confidence ?? null,
-        recommendedGrade,
-        computedGrade,
-        gradeMismatch,
-        qualityFindingCount: Array.isArray(qualityFindings)
-          ? qualityFindings.length
-          : null,
-      }),
-    );
+    return this.builderStaleRunRecoveryService.failStaleRunsOnStartup();
   }
 
   private async enqueueRunJob(
@@ -408,9 +230,13 @@ export class BuilderRunCommandsService {
     deliveryId: string,
     actor: AuthenticatedUser,
   ): Promise<void> {
-    const jobOptions: JobsOptions & { timeout: number } = {
+    // No hay timeout a nivel de job: BullMQ v5 eliminó la opción `timeout` de Bull
+    // v3/v4, y forzarla con un cast solo daba una falsa sensación de límite. La
+    // duración se acota por etapa (timeout del contenedor efímero y AbortController
+    // en las llamadas al LLM), y los runs que queden colgados los rescata
+    // BuilderStaleRunRecoveryService al arrancar el worker.
+    const jobOptions: JobsOptions = {
       attempts: 1,
-      timeout: 1_200_000,
       removeOnComplete: 100,
       removeOnFail: 200,
     };
