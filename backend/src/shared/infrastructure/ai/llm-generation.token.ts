@@ -1,5 +1,5 @@
-import type { LlmGenerateRequest } from './llm.types';
+import type { LlmGenerateRequest, LlmGenerateResult } from './llm.types';
 
 export interface ILlmGenerationService {
-  generate(request: LlmGenerateRequest): Promise<string>;
+  generate(request: LlmGenerateRequest): Promise<LlmGenerateResult>;
 }

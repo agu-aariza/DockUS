@@ -13,7 +13,11 @@ import {
   PromptRegistryService,
 } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 import { BedrockGenerationService } from '../../../../../shared/infrastructure/ai/bedrock-generation.service';
-import type { LlmModelProfile } from '../../../../../shared/infrastructure/ai/llm.types';
+import type {
+  LlmGenerateRequest,
+  LlmModelProfile,
+} from '../../../../../shared/infrastructure/ai/llm.types';
+import { BuilderConfigProvider } from '../builder-config.provider';
 import { BuilderLogTrimmer } from '../../infrastructure/utils/builder-log-trimmer.util';
 import { parseBuilderEvaluationContractV2 } from './builder-evaluation-contract.parser';
 import { parseBuilderFactsContractV2 } from './builder-facts-contract.parser';
@@ -65,23 +69,15 @@ export class BuilderLlmEvaluatorService {
   private readonly factsProfile: LlmModelProfile;
 
   constructor(
+    private readonly builderConfigProvider: BuilderConfigProvider,
     private readonly configService: ConfigService,
     private readonly promptRegistry: PromptRegistryService,
     private readonly logTrimmer: BuilderLogTrimmer,
     private readonly llmService: BedrockGenerationService,
   ) {
-    this.planMaxInputChars = this.configService.get<number>(
-      'BUILDER_LLM_PLAN_MAX_INPUT_CHARS',
-      15000,
-    );
-    this.factsMaxInputChars = this.configService.get<number>(
-      'BUILDER_LLM_FACTS_MAX_INPUT_CHARS',
-      18000,
-    );
-    this.evalMaxInputChars = this.configService.get<number>(
-      'BUILDER_LLM_EVAL_MAX_INPUT_CHARS',
-      15000,
-    );
+    this.planMaxInputChars = this.builderConfigProvider.planMaxInputChars;
+    this.factsMaxInputChars = this.builderConfigProvider.factsMaxInputChars;
+    this.evalMaxInputChars = this.builderConfigProvider.evalMaxInputChars;
     this.systemPrompt = this.promptRegistry.getPrompt(PromptId.EVAL);
     this.planSystemPrompt = this.promptRegistry.getPrompt(PromptId.PLAN);
     this.factsSystemPrompt = this.promptRegistry.getPrompt(PromptId.FACTS);
@@ -129,7 +125,7 @@ export class BuilderLlmEvaluatorService {
     let response: string | null;
 
     try {
-      response = await this.llmService.generate({
+      response = await this.generateText({
         stage: 'evaluation',
         promptId: PromptId.EVAL,
         prompt: composedPrompt.prompt,
@@ -207,7 +203,7 @@ export class BuilderLlmEvaluatorService {
     let response: string | null;
 
     try {
-      response = await this.llmService.generate({
+      response = await this.generateText({
         stage: 'facts',
         promptId: PromptId.FACTS,
         prompt: composedPrompt.prompt,
@@ -285,7 +281,7 @@ export class BuilderLlmEvaluatorService {
     let response: string | null;
 
     try {
-      response = await this.llmService.generate({
+      response = await this.generateText({
         stage: 'plan',
         promptId: PromptId.PLAN,
         prompt: composedPrompt.prompt,
@@ -322,5 +318,14 @@ export class BuilderLlmEvaluatorService {
       );
       return buildTrace(snapshot, response, serializedError);
     }
+  }
+
+  /**
+   * El consumo de tokens lo registra `BedrockGenerationService`; aquí solo
+   * interesa el texto de la respuesta.
+   */
+  private async generateText(request: LlmGenerateRequest): Promise<string> {
+    const { text } = await this.llmService.generate(request);
+    return text;
   }
 }

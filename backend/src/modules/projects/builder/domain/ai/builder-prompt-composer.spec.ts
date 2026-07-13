@@ -2,7 +2,41 @@ import {
   composeEvaluationPrompt,
   composePlanPrompt,
   composeQualityPrompt,
+  renderRubricSection,
 } from './builder-prompt-composer';
+
+describe('renderRubricSection', () => {
+  it('falls back to a placeholder when no rubric is defined', () => {
+    const rendered = renderRubricSection({
+      expectedType: null,
+      rubricInstructions: null,
+      expectedOutput: null,
+      rubricCriteria: null,
+    });
+    expect(rendered).toBe('No rubric instructions were provided.');
+  });
+
+  // Los pesos se convierten a puntos sobre 10 antes de llegar al modelo: si se
+  // le pasan como porcentajes, puede puntuar cada criterio sobre su porcentaje y
+  // la suma del desglose se dispara muy por encima de 10.
+  it('renders weighted criteria as points on the 0-10 scale', () => {
+    const rendered = renderRubricSection({
+      expectedType: 'C_CLI',
+      rubricInstructions: 'Sé estricto con los warnings.',
+      expectedOutput: null,
+      rubricCriteria: [
+        { name: 'Correctitud', weight: 60, description: 'Salida correcta.' },
+        { name: 'Calidad', weight: 40, description: null },
+      ],
+    });
+
+    expect(rendered).toContain('Sé estricto con los warnings.');
+    expect(rendered).toContain('WEIGHTED RUBRIC CRITERIA');
+    expect(rendered).toContain('Correctitud (maxPoints: 6): Salida correcta.');
+    expect(rendered).toContain('Calidad (maxPoints: 4)');
+    expect(rendered).not.toContain('% of the final grade');
+  });
+});
 
 describe('builder prompt composer', () => {
   it('preserves the oracle block in plan prompts while truncating the workspace section', () => {
@@ -11,6 +45,7 @@ describe('builder prompt composer', () => {
       {
         expectedType: 'C_CLI',
         rubricInstructions: 'Compila, ejecuta y valida la salida.',
+        rubricCriteria: null,
         expectedOutput: './main 7 8',
       },
       260,
@@ -48,6 +83,7 @@ describe('builder prompt composer', () => {
       {
         expectedType: 'PYTHON_CLI',
         rubricInstructions: 'Valida el comportamiento funcional.',
+        rubricCriteria: null,
         expectedOutput: '15',
       },
       {
@@ -103,6 +139,7 @@ describe('builder prompt composer', () => {
       {
         expectedType: 'C_CLI',
         rubricInstructions: 'Evalua seguridad y mantenibilidad.',
+        rubricCriteria: null,
         expectedOutput: '15',
       },
       {

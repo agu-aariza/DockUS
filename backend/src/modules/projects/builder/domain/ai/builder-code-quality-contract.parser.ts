@@ -1,5 +1,8 @@
 import { BuilderCodeQualityContractV2 } from '../builder.types';
-import { parseRawContract } from './parsers/contract-parser.utils';
+import {
+  parseRawContract,
+  normalizeString,
+} from './parsers/contract-parser.utils';
 
 const FINDING_SEVERITIES = ['low', 'medium', 'high'] as const;
 type FindingSeverity = (typeof FINDING_SEVERITIES)[number];
@@ -72,10 +75,7 @@ function normalizeFinding(
   }
 
   const candidate = value as Record<string, unknown>;
-  const title = normalizeRequiredString(
-    candidate.title,
-    `${field}[${index}].title`,
-  );
+  const title = normalizeString(candidate.title, `${field}[${index}].title`);
   const detail = normalizeFindingDetail(candidate, field, index);
   const severity = normalizeSeverity(candidate.severity, field, index);
   const file = normalizeOptionalString(
@@ -141,14 +141,6 @@ function normalizeFindingDetail(
   }
 
   return sections.join(' ');
-}
-
-function normalizeRequiredString(value: unknown, field: string): string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error(`${field} debe ser un string no vacío.`);
-  }
-
-  return value.trim();
 }
 
 function normalizeOptionalString(

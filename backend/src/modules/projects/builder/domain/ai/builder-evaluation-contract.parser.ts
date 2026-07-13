@@ -101,12 +101,40 @@ export function parseBuilderEvaluationContractV2(
   // gradeBreakdown is the auditable source of truth.
   // Override recommendedGrade with its sum to correct LLM arithmetic errors.
   if (contract.gradeBreakdown.length > 0) {
-    const computed = contract.gradeBreakdown.reduce(
+    const awarded = contract.gradeBreakdown.reduce(
       (sum, item) => sum + item.awarded,
       0,
     );
-    contract.recommendedGrade =
-      Math.round(Math.min(10, Math.max(0, computed)) * 100) / 100;
+    const maxTotal = contract.gradeBreakdown.reduce(
+      (sum, item) => sum + (Number.isFinite(item.maxPoints) ? item.maxPoints : 0),
+      0,
+    );
+
+    // El desglose puede venir en otra escala que la 0-10 (el caso típico: el
+    // modelo puntúa cada criterio sobre el peso porcentual de la rúbrica, y la
+    // suma se acerca a 100). Reescalar preserva la proporción; recortar a 10 sin
+    // más convertiría cualquier desglose en un sobresaliente, y en silencio.
+    const usesNonDecimalScale = maxTotal > 0 && Math.abs(maxTotal - 10) > 0.5;
+    const computed = usesNonDecimalScale ? (awarded / maxTotal) * 10 : awarded;
+
+    if (usesNonDecimalScale) {
+      contract.evaluationLimits = [
+        ...contract.evaluationLimits,
+        `RESCALED: el desglose sumaba ${roundToTwoDecimals(maxTotal)} puntos máximos; la nota se reescaló a la escala 0-10.`,
+      ];
+    }
+
+    if (computed > 10 || computed < 0) {
+      contract.evaluationLimits = [
+        ...contract.evaluationLimits,
+        `GRADE_OUT_OF_RANGE: la suma del desglose (${roundToTwoDecimals(computed)}) queda fuera de la escala 0-10 y se ha recortado.`,
+      ];
+      contract.confidence = 'low';
+    }
+
+    contract.recommendedGrade = roundToTwoDecimals(
+      Math.min(10, Math.max(0, computed)),
+    );
   }
 
   contract.capabilities = alignCapabilitiesWithRecipe(
@@ -133,6 +161,10 @@ export function parseBuilderEvaluationContractV2(
  * Instead of crashing, fall back to sensible defaults so we can still
  * surface the gradeBreakdown, studentSummary, etc. that were parsed.
  */
+function roundToTwoDecimals(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 function safeNormalizeRuntimeDescriptor(
   value: unknown,
   sourceName: string,

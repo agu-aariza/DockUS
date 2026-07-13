@@ -12,7 +12,10 @@ import {
   PromptRegistryService,
 } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 import { BedrockGenerationService } from '../../../../../shared/infrastructure/ai/bedrock-generation.service';
-import type { LlmModelProfile } from '../../../../../shared/infrastructure/ai/llm.types';
+import type {
+  LlmGenerateRequest,
+  LlmModelProfile,
+} from '../../../../../shared/infrastructure/ai/llm.types';
 import { parseBuilderCodeQualityContractV2 } from './builder-code-quality-contract.parser';
 import { resolveBuilderModelProfile } from './builder-llm-model-profile';
 import { composeQualityPrompt } from './builder-prompt-composer';
@@ -106,7 +109,7 @@ export class BuilderCodeQualityService {
     let response: string | null;
 
     try {
-      response = await this.llmService.generate({
+      response = await this.generateText({
         stage: 'quality',
         promptId: PromptId.TECHNICAL_FEEDBACK,
         prompt: composedPrompt.prompt,
@@ -145,5 +148,14 @@ export class BuilderCodeQualityService {
       );
       return buildTrace(snapshot, response, serializedError);
     }
+  }
+
+  /**
+   * El consumo de tokens lo registra `BedrockGenerationService`; aquí solo
+   * interesa el texto de la respuesta.
+   */
+  private async generateText(request: LlmGenerateRequest): Promise<string> {
+    const { text } = await this.llmService.generate(request);
+    return text;
   }
 }

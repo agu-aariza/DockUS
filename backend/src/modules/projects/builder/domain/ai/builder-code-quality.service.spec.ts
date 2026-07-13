@@ -55,7 +55,7 @@ describe('BuilderCodeQualityService', () => {
   });
 
   it('captures prompt sections, raw response, and parsed contract during analysis', async () => {
-    llmService.generate.mockResolvedValue(validQualityResponse);
+    llmService.generate.mockResolvedValue({ text: validQualityResponse, usage: { inputTokens: 120, outputTokens: 40 } });
 
     const trace = await service.analyzeWithTrace(
       {
@@ -64,6 +64,7 @@ describe('BuilderCodeQualityService', () => {
         assignmentContext: {
           expectedType: 'C_CLI',
           rubricInstructions: 'Evalua mantenibilidad y seguridad.',
+          rubricCriteria: null,
           expectedOutput: null,
         },
         assessment: {
@@ -167,6 +168,7 @@ describe('BuilderCodeQualityService', () => {
       assignmentContext: {
         expectedType: 'C_CLI',
         rubricInstructions: 'Evalua mantenibilidad y seguridad.',
+        rubricCriteria: null,
         expectedOutput: null,
       },
       assessment: {

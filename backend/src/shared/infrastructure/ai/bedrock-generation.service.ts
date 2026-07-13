@@ -6,7 +6,11 @@ import {
 } from '@aws-sdk/client-bedrock-runtime';
 import { ConfiguredRetryStrategy } from '@smithy/util-retry';
 import type { ILlmGenerationService } from './llm-generation.token';
-import type { LlmGenerateRequest } from './llm.types';
+import type {
+  LlmGenerateRequest,
+  LlmGenerateResult,
+  LlmUsage,
+} from './llm.types';
 import {
   BedrockRequestError,
   createBedrockInvalidResponseError,
@@ -43,7 +47,7 @@ export class BedrockGenerationService implements ILlmGenerationService {
     return { region: this.region };
   }
 
-  async generate(request: LlmGenerateRequest): Promise<string> {
+  async generate(request: LlmGenerateRequest): Promise<LlmGenerateResult> {
     const { profile, prompt, systemPrompt, stage, promptId } = request;
     const timeoutMs = request.timeoutMs ?? profile.timeoutMs;
 
@@ -96,7 +100,25 @@ export class BedrockGenerationService implements ILlmGenerationService {
         );
       }
 
-      return text;
+      // `ConverseCommand` devuelve el consumo en la misma respuesta. Sin él, el
+      // coste de una evaluación no es medible: Bedrock factura por token.
+      const usage: LlmUsage = {
+        inputTokens: response.usage?.inputTokens ?? null,
+        outputTokens: response.usage?.outputTokens ?? null,
+      };
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'builder_llm_stage_usage',
+          stage,
+          promptId,
+          modelId: profile.modelId,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+        }),
+      );
+
+      return { text, usage };
     } catch (error) {
       if (error instanceof BedrockRequestError) {
         throw error;

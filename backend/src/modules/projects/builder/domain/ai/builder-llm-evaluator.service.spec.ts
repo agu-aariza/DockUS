@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PromptRegistryService } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
+import { BuilderConfigProvider } from '../../builder-config.provider';
 import { ILlmGenerationService } from '../../../../../shared/infrastructure/ai/llm-generation.token';
 import { BedrockRequestError } from '../../../../../shared/infrastructure/ai/bedrock-request.util';
 import { BuilderLogTrimmer } from '../../infrastructure/utils/builder-log-trimmer.util';
@@ -112,6 +113,11 @@ describe('BuilderLlmEvaluatorService', () => {
 
     service = new BuilderLlmEvaluatorService(
       {
+        planMaxInputChars: 260,
+        factsMaxInputChars: 320,
+        evalMaxInputChars: 320,
+      } as BuilderConfigProvider,
+      {
         get: jest.fn((key: string, fallback?: unknown) => {
           switch (key) {
             case 'BUILDER_BEDROCK_PLAN_MODEL_ID':
@@ -120,12 +126,6 @@ describe('BuilderLlmEvaluatorService', () => {
               return 'bedrock-facts-model';
             case 'BUILDER_BEDROCK_EVALUATION_MODEL_ID':
               return 'bedrock-eval-model';
-            case 'BUILDER_LLM_PLAN_MAX_INPUT_CHARS':
-              return 260;
-            case 'BUILDER_LLM_FACTS_MAX_INPUT_CHARS':
-              return 320;
-            case 'BUILDER_LLM_EVAL_MAX_INPUT_CHARS':
-              return 320;
             default:
               return fallback;
           }
@@ -138,13 +138,14 @@ describe('BuilderLlmEvaluatorService', () => {
   });
 
   it('builds the planner prompt with stable sections and preserves the oracle block', async () => {
-    llmService.generate.mockResolvedValue(validPlanResponse);
+    llmService.generate.mockResolvedValue({ text: validPlanResponse, usage: { inputTokens: 120, outputTokens: 40 } });
 
     await service.plan({
       sourceCodePayload: 'A'.repeat(2000),
       assignmentContext: {
         expectedType: 'C_CLI',
         rubricInstructions: 'Compila y ejecuta el binario.',
+        rubricCriteria: null,
         expectedOutput: './main 7 8',
       },
     });
@@ -175,7 +176,10 @@ describe('BuilderLlmEvaluatorService', () => {
     const callOrder: string[] = [];
     llmService.generate.mockImplementation(async () => {
       callOrder.push('generate');
-      return validPlanResponse;
+      return {
+        text: validPlanResponse,
+        usage: { inputTokens: 120, outputTokens: 40 },
+      };
     });
 
     const trace = await service.planWithTrace(
@@ -184,6 +188,7 @@ describe('BuilderLlmEvaluatorService', () => {
         assignmentContext: {
           expectedType: 'PYTHON_FASTAPI',
           rubricInstructions: 'Evalua el proyecto.',
+          rubricCriteria: null,
           expectedOutput: null,
         },
       },
@@ -208,7 +213,7 @@ describe('BuilderLlmEvaluatorService', () => {
   });
 
   it('extracts facts before evaluation', async () => {
-    llmService.generate.mockResolvedValue(validFactsResponse);
+    llmService.generate.mockResolvedValue({ text: validFactsResponse, usage: { inputTokens: 120, outputTokens: 40 } });
 
     await service.extractFacts({
       sourceCodePayload: 'B'.repeat(2000),
@@ -216,6 +221,7 @@ describe('BuilderLlmEvaluatorService', () => {
       assignmentContext: {
         expectedType: 'PYTHON_FASTAPI',
         rubricInstructions: 'Evalua el proyecto.',
+        rubricCriteria: null,
         expectedOutput: 'ok',
       },
     });
@@ -242,7 +248,7 @@ describe('BuilderLlmEvaluatorService', () => {
   });
 
   it('builds the evaluation prompt with verified facts instead of raw logs', async () => {
-    llmService.generate.mockResolvedValue(validEvaluationResponse);
+    llmService.generate.mockResolvedValue({ text: validEvaluationResponse, usage: { inputTokens: 120, outputTokens: 40 } });
 
     await service.evaluate({
       projectRootDir: '/tmp/project',
@@ -252,6 +258,7 @@ describe('BuilderLlmEvaluatorService', () => {
       assignmentContext: {
         expectedType: 'PYTHON_FASTAPI',
         rubricInstructions: 'Evalua el proyecto.',
+        rubricCriteria: null,
         expectedOutput: 'ok',
       },
     });
@@ -282,7 +289,7 @@ describe('BuilderLlmEvaluatorService', () => {
     const errorSpy = jest
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
-    llmService.generate.mockResolvedValue('still-not-json');
+    llmService.generate.mockResolvedValue({ text: 'still-not-json', usage: { inputTokens: 120, outputTokens: 40 } });
 
     const trace = await service.evaluateWithTrace({
       projectRootDir: '/tmp/project',
@@ -292,6 +299,7 @@ describe('BuilderLlmEvaluatorService', () => {
       assignmentContext: {
         expectedType: 'PYTHON_FASTAPI',
         rubricInstructions: 'Evalua el proyecto.',
+        rubricCriteria: null,
         expectedOutput: null,
       },
     });
@@ -326,6 +334,7 @@ describe('BuilderLlmEvaluatorService', () => {
       assignmentContext: {
         expectedType: 'PYTHON_FASTAPI',
         rubricInstructions: 'Evalua el proyecto.',
+        rubricCriteria: null,
         expectedOutput: null,
       },
     });

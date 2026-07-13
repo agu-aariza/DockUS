@@ -5,33 +5,20 @@ import type {
   BuilderPlanContractV2,
 } from '../builder.types';
 import { runtimeCatalogToText } from '../../application/services/compilation/builder-plan-runtime-adapter';
+import type {
+  ComposedPromptPayload,
+  PromptSectionBudget,
+  PromptSectionInput,
+  PromptSectionPriority,
+} from './prompt-composer.types';
 
-export type PromptSectionPriority = 'critical' | 'high' | 'medium' | 'low';
-
-interface PromptSectionBudget {
-  preferredChars?: number;
-  reserveChars?: number;
-}
-
-interface PromptSectionInput {
-  label: string;
-  content: string;
-  priority: PromptSectionPriority;
-  budget?: PromptSectionBudget;
-}
-
-export interface PromptSectionTrace {
-  label: string;
-  priority: PromptSectionPriority;
-  originalChars: number;
-  renderedChars: number;
-  truncated: boolean;
-}
-
-export interface ComposedPromptPayload {
-  prompt: string;
-  sections: PromptSectionTrace[];
-}
+// Se re-exportan para no romper los imports existentes que tomaban estos tipos
+// desde el compositor.
+export type {
+  ComposedPromptPayload,
+  PromptSectionPriority,
+  PromptSectionTrace,
+} from './prompt-composer.types';
 
 const PRIORITY_ORDER: PromptSectionPriority[] = [
   'low',
@@ -70,6 +57,51 @@ const QUALITY_PROMPT_MAX_SECTION_CHARS: Record<string, PromptSectionBudget> = {
   logs: { preferredChars: 4000, reserveChars: 120 },
 };
 
+/**
+ * Renderiza la sección de rúbrica combinando las instrucciones docentes en
+ * texto libre con los criterios ponderados estructurados (si existen). Los
+ * pesos son porcentajes que suman 100 y guían al evaluador para repartir la
+ * nota final de forma proporcional a la importancia de cada criterio.
+ */
+function roundToTwoDecimals(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export function renderRubricSection(
+  assignmentContext: AssignmentContext,
+): string {
+  const parts: string[] = [];
+
+  const instructions = assignmentContext.rubricInstructions?.trim();
+  if (instructions) {
+    parts.push(instructions);
+  }
+
+  const criteria = assignmentContext.rubricCriteria;
+  if (criteria && criteria.length > 0) {
+    // Los pesos se expresan al modelo directamente en puntos sobre 10, no en
+    // porcentajes: pedirle porcentajes y a la vez un desglose en puntos le deja
+    // elegir la escala, y si elige la porcentual la suma se dispara por encima
+    // de 10.
+    const lines = criteria.map(
+      (criterion) =>
+        `- ${criterion.name} (maxPoints: ${roundToTwoDecimals(criterion.weight / 10)})` +
+        (criterion.description ? `: ${criterion.description}` : ''),
+    );
+    parts.push(
+      [
+        'WEIGHTED RUBRIC CRITERIA. The maxPoints shown are already expressed on the 0-10 final scale and add up to 10.',
+        'In gradeBreakdown, reuse each criterion name and its maxPoints verbatim, and set awarded between 0 and maxPoints. recommendedGrade is the exact sum of the awarded values.',
+        ...lines,
+      ].join('\n'),
+    );
+  }
+
+  return parts.length > 0
+    ? parts.join('\n\n')
+    : 'No rubric instructions were provided.';
+}
+
 export function composePlanPrompt(
   sourceCodePayload: string,
   assignmentContext: AssignmentContext,
@@ -99,9 +131,7 @@ export function composePlanPrompt(
       },
       {
         label: 'RUBRIC INSTRUCTIONS',
-        content:
-          assignmentContext.rubricInstructions ??
-          'No rubric instructions were provided.',
+        content: renderRubricSection(assignmentContext),
         priority: 'critical',
         budget: PLAN_PROMPT_MAX_SECTION_CHARS.rubric,
       },
@@ -196,9 +226,7 @@ export function composeEvaluationPrompt(
       },
       {
         label: 'RUBRIC INSTRUCTIONS',
-        content:
-          assignmentContext.rubricInstructions ??
-          'No rubric instructions were provided.',
+        content: renderRubricSection(assignmentContext),
         priority: 'critical',
         budget: EVAL_PROMPT_MAX_SECTION_CHARS.rubric,
       },
@@ -252,7 +280,7 @@ export function composeQualityPrompt(
         label: 'ASSIGNMENT CONTEXT',
         content: [
           `Expected project type: ${assignmentContext.expectedType ?? 'Not specified.'}`,
-          `Rubric instructions: ${assignmentContext.rubricInstructions ?? 'No rubric instructions were provided.'}`,
+          `Rubric:\n${renderRubricSection(assignmentContext)}`,
           `Expected output oracle: ${assignmentContext.expectedOutput ?? 'No exact expected output was defined.'}`,
         ].join('\n'),
         priority: 'critical',

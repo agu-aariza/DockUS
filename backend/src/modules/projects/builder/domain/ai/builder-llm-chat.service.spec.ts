@@ -99,7 +99,7 @@ describe('BuilderLlmChatService', () => {
       mockBuildRunRepo.findOne.mockResolvedValue(run as any);
       mockChatMessageRepo.find.mockResolvedValue([]);
       mockArtifactRepo.findOne.mockResolvedValue(null);
-      mockLlmService.generate.mockResolvedValue('Respuesta del tutor');
+      mockLlmService.generate.mockResolvedValue({ text: 'Respuesta del tutor', usage: { inputTokens: 120, outputTokens: 40 } });
 
       const result = await service.postChatMessage(
         'run-id',
@@ -144,7 +144,7 @@ describe('BuilderLlmChatService', () => {
           'utf-8',
         ),
       );
-      mockLlmService.generate.mockResolvedValue('Tutor response');
+      mockLlmService.generate.mockResolvedValue({ text: 'Tutor response', usage: { inputTokens: 120, outputTokens: 40 } });
 
       await service.postChatMessage('run-id', 'Duda');
 

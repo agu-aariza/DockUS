@@ -3,7 +3,10 @@ import type {
   BuilderLlmPromptStage,
   LlmModelProfile,
 } from '../../../../shared/infrastructure/ai/llm.types';
-import type { PromptSectionTrace } from './ai/builder-prompt-composer';
+import type { PromptSectionTrace } from './ai/prompt-composer.types';
+import type { RubricCriterion } from '../../entities/project.entity';
+
+export type { RubricCriterion };
 
 export const BUILDER_LLM_SCHEMA_VERSION = 'builder-llm/v2' as const;
 export type BuilderLlmSchemaVersion = typeof BUILDER_LLM_SCHEMA_VERSION;
@@ -99,6 +102,13 @@ export interface RubricGradeItem {
   maxPoints: number;
   awarded: number;
   justification: string;
+  /**
+   * Peso (%) del criterio en la rúbrica configurada del proyecto, si existe.
+   * Se rellena tras la evaluación emparejando por nombre con `rubricCriteria`.
+   */
+  weight?: number;
+  /** Descripción del criterio tomada de la rúbrica configurada, si existe. */
+  description?: string | null;
 }
 
 export interface BuilderPlanContractV2 extends BuilderLlmContractV2Base {
@@ -170,6 +180,7 @@ export interface AssignmentContext {
   expectedType: string | null;
   rubricInstructions: string | null;
   expectedOutput: string | null;
+  rubricCriteria: RubricCriterion[] | null;
 }
 
 export interface RuntimeFile {

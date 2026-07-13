@@ -188,6 +188,38 @@ describe('parseBuilderEvaluationContractV2', () => {
     expect(contract.gradeBreakdown).toHaveLength(3);
   });
 
+  // Si el modelo puntúa cada criterio sobre el peso porcentual de la rúbrica, la
+  // suma se acerca a 100. Recortarla a 10 convertiría cualquier entrega en un
+  // sobresaliente sin dejar rastro; reescalar preserva la proporción y lo declara.
+  it('rescales the grade when the breakdown does not use the 0-10 scale', () => {
+    const raw = JSON.stringify(
+      buildEvaluationPayload({
+        recommendedGrade: 10,
+        gradeBreakdown: [
+          {
+            criterion: 'Correctitud',
+            maxPoints: 60,
+            awarded: 45,
+            justification: 'Salida correcta con matices.',
+          },
+          {
+            criterion: 'Calidad',
+            maxPoints: 40,
+            awarded: 20,
+            justification: 'Duplicación evidente.',
+          },
+        ],
+      }),
+    );
+
+    const contract = parseBuilderEvaluationContractV2(raw);
+
+    expect(contract.recommendedGrade).toBe(6.5);
+    expect(contract.evaluationLimits).toContainEqual(
+      expect.stringContaining('RESCALED'),
+    );
+  });
+
   it('preserves recommendedGrade when gradeBreakdown is empty', () => {
     const raw = JSON.stringify(
       buildEvaluationPayload({

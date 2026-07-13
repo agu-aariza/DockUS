@@ -174,7 +174,7 @@ ${newUserMessage}
 [RESPUESTA DEL TUTOR — Estructura obligatoria: **Reconocimiento** → **El concepto** → **Por dónde empezar** → **Para reflexionar**]`;
 
     const profile = resolveBuilderModelProfile('chat', this.configService);
-    const response = await this.llmService.generate({
+    const { text } = await this.llmService.generate({
       stage: 'chat',
       promptId: PromptId.CHAT,
       prompt: fullPrompt,
@@ -182,6 +182,6 @@ ${newUserMessage}
       profile,
     });
 
-    return response;
+    return text;
   }
 }
