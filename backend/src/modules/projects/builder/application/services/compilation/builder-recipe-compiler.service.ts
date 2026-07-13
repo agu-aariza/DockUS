@@ -6,14 +6,32 @@ import {
 import { BuilderPlanContractV2 } from '../../../domain/builder.types';
 import { adaptPlanToRuntimeRecipe } from './builder-plan-runtime-adapter';
 
-interface CompiledRecipe {
+/**
+ * Gestores de dependencias cuya instalación se materializa en la imagen de
+ * entorno (necesita red y un sistema de ficheros escribible) en lugar de
+ * ejecutarse junto al código del alumno. El resto de comandos de `install`
+ * —típicamente `gcc`, `make` o `cmake`— son pasos de compilación: necesitan el
+ * código fuente y se quedan en el contenedor de ejecución.
+ */
+const DEPENDENCY_MANAGERS = new Set([
+  'pip',
+  'pip3',
+  'npm',
+  'yarn',
+  'pnpm',
+  'poetry',
+]);
+
+export interface CompiledRecipe {
   executable: boolean;
   unsupportedReason?: string;
   image: string;
   systemPackages: string[];
   aptCmd: string;
-  installCmd: string;
-  fullInstallCmd: string;
+  /** Instalación de dependencias: se hornea en la imagen de entorno. */
+  dependencyInstallCmd: string;
+  /** Compilación del código del alumno: se ejecuta en el contenedor. */
+  buildCmd: string;
   runCmd: string;
   runCmdWithStdin: string;
   stdinFile?: string;
@@ -42,8 +60,8 @@ export class BuilderRecipeCompiler {
         image: DEFAULT_BASE_PYTHON_IMAGE,
         systemPackages: [],
         aptCmd: '',
-        installCmd: '',
-        fullInstallCmd: '',
+        dependencyInstallCmd: '',
+        buildCmd: '',
         runCmd: '',
         runCmdWithStdin: '',
         testCmd: '',
@@ -80,24 +98,30 @@ export class BuilderRecipeCompiler {
         ? `apt-get update && apt-get install -y ${systemPackages.join(' ')}`
         : '';
 
-    const installCmd =
-      recipe.install && recipe.install.length > 0
-        ? recipe.install
-            .map((commandParts) => {
-              if (
-                recipe.runtimeFamily !== 'c' &&
-                (commandParts[0] === 'pip' || commandParts[0] === 'pip3')
-              ) {
-                return ['python', '-m', 'pip', ...commandParts.slice(1)].join(
-                  ' ',
-                );
-              }
-              return commandParts.join(' ');
-            })
-            .join(' && ')
-        : '';
+    const installCommands = recipe.install ?? [];
+    const isDependencyCommand = (commandParts: string[]): boolean =>
+      recipe.runtimeFamily !== 'c' &&
+      DEPENDENCY_MANAGERS.has((commandParts[0] ?? '').toLowerCase());
 
-    const fullInstallCmd = [aptCmd, installCmd].filter(Boolean).join(' && ');
+    const renderInstallCommand = (commandParts: string[]): string => {
+      if (
+        recipe.runtimeFamily !== 'c' &&
+        (commandParts[0] === 'pip' || commandParts[0] === 'pip3')
+      ) {
+        return ['python', '-m', 'pip', ...commandParts.slice(1)].join(' ');
+      }
+      return commandParts.join(' ');
+    };
+
+    const dependencyInstallCmd = installCommands
+      .filter(isDependencyCommand)
+      .map(renderInstallCommand)
+      .join(' && ');
+
+    const buildCmd = installCommands
+      .filter((commandParts) => !isDependencyCommand(commandParts))
+      .map(renderInstallCommand)
+      .join(' && ');
 
     const PYTHON_MODULE_EXECUTABLES = new Set(['uvicorn', 'gunicorn', 'flask']);
     const runCmd =
@@ -122,11 +146,15 @@ export class BuilderRecipeCompiler {
         ? recipe.healthcheck.join(' ')
         : '';
 
+    // `aptCmd` y `dependencyInstallCmd` NO aparecen aquí: se hornean en la
+    // imagen de entorno. El contenedor de ejecución corre sin red y con el
+    // sistema de ficheros raíz en solo lectura, donde ninguno de los dos
+    // podría funcionar.
     let orchestratedCmd: string;
     if (recipe.servicePort && recipe.servicePort > 0) {
       const waitTime = 3;
       orchestratedCmd = [
-        fullInstallCmd,
+        buildCmd,
         `(${runCmd} &)`,
         `sleep ${waitTime}`,
         healthcheckCmd
@@ -137,7 +165,7 @@ export class BuilderRecipeCompiler {
         .filter(Boolean)
         .join(' && ');
     } else {
-      orchestratedCmd = [fullInstallCmd, runCmdWithStdin, testCmd]
+      orchestratedCmd = [buildCmd, runCmdWithStdin, testCmd]
         .filter(Boolean)
         .join(' && ');
     }
@@ -149,8 +177,8 @@ export class BuilderRecipeCompiler {
       image,
       systemPackages,
       aptCmd,
-      installCmd,
-      fullInstallCmd,
+      dependencyInstallCmd,
+      buildCmd,
       runCmd,
       runCmdWithStdin,
       stdinFile,
