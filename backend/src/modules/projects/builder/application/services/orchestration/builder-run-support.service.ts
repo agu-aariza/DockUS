@@ -8,6 +8,7 @@ import {
 } from '../../../domain/entities/build-run.entity';
 import { BuildRunEventType } from '../../../domain/builder.types';
 import { BuilderRunEventsService } from '../../../domain/events/builder-run-events.service';
+import { toErrorMessage as extractErrorMessage } from '../../../../../../shared/utils/error-message.util';
 
 @Injectable()
 export class BuilderRunSupportService {
@@ -53,9 +54,9 @@ export class BuilderRunSupportService {
   }
 
   toErrorMessage(error: unknown): string {
-    if (error instanceof Error) {
-      return error.message;
-    }
-    return 'Error no tipado en ejecucion de builder.';
+    return extractErrorMessage(
+      error,
+      'Error no tipado en ejecucion de builder.',
+    );
   }
 }

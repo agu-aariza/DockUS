@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
@@ -10,6 +6,8 @@ import { UserRole } from '../../../../../users/entities/user.entity';
 import { Delivery } from '../../../../deliveries/entities/delivery.entity';
 import { Project } from '../../../../entities/project.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
+import { isTeacherAssignedToProject } from '../../../../project-access.policy';
+import { findDeliveryWithAssignmentOrThrow } from '../../../../deliveries/delivery-lookup.util';
 
 @Injectable()
 export class BuilderAccessService {
@@ -21,21 +19,11 @@ export class BuilderAccessService {
   ) {}
 
   async findDeliveryOrThrow(deliveryId: string): Promise<Delivery> {
-    const delivery = await this.deliveriesRepository.findOne({
-      where: { id: deliveryId },
-      relations: {
-        assignment: {
-          project: true,
-          student: true,
-        },
-      },
-    });
-    if (!delivery) {
-      throw new NotFoundException(
-        'Entrega no encontrada para ejecutar builder.',
-      );
-    }
-    return delivery;
+    return findDeliveryWithAssignmentOrThrow(
+      this.deliveriesRepository,
+      deliveryId,
+      'Entrega no encontrada para ejecutar builder.',
+    );
   }
 
   async assertCanAccessBuildRun(
@@ -63,14 +51,11 @@ export class BuilderAccessService {
       return;
     }
 
-    const isAssigned = await this.projectsRepository
-      .createQueryBuilder('project')
-      .innerJoin('project.teachers', 'teacher')
-      .where('project.id = :projectId', {
-        projectId: delivery.assignment.project.id,
-      })
-      .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
-      .getExists();
+    const isAssigned = await isTeacherAssignedToProject(
+      this.projectsRepository,
+      delivery.assignment.project.id,
+      actor.userId,
+    );
 
     if (isAssigned) {
       return;
@@ -103,14 +88,11 @@ export class BuilderAccessService {
       );
     }
 
-    const isAssigned = await this.projectsRepository
-      .createQueryBuilder('project')
-      .innerJoin('project.teachers', 'teacher')
-      .where('project.id = :projectId', {
-        projectId: delivery.assignment.project.id,
-      })
-      .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
-      .getExists();
+    const isAssigned = await isTeacherAssignedToProject(
+      this.projectsRepository,
+      delivery.assignment.project.id,
+      actor.userId,
+    );
 
     if (isAssigned) {
       return;

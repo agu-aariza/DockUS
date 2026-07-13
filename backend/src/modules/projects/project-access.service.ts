@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 import { UserRole } from '../users/entities/user.entity';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import { Project, ProjectStatus } from './entities/project.entity';
+import { assertTeacherCanManageProject } from './project-access.policy';
 
 @Injectable()
 export class ProjectAccessService {
@@ -130,24 +131,10 @@ export class ProjectAccessService {
     project: Project,
     actor: AuthenticatedUser,
   ): Promise<void> {
-    if (actor.role === UserRole.ADMIN) {
-      return;
-    }
-
-    if (actor.role === UserRole.TEACHER) {
-      const isAssigned = await this.projectsRepository
-        .createQueryBuilder('project')
-        .innerJoin('project.teachers', 'teacher')
-        .where('project.id = :projectId', { projectId: project.id })
-        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
-        .getExists();
-
-      if (isAssigned) {
-        return;
-      }
-    }
-
-    throw new ForbiddenException(
+    await assertTeacherCanManageProject(
+      this.projectsRepository,
+      project,
+      actor,
       'No tiene permisos para modificar el proyecto.',
     );
   }

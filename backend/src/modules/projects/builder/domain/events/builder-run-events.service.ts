@@ -26,6 +26,7 @@ interface EmitBuilderRunEventInput {
 
 const DEFAULT_EVENT_PAGE_LIMIT = 100;
 const MAX_EVENT_PAGE_LIMIT = 500;
+const BUILDER_EVENTS_PATTERN = 'builder:runs:events:*';
 
 @Injectable()
 export class BuilderRunEventsService
@@ -71,13 +72,19 @@ export class BuilderRunEventsService
     );
 
     const event = this.toPublicEvent(saved);
-    const run = await this.buildRunsRepository.findOne({
-      where: { id: input.buildRunId },
-    });
-    if (run) {
-      run.latestEventSequence = saved.sequence;
-      await this.buildRunsRepository.save(run);
-    }
+    // Un solo UPDATE con GREATEST en vez de leer-modificar-escribir: dos eventos
+    // concurrentes del mismo run se pisaban la secuencia, y además esto evita el
+    // SELECT + save() por cada evento (tres viajes a Postgres por línea de log).
+    await this.buildRunsRepository
+      .createQueryBuilder()
+      .update(BuildRun)
+      .set({
+        latestEventSequence: () =>
+          'GREATEST(COALESCE("latestEventSequence", 0), :seq)',
+      })
+      .where('id = :id', { id: input.buildRunId })
+      .setParameter('seq', saved.sequence)
+      .execute();
 
     const channel = this.channel(input.buildRunId);
     this.emitter.emit(channel, event);
@@ -148,15 +155,34 @@ export class BuilderRunEventsService
           // Ignore malformed messages from external publishers.
         }
       });
+      // ioredis reconecta por su cuenta; basta con re-suscribirse en cada
+      // 'ready'. Sin esto, un fallo puntual de Redis al arrancar dejaba la
+      // suscripción muerta para siempre y el SSE nunca recibía los eventos que
+      // emite el worker (el fallback a polling del frontend lo enmascaraba).
+      this.subscriber.on('ready', () => {
+        this.subscriber
+          ?.psubscribe(BUILDER_EVENTS_PATTERN)
+          .then(() => {
+            this.subscriberReady = true;
+          })
+          .catch(() => {
+            this.subscriberReady = false;
+          });
+      });
+      this.subscriber.on('end', () => {
+        this.subscriberReady = false;
+      });
     }
 
     try {
       if (this.subscriber.status === 'wait') {
         await this.subscriber.connect();
       }
-      await this.subscriber.psubscribe('builder:runs:events:*');
+      await this.subscriber.psubscribe(BUILDER_EVENTS_PATTERN);
       this.subscriberReady = true;
     } catch {
+      // No es fatal: el handler de 'ready' volverá a intentarlo en cuanto
+      // ioredis reconecte.
       this.subscriberReady = false;
     }
   }

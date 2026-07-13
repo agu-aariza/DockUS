@@ -14,6 +14,11 @@ import {
 } from '../deliveries/entities/delivery.entity';
 import { Project } from '../entities/project.entity';
 import {
+  assertTeacherCanManageProject,
+  isTeacherAssignedToProject,
+} from '../project-access.policy';
+import { findDeliveryWithAssignmentOrThrow } from '../deliveries/delivery-lookup.util';
+import {
   StorageAssetRole,
   StorageObject,
 } from './entities/storage-object.entity';
@@ -63,12 +68,11 @@ export class StorageAccessService {
       if (actor.role === UserRole.ADMIN) {
         return storageObject;
       }
-      const isAssigned = await this.projectsRepository
-        .createQueryBuilder('project')
-        .innerJoin('project.teachers', 'teacher')
-        .where('project.id = :projectId', { projectId: project.id })
-        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
-        .getExists();
+      const isAssigned = await isTeacherAssignedToProject(
+        this.projectsRepository,
+        project.id,
+        actor.userId,
+      );
 
       if (isAssigned) {
         return storageObject;
@@ -82,22 +86,11 @@ export class StorageAccessService {
   }
 
   async findDeliveryOrThrow(deliveryId: string): Promise<Delivery> {
-    const delivery = await this.deliveriesRepository.findOne({
-      where: { id: deliveryId },
-      relations: {
-        assignment: {
-          project: true,
-          student: true,
-        },
-      },
-    });
-    if (!delivery) {
-      throw new NotFoundException(
-        'Entrega no encontrada para operación storage.',
-      );
-    }
-
-    return delivery;
+    return findDeliveryWithAssignmentOrThrow(
+      this.deliveriesRepository,
+      deliveryId,
+      'Entrega no encontrada para operación storage.',
+    );
   }
 
   async findProjectOrThrow(projectId: string): Promise<Project> {
@@ -124,14 +117,11 @@ export class StorageAccessService {
     }
 
     if (actor.role === UserRole.TEACHER) {
-      const isAssigned = await this.projectsRepository
-        .createQueryBuilder('project')
-        .innerJoin('project.teachers', 'teacher')
-        .where('project.id = :projectId', {
-          projectId: delivery.assignment.project.id,
-        })
-        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
-        .getExists();
+      const isAssigned = await isTeacherAssignedToProject(
+        this.projectsRepository,
+        delivery.assignment.project.id,
+        actor.userId,
+      );
 
       if (isAssigned) {
         return;
@@ -163,24 +153,10 @@ export class StorageAccessService {
     project: Project,
     actor: AuthenticatedUser,
   ): Promise<void> {
-    if (actor.role === UserRole.ADMIN) {
-      return;
-    }
-
-    if (actor.role === UserRole.TEACHER) {
-      const isAssigned = await this.projectsRepository
-        .createQueryBuilder('project')
-        .innerJoin('project.teachers', 'teacher')
-        .where('project.id = :projectId', { projectId: project.id })
-        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
-        .getExists();
-
-      if (isAssigned) {
-        return;
-      }
-    }
-
-    throw new ForbiddenException(
+    await assertTeacherCanManageProject(
+      this.projectsRepository,
+      project,
+      actor,
       'No tiene permisos para administrar la suite docente del proyecto.',
     );
   }
