@@ -13,6 +13,10 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
+# Shared types package is referenced as file:../shared/contracts from backend/package.json.
+# With WORKDIR /app, npm resolves that to /shared/contracts inside the container.
+COPY shared/contracts /shared/contracts
+
 EXPOSE 3000
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \

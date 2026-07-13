@@ -6,12 +6,17 @@
 FROM node:22.12.0-alpine3.21 AS deps
 WORKDIR /app
 COPY backend/package*.json ./
+# Shared types package is referenced as file:../shared/contracts from backend/package.json.
+# With WORKDIR /app, npm resolves that to /shared/contracts inside the container.
+COPY shared/contracts /shared/contracts
 RUN npm ci
 
 # --- Stage 2: build ----------------------------------------------------------
 FROM node:22.12.0-alpine3.21 AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+# Keep the @dockus/contracts symlink target valid for the build stage.
+COPY --from=deps /shared/contracts /shared/contracts
 COPY backend/ ./
 RUN npm run build && npm prune --production
 
@@ -36,6 +41,8 @@ USER appuser
 COPY --from=build --chown=appuser:appgroup /app/package*.json ./
 COPY --from=build --chown=appuser:appgroup /app/node_modules ./node_modules
 COPY --from=build --chown=appuser:appgroup /app/dist ./dist
+# @dockus/contracts is types-only, but keep its symlink target valid in the final image.
+COPY --from=build --chown=appuser:appgroup /shared/contracts /shared/contracts
 
 ENV NODE_ENV=production
 EXPOSE 3000
