@@ -9,17 +9,92 @@
  */
 
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
+  Validate,
+  ValidateNested,
+  ValidatorConstraint,
+  type ValidatorConstraintInterface,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { ProjectStatus } from '../entities/project.entity';
+
+/**
+ * Criterio ponderado de una rúbrica. El peso es un porcentaje entero (0-100).
+ */
+export class RubricCriterionDto {
+  @ApiProperty({
+    example: 'Correctitud del algoritmo',
+    description: 'Nombre del criterio de evaluación.',
+    maxLength: 120,
+  })
+  @IsString()
+  @IsNotEmpty({ message: 'El nombre del criterio es obligatorio.' })
+  @MaxLength(120, {
+    message: 'El nombre del criterio no puede exceder 120 caracteres.',
+  })
+  name: string;
+
+  @ApiProperty({
+    example: 50,
+    description: 'Peso del criterio en porcentaje (0-100).',
+    minimum: 0,
+    maximum: 100,
+  })
+  @IsInt({ message: 'El peso del criterio debe ser un entero.' })
+  @Min(0, { message: 'El peso del criterio no puede ser negativo.' })
+  @Max(100, { message: 'El peso del criterio no puede exceder 100.' })
+  weight: number;
+
+  @ApiPropertyOptional({
+    example: 'La salida coincide con el oráculo para todas las entradas.',
+    description: 'Guía opcional de qué evaluar en este criterio.',
+    maxLength: 500,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(500, {
+    message: 'La descripción del criterio no puede exceder 500 caracteres.',
+  })
+  description?: string;
+}
+
+/**
+ * Valida que los pesos de los criterios de la rúbrica sumen exactamente 100.
+ * Se omite la validación cuando no se aporta ningún criterio (rúbrica opcional).
+ */
+@ValidatorConstraint({ name: 'rubricWeightsSumTo100', async: false })
+export class RubricWeightsSumTo100Constraint
+  implements ValidatorConstraintInterface
+{
+  validate(value: unknown): boolean {
+    if (value === undefined || value === null) {
+      return true;
+    }
+    if (!Array.isArray(value) || value.length === 0) {
+      return true;
+    }
+    const total = value.reduce((sum, criterion) => {
+      const weight = (criterion as RubricCriterionDto)?.weight;
+      return sum + (typeof weight === 'number' ? weight : 0);
+    }, 0);
+    return total === 100;
+  }
+
+  defaultMessage(): string {
+    return 'Los pesos de los criterios de la rúbrica deben sumar 100.';
+  }
+}
 
 export class CreateProjectDto {
   @ApiProperty({
@@ -82,6 +157,25 @@ export class CreateProjectDto {
   @IsString()
   @IsOptional()
   rubricInstructions?: string;
+
+  @ApiPropertyOptional({
+    type: [RubricCriterionDto],
+    description:
+      'Criterios de rúbrica ponderados. Los pesos son porcentajes que deben sumar 100.',
+    example: [
+      { name: 'Correctitud', weight: 60, description: 'La salida coincide.' },
+      { name: 'Calidad de código', weight: 40, description: 'Legible y modular.' },
+    ],
+  })
+  @IsArray()
+  @IsOptional()
+  @ArrayMaxSize(20, {
+    message: 'No se pueden definir más de 20 criterios de rúbrica.',
+  })
+  @ValidateNested({ each: true })
+  @Type(() => RubricCriterionDto)
+  @Validate(RubricWeightsSumTo100Constraint)
+  rubricCriteria?: RubricCriterionDto[];
 
   @ApiPropertyOptional({
     example: 'Hola Mundo',

@@ -35,6 +35,21 @@ export enum ProjectStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
+/**
+ * Criterio individual de una rúbrica de evaluación ponderada.
+ *
+ * El peso se expresa como porcentaje entero; la suma de los pesos de todos
+ * los criterios de un proyecto debe ser 100 (validado en el DTO de entrada).
+ */
+export interface RubricCriterion {
+  /** Nombre visible del criterio (ej: "Correctitud del algoritmo"). */
+  name: string;
+  /** Peso del criterio en porcentaje (0-100). */
+  weight: number;
+  /** Guía opcional de qué evaluar y cómo puntuar este criterio. */
+  description: string | null;
+}
+
 @Entity('projects')
 export class Project {
   /** Identificador unico de proyecto. */
@@ -64,6 +79,14 @@ export class Project {
   /** Instrucciones detalladas de la rúbrica para evaluación por LLM. */
   @Column({ type: 'text', nullable: true })
   rubricInstructions: string | null;
+
+  /**
+   * Criterios de rúbrica ponderados que guían la nota del evaluador LLM.
+   * Los pesos son porcentajes que suman 100. Complementa (no sustituye) a
+   * `rubricInstructions`, que aporta guía docente en texto libre.
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  rubricCriteria: RubricCriterion[] | null;
 
   /** Salida esperada del programa para validación automática. */
   @Column({ type: 'text', nullable: true })

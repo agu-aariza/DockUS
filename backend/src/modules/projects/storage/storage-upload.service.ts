@@ -22,18 +22,11 @@ import {
 import { UploadedStorageFile } from './interfaces/uploaded-storage-file.interface';
 import { StorageObjectResponse } from './storage.types';
 import { toStorageObjectResponse } from './storage-response.util';
-
-const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
-const ALLOWED_STUDENT_SOURCE_EXTENSIONS = new Set([
-  '.zip',
-  '.tar.gz',
-  '.txt',
-  '.md',
-  '.py',
-  '.json',
-  '.yml',
-]);
-const ALLOWED_TEST_SUITE_EXTENSIONS = new Set(['.zip', '.tar.gz']);
+import {
+  ALLOWED_STUDENT_SOURCE_EXTENSIONS,
+  ALLOWED_TEST_SUITE_EXTENSIONS,
+  MAX_FILE_SIZE_BYTES,
+} from './storage.constants';
 
 @Injectable()
 export class StorageUploadService {
@@ -81,7 +74,10 @@ export class StorageUploadService {
 
     const bucket = this.minioStorageService.getBucketName();
     const objectKey = this.buildDeliveryObjectKey(delivery.id, dto.logicalName);
-    const hash = dto.hash.trim();
+    // El hash se calcula sobre el buffer recibido, no se toma del cliente: es la
+    // huella de integridad del objeto almacenado y no puede depender de un valor
+    // que el remitente controla. La ruta docente ya lo hace así.
+    const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
     let uploadedObject = false;
     try {

@@ -22,21 +22,15 @@ import {
   Post,
   Query,
   Req,
-  UploadedFile,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
-import type { Response } from 'express';
 import {
   FORBIDDEN_DESCRIPTION,
   INTERNAL_SERVER_ERROR_DESCRIPTION,
@@ -58,11 +52,6 @@ import {
   ProjectOperationalIssuesSummary,
   ProjectsService,
 } from '../projects.service';
-import {
-  StorageObjectResponse,
-  StorageService,
-} from '../storage/storage.service';
-import { UploadedStorageFile } from '../storage/interfaces/uploaded-storage-file.interface';
 
 const PROJECT_ID_PARAM = {
   name: 'id',
@@ -77,48 +66,9 @@ const PROJECT_NOT_FOUND_DESCRIPTION = 'Proyecto no encontrado.';
 @Controller('projects')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProjectsController {
-  constructor(
-    private readonly projectsService: ProjectsService,
-    private readonly storageService: StorageService,
-  ) {}
+  constructor(private readonly projectsService: ProjectsService) {}
 
-  @ApiOperation({
-    summary: 'Consultar estado del runtime (efímero)',
-    description:
-      'Devuelve estado READY si la plataforma está operativa para ejecuciones.',
-  })
-  @ApiParam(PROJECT_ID_PARAM)
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @Get(':id/runtime')
-  async getRuntimeStatus(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Req() request: AuthenticatedRequest,
-  ) {
-    await this.projectsService.assertCanAccessProject(id, request.user);
-    return {
-      projectId: id,
-      workspaceNetworkName: null,
-      status: 'READY',
-      provisionedAt: new Date().toISOString(),
-      lastError: null,
-      activeRuns: [], // Se consultan vía /builder/runs
-      networks: [],
-    };
-  }
-
-  @ApiOperation({
-    summary: 'Reconciliar runtime (Legacy - No-op)',
-  })
-  @ApiParam(PROJECT_ID_PARAM)
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @Post(':id/runtime/reconcile')
-  async reconcileRuntime(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Req() request: AuthenticatedRequest,
-  ) {
-    await this.projectsService.assertCanAccessProject(id, request.user);
-    return { message: 'Plataforma efímera activa. Reconcile no requerido.' };
-  }
+  // El estado del runtime (`projects/:id/runtime`) vive en ProjectRuntimeController.
 
   /**
    * Crea un nuevo proyecto academico.
@@ -304,109 +254,8 @@ export class ProjectsController {
     return this.projectsService.updateStatus(id, status, request.user);
   }
 
-  @ApiOperation({
-    summary: 'Subir o reemplazar suite docente del proyecto',
-  })
-  @ApiParam(PROJECT_ID_PARAM)
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['file'],
-      properties: {
-        file: { type: 'string', format: 'binary' },
-      },
-    },
-  })
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @Post(':id/test-suite/upload')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadTestSuite(
-    @Param('id', ParseUUIDPipe) id: string,
-    @UploadedFile() file: UploadedStorageFile | undefined,
-    @Req() request: AuthenticatedRequest,
-  ): Promise<StorageObjectResponse> {
-    const uploaded = await this.storageService.uploadProjectTestSuite(
-      id,
-      file,
-      request.user,
-    );
-    return uploaded;
-  }
-
-  @ApiOperation({
-    summary: 'Consultar suite docente activa',
-  })
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @Get(':id/test-suite')
-  async findTestSuite(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Req() request: AuthenticatedRequest,
-  ): Promise<StorageObjectResponse> {
-    return this.storageService.findProjectTestSuite(id, request.user);
-  }
-
-  @ApiOperation({
-    summary: 'Previsualizar contenido de la suite docente (solo ZIP)',
-  })
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @Get(':id/test-suite/preview')
-  async previewTestSuite(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Req() request: AuthenticatedRequest,
-  ): Promise<Array<{ path: string; content: string }>> {
-    return this.storageService.previewProjectTestSuite(id, request.user);
-  }
-
-  @ApiOperation({
-    summary: 'Eliminar suite docente activa',
-  })
-  @ApiParam(PROJECT_ID_PARAM)
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @Delete(':id/test-suite')
-  async removeTestSuite(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Req() request: AuthenticatedRequest,
-  ): Promise<{ message: string }> {
-    const result = await this.storageService.removeProjectTestSuite(
-      id,
-      request.user,
-    );
-    return result;
-  }
-
-  @ApiOperation({
-    summary: 'Asignar profesor al proyecto',
-  })
-  @ApiParam(PROJECT_ID_PARAM)
-  @ApiParam({ name: 'teacherId', description: 'UUID del profesor a asignar.' })
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @Post(':id/teachers/:teacherId')
-  async addTeacher(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('teacherId', ParseUUIDPipe) teacherId: string,
-    @Req() request: AuthenticatedRequest,
-  ): Promise<Project> {
-    return this.projectsService.addTeacher(id, teacherId, request.user);
-  }
-
-  @ApiOperation({
-    summary: 'Desasignar profesor del proyecto',
-  })
-  @ApiParam(PROJECT_ID_PARAM)
-  @ApiParam({
-    name: 'teacherId',
-    description: 'UUID del profesor a desasignar.',
-  })
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @Delete(':id/teachers/:teacherId')
-  async removeTeacher(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('teacherId', ParseUUIDPipe) teacherId: string,
-    @Req() request: AuthenticatedRequest,
-  ): Promise<Project> {
-    return this.projectsService.removeTeacher(id, teacherId, request.user);
-  }
+  // La suite docente (`projects/:id/test-suite`) vive en ProjectTestSuiteController
+  // y la gestión de docentes (`projects/:id/teachers`) en ProjectTeachersController.
 
   /**
    * Borrado logico de proyecto.

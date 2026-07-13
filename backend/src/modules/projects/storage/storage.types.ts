@@ -1,29 +1,17 @@
 import type { PaginationMeta } from '../../../shared/utils/pagination.util';
-import type { StorageAssetRole } from './entities/storage-object.entity';
+import type { StorageObjectResponse } from '@dockus/contracts';
+
+/**
+ * Shapes compartidas con el frontend. La fuente única de verdad vive en
+ * `@dockus/contracts`; `CreateDownloadUrlResponse` es el nombre local del
+ * `DownloadUrlResponse` del contrato.
+ */
+export type {
+  StorageObjectResponse,
+  DownloadUrlResponse as CreateDownloadUrlResponse,
+} from '@dockus/contracts';
 
 export type StorageObjectsPaginationMeta = PaginationMeta;
-
-export interface StorageObjectResponse {
-  id: string;
-  assetRole: StorageAssetRole;
-  projectId: string | null;
-  deliveryId: string | null;
-  logicalName: string;
-  logicalPath: string;
-  contentType: string;
-  sizeBytes: number;
-  hash: string;
-  createdAt: string;
-  uploaderId: string;
-  projectName?: string;
-  deliveryVersion?: number;
-  studentName?: string;
-}
-
-export interface CreateDownloadUrlResponse {
-  downloadUrl: string;
-  expiresAt: string;
-}
 
 export interface PaginatedStorageResponse {
   data: StorageObjectResponse[];

@@ -13,7 +13,9 @@ import {
   Controller,
   Delete,
   Get,
+  MaxFileSizeValidator,
   Param,
+  ParseFilePipe,
   ParseUUIDPipe,
   Patch,
   Post,
@@ -53,6 +55,11 @@ import {
   StorageService,
 } from './storage.service';
 import { UploadedStorageFile } from './interfaces/uploaded-storage-file.interface';
+import { FileExtensionValidator } from './storage-file.validator';
+import {
+  ALLOWED_STUDENT_SOURCE_EXTENSIONS,
+  MAX_FILE_SIZE_BYTES,
+} from './storage.constants';
 
 const STORAGE_OBJECT_ID_PARAM = {
   name: 'id',
@@ -111,7 +118,17 @@ export class StorageController {
   @UseInterceptors(FileInterceptor('file'))
   async upload(
     @Body() dto: CreateStorageObjectDto,
-    @UploadedFile() file: UploadedStorageFile | undefined,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE_BYTES }),
+          new FileExtensionValidator({
+            allowedExtensions: [...ALLOWED_STUDENT_SOURCE_EXTENSIONS],
+          }),
+        ],
+      }),
+    )
+    file: UploadedStorageFile | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<StorageObjectResponse> {
     return this.storageService.upload(dto, file, request.user);

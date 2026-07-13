@@ -25,6 +25,9 @@ import { Delivery } from './deliveries/entities/delivery.entity';
 import { User } from '../users/entities/user.entity';
 import { Project } from './entities/project.entity';
 import { ProjectsController } from './presentation/projects.controller';
+import { ProjectTestSuiteController } from './presentation/project-test-suite.controller';
+import { ProjectTeachersController } from './presentation/project-teachers.controller';
+import { ProjectRuntimeController } from './presentation/project-runtime.controller';
 import { ProjectGradebookController } from './presentation/project-gradebook.controller';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectGradebookService } from './project-gradebook.service';
@@ -53,6 +56,9 @@ import { StorageInfrastructureModule } from '../../shared/infrastructure/storage
   ],
   controllers: [
     ProjectsController,
+    ProjectTestSuiteController,
+    ProjectTeachersController,
+    ProjectRuntimeController,
     ProjectGradebookController,
     DeliveriesController,
     ProjectAssignmentsController,

@@ -8,8 +8,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
-import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
-import { Project, ProjectStatus } from './entities/project.entity';
+import {
+  CreateProjectDto,
+  RubricCriterionDto,
+  UpdateProjectDto,
+} from './dto/create-project.dto';
+import {
+  Project,
+  ProjectStatus,
+  type RubricCriterion,
+} from './entities/project.entity';
 import { ProjectAccessService } from './project-access.service';
 import { Delivery } from './deliveries/entities/delivery.entity';
 
@@ -39,6 +47,7 @@ export class ProjectLifecycleService {
       expectedType: dto.expectedType?.trim() || null,
       expectedOutput: dto.expectedOutput?.trim() || null,
       rubricInstructions: dto.rubricInstructions?.trim() || null,
+      rubricCriteria: this.normalizeRubricCriteria(dto.rubricCriteria),
       opensAt: this.normalizeDateInput(dto.opensAt),
       closesAt: this.normalizeDateInput(dto.closesAt),
       teachers: [{ id: actor.userId }],
@@ -97,6 +106,10 @@ export class ProjectLifecycleService {
 
     if (dto.rubricInstructions !== undefined) {
       project.rubricInstructions = dto.rubricInstructions?.trim() || null;
+    }
+
+    if (dto.rubricCriteria !== undefined) {
+      project.rubricCriteria = this.normalizeRubricCriteria(dto.rubricCriteria);
     }
 
     if (dto.opensAt !== undefined) {
@@ -239,6 +252,29 @@ export class ProjectLifecycleService {
 
   private normalizeTitle(title: string): string {
     return title.trim();
+  }
+
+  /**
+   * Sanea los criterios de rúbrica: recorta textos, descarta criterios sin
+   * nombre y devuelve `null` cuando no queda ninguno. La validación de que los
+   * pesos suman 100 ya la garantiza el DTO de entrada.
+   */
+  private normalizeRubricCriteria(
+    criteria?: RubricCriterionDto[] | null,
+  ): RubricCriterion[] | null {
+    if (!criteria || criteria.length === 0) {
+      return null;
+    }
+
+    const normalized = criteria
+      .map((criterion) => ({
+        name: criterion.name?.trim() ?? '',
+        weight: criterion.weight,
+        description: criterion.description?.trim() || null,
+      }))
+      .filter((criterion) => criterion.name.length > 0);
+
+    return normalized.length > 0 ? normalized : null;
   }
 
   private normalizeDateInput(value?: string | null): Date | null {

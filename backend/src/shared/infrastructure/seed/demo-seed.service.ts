@@ -117,6 +117,26 @@ export class DemoSeedService implements OnApplicationBootstrap {
         expectedType: 'Flask API',
         rubricInstructions:
           'Valora arranque correcto, rutas mínimas, organización del código y robustez frente a errores.',
+        rubricCriteria: [
+          {
+            name: 'Arranque y rutas funcionales',
+            weight: 50,
+            description:
+              'La API arranca y las rutas mínimas responden con los códigos y cuerpos esperados.',
+          },
+          {
+            name: 'Organización del código',
+            weight: 30,
+            description:
+              'Separación en módulos, nombres claros y ausencia de duplicación evidente.',
+          },
+          {
+            name: 'Robustez frente a errores',
+            weight: 20,
+            description:
+              'Manejo de entradas inválidas y respuestas de error controladas.',
+          },
+        ],
         opensAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
         closesAt: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
       }),

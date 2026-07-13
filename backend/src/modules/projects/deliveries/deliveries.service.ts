@@ -45,27 +45,9 @@ const DELIVERY_SORT_COLUMNS: Record<DeliverySortField, string> = {
   status: 'delivery.status',
 };
 
-export interface DeliveryResponse {
-  id: string;
-  assignmentId: string;
-  projectId: string;
-  projectTitle: string;
-  authorId: string;
-  studentEmail: string;
-  studentName: string;
-  version: number;
-  status: DeliveryStatus;
-  notes: string | null;
-  isLate: boolean;
-  grade: number | null;
-  graderNotes: string | null;
-  deliveryCount: number;
-  remainingDeliveries: number;
-  minimumRequirementMet: boolean;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-}
+// Shape compartida con el frontend: fuente única en @dockus/contracts.
+export type { DeliveryResponse } from '@dockus/contracts';
+import type { DeliveryResponse } from '@dockus/contracts';
 
 export type DeliveriesPaginationMeta = PaginationMeta;
 

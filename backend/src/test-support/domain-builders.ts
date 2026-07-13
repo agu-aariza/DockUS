@@ -37,6 +37,7 @@ export function buildProject(overrides: Partial<Project> = {}): Project {
     maxDeliveriesPerStudent: 2,
     expectedType: 'PYTHON_FASTAPI',
     rubricInstructions: 'Evaluar calidad de código y tests.',
+    rubricCriteria: null,
     expectedOutput: null,
     opensAt: null,
     closesAt: null,

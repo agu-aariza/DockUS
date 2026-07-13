@@ -75,13 +75,14 @@ export class CreateStorageObjectDto {
   @IsOptional()
   sizeBytes?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
-    description: 'Hash textual del archivo para trazabilidad.',
+    description:
+      'Hash orientativo del cliente. Ignorado para la integridad: el servidor recalcula el hash sobre el contenido recibido.',
     maxLength: 128,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'El hash es obligatorio.' })
   @MaxLength(128, { message: 'El hash no puede exceder 128 caracteres.' })
-  hash: string;
+  hash?: string;
 }
