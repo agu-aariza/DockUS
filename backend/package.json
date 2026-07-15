@@ -15,6 +15,7 @@
     "start:worker": "node dist/worker",
     "start:worker:dev": "nest start --entryFile worker --watch",
     "typecheck": "tsc -p tsconfig.build.json --noEmit --incremental false",
+    "typecheck:tests": "tsc -p tsconfig.spec.json",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "node ./test/run-jest.cjs",
@@ -30,12 +31,10 @@
     "path-to-regexp": "8.4.2",
     "picomatch": "4.0.4",
     "@babel/core": "7.29.7",
-    "brace-expansion": "^2.0.1",
     "fast-uri": "^3.1.2",
     "js-yaml": "^4.1.0",
     "qs": "^6.15.3",
-    "uuid": "^11.1.1",
-    "multer": "^1.4.5-lts.1"
+    "uuid": "^11.1.1"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock": "^3.1081.0",

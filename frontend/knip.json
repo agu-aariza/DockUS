@@ -2,10 +2,13 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "src/env.d.ts",
-    "tests/**/*.test.ts"
+    "src/**/*.spec.{ts,tsx}"
   ],
   "project": [
-    "src/**/*.{ts,tsx}",
-    "tests/**/*.ts"
+    "src/**/*.{ts,tsx}"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "ignore": [
+    "src/global.d.ts"
   ]
 }

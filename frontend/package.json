@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@dockus/contracts": "file:../shared/contracts",
-    "anser": "^2.3.5",
     "axios": "^1.18.1",
     "jszip": "^3.10.1",
     "prism-react-renderer": "^2.4.1",
