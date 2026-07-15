@@ -14,6 +14,11 @@ import {
   resolveCodeQualityFindings,
 } from '../support/builder-fallback-assessment.util';
 import { Delivery } from '../../../../deliveries/entities/delivery.entity';
+import { toStageTokenUsage } from '../../../domain/ai/builder-llm-trace.util';
+import type {
+  BuilderCodeQualityTrace,
+  BuilderStageTokenUsage,
+} from '../../../domain/builder.types';
 
 interface QualityStageInput {
   runId: string;
@@ -26,6 +31,7 @@ interface QualityStageInput {
 
 interface QualityStageOutput {
   qualityFindings: BuilderCodeQualityContractV2;
+  usages: BuilderStageTokenUsage[];
 }
 
 @Injectable()
@@ -52,6 +58,7 @@ export class BuilderQualityStageHandler implements IBuilderStageHandler<
     } = input;
 
     let qualityFindings: BuilderCodeQualityContractV2;
+    let qualityTrace: BuilderCodeQualityTrace | null = null;
 
     try {
       await this.builderRunSupportService.emitEvent({
@@ -62,23 +69,22 @@ export class BuilderQualityStageHandler implements IBuilderStageHandler<
         payload: { studentStage: 'analyzing' },
       });
 
-      const qualityTrace =
-        await this.builderCodeQualityService.analyzeWithTrace(
-          {
-            sourceCodePayload,
-            executionLogs,
-            assignmentContext,
-            assessment,
+      qualityTrace = await this.builderCodeQualityService.analyzeWithTrace(
+        {
+          sourceCodePayload,
+          executionLogs,
+          assignmentContext,
+          assessment,
+        },
+        {
+          onBeforeCall: async (snapshot) => {
+            await this.builderArtifactPersister.persistQualityPromptArtifact(
+              runId,
+              snapshot,
+            );
           },
-          {
-            onBeforeCall: async (snapshot) => {
-              await this.builderArtifactPersister.persistQualityPromptArtifact(
-                runId,
-                snapshot,
-              );
-            },
-          },
-        );
+        },
+      );
       await this.builderArtifactPersister.persistQualityTraceArtifacts(
         runId,
         qualityTrace,
@@ -101,6 +107,7 @@ export class BuilderQualityStageHandler implements IBuilderStageHandler<
       );
     }
 
-    return { qualityFindings };
+    const usage = toStageTokenUsage(qualityTrace);
+    return { qualityFindings, usages: usage ? [usage] : [] };
   }
 }

@@ -7,8 +7,10 @@ import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import {
   BuilderPlanContractV2,
   AssignmentContext,
+  BuilderStageTokenUsage,
 } from '../../../domain/builder.types';
 import { requireParsedContract } from '../support/builder-fallback-assessment.util';
+import { toStageTokenUsage } from '../../../domain/ai/builder-llm-trace.util';
 
 interface PlanStageInput {
   runId: string;
@@ -18,6 +20,7 @@ interface PlanStageInput {
 
 interface PlanStageOutput {
   planAssessment: BuilderPlanContractV2;
+  usages: BuilderStageTokenUsage[];
 }
 
 @Injectable()
@@ -70,6 +73,7 @@ export class BuilderPlanStageHandler implements IBuilderStageHandler<
       payload: { studentStage: 'building' },
     });
 
-    return { planAssessment };
+    const usage = toStageTokenUsage(planTrace);
+    return { planAssessment, usages: usage ? [usage] : [] };
   }
 }

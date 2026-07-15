@@ -74,9 +74,7 @@ export class RubricCriterionDto {
  * Se omite la validación cuando no se aporta ningún criterio (rúbrica opcional).
  */
 @ValidatorConstraint({ name: 'rubricWeightsSumTo100', async: false })
-export class RubricWeightsSumTo100Constraint
-  implements ValidatorConstraintInterface
-{
+export class RubricWeightsSumTo100Constraint implements ValidatorConstraintInterface {
   validate(value: unknown): boolean {
     if (value === undefined || value === null) {
       return true;
@@ -164,7 +162,11 @@ export class CreateProjectDto {
       'Criterios de rúbrica ponderados. Los pesos son porcentajes que deben sumar 100.',
     example: [
       { name: 'Correctitud', weight: 60, description: 'La salida coincide.' },
-      { name: 'Calidad de código', weight: 40, description: 'Legible y modular.' },
+      {
+        name: 'Calidad de código',
+        weight: 40,
+        description: 'Legible y modular.',
+      },
     ],
   })
   @IsArray()

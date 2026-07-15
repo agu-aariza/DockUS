@@ -307,6 +307,7 @@ export class ProjectAssignmentsService {
     const assignments = await this.assignmentsRepository
       .createQueryBuilder('assignment')
       .innerJoinAndSelect('assignment.project', 'project')
+      .leftJoinAndSelect('project.teachers', 'teacher')
       .innerJoinAndSelect('assignment.student', 'student')
       .where('assignment.projectId = :projectId', { projectId })
       .andWhere('assignment.revokedAt IS NULL')
@@ -329,6 +330,7 @@ export class ProjectAssignmentsService {
     const assignments = await this.assignmentsRepository
       .createQueryBuilder('assignment')
       .innerJoinAndSelect('assignment.project', 'project')
+      .leftJoinAndSelect('project.teachers', 'teacher')
       .innerJoinAndSelect('assignment.student', 'student')
       .where('assignment.studentId = :studentId', { studentId: actor.userId })
       .andWhere('assignment.revokedAt IS NULL')
@@ -454,6 +456,11 @@ export class ProjectAssignmentsService {
         projectId: assignment.projectId,
         projectTitle: project?.title,
         projectExpectedType: project.expectedType ?? null,
+        teachers: (project.teachers ?? []).map((teacher) => ({
+          id: teacher.id,
+          firstName: teacher.firstName,
+          lastName: teacher.lastName,
+        })),
         maxDeliveriesPerStudent,
         sourceGroupIds: assignment.sourceGroupIds,
         courseGroupId: primaryGroupId,

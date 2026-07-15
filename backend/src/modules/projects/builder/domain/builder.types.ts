@@ -2,6 +2,8 @@ import { BuildRunArtifactType } from './entities/build-run-artifact.entity';
 import type {
   BuilderLlmPromptStage,
   LlmModelProfile,
+  LlmProviderId,
+  LlmUsage,
 } from '../../../../shared/infrastructure/ai/llm.types';
 import type { PromptSectionTrace } from './ai/prompt-composer.types';
 import type { RubricCriterion } from '../../entities/project.entity';
@@ -169,6 +171,20 @@ export interface BuilderLlmStageTrace<
   rawResponse: string | null;
   parsedContract: TContract | null;
   error: BuilderLlmStageErrorInfo | null;
+  usage?: LlmUsage;
+}
+
+/**
+ * Consumo de una llamada al LLM junto al proveedor y modelo que la sirvieron.
+ * El coste solo es calculable con los tres datos: cada etapa puede correr en un
+ * proveedor distinto y a una tarifa distinta.
+ */
+export interface BuilderStageTokenUsage {
+  stage: BuilderLlmPromptStage;
+  providerId: LlmProviderId;
+  modelId: string;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export type BuilderCodeQualityPromptSnapshot = BuilderLlmStagePromptSnapshot;

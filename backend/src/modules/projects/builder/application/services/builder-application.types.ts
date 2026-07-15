@@ -19,6 +19,7 @@ import {
   BuilderEvaluationContractV2,
   BuilderPlanContractV2,
   BuilderReportEntity,
+  BuilderStageTokenUsage,
 } from '../../domain/builder.types';
 
 export interface EnqueueBuildRunResponse {
@@ -41,6 +42,8 @@ export interface BuilderPipelineResult {
   executionLogs: string;
   /** Avisos acumulados durante la preparación del workspace y las etapas. */
   warnings: string[];
+  /** Consumo por llamada al LLM, con el proveedor y modelo que la sirvieron. */
+  llmUsages: BuilderStageTokenUsage[];
 }
 
 export interface PaginatedBuildRunsResponse {

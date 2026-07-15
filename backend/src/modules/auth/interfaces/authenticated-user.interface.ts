@@ -8,7 +8,7 @@
  * @module AuthenticatedUser
  */
 
-import { Request } from 'express';
+import type { Request } from 'express';
 import { UserRole } from '../../users/entities/user.entity';
 
 export interface AuthenticatedUser {

@@ -11,6 +11,9 @@ import { BuildRunChatMessage } from '../entities/build-run-chat-message.entity';
 import { BuildRun } from '../entities/build-run.entity';
 import { BuildRunArtifact } from '../entities/build-run-artifact.entity';
 import { NotFoundException } from '@nestjs/common';
+import { BuilderLlmConfigService } from '../../infrastructure/config/builder-llm-config.service';
+import { BuilderRunCostService } from './builder-run-cost.service';
+import { resolveBuilderModelProfile } from './builder-llm-model-profile';
 
 describe('BuilderLlmChatService', () => {
   let service: BuilderLlmChatService;
@@ -27,6 +30,7 @@ describe('BuilderLlmChatService', () => {
 
   const mockBuildRunRepo = {
     findOne: jest.fn(),
+    increment: jest.fn(),
   } as unknown as jest.Mocked<Repository<BuildRun>>;
 
   const mockArtifactRepo = {
@@ -49,6 +53,21 @@ describe('BuilderLlmChatService', () => {
     get: jest.fn((key: string, fallback?: unknown) => fallback),
   } as unknown as jest.Mocked<ConfigService>;
 
+  const mockLlmConfigService = {
+    resolveStageProfile: jest.fn(async () => ({
+      profile: resolveBuilderModelProfile('chat', mockConfigService),
+      credentials: null,
+    })),
+  } as unknown as jest.Mocked<BuilderLlmConfigService>;
+
+  const mockRunCostService = {
+    summarize: jest.fn(async () => ({
+      inputTokens: 120,
+      outputTokens: 40,
+      costUsd: 0.01,
+    })),
+  } as unknown as jest.Mocked<BuilderRunCostService>;
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -59,7 +78,8 @@ describe('BuilderLlmChatService', () => {
       mockLlmService as any,
       mockPromptRegistry,
       mockMinioService,
-      mockConfigService,
+      mockLlmConfigService,
+      mockRunCostService,
     );
   });
 
@@ -99,7 +119,10 @@ describe('BuilderLlmChatService', () => {
       mockBuildRunRepo.findOne.mockResolvedValue(run as any);
       mockChatMessageRepo.find.mockResolvedValue([]);
       mockArtifactRepo.findOne.mockResolvedValue(null);
-      mockLlmService.generate.mockResolvedValue({ text: 'Respuesta del tutor', usage: { inputTokens: 120, outputTokens: 40 } });
+      mockLlmService.generate.mockResolvedValue({
+        text: 'Respuesta del tutor',
+        usage: { inputTokens: 120, outputTokens: 40 },
+      });
 
       const result = await service.postChatMessage(
         'run-id',
@@ -144,7 +167,10 @@ describe('BuilderLlmChatService', () => {
           'utf-8',
         ),
       );
-      mockLlmService.generate.mockResolvedValue({ text: 'Tutor response', usage: { inputTokens: 120, outputTokens: 40 } });
+      mockLlmService.generate.mockResolvedValue({
+        text: 'Tutor response',
+        usage: { inputTokens: 120, outputTokens: 40 },
+      });
 
       await service.postChatMessage('run-id', 'Duda');
 

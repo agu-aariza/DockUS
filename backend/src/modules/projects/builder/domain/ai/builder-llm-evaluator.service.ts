@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
   AssignmentContext,
   BuilderEvaluationContractV2,
@@ -12,17 +11,17 @@ import {
   PromptId,
   PromptRegistryService,
 } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
-import { BedrockGenerationService } from '../../../../../shared/infrastructure/ai/bedrock-generation.service';
+import { LlmGenerationRouter } from '../../../../../shared/infrastructure/ai/llm-generation.router';
 import type {
   LlmGenerateRequest,
-  LlmModelProfile,
+  LlmGenerateResult,
 } from '../../../../../shared/infrastructure/ai/llm.types';
 import { BuilderConfigProvider } from '../builder-config.provider';
 import { BuilderLogTrimmer } from '../../infrastructure/utils/builder-log-trimmer.util';
 import { parseBuilderEvaluationContractV2 } from './builder-evaluation-contract.parser';
 import { parseBuilderFactsContractV2 } from './builder-facts-contract.parser';
-import { resolveBuilderModelProfile } from './builder-llm-model-profile';
 import { parseBuilderPlanContractV2 } from './builder-plan-contract.parser';
+import { BuilderLlmConfigService } from '../../infrastructure/config/builder-llm-config.service';
 import {
   composeEvaluationPrompt,
   composeFactsPrompt,
@@ -64,16 +63,13 @@ export class BuilderLlmEvaluatorService {
   private readonly systemPrompt: string;
   private readonly planSystemPrompt: string;
   private readonly factsSystemPrompt: string;
-  private readonly evaluationProfile: LlmModelProfile;
-  private readonly planProfile: LlmModelProfile;
-  private readonly factsProfile: LlmModelProfile;
 
   constructor(
     private readonly builderConfigProvider: BuilderConfigProvider,
-    private readonly configService: ConfigService,
     private readonly promptRegistry: PromptRegistryService,
     private readonly logTrimmer: BuilderLogTrimmer,
-    private readonly llmService: BedrockGenerationService,
+    private readonly llmService: LlmGenerationRouter,
+    private readonly llmConfigService: BuilderLlmConfigService,
   ) {
     this.planMaxInputChars = this.builderConfigProvider.planMaxInputChars;
     this.factsMaxInputChars = this.builderConfigProvider.factsMaxInputChars;
@@ -81,12 +77,6 @@ export class BuilderLlmEvaluatorService {
     this.systemPrompt = this.promptRegistry.getPrompt(PromptId.EVAL);
     this.planSystemPrompt = this.promptRegistry.getPrompt(PromptId.PLAN);
     this.factsSystemPrompt = this.promptRegistry.getPrompt(PromptId.FACTS);
-    this.evaluationProfile = resolveBuilderModelProfile(
-      'evaluation',
-      this.configService,
-    );
-    this.planProfile = resolveBuilderModelProfile('plan', this.configService);
-    this.factsProfile = resolveBuilderModelProfile('facts', this.configService);
   }
 
   async evaluate(input: EvaluatorInput): Promise<BuilderEvaluationContractV2> {
@@ -113,16 +103,19 @@ export class BuilderLlmEvaluatorService {
       this.evalMaxInputChars,
     );
 
+    const { profile, credentials } =
+      await this.llmConfigService.resolveStageProfile('evaluation');
+
     const snapshot = createPromptSnapshot(
       'evaluation',
       PromptId.EVAL,
-      this.evaluationProfile,
+      profile,
       composedPrompt,
       this.systemPrompt,
     );
     await hooks?.onBeforeCall?.(snapshot);
 
-    let response: string | null;
+    let response: LlmGenerateResult;
 
     try {
       response = await this.generateText({
@@ -130,7 +123,8 @@ export class BuilderLlmEvaluatorService {
         promptId: PromptId.EVAL,
         prompt: composedPrompt.prompt,
         systemPrompt: this.systemPrompt,
-        profile: this.evaluationProfile,
+        profile,
+        credentials,
         format: 'json',
       });
     } catch (error: unknown) {
@@ -138,29 +132,45 @@ export class BuilderLlmEvaluatorService {
       logStageError(
         'evaluation',
         PromptId.EVAL,
-        this.evaluationProfile,
+        profile,
         serializedError,
         this.logger,
       );
-      return buildTrace(snapshot, null, serializedError);
+      return buildTrace<BuilderEvaluationContractV2>(
+        snapshot,
+        null,
+        serializedError,
+      );
     }
 
     try {
-      const parsedContract = parseBuilderEvaluationContractV2(response);
-      return buildTrace(snapshot, response, null, parsedContract);
+      const parsedContract = parseBuilderEvaluationContractV2(response.text);
+      return buildTrace<BuilderEvaluationContractV2>(
+        snapshot,
+        response.text,
+        null,
+        parsedContract,
+        response.usage,
+      );
     } catch (parseError) {
       const serializedError = serializeError(parseError, 'invalid_contract');
       logStageError(
         'evaluation',
         PromptId.EVAL,
-        this.evaluationProfile,
+        profile,
         serializedError,
         this.logger,
       );
       this.logger.error(
-        `Fallo al parsear respuesta del Evaluador. Respuesta bruta: ${response}`,
+        `Fallo al parsear respuesta del Evaluador. Respuesta bruta: ${response.text}`,
       );
-      return buildTrace(snapshot, response, serializedError);
+      return buildTrace<BuilderEvaluationContractV2>(
+        snapshot,
+        response.text,
+        serializedError,
+        null,
+        response.usage,
+      );
     }
   }
 
@@ -191,16 +201,19 @@ export class BuilderLlmEvaluatorService {
       this.factsMaxInputChars,
     );
 
+    const { profile, credentials } =
+      await this.llmConfigService.resolveStageProfile('facts');
+
     const snapshot = createPromptSnapshot(
       'facts',
       PromptId.FACTS,
-      this.factsProfile,
+      profile,
       composedPrompt,
       this.factsSystemPrompt,
     );
     await hooks?.onBeforeCall?.(snapshot);
 
-    let response: string | null;
+    let response: LlmGenerateResult;
 
     try {
       response = await this.generateText({
@@ -208,7 +221,8 @@ export class BuilderLlmEvaluatorService {
         promptId: PromptId.FACTS,
         prompt: composedPrompt.prompt,
         systemPrompt: this.factsSystemPrompt,
-        profile: this.factsProfile,
+        profile,
+        credentials,
         format: 'json',
       });
     } catch (error: unknown) {
@@ -216,29 +230,45 @@ export class BuilderLlmEvaluatorService {
       logStageError(
         'facts',
         PromptId.FACTS,
-        this.factsProfile,
+        profile,
         serializedError,
         this.logger,
       );
-      return buildTrace(snapshot, null, serializedError);
+      return buildTrace<BuilderFactsContractV2>(
+        snapshot,
+        null,
+        serializedError,
+      );
     }
 
     try {
-      const parsedContract = parseBuilderFactsContractV2(response);
-      return buildTrace(snapshot, response, null, parsedContract);
+      const parsedContract = parseBuilderFactsContractV2(response.text);
+      return buildTrace<BuilderFactsContractV2>(
+        snapshot,
+        response.text,
+        null,
+        parsedContract,
+        response.usage,
+      );
     } catch (parseError) {
       const serializedError = serializeError(parseError, 'invalid_contract');
       logStageError(
         'facts',
         PromptId.FACTS,
-        this.factsProfile,
+        profile,
         serializedError,
         this.logger,
       );
       this.logger.error(
-        `Fallo al parsear respuesta del extractor de hechos. Respuesta bruta: ${response}`,
+        `Fallo al parsear respuesta del extractor de hechos. Respuesta bruta: ${response.text}`,
       );
-      return buildTrace(snapshot, response, serializedError);
+      return buildTrace<BuilderFactsContractV2>(
+        snapshot,
+        response.text,
+        serializedError,
+        null,
+        response.usage,
+      );
     }
   }
 
@@ -269,16 +299,19 @@ export class BuilderLlmEvaluatorService {
       this.planMaxInputChars,
     );
 
+    const { profile, credentials } =
+      await this.llmConfigService.resolveStageProfile('plan');
+
     const snapshot = createPromptSnapshot(
       'plan',
       PromptId.PLAN,
-      this.planProfile,
+      profile,
       composedPrompt,
       this.planSystemPrompt,
     );
     await hooks?.onBeforeCall?.(snapshot);
 
-    let response: string | null;
+    let response: LlmGenerateResult;
 
     try {
       response = await this.generateText({
@@ -286,7 +319,8 @@ export class BuilderLlmEvaluatorService {
         promptId: PromptId.PLAN,
         prompt: composedPrompt.prompt,
         systemPrompt: this.planSystemPrompt,
-        profile: this.planProfile,
+        profile,
+        credentials,
         format: 'json',
       });
     } catch (error: unknown) {
@@ -294,38 +328,47 @@ export class BuilderLlmEvaluatorService {
       logStageError(
         'plan',
         PromptId.PLAN,
-        this.planProfile,
+        profile,
         serializedError,
         this.logger,
       );
-      return buildTrace(snapshot, null, serializedError);
+      return buildTrace<BuilderPlanContractV2>(snapshot, null, serializedError);
     }
 
     try {
-      const parsedContract = parseBuilderPlanContractV2(response);
-      return buildTrace(snapshot, response, null, parsedContract);
+      const parsedContract = parseBuilderPlanContractV2(response.text);
+      return buildTrace<BuilderPlanContractV2>(
+        snapshot,
+        response.text,
+        null,
+        parsedContract,
+        response.usage,
+      );
     } catch (parseError) {
       const serializedError = serializeError(parseError, 'invalid_contract');
       logStageError(
         'plan',
         PromptId.PLAN,
-        this.planProfile,
+        profile,
         serializedError,
         this.logger,
       );
       this.logger.error(
-        `Fallo al parsear respuesta del Planner. Respuesta bruta: ${response}`,
+        `Fallo al parsear respuesta del Planner. Respuesta bruta: ${response.text}`,
       );
-      return buildTrace(snapshot, response, serializedError);
+      return buildTrace<BuilderPlanContractV2>(
+        snapshot,
+        response.text,
+        serializedError,
+        null,
+        response.usage,
+      );
     }
   }
 
-  /**
-   * El consumo de tokens lo registra `BedrockGenerationService`; aquí solo
-   * interesa el texto de la respuesta.
-   */
-  private async generateText(request: LlmGenerateRequest): Promise<string> {
-    const { text } = await this.llmService.generate(request);
-    return text;
+  private async generateText(
+    request: LlmGenerateRequest,
+  ): Promise<LlmGenerateResult> {
+    return this.llmService.generate(request);
   }
 }

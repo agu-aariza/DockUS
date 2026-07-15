@@ -213,7 +213,10 @@ describe('ProjectsService', () => {
 
     const result = await service.remove(project.id, actor);
 
-    expect(projectLifecycleService.remove).toHaveBeenCalledWith(project.id, actor);
+    expect(projectLifecycleService.remove).toHaveBeenCalledWith(
+      project.id,
+      actor,
+    );
     expect(result).toEqual({
       message: 'Proyecto marcado como eliminado correctamente.',
     });
@@ -246,9 +249,9 @@ describe('ProjectsService', () => {
     });
     projectLifecycleService.restore.mockRejectedValue(new ConflictException());
 
-    await expect(service.restore(activeProject.id, actor)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.restore(activeProject.id, actor),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('debe rechazar rango de fechas invalido cuando createdFrom es mayor que createdTo', async () => {

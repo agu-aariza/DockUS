@@ -105,6 +105,7 @@ describe('BuilderPipelineOrchestrator', () => {
     hasTeacherTests: false,
     workspaceRoot: '/tmp/dockus-builder-test-123',
     projectRootDir: '/tmp/dockus-builder-test-123/project',
+    teacherTestsRootDir: '/tmp/dockus-builder-test-123/teacher-tests',
     warnings: [],
     ...overrides,
   });
@@ -133,13 +134,19 @@ describe('BuilderPipelineOrchestrator', () => {
       const workspace = buildWorkspace();
 
       builderWorkspaceService.prepareWorkspace.mockResolvedValue(workspace);
-      planStageHandler.handle.mockResolvedValue({ planAssessment });
+      planStageHandler.handle.mockResolvedValue({ planAssessment, usages: [] });
       compileStageHandler.handle.mockResolvedValue({
         compiled: { executable: false },
         executionLogs: 'compile logs',
       });
-      evaluationStageHandler.handle.mockResolvedValue({ assessment });
-      qualityStageHandler.handle.mockResolvedValue({ qualityFindings });
+      evaluationStageHandler.handle.mockResolvedValue({
+        assessment,
+        usages: [],
+      });
+      qualityStageHandler.handle.mockResolvedValue({
+        qualityFindings,
+        usages: [],
+      });
       reportStageHandler.handle.mockResolvedValue({ report });
 
       const result = await orchestrator.runPipeline(
@@ -170,15 +177,24 @@ describe('BuilderPipelineOrchestrator', () => {
       const workspace = buildWorkspace();
 
       builderWorkspaceService.prepareWorkspace.mockResolvedValue(workspace);
-      planStageHandler.handle.mockResolvedValue({ planAssessment: {} });
+      planStageHandler.handle.mockResolvedValue({
+        planAssessment: {},
+        usages: [],
+      });
       compileStageHandler.handle.mockResolvedValue({
         compiled: { executable: true },
       });
       executionStageHandler.handle.mockResolvedValue({
         executionLogs: 'exec logs',
       });
-      evaluationStageHandler.handle.mockResolvedValue({ assessment: {} });
-      qualityStageHandler.handle.mockResolvedValue({ qualityFindings: {} });
+      evaluationStageHandler.handle.mockResolvedValue({
+        assessment: {},
+        usages: [],
+      });
+      qualityStageHandler.handle.mockResolvedValue({
+        qualityFindings: {},
+        usages: [],
+      });
       reportStageHandler.handle.mockResolvedValue({ report: {} });
 
       const result = await orchestrator.runPipeline(
@@ -199,8 +215,18 @@ describe('BuilderPipelineOrchestrator', () => {
       const assessment = {
         thought: 'eval ok',
         gradeBreakdown: [
-          { criterion: 'Correctitud', maxPoints: 6, awarded: 5, justification: 'ok' },
-          { criterion: 'Sin match', maxPoints: 4, awarded: 4, justification: 'ok' },
+          {
+            criterion: 'Correctitud',
+            maxPoints: 6,
+            awarded: 5,
+            justification: 'ok',
+          },
+          {
+            criterion: 'Sin match',
+            maxPoints: 4,
+            awarded: 4,
+            justification: 'ok',
+          },
         ],
       };
 
@@ -215,20 +241,35 @@ describe('BuilderPipelineOrchestrator', () => {
             rubricInstructions: null,
             expectedOutput: null,
             rubricCriteria: [
-              { name: 'Correctitud', weight: 60, description: 'Salida correcta.' },
+              {
+                name: 'Correctitud',
+                weight: 60,
+                description: 'Salida correcta.',
+              },
             ],
           },
         },
       } as unknown as Delivery;
 
-      builderWorkspaceService.prepareWorkspace.mockResolvedValue(buildWorkspace());
-      planStageHandler.handle.mockResolvedValue({ planAssessment: {} });
+      builderWorkspaceService.prepareWorkspace.mockResolvedValue(
+        buildWorkspace(),
+      );
+      planStageHandler.handle.mockResolvedValue({
+        planAssessment: {},
+        usages: [],
+      });
       compileStageHandler.handle.mockResolvedValue({
         compiled: { executable: false },
         executionLogs: 'logs',
       });
-      evaluationStageHandler.handle.mockResolvedValue({ assessment });
-      qualityStageHandler.handle.mockResolvedValue({ qualityFindings: {} });
+      evaluationStageHandler.handle.mockResolvedValue({
+        assessment,
+        usages: [],
+      });
+      qualityStageHandler.handle.mockResolvedValue({
+        qualityFindings: {},
+        usages: [],
+      });
       reportStageHandler.handle.mockResolvedValue({ report: {} });
 
       const result = await orchestrator.runPipeline(buildRun(), delivery);
@@ -276,12 +317,21 @@ describe('BuilderPipelineOrchestrator', () => {
 
       builderWorkspaceService.prepareWorkspace.mockResolvedValue(workspace);
       jest.mocked(fs.readFile).mockResolvedValue('content');
-      planStageHandler.handle.mockResolvedValue({ planAssessment: {} });
+      planStageHandler.handle.mockResolvedValue({
+        planAssessment: {},
+        usages: [],
+      });
       compileStageHandler.handle.mockResolvedValue({
         compiled: { executable: false },
       });
-      evaluationStageHandler.handle.mockResolvedValue({ assessment: {} });
-      qualityStageHandler.handle.mockResolvedValue({ qualityFindings: {} });
+      evaluationStageHandler.handle.mockResolvedValue({
+        assessment: {},
+        usages: [],
+      });
+      qualityStageHandler.handle.mockResolvedValue({
+        qualityFindings: {},
+        usages: [],
+      });
       reportStageHandler.handle.mockResolvedValue({ report: {} });
 
       await orchestrator.runPipeline(buildRun(), buildDelivery());

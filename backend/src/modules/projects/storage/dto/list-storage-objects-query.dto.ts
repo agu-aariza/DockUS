@@ -9,7 +9,13 @@
  */
 
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsDateString, IsIn, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsEnum,
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 import { StorageAssetRole } from '../entities/storage-object.entity';
 import { PaginatedQueryDto } from '../../../../shared/dto/paginated-query.dto';
 

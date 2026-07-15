@@ -1,10 +1,13 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PromptRegistryService } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
-import { BuilderConfigProvider } from '../../builder-config.provider';
+import { BuilderConfigProvider } from '../builder-config.provider';
 import { ILlmGenerationService } from '../../../../../shared/infrastructure/ai/llm-generation.token';
 import { BedrockRequestError } from '../../../../../shared/infrastructure/ai/bedrock-request.util';
 import { BuilderLogTrimmer } from '../../infrastructure/utils/builder-log-trimmer.util';
+import { BuilderLlmConfigService } from '../../infrastructure/config/builder-llm-config.service';
+import { resolveBuilderModelProfile } from './builder-llm-model-profile';
+import type { BuilderLlmPromptStage } from '../../../../../shared/infrastructure/ai/llm.types';
 import { BuilderLlmEvaluatorService } from './builder-llm-evaluator.service';
 
 const validPlanResponse = JSON.stringify({
@@ -106,6 +109,30 @@ describe('BuilderLlmEvaluatorService', () => {
     generate: jest.fn(),
   };
 
+  const configService = {
+    get: jest.fn((key: string, fallback?: unknown) => {
+      switch (key) {
+        case 'BUILDER_BEDROCK_PLAN_MODEL_ID':
+          return 'bedrock-plan-model';
+        case 'BUILDER_BEDROCK_FACTS_MODEL_ID':
+          return 'bedrock-facts-model';
+        case 'BUILDER_BEDROCK_EVALUATION_MODEL_ID':
+          return 'bedrock-eval-model';
+        default:
+          return fallback;
+      }
+    }),
+  } as unknown as ConfigService;
+
+  // Sin proveedores en base de datos, la resolución cae al perfil de Bedrock
+  // definido por variables de entorno.
+  const llmConfigService = {
+    resolveStageProfile: jest.fn(async (stage: BuilderLlmPromptStage) => ({
+      profile: resolveBuilderModelProfile(stage, configService),
+      credentials: null,
+    })),
+  } as unknown as BuilderLlmConfigService;
+
   let service: BuilderLlmEvaluatorService;
 
   beforeEach(() => {
@@ -117,28 +144,18 @@ describe('BuilderLlmEvaluatorService', () => {
         factsMaxInputChars: 320,
         evalMaxInputChars: 320,
       } as BuilderConfigProvider,
-      {
-        get: jest.fn((key: string, fallback?: unknown) => {
-          switch (key) {
-            case 'BUILDER_BEDROCK_PLAN_MODEL_ID':
-              return 'bedrock-plan-model';
-            case 'BUILDER_BEDROCK_FACTS_MODEL_ID':
-              return 'bedrock-facts-model';
-            case 'BUILDER_BEDROCK_EVALUATION_MODEL_ID':
-              return 'bedrock-eval-model';
-            default:
-              return fallback;
-          }
-        }),
-      } as unknown as ConfigService,
       promptRegistry,
       new BuilderLogTrimmer(),
       llmService as any,
+      llmConfigService,
     );
   });
 
   it('builds the planner prompt with stable sections and preserves the oracle block', async () => {
-    llmService.generate.mockResolvedValue({ text: validPlanResponse, usage: { inputTokens: 120, outputTokens: 40 } });
+    llmService.generate.mockResolvedValue({
+      text: validPlanResponse,
+      usage: { inputTokens: 120, outputTokens: 40 },
+    });
 
     await service.plan({
       sourceCodePayload: 'A'.repeat(2000),
@@ -213,7 +230,10 @@ describe('BuilderLlmEvaluatorService', () => {
   });
 
   it('extracts facts before evaluation', async () => {
-    llmService.generate.mockResolvedValue({ text: validFactsResponse, usage: { inputTokens: 120, outputTokens: 40 } });
+    llmService.generate.mockResolvedValue({
+      text: validFactsResponse,
+      usage: { inputTokens: 120, outputTokens: 40 },
+    });
 
     await service.extractFacts({
       sourceCodePayload: 'B'.repeat(2000),
@@ -248,7 +268,10 @@ describe('BuilderLlmEvaluatorService', () => {
   });
 
   it('builds the evaluation prompt with verified facts instead of raw logs', async () => {
-    llmService.generate.mockResolvedValue({ text: validEvaluationResponse, usage: { inputTokens: 120, outputTokens: 40 } });
+    llmService.generate.mockResolvedValue({
+      text: validEvaluationResponse,
+      usage: { inputTokens: 120, outputTokens: 40 },
+    });
 
     await service.evaluate({
       projectRootDir: '/tmp/project',
@@ -289,7 +312,10 @@ describe('BuilderLlmEvaluatorService', () => {
     const errorSpy = jest
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
-    llmService.generate.mockResolvedValue({ text: 'still-not-json', usage: { inputTokens: 120, outputTokens: 40 } });
+    llmService.generate.mockResolvedValue({
+      text: 'still-not-json',
+      usage: { inputTokens: 120, outputTokens: 40 },
+    });
 
     const trace = await service.evaluateWithTrace({
       projectRootDir: '/tmp/project',

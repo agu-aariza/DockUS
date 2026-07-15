@@ -8,9 +8,6 @@ import { IsNull, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
 import { parseZipEntries } from '../builder/infrastructure/utils/archive-extractor.util';
-import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
-import { Delivery } from '../deliveries/entities/delivery.entity';
-import { Project } from '../entities/project.entity';
 import { StorageAccessService } from './storage-access.service';
 import {
   ListStorageObjectsQueryDto,

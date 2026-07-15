@@ -11,6 +11,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AcademicModule } from '../academic/academic.module';
+import { StudentProfileController } from './presentation/student-profile.controller';
+import { StudentProfileService } from './student-profile.service';
 import { SharedApplicationModule } from '../../shared/application/shared-application.module';
 import { ProjectRepository } from './infrastructure/database/project.repository';
 import { ProjectAssignmentsController } from './presentation/project-assignments.controller';
@@ -20,7 +22,8 @@ import { ProjectAssignmentsService } from './assignments/project-assignments.ser
 import { BuilderModule } from './builder/builder.module';
 import { BuildRun } from './builder/domain/entities/build-run.entity';
 import { DeliveriesController } from './presentation/deliveries.controller';
-import { DeliveriesService } from './deliveries/deliveries.service';
+import { DeliveriesQueryService } from './deliveries/deliveries-query.service';
+import { DeliveriesCommandService } from './deliveries/deliveries-command.service';
 import { Delivery } from './deliveries/entities/delivery.entity';
 import { User } from '../users/entities/user.entity';
 import { Project } from './entities/project.entity';
@@ -60,6 +63,7 @@ import { StorageInfrastructureModule } from '../../shared/infrastructure/storage
     ProjectTeachersController,
     ProjectRuntimeController,
     ProjectGradebookController,
+    StudentProfileController,
     DeliveriesController,
     ProjectAssignmentsController,
   ],
@@ -72,8 +76,10 @@ import { StorageInfrastructureModule } from '../../shared/infrastructure/storage
     ProjectLifecycleService,
     ProjectAccessService,
     ProjectGradebookService,
+    StudentProfileService,
     ProjectOperationalIssuesService,
-    DeliveriesService,
+    DeliveriesQueryService,
+    DeliveriesCommandService,
     ProjectAssignmentsService,
     ProjectAssignmentGroupEnrollmentListener,
   ],
@@ -81,8 +87,10 @@ import { StorageInfrastructureModule } from '../../shared/infrastructure/storage
     ProjectsService,
     ProjectLifecycleService,
     ProjectAccessService,
-    DeliveriesService,
+    DeliveriesQueryService,
+    DeliveriesCommandService,
     ProjectAssignmentsService,
+    BuilderModule,
   ],
 })
 export class ProjectsModule {}

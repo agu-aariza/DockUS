@@ -189,7 +189,8 @@ export class ProjectOperationalIssuesService {
             targetId: candidate.id,
             action: 'soft_delete_delivery',
             outcome: 'applied',
-            detail: 'Entrega marcada como eliminada para evitar ruido operativo.',
+            detail:
+              'Entrega marcada como eliminada para evitar ruido operativo.',
           });
         }
       }
@@ -208,7 +209,10 @@ export class ProjectOperationalIssuesService {
       }
     }
 
-    if (requestedCategories.includes('orphanStorageObjects') && mode === 'apply') {
+    if (
+      requestedCategories.includes('orphanStorageObjects') &&
+      mode === 'apply'
+    ) {
       const storageIds = candidates.orphanStorageObjects.map((c) => c.id);
       if (storageIds.length > 0) {
         const storageObjects = await this.storageObjectsRepository.find({

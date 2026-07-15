@@ -88,6 +88,15 @@ export class BuildRun {
   @Column({ type: 'text', nullable: true })
   promptVersion!: string | null;
 
+  @Column({ type: 'int', default: 0 })
+  inputTokens!: number;
+
+  @Column({ type: 'int', default: 0 })
+  outputTokens!: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 6, default: 0 })
+  executionCostUsd!: number;
+
   @Column({ type: 'timestamp', nullable: true })
   startedAt!: Date | null;
 

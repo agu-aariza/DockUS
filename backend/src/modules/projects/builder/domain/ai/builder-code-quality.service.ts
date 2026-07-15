@@ -11,13 +11,13 @@ import {
   PromptId,
   PromptRegistryService,
 } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
-import { BedrockGenerationService } from '../../../../../shared/infrastructure/ai/bedrock-generation.service';
+import { LlmGenerationRouter } from '../../../../../shared/infrastructure/ai/llm-generation.router';
 import type {
   LlmGenerateRequest,
-  LlmModelProfile,
+  LlmGenerateResult,
 } from '../../../../../shared/infrastructure/ai/llm.types';
 import { parseBuilderCodeQualityContractV2 } from './builder-code-quality-contract.parser';
-import { resolveBuilderModelProfile } from './builder-llm-model-profile';
+import { BuilderLlmConfigService } from '../../infrastructure/config/builder-llm-config.service';
 import { composeQualityPrompt } from './builder-prompt-composer';
 import {
   createPromptSnapshot,
@@ -48,12 +48,12 @@ export class BuilderCodeQualityService {
   private readonly logger = new Logger(BuilderCodeQualityService.name);
   private readonly maxInputChars: number;
   private readonly systemPrompt: string;
-  private readonly modelProfile: LlmModelProfile;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly promptRegistry: PromptRegistryService,
-    private readonly llmService: BedrockGenerationService,
+    private readonly llmService: LlmGenerationRouter,
+    private readonly llmConfigService: BuilderLlmConfigService,
   ) {
     this.maxInputChars = this.configService.get<number>(
       'BUILDER_LLM_QUALITY_MAX_INPUT_CHARS',
@@ -61,10 +61,6 @@ export class BuilderCodeQualityService {
     );
     this.systemPrompt = this.promptRegistry.getPrompt(
       PromptId.TECHNICAL_FEEDBACK,
-    );
-    this.modelProfile = resolveBuilderModelProfile(
-      'quality',
-      this.configService,
     );
   }
 
@@ -97,16 +93,19 @@ export class BuilderCodeQualityService {
       this.maxInputChars,
     );
 
+    const { profile, credentials } =
+      await this.llmConfigService.resolveStageProfile('quality');
+
     const snapshot = createPromptSnapshot(
       'quality',
       PromptId.TECHNICAL_FEEDBACK,
-      this.modelProfile,
+      profile,
       composedPrompt,
       this.systemPrompt,
     );
     await hooks?.onBeforeCall?.(snapshot);
 
-    let response: string | null;
+    let response: LlmGenerateResult;
 
     try {
       response = await this.generateText({
@@ -114,7 +113,8 @@ export class BuilderCodeQualityService {
         promptId: PromptId.TECHNICAL_FEEDBACK,
         prompt: composedPrompt.prompt,
         systemPrompt: this.systemPrompt,
-        profile: this.modelProfile,
+        profile,
+        credentials,
         format: 'json',
       });
     } catch (error: unknown) {
@@ -122,40 +122,53 @@ export class BuilderCodeQualityService {
       logStageError(
         'quality',
         PromptId.TECHNICAL_FEEDBACK,
-        this.modelProfile,
+        profile,
         serializedError,
         this.logger,
       );
-      return buildTrace(snapshot, null, serializedError);
+      return buildTrace<BuilderCodeQualityContractV2>(
+        snapshot,
+        null,
+        serializedError,
+      );
     }
 
     try {
-      const parsedContract = parseBuilderCodeQualityContractV2(response);
-      return buildTrace(snapshot, response, null, parsedContract);
+      const parsedContract = parseBuilderCodeQualityContractV2(response.text);
+      return buildTrace<BuilderCodeQualityContractV2>(
+        snapshot,
+        response.text,
+        null,
+        parsedContract,
+        response.usage,
+      );
     } catch (parseError: unknown) {
       const serializedError = serializeError(parseError, 'invalid_contract');
       logStageError(
         'quality',
         PromptId.TECHNICAL_FEEDBACK,
-        this.modelProfile,
+        profile,
         serializedError,
         this.logger,
       );
       const message =
         parseError instanceof Error ? parseError.message : String(parseError);
       this.logger.error(
-        `Fallo al parsear respuesta de calidad. Respuesta bruta: ${response}. Error: ${message}`,
+        `Fallo al parsear respuesta de calidad. Respuesta bruta: ${response.text}. Error: ${message}`,
       );
-      return buildTrace(snapshot, response, serializedError);
+      return buildTrace<BuilderCodeQualityContractV2>(
+        snapshot,
+        response.text,
+        serializedError,
+        null,
+        response.usage,
+      );
     }
   }
 
-  /**
-   * El consumo de tokens lo registra `BedrockGenerationService`; aquí solo
-   * interesa el texto de la respuesta.
-   */
-  private async generateText(request: LlmGenerateRequest): Promise<string> {
-    const { text } = await this.llmService.generate(request);
-    return text;
+  private async generateText(
+    request: LlmGenerateRequest,
+  ): Promise<LlmGenerateResult> {
+    return this.llmService.generate(request);
   }
 }

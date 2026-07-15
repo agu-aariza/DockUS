@@ -102,6 +102,24 @@ export class BuildRunResponseDto {
     format: 'date-time',
   })
   updatedAt!: string;
+
+  @ApiProperty({
+    description: 'Número de tokens de entrada consumidos.',
+    example: 1240,
+  })
+  inputTokens!: number;
+
+  @ApiProperty({
+    description: 'Número de tokens de salida consumidos.',
+    example: 850,
+  })
+  outputTokens!: number;
+
+  @ApiProperty({
+    description: 'Coste estimado de la ejecución en USD.',
+    example: 0.00342,
+  })
+  executionCostUsd!: number;
 }
 
 export class PaginatedBuildRunsResponseDto {

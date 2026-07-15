@@ -9,6 +9,7 @@
  */
 
 import {
+  BadRequestException,
   Body,
   Controller,
   DefaultValuePipe,
@@ -46,6 +47,17 @@ import { UserRole } from '../../../users/entities/user.entity';
 import { BuilderRunCommandsService } from '../application/services/orchestration/builder-run-commands.service';
 import { BuilderRunQueriesService } from '../application/services/orchestration/builder-run-queries.service';
 import { BuilderLlmChatService } from '../domain/ai/builder-llm-chat.service';
+import { BuilderLlmConfigService } from '../infrastructure/config/builder-llm-config.service';
+import { BuilderLlmProviderTester } from '../infrastructure/config/builder-llm-provider-tester.service';
+import {
+  LLM_PROVIDER_IDS,
+  LlmProviderId,
+} from '../../../../shared/infrastructure/ai/llm.types';
+import {
+  LlmConfigsResponseDto,
+  LlmProviderTestResponseDto,
+  SaveLlmConfigsDto,
+} from './dto/llm-config.dto';
 import {
   BuildRunResponseDto,
   BuildRunEventsResponseDto,
@@ -88,6 +100,8 @@ export class BuilderController {
     private readonly builderRunCommandsService: BuilderRunCommandsService,
     private readonly builderRunQueriesService: BuilderRunQueriesService,
     private readonly builderLlmChatService: BuilderLlmChatService,
+    private readonly builderLlmConfigService: BuilderLlmConfigService,
+    private readonly builderLlmProviderTester: BuilderLlmProviderTester,
   ) {}
 
   @ApiOperation({
@@ -491,5 +505,46 @@ export class BuilderController {
   ): Promise<BuildRunChatMessage> {
     await this.builderRunQueriesService.getRunById(buildRunId, request.user);
     return this.builderLlmChatService.postChatMessage(buildRunId, body.message);
+  }
+
+  @ApiOperation({
+    summary: 'Obtener configuración de LLM y roles',
+    description:
+      'Devuelve los proveedores de IA configurados y el rol que sirve cada uno. Las claves de API nunca se devuelven: solo si existen y sus últimos 4 caracteres.',
+  })
+  @Roles(UserRole.ADMIN)
+  @Get('llm-configs')
+  async getLlmConfigs(): Promise<LlmConfigsResponseDto> {
+    return this.builderLlmConfigService.getConfigsView();
+  }
+
+  @ApiOperation({
+    summary: 'Guardar configuración de LLM y roles',
+    description:
+      'Guarda modelo, endpoint, tarifas y roles de cada proveedor. La clave de API se cifra en reposo; omitirla conserva la ya guardada.',
+  })
+  @Roles(UserRole.ADMIN)
+  @Post('llm-configs')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async saveLlmConfigs(@Body() body: SaveLlmConfigsDto): Promise<void> {
+    await this.builderLlmConfigService.saveConfigs(body);
+  }
+
+  @ApiOperation({
+    summary: 'Probar la conexión con un proveedor',
+    description:
+      'Envía un prompt mínimo al proveedor con las credenciales guardadas y devuelve su respuesta, latencia y tokens reales.',
+  })
+  @ApiParam({ name: 'providerId', enum: LLM_PROVIDER_IDS })
+  @Roles(UserRole.ADMIN)
+  @Post('llm-configs/:providerId/test')
+  @HttpCode(HttpStatus.OK)
+  async testLlmProvider(
+    @Param('providerId') providerId: string,
+  ): Promise<LlmProviderTestResponseDto> {
+    if (!(LLM_PROVIDER_IDS as readonly string[]).includes(providerId)) {
+      throw new BadRequestException(`Proveedor desconocido: "${providerId}".`);
+    }
+    return this.builderLlmProviderTester.test(providerId as LlmProviderId);
   }
 }

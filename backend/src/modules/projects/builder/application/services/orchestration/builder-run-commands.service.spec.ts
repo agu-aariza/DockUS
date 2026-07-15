@@ -10,6 +10,7 @@ import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
 import { BuilderPipelineOrchestrator } from './builder-pipeline-orchestrator.service';
 import { BuilderRunMetricsService } from './builder-run-metrics.service';
 import { BuilderStaleRunRecoveryService } from './builder-stale-run-recovery.service';
+import { BuilderRunCostService } from '../../../domain/ai/builder-run-cost.service';
 import {
   BuildRun,
   BuildRunStatus,
@@ -28,7 +29,6 @@ jest.mock('fs/promises', () => ({
 describe('BuilderRunCommandsService', () => {
   let service: BuilderRunCommandsService;
 
-  const workspaceRoot = '/tmp/dockus-builder-test-123';
   const runId = 'run-123';
   const deliveryId = 'delivery-123';
 
@@ -116,8 +116,17 @@ describe('BuilderRunCommandsService', () => {
     report: { summary: 'ok' },
     executionLogs: '',
     warnings: [],
+    llmUsages: [],
     ...overrides,
   });
+
+  const builderRunCostService = {
+    summarize: jest.fn(async () => ({
+      inputTokens: 1200,
+      outputTokens: 300,
+      costUsd: 0.0042,
+    })),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -146,6 +155,7 @@ describe('BuilderRunCommandsService', () => {
       builderRunMetricsService as unknown as BuilderRunMetricsService,
       builderStaleRunRecoveryService as unknown as BuilderStaleRunRecoveryService,
       {} as DataSource,
+      builderRunCostService as unknown as BuilderRunCostService,
     );
   });
 

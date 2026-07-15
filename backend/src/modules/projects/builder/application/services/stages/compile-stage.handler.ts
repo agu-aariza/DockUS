@@ -75,7 +75,8 @@ export class BuilderCompileStageHandler implements IBuilderStageHandler<
         buildRunId: runId,
         eventType: 'RUN_STATUS_CHANGED',
         runStatus: BuildRunStatus.RUNNING,
-        message: 'Preparando imagen de entorno con las dependencias declaradas...',
+        message:
+          'Preparando imagen de entorno con las dependencias declaradas...',
       });
     }
 

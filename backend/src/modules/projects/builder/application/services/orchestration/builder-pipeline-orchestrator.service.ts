@@ -36,6 +36,7 @@ import { BuilderQualityStageHandler } from '../stages/quality-stage.handler';
 import { BuilderReportStageHandler } from '../stages/report-stage.handler';
 import { CompiledRecipe } from '../compilation/builder-recipe-compiler.service';
 import { BuilderPipelineResult } from '../builder-application.types';
+import { BuilderStageTokenUsage } from '../../../domain/builder.types';
 
 /** Extensiones cuyo contenido se incluye como código fuente en el prompt. */
 const SOURCE_CODE_EXTENSIONS = [
@@ -108,7 +109,7 @@ export class BuilderPipelineOrchestrator {
       const assignmentContext = this.buildAssignmentContext(delivery);
       const sourceCodePayload = await this.buildSourceCodePayload(workspace);
 
-      const planAssessment = await this.runPlanStage(
+      const { planAssessment, usages: planUsages } = await this.runPlanStage(
         run.id,
         sourceCodePayload,
         assignmentContext,
@@ -126,28 +127,30 @@ export class BuilderPipelineOrchestrator {
           )
         : (compileLogs ?? '');
 
-      const assessment = await this.runEvaluationStage(
-        run.id,
-        workspace,
-        sourceCodePayload,
-        executionLogs,
-        assignmentContext,
-        planAssessment,
-      );
+      const { assessment, usages: evaluationUsages } =
+        await this.runEvaluationStage(
+          run.id,
+          workspace,
+          sourceCodePayload,
+          executionLogs,
+          assignmentContext,
+          planAssessment,
+        );
 
       this.enrichGradeBreakdownWithRubric(
         assessment,
         assignmentContext.rubricCriteria,
       );
 
-      const qualityFindings = await this.runQualityStage(
-        run.id,
-        sourceCodePayload,
-        executionLogs,
-        assignmentContext,
-        assessment,
-        delivery,
-      );
+      const { qualityFindings, usages: qualityUsages } =
+        await this.runQualityStage(
+          run.id,
+          sourceCodePayload,
+          executionLogs,
+          assignmentContext,
+          assessment,
+          delivery,
+        );
 
       const report = await this.runReportStage(
         run.id,
@@ -163,6 +166,9 @@ export class BuilderPipelineOrchestrator {
         report,
         executionLogs,
         warnings: workspace.warnings,
+        // El coste no se puede derivar de la suma de tokens: cada etapa puede
+        // haber corrido en un proveedor distinto, así que se propaga el detalle.
+        llmUsages: [...planUsages, ...evaluationUsages, ...qualityUsages],
       };
     } finally {
       await this.builderWorkspaceService.cleanup(workspace);
@@ -278,7 +284,10 @@ export class BuilderPipelineOrchestrator {
     runId: string,
     sourceCodePayload: string,
     assignmentContext: AssignmentContext,
-  ): Promise<BuilderPlanContractV2> {
+  ): Promise<{
+    planAssessment: BuilderPlanContractV2;
+    usages: BuilderStageTokenUsage[];
+  }> {
     await this.builderRunSupportService.emitEvent({
       buildRunId: runId,
       eventType: 'RUN_STATUS_CHANGED',
@@ -286,13 +295,13 @@ export class BuilderPipelineOrchestrator {
       payload: { studentStage: 'building' },
     });
 
-    const { planAssessment } = await this.builderPlanStageHandler.handle({
+    const result = await this.builderPlanStageHandler.handle({
       runId,
       sourceCodePayload,
       assignmentContext,
     });
 
-    return planAssessment;
+    return result;
   }
 
   private async runCompileStage(
@@ -333,8 +342,11 @@ export class BuilderPipelineOrchestrator {
     executionLogs: string,
     assignmentContext: AssignmentContext,
     planAssessment: BuilderPlanContractV2,
-  ): Promise<BuilderEvaluationContractV2> {
-    const { assessment } = await this.builderEvaluationStageHandler.handle({
+  ): Promise<{
+    assessment: BuilderEvaluationContractV2;
+    usages: BuilderStageTokenUsage[];
+  }> {
+    const result = await this.builderEvaluationStageHandler.handle({
       runId,
       workspace,
       sourceCodePayload,
@@ -343,7 +355,7 @@ export class BuilderPipelineOrchestrator {
       planAssessment,
     });
 
-    return assessment;
+    return result;
   }
 
   private async runQualityStage(
@@ -353,8 +365,11 @@ export class BuilderPipelineOrchestrator {
     assignmentContext: AssignmentContext,
     assessment: BuilderEvaluationContractV2,
     delivery: Delivery,
-  ): Promise<BuilderCodeQualityContractV2> {
-    const { qualityFindings } = await this.builderQualityStageHandler.handle({
+  ): Promise<{
+    qualityFindings: BuilderCodeQualityContractV2;
+    usages: BuilderStageTokenUsage[];
+  }> {
+    const result = await this.builderQualityStageHandler.handle({
       runId,
       sourceCodePayload,
       executionLogs,
@@ -363,7 +378,7 @@ export class BuilderPipelineOrchestrator {
       delivery,
     });
 
-    return qualityFindings;
+    return result;
   }
 
   private async runReportStage(

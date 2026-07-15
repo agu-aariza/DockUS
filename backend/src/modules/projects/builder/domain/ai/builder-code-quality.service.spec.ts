@@ -4,6 +4,8 @@ import { PromptRegistryService } from '../../../../../shared/infrastructure/ai/p
 import { ILlmGenerationService } from '../../../../../shared/infrastructure/ai/llm-generation.token';
 import { BedrockRequestError } from '../../../../../shared/infrastructure/ai/bedrock-request.util';
 import { BuilderCodeQualityService } from './builder-code-quality.service';
+import { BuilderLlmConfigService } from '../../infrastructure/config/builder-llm-config.service';
+import { resolveBuilderModelProfile } from './builder-llm-model-profile';
 
 const validQualityResponse = JSON.stringify({
   thought: 'Calidad consistente.',
@@ -31,31 +33,44 @@ describe('BuilderCodeQualityService', () => {
     generate: jest.fn(),
   };
 
+  const configService = {
+    get: jest.fn((key: string, fallback?: unknown) => {
+      switch (key) {
+        case 'BUILDER_BEDROCK_QUALITY_MODEL_ID':
+          return 'bedrock-quality-model';
+        case 'BUILDER_LLM_QUALITY_MAX_INPUT_CHARS':
+          return 240;
+        default:
+          return fallback;
+      }
+    }),
+  } as unknown as ConfigService;
+
+  const llmConfigService = {
+    resolveStageProfile: jest.fn(async () => ({
+      profile: resolveBuilderModelProfile('quality', configService),
+      credentials: null,
+    })),
+  } as unknown as BuilderLlmConfigService;
+
   let service: BuilderCodeQualityService;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     service = new BuilderCodeQualityService(
-      {
-        get: jest.fn((key: string, fallback?: unknown) => {
-          switch (key) {
-            case 'BUILDER_BEDROCK_QUALITY_MODEL_ID':
-              return 'bedrock-quality-model';
-            case 'BUILDER_LLM_QUALITY_MAX_INPUT_CHARS':
-              return 240;
-            default:
-              return fallback;
-          }
-        }),
-      } as unknown as ConfigService,
+      configService,
       promptRegistry,
       llmService as any,
+      llmConfigService,
     );
   });
 
   it('captures prompt sections, raw response, and parsed contract during analysis', async () => {
-    llmService.generate.mockResolvedValue({ text: validQualityResponse, usage: { inputTokens: 120, outputTokens: 40 } });
+    llmService.generate.mockResolvedValue({
+      text: validQualityResponse,
+      usage: { inputTokens: 120, outputTokens: 40 },
+    });
 
     const trace = await service.analyzeWithTrace(
       {

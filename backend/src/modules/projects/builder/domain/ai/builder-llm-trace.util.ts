@@ -3,9 +3,13 @@ import {
   BuilderLlmStagePromptSnapshot,
   BuilderLlmStageErrorInfo,
   BuilderLlmStageTrace,
+  BuilderStageTokenUsage,
   BUILDER_LLM_SCHEMA_VERSION,
 } from '../builder.types';
-import type { LlmModelProfile } from '../../../../../shared/infrastructure/ai/llm.types';
+import type {
+  LlmModelProfile,
+  LlmUsage,
+} from '../../../../../shared/infrastructure/ai/llm.types';
 import type { PromptId } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 import type { ComposedPromptPayload } from './builder-prompt-composer';
 import { BedrockRequestError } from '../../../../../shared/infrastructure/ai/bedrock-request.util';
@@ -55,6 +59,7 @@ export function buildTrace<TContract>(
   rawResponse: string | null,
   error: BuilderLlmStageErrorInfo | null,
   parsedContract: TContract | null = null,
+  usage?: LlmUsage,
 ): BuilderLlmStageTrace<TContract> {
   return {
     schemaVersion: BUILDER_LLM_SCHEMA_VERSION,
@@ -62,6 +67,30 @@ export function buildTrace<TContract>(
     rawResponse,
     parsedContract,
     error,
+    usage,
+  };
+}
+
+/**
+ * Extrae el consumo facturable de un trace. Devuelve null si el proveedor no
+ * declaró tokens (fallo antes de llegar al modelo, o respuesta sin `usage`).
+ */
+export function toStageTokenUsage(
+  trace: BuilderLlmStageTrace<unknown> | null | undefined,
+): BuilderStageTokenUsage | null {
+  const inputTokens = trace?.usage?.inputTokens ?? 0;
+  const outputTokens = trace?.usage?.outputTokens ?? 0;
+
+  if (!trace || (inputTokens === 0 && outputTokens === 0)) {
+    return null;
+  }
+
+  return {
+    stage: trace.stage,
+    providerId: trace.modelProfile.providerId,
+    modelId: trace.modelProfile.modelId,
+    inputTokens,
+    outputTokens,
   };
 }
 

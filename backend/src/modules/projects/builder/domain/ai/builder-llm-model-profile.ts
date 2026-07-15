@@ -43,6 +43,9 @@ export function resolveBuilderModelProfile(
   return {
     profileVersion: PROFILE_VERSION,
     stage,
+    // Sin configuración en base de datos, el Builder sigue sirviéndose de
+    // Bedrock con los modelos declarados por variables de entorno.
+    providerId: 'bedrock',
     modelId,
     maxTokens: DEFAULT_MAX_TOKENS[stage],
     temperature: DEFAULT_TEMPERATURE[stage],

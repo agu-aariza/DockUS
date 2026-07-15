@@ -86,7 +86,9 @@ export class ProjectTestSuiteController {
     return this.storageService.findProjectTestSuite(id, request.user);
   }
 
-  @ApiOperation({ summary: 'Previsualizar contenido de la suite docente (solo ZIP)' })
+  @ApiOperation({
+    summary: 'Previsualizar contenido de la suite docente (solo ZIP)',
+  })
   @ApiParam(PROJECT_ID_PARAM)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Get('preview')

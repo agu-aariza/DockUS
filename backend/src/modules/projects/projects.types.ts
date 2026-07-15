@@ -11,6 +11,12 @@ import type {
 export type {
   ProjectProgressSummary,
   ProjectGradebookRow,
+  StudentProfileResponse,
+  StudentProfileProject,
+  StudentProfileDelivery,
+  StudentProfileRun,
+  StudentProfileSummary,
+  TeacherRef,
   ProjectOperationalIssue,
   ProjectOperationalIssuesSummary,
   ProjectOperationalIssuesReconcileResult,

@@ -38,6 +38,7 @@ import { BuildRunEventEntity } from './domain/entities/build-run-event.entity';
 import { BuildRun } from './domain/entities/build-run.entity';
 import { CodeQualityFindingEntity } from './domain/entities/code-quality-finding.entity';
 import { BuildRunChatMessage } from './domain/entities/build-run-chat-message.entity';
+import { LlmConfiguration } from './domain/entities/llm-configuration.entity';
 import { BuilderConfigProvider } from './domain/builder-config.provider';
 import { BuilderLlmEvaluatorService } from './domain/ai/builder-llm-evaluator.service';
 import { BuilderLlmChatService } from './domain/ai/builder-llm-chat.service';
@@ -56,6 +57,9 @@ import { BuilderReportStageHandler } from './application/services/stages/report-
 import { BuilderPipelineOrchestrator } from './application/services/orchestration/builder-pipeline-orchestrator.service';
 import { BuilderRunMetricsService } from './application/services/orchestration/builder-run-metrics.service';
 import { BuilderStaleRunRecoveryService } from './application/services/orchestration/builder-stale-run-recovery.service';
+import { BuilderLlmConfigService } from './infrastructure/config/builder-llm-config.service';
+import { BuilderLlmProviderTester } from './infrastructure/config/builder-llm-provider-tester.service';
+import { BuilderRunCostService } from './domain/ai/builder-run-cost.service';
 
 @Module({
   imports: [
@@ -74,6 +78,7 @@ import { BuilderStaleRunRecoveryService } from './application/services/orchestra
       BuildRunEventEntity,
       CodeQualityFindingEntity,
       BuildRunChatMessage,
+      LlmConfiguration,
     ]),
     StorageInfrastructureModule,
   ],
@@ -111,8 +116,11 @@ import { BuilderStaleRunRecoveryService } from './application/services/orchestra
     BuilderPipelineOrchestrator,
     BuilderRunMetricsService,
     BuilderStaleRunRecoveryService,
+    BuilderLlmConfigService,
+    BuilderLlmProviderTester,
+    BuilderRunCostService,
   ],
-  exports: [BuilderQualityAggregationService],
+  exports: [BuilderQualityAggregationService, BuilderRunCommandsService],
 })
 export class BuilderModule implements OnModuleInit {
   constructor(

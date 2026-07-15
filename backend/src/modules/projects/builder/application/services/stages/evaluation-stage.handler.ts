@@ -13,6 +13,8 @@ import {
 } from '../../../domain/builder.types';
 import { resolveEvaluationAssessment } from '../support/builder-fallback-assessment.util';
 import { StageWorkspaceResult } from '../workspace/builder-workspace.service';
+import { toStageTokenUsage } from '../../../domain/ai/builder-llm-trace.util';
+import type { BuilderStageTokenUsage } from '../../../domain/builder.types';
 
 interface EvaluationStageInput {
   runId: string;
@@ -25,6 +27,7 @@ interface EvaluationStageInput {
 
 interface EvaluationStageOutput {
   assessment: BuilderEvaluationContractV2;
+  usages: BuilderStageTokenUsage[];
 }
 
 @Injectable()
@@ -112,7 +115,12 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<
       this.builderHallucinationGuard,
     );
 
-    return { assessment };
+    return {
+      assessment,
+      usages: [factsTrace, evaluationTrace]
+        .map(toStageTokenUsage)
+        .filter((usage): usage is BuilderStageTokenUsage => usage !== null),
+    };
   }
 
   private createFallbackFacts(

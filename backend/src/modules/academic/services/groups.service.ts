@@ -47,6 +47,31 @@ export class GroupsService {
     }));
   }
 
+  /**
+   * Grupos vigentes de un alumno. Las matrículas son soft-revoke, así que una
+   * revocada (`revokedAt`) no cuenta aunque la fila siga en la tabla.
+   */
+  async listGroupsForStudent(
+    studentId: string,
+  ): Promise<Array<{ id: string; name: string; code: string | null }>> {
+    const groups = await this.groupsRepository
+      .createQueryBuilder('group')
+      .innerJoin(
+        GroupEnrollment,
+        'enrollment',
+        'enrollment."groupId" = group.id AND enrollment."studentId" = :studentId AND enrollment."revokedAt" IS NULL',
+        { studentId },
+      )
+      .orderBy('group.name', 'ASC')
+      .getMany();
+
+    return groups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      code: group.code ?? null,
+    }));
+  }
+
   async create(dto: CreateGroupDto, creatorId: string): Promise<CourseGroup> {
     const group = this.groupsRepository.create({
       ...dto,

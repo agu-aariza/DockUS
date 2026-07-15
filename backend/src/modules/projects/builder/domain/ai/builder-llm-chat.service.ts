@@ -1,7 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 
 import { BuildRunChatMessage } from '../entities/build-run-chat-message.entity';
 import { BuildRun } from '../entities/build-run.entity';
@@ -9,13 +8,15 @@ import {
   BuildRunArtifact,
   BuildRunArtifactType,
 } from '../entities/build-run-artifact.entity';
-import { BedrockGenerationService } from '../../../../../shared/infrastructure/ai/bedrock-generation.service';
+import { LlmGenerationRouter } from '../../../../../shared/infrastructure/ai/llm-generation.router';
 import {
   PromptRegistryService,
   PromptId,
 } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
 import { MinioStorageService } from '../../../../../shared/infrastructure/storage/minio-storage.service';
-import { resolveBuilderModelProfile } from './builder-llm-model-profile';
+import { BuilderLlmConfigService } from '../../infrastructure/config/builder-llm-config.service';
+import { BuilderRunCostService } from './builder-run-cost.service';
+import { BuilderStageTokenUsage } from '../builder.types';
 
 @Injectable()
 export class BuilderLlmChatService {
@@ -28,10 +29,11 @@ export class BuilderLlmChatService {
     private readonly buildRunRepository: Repository<BuildRun>,
     @InjectRepository(BuildRunArtifact)
     private readonly artifactRepository: Repository<BuildRunArtifact>,
-    private readonly llmService: BedrockGenerationService,
+    private readonly llmService: LlmGenerationRouter,
     private readonly promptRegistryService: PromptRegistryService,
     private readonly minioStorageService: MinioStorageService,
-    private readonly configService: ConfigService,
+    private readonly llmConfigService: BuilderLlmConfigService,
+    private readonly runCostService: BuilderRunCostService,
   ) {}
 
   async getChatMessages(buildRunId: string): Promise<BuildRunChatMessage[]> {
@@ -62,7 +64,7 @@ export class BuilderLlmChatService {
     await this.chatMessageRepository.save(userMessage);
 
     try {
-      const assistantReplyText = await this.generateTutorReply(
+      const { text, usage } = await this.generateTutorReply(
         run,
         history,
         messageText,
@@ -71,9 +73,13 @@ export class BuilderLlmChatService {
       const assistantMessage = this.chatMessageRepository.create({
         buildRunId,
         sender: 'assistant',
-        message: assistantReplyText,
+        message: text,
       });
       await this.chatMessageRepository.save(assistantMessage);
+
+      // El chat consume tokens reales del run: si no se acumulan aquí, el coste
+      // que ve el profesor se queda congelado en el de la evaluación.
+      await this.accrueChatUsage(run, usage);
 
       return assistantMessage;
     } catch (error) {
@@ -91,11 +97,42 @@ export class BuilderLlmChatService {
     }
   }
 
+  /** Suma el consumo de un mensaje de chat a los contadores del `BuildRun`. */
+  private async accrueChatUsage(
+    run: BuildRun,
+    usage: BuilderStageTokenUsage | null,
+  ): Promise<void> {
+    if (!usage) {
+      return;
+    }
+
+    const { inputTokens, outputTokens, costUsd } =
+      await this.runCostService.summarize([usage]);
+
+    await this.buildRunRepository.increment(
+      { id: run.id },
+      'inputTokens',
+      inputTokens,
+    );
+    await this.buildRunRepository.increment(
+      { id: run.id },
+      'outputTokens',
+      outputTokens,
+    );
+    if (costUsd > 0) {
+      await this.buildRunRepository.increment(
+        { id: run.id },
+        'executionCostUsd',
+        costUsd,
+      );
+    }
+  }
+
   private async generateTutorReply(
     run: BuildRun,
     history: BuildRunChatMessage[],
     newUserMessage: string,
-  ): Promise<string> {
+  ): Promise<{ text: string; usage: BuilderStageTokenUsage | null }> {
     let evaluationContext = '';
     try {
       const evalPromptArtifact = await this.artifactRepository.findOne({
@@ -173,15 +210,33 @@ ${newUserMessage}
 
 [RESPUESTA DEL TUTOR — Estructura obligatoria: **Reconocimiento** → **El concepto** → **Por dónde empezar** → **Para reflexionar**]`;
 
-    const profile = resolveBuilderModelProfile('chat', this.configService);
-    const { text } = await this.llmService.generate({
+    const { profile, credentials } =
+      await this.llmConfigService.resolveStageProfile('chat');
+
+    const { text, usage } = await this.llmService.generate({
       stage: 'chat',
       promptId: PromptId.CHAT,
       prompt: fullPrompt,
       systemPrompt,
       profile,
+      credentials,
     });
 
-    return text;
+    const inputTokens = usage.inputTokens ?? 0;
+    const outputTokens = usage.outputTokens ?? 0;
+
+    return {
+      text,
+      usage:
+        inputTokens === 0 && outputTokens === 0
+          ? null
+          : {
+              stage: 'chat',
+              providerId: profile.providerId,
+              modelId: profile.modelId,
+              inputTokens,
+              outputTokens,
+            },
+    };
   }
 }

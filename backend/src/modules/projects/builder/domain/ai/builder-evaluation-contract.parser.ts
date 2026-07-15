@@ -106,7 +106,8 @@ export function parseBuilderEvaluationContractV2(
       0,
     );
     const maxTotal = contract.gradeBreakdown.reduce(
-      (sum, item) => sum + (Number.isFinite(item.maxPoints) ? item.maxPoints : 0),
+      (sum, item) =>
+        sum + (Number.isFinite(item.maxPoints) ? item.maxPoints : 0),
       0,
     );
 

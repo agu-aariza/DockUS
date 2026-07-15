@@ -394,7 +394,9 @@ export class BuilderWorkspaceService {
    * mismo servicio que lo abre. Nunca lanza: un fallo de limpieza no debe alterar
    * el resultado del run.
    */
-  async cleanup(workspace: Pick<StageWorkspaceResult, 'workspaceRoot'>): Promise<void> {
+  async cleanup(
+    workspace: Pick<StageWorkspaceResult, 'workspaceRoot'>,
+  ): Promise<void> {
     if (!workspace?.workspaceRoot) {
       return;
     }
@@ -416,5 +418,4 @@ export class BuilderWorkspaceService {
     );
     await chmod(rootDir, 0o555).catch(() => undefined);
   }
-
 }

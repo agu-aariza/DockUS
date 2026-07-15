@@ -20,10 +20,7 @@ export {
   EnqueueBuildRunResponseDto,
   PaginatedBuildRunsResponseDto,
 } from './build-run-core.dto';
-export {
-  BuildRunEventDto,
-  BuildRunEventsResponseDto,
-} from './build-run-events.dto';
+export { BuildRunEventsResponseDto } from './build-run-events.dto';
 export {
   EvidenceArtifactDto,
   EvidenceDownloadUrlDto,
@@ -51,5 +48,8 @@ export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
     finishedAt: run.finishedAt?.toISOString() ?? null,
     createdAt: run.createdAt.toISOString(),
     updatedAt: run.updatedAt.toISOString(),
+    inputTokens: run.inputTokens,
+    outputTokens: run.outputTokens,
+    executionCostUsd: Number(run.executionCostUsd) || 0,
   };
 }

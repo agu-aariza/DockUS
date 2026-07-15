@@ -37,6 +37,7 @@ import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
 import { BuilderPipelineOrchestrator } from './builder-pipeline-orchestrator.service';
 import { BuilderRunMetricsService } from './builder-run-metrics.service';
 import { BuilderStaleRunRecoveryService } from './builder-stale-run-recovery.service';
+import { BuilderRunCostService } from '../../../domain/ai/builder-run-cost.service';
 
 @Injectable()
 export class BuilderRunCommandsService {
@@ -58,6 +59,7 @@ export class BuilderRunCommandsService {
     private readonly builderRunMetricsService: BuilderRunMetricsService,
     private readonly builderStaleRunRecoveryService: BuilderStaleRunRecoveryService,
     private readonly dataSource: DataSource,
+    private readonly builderRunCostService: BuilderRunCostService,
   ) {
     this.promptVersion = this.builderConfigProvider.promptVersion;
   }
@@ -188,6 +190,13 @@ export class BuilderRunCommandsService {
       run.warnings = pipelineResult.warnings;
       run.codeQualityFindings = pipelineResult.qualityFindings;
       run.report = pipelineResult.report;
+
+      const cost = await this.builderRunCostService.summarize(
+        pipelineResult.llmUsages,
+      );
+      run.inputTokens = cost.inputTokens;
+      run.outputTokens = cost.outputTokens;
+      run.executionCostUsd = cost.costUsd;
 
       this.builderRunMetricsService.logRunMetrics(
         run.id,
