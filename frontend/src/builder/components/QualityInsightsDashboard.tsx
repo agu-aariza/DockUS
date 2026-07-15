@@ -14,7 +14,8 @@ import {
 } from "react-icons/ri";
 
 import { projectsApi } from "../../shared/api/services";
-import { Badge, Card } from "../../shared/components/ui/Layout";
+import { Card } from "../../shared/components/ui/Layout";
+import { StatusBadge, type StatusTone } from "../../shared/components/ui/StatusBadge";
 import type { TeacherDeliveryDetailTab } from "../../deliveries/teacherReviewNavigation";
 import type { ProjectQualityInsightsResponse, ProjectStudentQualityInsightsResponse } from "../../features/projects/types";
 import type { QualityInsightCategory } from "../../features/builder/types";
@@ -93,7 +94,7 @@ function getCategoryIcon(category: QualityInsightCategory) {
   }
 }
 
-function getBadgeVariant(studentCount: number, totalStudents: number) {
+function getBadgeVariant(studentCount: number, totalStudents: number): StatusTone {
   if (totalStudents <= 0) {
     return "success";
   }
@@ -390,8 +391,8 @@ export function QualityInsightsDashboard({
                     </div>
                     <div className="h-10 w-px bg-slate-200" />
                     <div className="min-w-[4.5rem] text-right">
-                      <Badge
-                        variant={getBadgeVariant(
+                      <StatusBadge
+                        tone={getBadgeVariant(
                           insight.studentCount,
                           summary.totalStudentsAnalyzed,
                         )}
@@ -401,7 +402,7 @@ export function QualityInsightsDashboard({
                             100,
                         )}
                         %
-                      </Badge>
+                      </StatusBadge>
                     </div>
                   </div>
                 </div>
@@ -525,8 +526,8 @@ export function QualityInsightsDashboard({
                                 <div className="font-semibold text-slate-900">
                                   {finding.title}
                                 </div>
-                                <Badge
-                                  variant={
+                                <StatusBadge
+                                  tone={
                                     finding.severity === "high"
                                       ? "danger"
                                       : finding.severity === "medium"
@@ -535,7 +536,7 @@ export function QualityInsightsDashboard({
                                   }
                                 >
                                   {finding.severity}
-                                </Badge>
+                                </StatusBadge>
                               </div>
                               <p className="mt-2 text-sm leading-relaxed text-slate-600">
                                 {finding.detail}

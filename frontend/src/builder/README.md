@@ -7,6 +7,17 @@ No gestiona llamadas a API ni tipos de datos del dominio builder (responsabilida
 ## Conceptos Clave (Glosario)
 - **Builder**: Módulo o motor encargado de la evaluación, calidad (lint/test) y asistencia en la ejecución de código.
 - **Evaluation/Quality**: Componentes que exponen los hallazgos y correcciones al usuario.
+- **RunStatusStrip**: Lectura del run (ejecución, infraestructura, evaluación) en una sola superficie.
+- **TimelinePanel**: La traza como raíl cronológico. Es el elemento característico del builder: aquí se gasta la atención visual y el resto de paneles se callan.
+- **LiveConsolePanel**: Terminal real. El fondo oscuro es el medio de los logs, no decoración: no le añadas degradados ni glow.
+
+## Convención visual
+La voz de la máquina (estados, notas, ids, horas, comandos) va en mono con cifras tabulares vía
+`.data-figure` / `.data-meta`; la voz humana (títulos y prosa) en Inter. El vino (`accent`) marca
+identidad, el azul (`primary`) interacción, y verde/ámbar/rojo son semáforo de estado, nunca adorno.
+La copia va en castellano: nada de "LLM Assessment" ni "Payload Data". Las etiquetas de dominio se
+traducen en un único sitio (`confidenceLabel`, `PREFLIGHT_COMPATIBILITY_LABEL` en `liveRunUtils`),
+no en cada componente.
 
 ## Dependencias Externas Clave
 Depende de las interfaces y utilidades de `features/builder/` y hooks personalizados que abstraen las peticiones API del ecosistema builder.

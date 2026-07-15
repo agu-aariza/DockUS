@@ -295,6 +295,9 @@ export interface BuildRunEntity {
   runtimeTarget?: BuildRunRuntimeTarget | null;
   failureReason?: string | null;
   warnings: string[];
+  inputTokens?: number;
+  outputTokens?: number;
+  executionCostUsd?: number;
   imageTag?: string | null;
   imageExpiresAt?: string | null;
   startedAt?: string | null;
