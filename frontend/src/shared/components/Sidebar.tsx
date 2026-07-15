@@ -11,8 +11,11 @@ import {
   RiInboxArchiveLine,
   RiUploadCloud2Line,
   RiFileTextLine,
+  RiCpuLine,
+  RiSearch2Line,
+  RiUser3Line,
 } from 'react-icons/ri';
-import { useWorkspace } from '../workspace/WorkspaceContext';
+import { useWorkspaceSelection, useWorkspaceUI } from '../workspace/WorkspaceContext';
 
 interface SidebarProps {
   activeTab: string;
@@ -30,7 +33,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeStudentTab, onStudentTabChange, studentHasUnread,
 }) => {
   const isStudent = userRole === 'STUDENT';
-  const { selection, isMinimized, setIsMinimized } = useWorkspace();
+  const { selection } = useWorkspaceSelection();
+  const { isMinimized, setIsMinimized } = useWorkspaceUI();
   const isWorkspaceActive = Boolean(selection.projectId || selection.assignmentId || selection.deliveryId);
 
   const userInitial = userEmail ? userEmail.charAt(0).toUpperCase() : 'U';
@@ -46,6 +50,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const adminNavigation = [
     { id: 'storage', label: 'Almacenamiento', icon: RiDatabase2Line },
     { id: 'users', label: 'Usuarios', icon: RiGroupLine },
+    // Solo ADMIN: la pestaña gestiona claves de API y tarifas de los proveedores.
+    ...(userRole === 'ADMIN'
+      ? [{ id: 'llm', label: 'Modelos de IA', icon: RiCpuLine }]
+      : []),
   ];
 
   const studentTabNavigation = [
@@ -54,6 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'entregas', label: 'Mis entregas', icon: RiInboxArchiveLine },
     { id: 'subir', label: 'Subir versión', icon: RiUploadCloud2Line },
     { id: 'informes', label: 'Mis informes', icon: RiFileTextLine },
+    { id: 'expediente', label: 'Mi expediente', icon: RiUser3Line },
   ];
 
   const NavItem = ({ item }: { item: { id: string, label: string, icon: React.ComponentType<{ className?: string }> } }) => {
@@ -137,6 +146,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <>
             <nav className="space-y-1" aria-label="Navegación principal">
               {teacherMainNavigation.map(item => <NavItem key={item.id} item={item} />)}
+              
+              {/* Buscar tab */}
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}
+                className="group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:translate-x-1"
+              >
+                <span className="flex items-center justify-center transition-colors duration-200 text-slate-500 group-hover:text-slate-300">
+                  <RiSearch2Line className="text-lg" />
+                </span>
+                <span className="transition-transform duration-200">Buscar</span>
+                
+                {/* Hotkey hint */}
+                <span className="ml-auto hidden group-hover:inline-block rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 tracking-wider font-mono">
+                  Ctrl+K
+                </span>
+              </button>
             </nav>
 
             <div className="space-y-1">

@@ -13,9 +13,11 @@ export type StatusTone =
   | 'error'
   | 'active';
 
-interface StatusBadgeProps {
+export interface StatusBadgeProps {
   children: ReactNode;
   tone?: StatusTone;
+  icon?: ReactNode;
+  size?: 'sm' | 'md';
   className?: string;
 }
 
@@ -33,12 +35,27 @@ const TONE_MAP: Record<StatusTone, string> = {
   running: 'border-indigo-200 bg-indigo-50 text-indigo-700',
 };
 
-export function StatusBadge({ children, tone = 'idle', className = '' }: StatusBadgeProps) {
+const SIZE_MAP: Record<NonNullable<StatusBadgeProps['size']>, string> = {
+  sm: 'px-2 py-0.5 text-xs',
+  md: 'px-2.5 py-1 text-sm',
+};
+
+export function StatusBadge({
+  children,
+  tone = 'idle',
+  icon,
+  size = 'sm',
+  className = '',
+}: StatusBadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${TONE_MAP[tone]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border font-medium ${TONE_MAP[tone]} ${SIZE_MAP[size]} ${className}`}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" aria-hidden="true" />
+      {icon ? (
+        <span className="text-sm">{icon}</span>
+      ) : (
+        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" aria-hidden="true" />
+      )}
       {children}
     </span>
   );

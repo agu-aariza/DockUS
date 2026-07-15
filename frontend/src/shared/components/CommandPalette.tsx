@@ -5,10 +5,13 @@ import {
   RiPulseFill, 
   RiCommandFill,
   RiArrowRightLine,
-  RiGlobalLine
+  RiGlobalLine,
+  RiLayoutGridFill
 } from 'react-icons/ri';
 import { useNavigate } from 'react-router-dom';
-import { useWorkspace } from '../workspace/WorkspaceContext';
+import { useWorkspaceSelection } from '../workspace/WorkspaceContext';
+import { projectsApi, assignmentsApi } from '../api/services';
+import type { ProjectAssignmentEntity } from '../../features/projects/types';
 
 interface CommandItem {
   id: string;
@@ -23,7 +26,8 @@ export function CommandPalette(): JSX.Element | null {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const { selection } = useWorkspace();
+  const [assignments, setAssignments] = useState<ProjectAssignmentEntity[]>([]);
+  const { selection, setProject, setAssignment } = useWorkspaceSelection();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogTitleId = 'command-palette-title';
@@ -40,8 +44,39 @@ export function CommandPalette(): JSX.Element | null {
       }
     };
 
+    const handleOpenEvent = () => setIsOpen(true);
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('open-command-palette', handleOpenEvent);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('open-command-palette', handleOpenEvent);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadAllAssignments = async () => {
+      try {
+        const projectsRes = await projectsApi.list({ page: 1, limit: 50 });
+        if (!active) return;
+        const promises = projectsRes.data.map(p => 
+          assignmentsApi.listByProject(p.id)
+            .then(asgs => asgs.map(a => ({ ...a, projectId: p.id, projectTitle: p.title })))
+        );
+        const allResults = await Promise.all(promises);
+        if (active) {
+          setAssignments(allResults.flat());
+        }
+      } catch (err) {
+        console.error("Error loading assignments for command palette:", err);
+      }
+    };
+    loadAllAssignments();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -54,32 +89,74 @@ export function CommandPalette(): JSX.Element | null {
 
   const projectTitle = selection.projectTitle;
 
-  const commands: CommandItem[] = useMemo(() => [
-    {
-      id: 'nav-projects',
-      category: 'Acciones',
-      label: 'Ir a Proyectos',
-      description: 'Ver lista general de proyectos',
-      icon: <RiGlobalLine />,
-      action: () => navigate('/projects'),
-    },
-    {
-      id: 'nav-runtime',
-      category: 'Acciones',
-      label: 'Abrir Runtime Control',
-      description: 'Gestionar ejecuciones activas',
-      icon: <RiPulseFill />,
-      action: () => navigate('/runtime'),
-    },
-    {
-      id: 'p1',
-      category: 'Proyectos',
-      label: projectTitle || 'Seleccionar Proyecto Actual',
-      description: 'Ver detalles del proyecto activo',
-      icon: <RiStackFill className="text-primary" />,
-      action: () => navigate('/projects'),
-    },
-  ], [navigate, projectTitle]);
+  const commands: CommandItem[] = useMemo(() => {
+    const list: CommandItem[] = [
+      {
+        id: 'nav-projects',
+        category: 'Acciones',
+        label: 'Ir a Proyectos',
+        description: 'Ver lista general de proyectos',
+        icon: <RiGlobalLine />,
+        action: () => navigate('/projects'),
+      },
+      {
+        id: 'nav-runtime',
+        category: 'Acciones',
+        label: 'Abrir Runtime Control',
+        description: 'Gestionar ejecuciones activas',
+        icon: <RiPulseFill />,
+        action: () => navigate('/runtime'),
+      },
+    ];
+
+    if (projectTitle) {
+      list.push({
+        id: 'p1',
+        category: 'Proyectos',
+        label: `Proyecto: ${projectTitle}`,
+        description: 'Ver detalles del proyecto activo',
+        icon: <RiStackFill className="text-primary" />,
+        action: () => navigate('/projects'),
+      });
+    }
+
+    // Deduplicar alumnos por email para evitar duplicados en la lista de búsqueda
+    const uniqueStudents: Record<string, ProjectAssignmentEntity> = {};
+    for (const a of assignments) {
+      const email = a.studentEmail;
+      if (!email) continue;
+      
+      const existing = uniqueStudents[email];
+      if (!existing) {
+        uniqueStudents[email] = a;
+      } else {
+        // Si el alumno está en varios proyectos, preferir el que coincide con el proyecto activo
+        if (a.projectId === selection.projectId) {
+          uniqueStudents[email] = a;
+        }
+      }
+    }
+
+    for (const a of Object.values(uniqueStudents)) {
+      const isCurrentProject = a.projectId === selection.projectId;
+      list.push({
+        id: `asg-${a.id}`,
+        category: 'Alumnos',
+        label: a.studentName || 'Alumno sin nombre',
+        description: isCurrentProject 
+          ? `Email: ${a.studentEmail} (Proyecto actual)`
+          : `Email: ${a.studentEmail} (Proyecto: ${a.projectTitle})`,
+        icon: <RiLayoutGridFill className="text-amber-400" />,
+        action: () => {
+          if (a.projectId) setProject(a.projectId, a.projectTitle || undefined);
+          setAssignment(a.id, a.studentName);
+          navigate('/deliveries');
+        },
+      });
+    }
+
+    return list;
+  }, [navigate, projectTitle, assignments, setProject, setAssignment]);
 
   const filteredCommands = useMemo(() => {
     const query = search.toLowerCase().trim();

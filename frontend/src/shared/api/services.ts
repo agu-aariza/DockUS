@@ -13,3 +13,6 @@ export { groupsApi } from "./groupsApi";
 export { deliveriesApi } from "./deliveriesApi";
 export { storageApi } from "./storageApi";
 export { builderApi } from "./builderApi";
+export { llmApi } from "./llmApi";
+export { studentsApi } from "./studentsApi";
+export { healthApi } from "./healthApi";

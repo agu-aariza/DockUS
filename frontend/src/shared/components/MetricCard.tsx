@@ -27,8 +27,8 @@ export function MetricCard({
 }: MetricCardProps): JSX.Element {
   const isLongValue = typeof value === "string" && value.length > 12;
   const valueClassName = isLongValue
-    ? "text-lg sm:text-xl font-semibold tracking-tight text-slate-900"
-    : "text-2xl font-semibold tracking-tight text-slate-900";
+    ? "data-figure text-lg font-semibold sm:text-xl"
+    : "data-figure text-2xl font-semibold";
 
   return (
     <div

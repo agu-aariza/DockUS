@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-
+/* Las fuentes se precargan desde index.html: un @import aquí bloquea el render. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -106,6 +105,49 @@
   .status-chip {
     @apply inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 px-2 py-0.5 text-xs font-medium;
   }
+
+  /*
+   * Voz de la máquina. Todo lo que emite el pipeline —cifras, notas, versiones,
+   * duraciones, identificadores— se compone en mono con cifras tabulares, para que
+   * columnas de números se alineen y para separarlo de la voz humana (títulos,
+   * nombres y prosa, que siguen en Inter).
+   */
+  .data-figure {
+    @apply font-mono tabular-nums tracking-tight text-slate-900;
+  }
+
+  .data-meta {
+    @apply font-mono text-xs tabular-nums text-slate-500;
+  }
+
+  /* Marca institucional: filete vino que abre una sección. */
+  .accent-rule {
+    @apply h-0.5 w-8 rounded-full bg-accent;
+  }
+
+  /* Tarjeta que responde al puntero: elevación sutil, sin cambiar la paleta. */
+  .card-interactive {
+    transition:
+      transform var(--motion-state) var(--motion-ease-out),
+      box-shadow var(--motion-state) var(--motion-ease-out),
+      border-color var(--motion-state) var(--motion-ease-out);
+  }
+
+  .card-interactive:hover {
+    @apply -translate-y-0.5 border-slate-300 shadow-md;
+  }
+
+  .card-interactive:active {
+    @apply translate-y-0 shadow-sm;
+  }
+
+  /*
+   * Capa que flota SOBRE el contenido (banners, barras sticky). El desenfoque solo
+   * se usa aquí, donde hay algo detrás que desenfocar y el efecto tiene sentido físico.
+   */
+  .surface-floating {
+    @apply border border-app-border/80 bg-white/80 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60;
+  }
 }
 
 @layer utilities {
@@ -128,6 +170,36 @@
 
   .motion-modal-panel {
     animation: dockus-modal-in var(--motion-standard) var(--motion-ease-out) both;
+  }
+
+  /* Entrada de una sola pasada (banners, confirmación de entrega). Nunca en bucle. */
+  .motion-rise-in {
+    animation: dockus-modal-in var(--motion-state) var(--motion-ease-out) both;
+  }
+
+  /* Barrido para skeletons: comunica "cargando" mejor que un pulse plano. */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      rgb(255 255 255 / 0) 0%,
+      rgb(255 255 255 / 0.6) 50%,
+      rgb(255 255 255 / 0) 100%
+    );
+    animation: dockus-shimmer 1600ms var(--motion-ease-out) infinite;
+  }
+
+  /* Progreso sin porcentaje fiable: el builder aún no reporta etapa. */
+  .progress-indeterminate {
+    animation: dockus-progress-indeterminate 1400ms var(--motion-ease-out) infinite;
   }
 }
 
@@ -158,6 +230,21 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dockus-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes dockus-progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
   }
 }
 
@@ -291,11 +378,23 @@
   .status-pulse,
   .motion-modal-backdrop,
   .motion-modal-panel,
+  .motion-rise-in,
+  .shimmer::after,
+  .progress-indeterminate,
   .auth-shake,
   .auth-slide-up,
   .auth-slide-right,
   .auth-shimmer-btn {
     animation: none !important;
+  }
+
+  /* Sin el barrido, el skeleton se queda sin señal de "cargando": lo ocultamos. */
+  .shimmer::after {
+    display: none;
+  }
+
+  .card-interactive:hover {
+    transform: none;
   }
 
   .status-pulse {
