@@ -6,18 +6,18 @@ import {
   deliveriesApi,
   projectsApi,
 } from "../../shared/api/services";
-import { useWorkspace } from "../../shared/workspace/WorkspaceContext";
+import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import type {
   BuildRunEntity,
   DeliveryEntity,
   DeliveryStatus,
-  PaginatedResponse,
   ProjectAssignmentEntity,
   ProjectEntity,
 } from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useSession } from "../../shared/session/SessionContext";
 import { useManagementPermissions } from "../../shared/session/useManagementPermissions";
+import { useCrudResource } from "../../shared/hooks/useCrudResource";
 import {
   extractLegacyAiEvidence,
   mergeManualAndLegacyNotes,
@@ -37,8 +37,7 @@ export function useDeliveryManagement(
   const [projects, setProjects] = useState<ProjectEntity[]>([]);
   const [assignments, setAssignments] = useState<ProjectAssignmentEntity[]>([]);
   const [myAssignments, setMyAssignments] = useState<ProjectAssignmentEntity[]>([]);
-  const [deliveries, setDeliveries] = useState<PaginatedResponse<DeliveryEntity> | null>(null);
-  const { selection, setAssignment, setDelivery } = useWorkspace();
+  const { selection, setAssignment, setDelivery } = useWorkspaceSelection();
   const selectedProjectId = selection.projectId || "";
   const selectedAssignmentId = selection.assignmentId || "";
   const selectedDeliveryId = selection.deliveryId || "";
@@ -67,13 +66,33 @@ export function useDeliveryManagement(
   const [reportRun, setReportRun] = useState<BuildRunEntity | null>(null);
   const [reportDelivery, setReportDelivery] = useState<DeliveryEntity | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
-  const [loadingDeliveries, setLoadingDeliveries] = useState(false);
 
   const reportAbortRef = useRef<AbortController | null>(null);
   const lastReportDeliveryIdRef = useRef<string | null>(null);
   const reportInFlightRef = useRef(false);
 
   const { canRead, canWrite, canAdmin } = useManagementPermissions(session);
+
+  type CreateDeliveryPayload = Parameters<typeof deliveriesApi.create>[0];
+  type UpdateDeliveryPayload = Parameters<typeof deliveriesApi.update>[1];
+
+  const deliveriesCrud = useCrudResource<DeliveryEntity, CreateDeliveryPayload, UpdateDeliveryPayload>({
+    api: {
+      list: deliveriesApi.list,
+      create: deliveriesApi.create,
+      update: deliveriesApi.update,
+    },
+    canRead,
+    initialQuery: {
+      assignmentId: selectedAssignmentId,
+      page: 1,
+      limit: 50,
+      sortBy: "createdAt",
+      sortOrder: "DESC",
+    },
+  });
+
+  const deliveries = deliveriesCrud.listResponse;
 
   const selectedDelivery = deliveries?.data.find(d => d.id === selectedDeliveryId) ?? null;
   const selectedDeliveryReviewNotes = useMemo(
@@ -83,64 +102,62 @@ export function useDeliveryManagement(
 
   const refreshDeliveries = async (assignmentId = selectedAssignmentId) => {
     if (!assignmentId || !canRead) return;
-    setLoadingDeliveries(true);
-    try {
-      lastFetchedAssignmentId.current = assignmentId;
-      const response = await deliveriesApi.list({ assignmentId, page: 1, limit: 50, sortBy: "createdAt", sortOrder: "DESC" });
-      setDeliveries(response);
-      // Invalidate the report cache so the next handleViewReport
-      // re-fetches the latest run (a new run may have completed).
-      lastReportDeliveryIdRef.current = null;
-      setWorkspaceNotice({ text: "Entregas actualizadas.", tone: "info" });
-      
-      // Determine which delivery should be active
-      const activeId = selectedDeliveryId || options?.initialDeliveryId;
-      
-      // Only auto-select if no relevant delivery is selected or the selected one is gone
-      if (!activeId || !response.data.some(d => d.id === activeId)) {
-        const firstId = response.data[0]?.id;
-        if (firstId) {
-          setDelivery(firstId, `v${response.data[0].version} - ${response.data[0].studentEmail}`);
-        }
-      } else if (activeId && !selectedDeliveryId) {
-        // If we have an initial ID but it's not yet in workspace context, sync it now that we have labels
-        const match = response.data.find(d => d.id === activeId);
-        if (match) {
-          setDelivery(activeId, `v${match.version} - ${match.studentEmail}`);
-        }
+    const response = await deliveriesCrud.refresh(undefined, {
+      assignmentId,
+      page: 1,
+      limit: 50,
+      sortBy: "createdAt",
+      sortOrder: "DESC",
+    });
+    if (!response) return;
+
+    lastFetchedAssignmentId.current = assignmentId;
+    setWorkspaceNotice({ text: "Entregas actualizadas.", tone: "info" });
+    lastReportDeliveryIdRef.current = null;
+
+    const activeId = selectedDeliveryId || options?.initialDeliveryId;
+
+    if (!activeId || !response.data.some(d => d.id === activeId)) {
+      const firstId = response.data[0]?.id;
+      if (firstId) {
+        setDelivery(firstId, `v${response.data[0].version} - ${response.data[0].studentEmail}`);
       }
-    } catch (e) {
-      setWorkspaceNotice({ text: getErrorMessage(e), tone: "warning" });
-    } finally {
-      setLoadingDeliveries(false);
+    } else if (activeId && !selectedDeliveryId) {
+      const match = response.data.find(d => d.id === activeId);
+      if (match) {
+        setDelivery(activeId, `v${match.version} - ${match.studentEmail}`);
+      }
     }
   };
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canRead || !createForm.assignmentId.trim()) return;
-    try {
-      const response = await deliveriesApi.create({ ...createForm, notes: createForm.notes || undefined });
+    const response = await deliveriesCrud.create({
+      ...createForm,
+      notes: createForm.notes || undefined,
+    });
+    if (response) {
       setEditorNotice({ text: "Entrega creada correctamente.", tone: "info" });
       await refreshDeliveries(createForm.assignmentId);
       setDelivery(response.id);
-    } catch (e) {
-      setEditorNotice({ text: getErrorMessage(e), tone: "warning" });
+    } else if (deliveriesCrud.notice) {
+      setEditorNotice({ text: deliveriesCrud.notice.text, tone: "warning" });
     }
   };
 
   const handleUpdate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canWrite || !updateForm.id.trim()) return;
-    try {
-      await deliveriesApi.update(updateForm.id.trim(), { 
-        status: updateForm.status ? (updateForm.status as DeliveryStatus) : undefined, 
-        notes: updateForm.notes || undefined 
-      });
+    const response = await deliveriesCrud.update(updateForm.id.trim(), {
+      status: updateForm.status ? (updateForm.status as DeliveryStatus) : undefined,
+      notes: updateForm.notes || undefined,
+    });
+    if (response) {
       setEditorNotice({ text: "Entrega actualizada.", tone: "info" });
       await refreshDeliveries();
-    } catch (e) {
-      setEditorNotice({ text: getErrorMessage(e), tone: "warning" });
+    } else if (deliveriesCrud.notice) {
+      setEditorNotice({ text: deliveriesCrud.notice.text, tone: "warning" });
     }
   };
 
@@ -159,9 +176,11 @@ export function useDeliveryManagement(
   const handleViewReport = useCallback(async (deliveryId = selectedDeliveryId, { force = false }: { force?: boolean } = {}) => {
     if (!deliveryId || !canRead) return;
     if (reportInFlightRef.current) return;
-    // Only skip when the same delivery was JUST loaded (debounce rapid clicks).
-    // After a refreshDeliveries() call, the ref is cleared so we always re-fetch.
-    if (!force && lastReportDeliveryIdRef.current === deliveryId && reportRun?.deliveryId === deliveryId) return;
+    // El ref es la marca de "esta entrega ya se cargó", y por sí solo. Exigir
+    // además que `reportRun` case con la entrega hacía que una entrega SIN runs
+    // (donde `reportRun` queda en null) nunca satisficiese la condición: cada
+    // render volvía a pedir /deliveries/:id y /runs, en bucle.
+    if (!force && lastReportDeliveryIdRef.current === deliveryId) return;
 
     reportAbortRef.current?.abort();
     const controller = new AbortController();
@@ -201,7 +220,7 @@ export function useDeliveryManagement(
         setReportLoading(false);
       }
     }
-  }, [selectedDeliveryId, canRead, reportRun]);
+  }, [selectedDeliveryId, canRead]);
 
   const handleGradingUpdate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -222,7 +241,6 @@ export function useDeliveryManagement(
     }
   };
 
-  // Initial loads
   useEffect(() => {
     if (!canRead) return;
     projectsApi.list({ page: 1, limit: 50, sortBy: "updatedAt", sortOrder: "DESC" })
@@ -258,7 +276,7 @@ export function useDeliveryManagement(
 
   useEffect(() => {
     if (!selectedAssignmentId) {
-      setDeliveries(null);
+      deliveriesCrud.setListResponse(null);
       setReportRun(null);
       setReportDelivery(null);
       lastFetchedAssignmentId.current = null;
@@ -271,7 +289,6 @@ export function useDeliveryManagement(
     
     if (!canRead) return;
     
-    // Prevent redundant fetches if we already have this data
     if (lastFetchedAssignmentId.current === selectedAssignmentId && deliveries) {
       return;
     }
@@ -307,7 +324,7 @@ export function useDeliveryManagement(
     gradingForm, setGradingForm,
     workspaceNotice, editorNotice, reportNotice,
     debugPayload, setDebugPayload,
-    reportRun, reportDelivery, reportLoading, loadingDeliveries,
+    reportRun, reportDelivery, reportLoading, loadingDeliveries: deliveriesCrud.loading,
     canRead, canWrite, canAdmin,
     refreshDeliveries, handleCreate, handleUpdate, handleStatusUpdate, handleViewReport, handleGradingUpdate,
     navigate

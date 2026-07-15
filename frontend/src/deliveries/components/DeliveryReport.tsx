@@ -1,6 +1,6 @@
 import { RiFileTextLine, RiLoader4Line } from "react-icons/ri";
 import { DeliveryEntity } from "../../shared/types";
-import { useWorkspace } from "../../shared/workspace/WorkspaceContext";
+import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { Button } from "../../shared/components/ui/Button";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { ReportView } from "../../shared/components/ReportView";
@@ -21,7 +21,7 @@ export function DeliveryReport({
   selectedDeliveryReviewNotes: { manualNotes?: string | null; legacyBlocks?: any };
   onHandleViewReport: (_id?: string, _options?: { force?: boolean }) => void;
 }) {
-  const { selection } = useWorkspace();
+  const { selection } = useWorkspaceSelection();
   const selectedDeliveryId = selection.deliveryId;
 
   return (

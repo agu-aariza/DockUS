@@ -1,6 +1,6 @@
 import { RiRefreshLine, RiInboxArchiveLine, RiPulseLine, RiCheckFill } from "react-icons/ri";
 import { DeliveryEntity, ProjectAssignmentEntity } from "../../shared/types";
-import { useWorkspace } from "../../shared/workspace/WorkspaceContext";
+import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { Button } from "../../shared/components/ui/Button";
 import { VisualPicker, VisualPickerOption } from "../../shared/components/ui/VisualPicker";
 import { SearchInput } from "../../shared/components/ui/SearchInput";
@@ -56,19 +56,19 @@ export function DeliveriesSidebar({
   handleViewReport: (_id: string) => void;
   handleQuickGrade: (_id: string, _grade: number) => void;
 }) {
-  const { selection } = useWorkspace();
+  const { selection } = useWorkspaceSelection();
   const selectedProjectId = selection.projectId ?? "";
   const selectedAssignmentId = selection.assignmentId ?? "";
   const selectedDeliveryId = selection.deliveryId ?? "";
 
   return (
-    <aside className="flex flex-col h-full rounded-2xl border border-slate-200 bg-white p-5 overflow-hidden lg:sticky lg:top-24 shadow-sm">
+    <aside className="flex h-full flex-col overflow-hidden rounded-lg border border-app-border bg-white p-4 lg:sticky lg:top-24">
       <div className="flex items-center justify-between gap-3 mb-5">
         <div>
-          <h3 className="text-sm font-bold text-slate-900">
+          <h3 className="text-sm font-semibold text-slate-900">
             Cola Operativa
           </h3>
-          <p className="mt-0.5 text-xs text-slate-400 font-medium">Entregas</p>
+          <p className="mt-0.5 text-xs text-slate-500">Entregas</p>
         </div>
         <Button
           variant="secondary"
@@ -83,7 +83,7 @@ export function DeliveriesSidebar({
 
       <div className="space-y-4">
         <div>
-          <label className="label-text text-xs font-bold text-slate-500 mb-1.5 block">Proyecto</label>
+          <label className="label-text">Proyecto</label>
           <VisualPicker
             options={projectOptions}
             value={selectedProjectId}
@@ -94,7 +94,7 @@ export function DeliveriesSidebar({
         </div>
 
         <div>
-          <label className="label-text text-xs font-bold text-slate-500 mb-1.5 block">Asignación</label>
+          <label className="label-text">Asignación</label>
           <VisualPicker
             options={assignmentOptions}
             value={selectedAssignmentId}
@@ -155,12 +155,10 @@ export function DeliveriesSidebar({
         </div>
       </div>
 
-      <div className="mt-5 border-t border-slate-100 pt-4">
+      <div className="mt-5 border-t border-app-border pt-4">
         <div className="flex items-center justify-between gap-3 mb-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Selección actual
-            </p>
+            <p className="ui-label">Selección actual</p>
             <div className="mt-1 text-sm font-semibold text-slate-900">
               <AssignmentLabel assignment={selectedAssignment} />
             </div>

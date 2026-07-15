@@ -14,6 +14,7 @@ import { useSession } from '../../shared/session/SessionContext';
 import { useManagementPermissions } from '../../shared/session/useManagementPermissions';
 import { getErrorMessage } from '../../shared/utils/errors';
 import { computeSha256Hex } from '../../shared/utils/hash';
+import { useCrudResource } from '../../shared/hooks/useCrudResource';
 
 interface UnifiedStorageItem {
   id: string;
@@ -49,18 +50,15 @@ export function useStorageManagement() {
     sortBy: 'createdAt' as StorageSortBy,
     sortOrder: 'DESC' as SortOrder,
   });
-  const [listResponse, setListResponse] = useState<PaginatedResponse<StorageObjectEntity> | null>(null);
   const [unifiedItems, setUnifiedItems] = useState<UnifiedStorageItem[]>([]);
   const [projectsList, setProjectsList] = useState<Array<{ id: string; title: string }>>([]);
   const [deliveriesList, setDeliveriesList] = useState<DeliveryEntity[]>([]);
   const [runsList, setRunsList] = useState<BuildRunEntity[]>([]);
 
-  // Preview States
   const [previewContent, setPreviewContent] = useState<Array<{ path: string; content: string }> | string | null>(null);
   const [previewTitle, setPreviewTitle] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  // Download loading
   const [downloadLoading, setDownloadLoading] = useState(false);
 
   const [detailId, setDetailId] = useState('');
@@ -84,6 +82,16 @@ export function useStorageManagement() {
   const { canRead, canUpload, canTeacherOrAdmin, canAdmin } =
     useManagementPermissions(session);
   const canSoftDelete = canTeacherOrAdmin;
+
+  const storageCrud = useCrudResource<StorageObjectEntity>({
+    api: {
+      list: storageApi.list,
+      remove: storageApi.remove,
+    },
+    canRead,
+  });
+
+  const listResponse = storageCrud.listResponse;
 
   // 1. Fetch Projects list based on Role
   useEffect(() => {
@@ -144,92 +152,71 @@ export function useStorageManagement() {
     void fetchRuns();
   }, [query.deliveryId]);
 
+  const buildUnifiedItems = (response: PaginatedResponse<StorageObjectEntity>) => {
+    const sourceObjects = response.data.map(item => ({
+      id: item.id,
+      logicalName: item.logicalName,
+      sizeBytes: item.sizeBytes,
+      createdAt: item.createdAt,
+      contentType: item.contentType,
+      itemType: 'storage_object' as const,
+      projectName: item.projectName,
+      deliveryVersion: item.deliveryVersion,
+      studentName: item.studentName,
+      deliveryId: item.deliveryId,
+      projectId: item.projectId,
+    }));
+
+    if (!query.runId) {
+      setUnifiedItems(sourceObjects);
+      return;
+    }
+
+    builderApi.listEvidenceArtifacts(query.runId)
+      .then(artifacts => {
+        const runArtifacts = artifacts.map(art => ({
+          id: art.id,
+          logicalName: `${art.type.toLowerCase().replace(/_/g, ' ')}`,
+          sizeBytes: art.sizeBytes,
+          createdAt: art.createdAt,
+          contentType: art.contentType,
+          itemType: 'run_artifact' as const,
+          runId: query.runId,
+          artifactType: art.type,
+          projectName: response.data[0]?.projectName || projectsList.find(p => p.id === query.projectId)?.title,
+          deliveryVersion: response.data[0]?.deliveryVersion || deliveriesList.find(d => d.id === query.deliveryId)?.version,
+          studentName: response.data[0]?.studentName,
+          deliveryId: query.deliveryId,
+          projectId: query.projectId,
+        }));
+        setUnifiedItems([...sourceObjects, ...runArtifacts]);
+      })
+      .catch(err => {
+        console.error('Error fetching run artifacts:', err);
+        setUnifiedItems(sourceObjects);
+      });
+  };
+
   const handleList = async () => {
     if (!canRead) return;
-    try {
-      const response = await storageApi.list({
-        page: Number(query.page) || 1,
-        limit: Number(query.limit) || 20,
-        deliveryId: query.deliveryId || undefined,
-        projectId: query.projectId || undefined,
-        uploaderId: query.uploaderId || undefined,
-        createdFrom: query.createdFrom || undefined,
-        createdTo: query.createdTo || undefined,
-        sortBy: query.sortBy,
-        sortOrder: query.sortOrder,
-      });
-      setListResponse(response);
+    const response = await storageCrud.refresh(undefined, {
+      page: Number(query.page) || 1,
+      limit: Number(query.limit) || 20,
+      deliveryId: query.deliveryId || undefined,
+      projectId: query.projectId || undefined,
+      uploaderId: query.uploaderId || undefined,
+      createdFrom: query.createdFrom || undefined,
+      createdTo: query.createdTo || undefined,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    });
+    if (response) {
       setResult(response);
-
-      if (query.runId) {
-        try {
-          const artifacts = await builderApi.listEvidenceArtifacts(query.runId);
-          
-          const sourceObjects = response.data.map(item => ({
-            id: item.id,
-            logicalName: item.logicalName,
-            sizeBytes: item.sizeBytes,
-            createdAt: item.createdAt,
-            contentType: item.contentType,
-            itemType: 'storage_object' as const,
-            projectName: item.projectName,
-            deliveryVersion: item.deliveryVersion,
-            studentName: item.studentName,
-            deliveryId: item.deliveryId,
-            projectId: item.projectId,
-          }));
-
-          const runArtifacts = artifacts.map(art => ({
-            id: art.id,
-            logicalName: `${art.type.toLowerCase().replace(/_/g, ' ')}`,
-            sizeBytes: art.sizeBytes,
-            createdAt: art.createdAt,
-            contentType: art.contentType,
-            itemType: 'run_artifact' as const,
-            runId: query.runId,
-            artifactType: art.type,
-            projectName: response.data[0]?.projectName || projectsList.find(p => p.id === query.projectId)?.title,
-            deliveryVersion: response.data[0]?.deliveryVersion || deliveriesList.find(d => d.id === query.deliveryId)?.version,
-            studentName: response.data[0]?.studentName,
-            deliveryId: query.deliveryId,
-            projectId: query.projectId,
-          }));
-
-          setUnifiedItems([...sourceObjects, ...runArtifacts]);
-        } catch (err) {
-          console.error('Error fetching run artifacts:', err);
-          const sourceObjects = response.data.map(item => ({
-            id: item.id,
-            logicalName: item.logicalName,
-            sizeBytes: item.sizeBytes,
-            createdAt: item.createdAt,
-            contentType: item.contentType,
-            itemType: 'storage_object' as const,
-            projectName: item.projectName,
-            deliveryVersion: item.deliveryVersion,
-            studentName: item.studentName,
-            deliveryId: item.deliveryId,
-            projectId: item.projectId,
-          }));
-          setUnifiedItems(sourceObjects);
-        }
-      } else {
-        const sourceObjects = response.data.map(item => ({
-          id: item.id,
-          logicalName: item.logicalName,
-          sizeBytes: item.sizeBytes,
-          createdAt: item.createdAt,
-          contentType: item.contentType,
-          itemType: 'storage_object' as const,
-          projectName: item.projectName,
-          deliveryVersion: item.deliveryVersion,
-          studentName: item.studentName,
-          deliveryId: item.deliveryId,
-          projectId: item.projectId,
-        }));
-        setUnifiedItems(sourceObjects);
-      }
-    } catch (e) { setMessage(getErrorMessage(e)); }
+      buildUnifiedItems(response);
+    }
+    if (storageCrud.notice?.tone === 'warning') {
+      setMessage(storageCrud.notice.text);
+    }
   };
 
   const handlePreview = async (item: UnifiedStorageItem) => {
@@ -305,11 +292,17 @@ export function useStorageManagement() {
   const executeDanger = async () => {
     if (!actionId.trim()) return;
     try {
-      if (dangerAction === 'DELETE') await storageApi.remove(actionId.trim());
-      else await storageApi.purge(actionId.trim());
+      if (dangerAction === 'DELETE') {
+        await storageCrud.remove(actionId.trim());
+      } else {
+        await storageApi.purge(actionId.trim());
+      }
       setMessage('Acción completada.');
       await handleList();
-    } catch (e) { setMessage(getErrorMessage(e)); throw e; }
+    } catch (e) {
+      setMessage(getErrorMessage(e));
+      throw e;
+    }
   };
 
   return {

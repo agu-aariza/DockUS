@@ -43,7 +43,7 @@ export function RubricEditor({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+        <label className="label-text flex items-center gap-1.5">
           <RiScales3Line className="text-sm" />
           Rúbrica ponderada
         </label>

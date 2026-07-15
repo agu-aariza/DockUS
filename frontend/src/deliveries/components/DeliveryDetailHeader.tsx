@@ -2,34 +2,9 @@ import { RiCodeSSlashLine, RiArrowRightUpLine, RiStackLine, RiFolderChartLine, R
 import { DeliveryEntity } from "../../shared/types";
 import { Tabs } from "../../shared/components/ui/Tabs";
 import { Button } from "../../shared/components/ui/Button";
+import { DeliveryStatusBadge } from "../../features/deliveries/components/DeliveryStatusBadge";
 import { StatusBadge } from "../../shared/components/ui/StatusBadge";
 import { DetailTab } from "../hooks/useDeliveriesPanel";
-
-function statusTone(status: DeliveryEntity["status"]) {
-  switch (status) {
-    case "SUBMITTED":
-      return "info";
-    case "IN_REVIEW":
-      return "warning";
-    case "EVALUATED":
-      return "success";
-    default:
-      return "draft";
-  }
-}
-
-function statusText(status: DeliveryEntity["status"]) {
-  switch (status) {
-    case "SUBMITTED":
-      return "Entregada";
-    case "IN_REVIEW":
-      return "En revisión";
-    case "EVALUATED":
-      return "Evaluada";
-    default:
-      return "Borrador";
-  }
-}
 
 export function DeliveryDetailHeader({
   selectedDelivery,
@@ -51,9 +26,7 @@ export function DeliveryDetailHeader({
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone={statusTone(selectedDelivery.status)}>
-              {statusText(selectedDelivery.status)}
-            </StatusBadge>
+            <DeliveryStatusBadge status={selectedDelivery.status} />
             <StatusBadge tone={selectedDelivery.isLate ? "danger" : "success"}>
               {selectedDelivery.isLate ? "Entrega Tardía" : "A Tiempo"}
             </StatusBadge>

@@ -1,34 +1,15 @@
 import { useState } from "react";
 import { RiTimeLine, RiFileChartLine, RiStackLine, RiFileTextLine } from "react-icons/ri";
 import { DeliveryEntity } from "../../shared/types";
-import { StatusBadge } from "../../shared/components/ui/StatusBadge";
+import { DeliveryStatusBadge } from "../../features/deliveries/components/DeliveryStatusBadge";
 import { formatDateTime } from "../utils";
 
-function statusTone(status: DeliveryEntity["status"]) {
-  switch (status) {
-    case "SUBMITTED":
-      return "info";
-    case "IN_REVIEW":
-      return "warning";
-    case "EVALUATED":
-      return "success";
-    default:
-      return "draft";
-  }
-}
-
-function statusText(status: DeliveryEntity["status"]) {
-  switch (status) {
-    case "SUBMITTED":
-      return "Entregada";
-    case "IN_REVIEW":
-      return "En revisión";
-    case "EVALUATED":
-      return "Evaluada";
-    default:
-      return "Borrador";
-  }
-}
+const STATUS_TEXT: Record<DeliveryEntity["status"], string> = {
+  DRAFT: "Borrador",
+  SUBMITTED: "Entregada",
+  IN_REVIEW: "En revisión",
+  EVALUATED: "Evaluada",
+};
 
 export function DeliveryListItem({
   delivery,
@@ -58,10 +39,10 @@ export function DeliveryListItem({
 
   return (
     <article
-      className={`group w-full rounded-xl border p-4 text-left transition-all duration-200 relative overflow-hidden ${
+      className={`group relative w-full overflow-hidden rounded-xl border p-4 text-left ${
         active
-          ? "border-primary bg-gradient-to-r from-primary to-blue-700 text-white shadow-md shadow-primary/20"
-          : "border-app-border bg-white hover:border-slate-300 hover:-translate-y-[2px] hover:shadow-md"
+          ? "border-primary bg-primary text-white shadow-md shadow-primary/20"
+          : "card-interactive border-app-border bg-white"
       }`}
     >
       <button type="button" onClick={onSelect} className="w-full text-left focus:outline-none">
@@ -76,12 +57,10 @@ export function DeliveryListItem({
           </div>
           {active ? (
             <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs font-medium text-white shadow-inner">
-              {statusText(delivery.status)}
+              {STATUS_TEXT[delivery.status]}
             </span>
           ) : (
-            <StatusBadge tone={statusTone(delivery.status)}>
-              {statusText(delivery.status)}
-            </StatusBadge>
+            <DeliveryStatusBadge status={delivery.status} />
           )}
         </div>
 

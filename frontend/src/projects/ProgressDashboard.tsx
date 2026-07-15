@@ -1,97 +1,43 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { RiBarChartFill, RiDownload2Line, RiTeamLine } from "react-icons/ri";
 import { builderApi, deliveriesApi, projectsApi } from "../shared/api/services";
-import { CodePreviewModal } from "../shared/components/CodePreviewModal";
-import { TeacherGradingStudio } from "../shared/components/TeacherGradingStudio";
 import { useManagementPermissions } from "../shared/session/useManagementPermissions";
-import {
-  RiAwardLine,
-  RiCheckboxCircleLine,
-  RiCloseLine,
-  RiCodeSSlashLine,
-  RiDownload2Line,
-  RiEyeLine,
-  RiFileCodeLine,
-  RiFileTextLine,
-  RiFilter3Line,
-  RiHistoryLine,
-  RiLoader4Line,
-  RiSearchLine,
-  RiStackLine,
-  RiTeamLine,
-  RiTimeLine,
-  RiUserLine,
-  RiUserSharedLine,
-  RiBarChartFill,
-} from "react-icons/ri";
 import { QualityInsightsDashboard } from "../builder/components/QualityInsightsDashboard";
 import {
   buildTeacherDeliveryReviewPath,
-  extractLegacyAiEvidence,
   resolveTeacherReviewTarget,
 } from "../deliveries/teacherReviewNavigation";
 import type { TeacherDeliveryDetailTab } from "../deliveries/teacherReviewNavigation";
 import type { BuilderOutcome, BuildRunEntity } from "../features/builder/types";
 import type { DeliveryEntity, DeliveryStatus } from "../features/deliveries/types";
-import type { ProjectEntity, ProjectGradebookRow, ProjectProgressSummary } from "../features/projects/types";
+import type {
+  ProjectEntity,
+  ProjectGradebookRow,
+  ProjectProgressSummary,
+} from "../features/projects/types";
 import { useSession } from "../shared/session/SessionContext";
 import { useToast } from "../shared/toast/ToastContext";
 import { getErrorMessage } from "../shared/utils/errors";
+import { DeliveryHistoryModal } from "./components/progress/DeliveryHistoryModal";
+import { DistributionCharts } from "./components/progress/DistributionCharts";
+import {
+  GradebookFilters,
+  type GroupOption,
+} from "./components/progress/GradebookFilters";
+import { GradebookTable } from "./components/progress/GradebookTable";
+import { ParticipationProgress } from "./components/progress/ParticipationProgress";
+import {
+  PreviewOrGradingModal,
+  type PreviewFile,
+} from "./components/progress/PreviewOrGradingModal";
+import { ProgressStatsPanel } from "./components/progress/ProgressStatsPanel";
+import { ProjectSelector } from "./components/progress/ProjectSelector";
 
 interface ProgressDashboardProps {
   projectOptions?: ProjectEntity[];
   selectedProjectId?: string;
   embedded?: boolean;
-}
-
-interface GroupOption {
-  id: string;
-  label: string;
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "Draft",
-  SUBMITTED: "Submitted",
-  IN_REVIEW: "In Review",
-  EVALUATED: "Evaluated",
-};
-
-const STATUS_STYLE: Record<string, string> = {
-  DRAFT: "bg-slate-100 text-slate-700 border-slate-200",
-  SUBMITTED: "bg-primary-subtle text-primary border-primary/10",
-  IN_REVIEW: "bg-amber-50 text-amber-700 border-amber-200",
-  EVALUATED: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
-
-const OUTCOME_STYLE: Record<string, string> = {
-  PASS: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  FAIL: "bg-rose-50 text-rose-700 border-rose-200",
-  PARTIAL: "bg-amber-50 text-amber-700 border-amber-200",
-  UNKNOWN: "bg-slate-100 text-slate-700 border-slate-200",
-};
-
-function StatCard({
-  label,
-  value,
-  icon,
-  color,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-  color: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className={`text-xl ${color}`}>{icon}</div>
-      <div className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
-        {value}
-      </div>
-      <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-        {label}
-      </div>
-    </div>
-  );
 }
 
 function toGroupOptions(rows: ProjectGradebookRow[]): GroupOption[] {
@@ -117,28 +63,33 @@ export function ProgressDashboard({
   const { activeSession: session } = useSession();
   const navigate = useNavigate();
   const { pushToast } = useToast();
+  const { canWrite } = useManagementPermissions(session);
+
   const [projectId, setProjectId] = useState(selectedProjectId);
   const [summary, setSummary] = useState<ProjectProgressSummary | null>(null);
   const [gradebook, setGradebook] = useState<ProjectGradebookRow[]>([]);
   const [availableGroups, setAvailableGroups] = useState<GroupOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"gradebook" | "insights">("gradebook");
+
   const [statusFilter, setStatusFilter] = useState<DeliveryStatus | "ALL">("ALL");
   const [outcomeFilter, setOutcomeFilter] = useState<BuilderOutcome | "ALL">("ALL");
   const [lateOnly, setLateOnly] = useState(false);
   const [groupFilter, setGroupFilter] = useState<string>("ALL");
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [previewFiles, setPreviewFiles] = useState<Array<{ path: string; content: string }>>([]);
+  const [previewFiles, setPreviewFiles] = useState<PreviewFile[]>([]);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryEntity | null>(null);
+  const [selectedReportRun, setSelectedReportRun] = useState<BuildRunEntity | null>(null);
 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [historyDeliveries, setHistoryDeliveries] = useState<DeliveryEntity[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [selectedStudentName, setSelectedStudentName] = useState("");
-  const [activeTab, setActiveTab] = useState<"gradebook" | "insights">("gradebook");
-
-  const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -147,9 +98,44 @@ export function ProgressDashboard({
     }
   }, [selectedProjectId]);
 
-  const { canWrite } = useManagementPermissions(session);
-  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryEntity | null>(null);
-  const [selectedReportRun, setSelectedReportRun] = useState<BuildRunEntity | null>(null);
+  const fetchDashboard = async (
+    targetProjectId: string,
+    targetGroupId = groupFilter,
+  ) => {
+    if (!targetProjectId.trim() || !session) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const groupId = targetGroupId === "ALL" ? undefined : targetGroupId;
+      const [summaryData, gradebookData] = await Promise.all([
+        projectsApi.progressSummary(targetProjectId.trim(), { groupId }),
+        projectsApi.gradebook(targetProjectId.trim(), { groupId }),
+      ]);
+      setSummary(summaryData);
+      setGradebook(gradebookData);
+      if (groupId === undefined || availableGroups.length === 0) {
+        setAvailableGroups(toGroupOptions(gradebookData));
+      }
+    } catch (error) {
+      pushToast({
+        title: "Seguimiento",
+        description: getErrorMessage(error),
+        tone: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!embedded || !selectedProjectId || !session) {
+      return;
+    }
+
+    void fetchDashboard(selectedProjectId.trim(), groupFilter);
+  }, [embedded, groupFilter, selectedProjectId, session]);
 
   const handlePreview = async (deliveryId: string) => {
     setIsLoadingPreview(true);
@@ -164,7 +150,11 @@ export function ProgressDashboard({
       setSelectedDelivery(delivery);
 
       try {
-        const runs = await builderApi.listByDelivery({ deliveryId, limit: 1, sortOrder: "DESC" });
+        const runs = await builderApi.listByDelivery({
+          deliveryId,
+          limit: 1,
+          sortOrder: "DESC",
+        });
         const latestRun = runs.data[0] ?? null;
         if (latestRun) {
           const fullRun = await builderApi.detail(latestRun.id);
@@ -223,74 +213,32 @@ export function ProgressDashboard({
     );
   };
 
-  const fetchDashboard = async (
-    targetProjectId: string,
-    targetGroupId = groupFilter,
-  ) => {
-    if (!targetProjectId.trim() || !session) {
+  const handleSubmitGrading = async (grade: string, graderNotes: string) => {
+    if (!selectedDelivery) {
       return;
     }
 
-    setLoading(true);
     try {
-      const groupId = targetGroupId === "ALL" ? undefined : targetGroupId;
-      const [summaryData, gradebookData] = await Promise.all([
-        projectsApi.progressSummary(targetProjectId.trim(), { groupId }),
-        projectsApi.gradebook(targetProjectId.trim(), { groupId }),
-      ]);
-      setSummary(summaryData);
-      setGradebook(gradebookData);
-      if (groupId === undefined || availableGroups.length === 0) {
-        setAvailableGroups(toGroupOptions(gradebookData));
+      await deliveriesApi.updateGrading(selectedDelivery.id, {
+        grade: grade.trim() ? Number(grade) : null,
+        graderNotes,
+      });
+      pushToast({
+        title: "Calificación guardada",
+        description: "La nota oficial ha sido consolidada.",
+        tone: "success",
+      });
+      setIsPreviewModalOpen(false);
+      if (projectId.trim()) {
+        await fetchDashboard(projectId.trim(), groupFilter);
       }
     } catch (error) {
       pushToast({
-        title: "Seguimiento",
+        title: "Error al calificar",
         description: getErrorMessage(error),
         tone: "error",
       });
-    } finally {
-      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (!embedded || !selectedProjectId || !session) {
-      return;
-    }
-
-    void fetchDashboard(selectedProjectId.trim(), groupFilter);
-  }, [embedded, groupFilter, selectedProjectId, session]);
-
-  const filteredRows = useMemo(() => {
-    const normalizedSearch = deferredSearch.trim().toLowerCase();
-    return gradebook.filter((row) => {
-      if (statusFilter !== "ALL" && row.latestStatus !== statusFilter) {
-        return false;
-      }
-      if (outcomeFilter !== "ALL" && row.latestBuilderOutcome !== outcomeFilter) {
-        return false;
-      }
-      if (lateOnly && !row.isLate) {
-        return false;
-      }
-      if (normalizedSearch) {
-        const matches = [row.studentName, row.studentEmail]
-          .filter(Boolean)
-          .some((val) => val.toLowerCase().includes(normalizedSearch));
-        if (!matches) return false;
-      }
-      return true;
-    });
-  }, [deferredSearch, gradebook, lateOnly, outcomeFilter, statusFilter]);
-  const deferredRows = useDeferredValue(filteredRows);
-
-  const total = summary?.totalAssignments ?? 0;
-  const delivered = summary?.deliveredAtLeastOnce ?? 0;
-  const rate = total > 0 ? Math.round((delivered / total) * 100) : 0;
-
-  const handleLoad = async () => {
-    await fetchDashboard(projectId.trim(), groupFilter);
   };
 
   const handleGroupChange = async (nextGroupId: string) => {
@@ -334,176 +282,73 @@ export function ProgressDashboard({
     }
   };
 
+  const filteredRows = useMemo(() => {
+    const normalizedSearch = deferredSearch.trim().toLowerCase();
+    return gradebook.filter((row) => {
+      if (statusFilter !== "ALL" && row.latestStatus !== statusFilter) {
+        return false;
+      }
+      if (outcomeFilter !== "ALL" && row.latestBuilderOutcome !== outcomeFilter) {
+        return false;
+      }
+      if (lateOnly && !row.isLate) {
+        return false;
+      }
+      if (normalizedSearch) {
+        const matches = [row.studentName, row.studentEmail]
+          .filter(Boolean)
+          .some((val) => val.toLowerCase().includes(normalizedSearch));
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }, [deferredSearch, gradebook, lateOnly, outcomeFilter, statusFilter]);
+  const deferredRows = useDeferredValue(filteredRows);
+
+  const total = summary?.totalAssignments ?? 0;
+  const delivered = summary?.deliveredAtLeastOnce ?? 0;
+  const rate = total > 0 ? Math.round((delivered / total) * 100) : 0;
+
   return (
     <div className="space-y-8">
       {!embedded ? (
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-            <div className="flex-1">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Proyecto a monitorizar
-              </label>
-              <select
-                className="input-field bg-white"
-                value={projectId}
-                onChange={(event) => {
-                  setProjectId(event.target.value);
-                  setGroupFilter("ALL");
-                }}
-              >
-                <option value="">Selecciona un proyecto...</option>
-                {projectOptions.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              className="btn-primary"
-              onClick={() => void handleLoad()}
-              disabled={loading || !projectId.trim()}
-            >
-              {loading ? <RiLoader4Line className="animate-spin motion-reduce:animate-none" /> : null}
-              {loading ? "Cargando seguimiento..." : "Cargar seguimiento"}
-            </button>
-          </div>
-        </div>
+        <ProjectSelector
+          projectOptions={projectOptions}
+          projectId={projectId}
+          loading={loading}
+          onProjectChange={(nextProjectId) => {
+            setProjectId(nextProjectId);
+            setGroupFilter("ALL");
+          }}
+          onLoad={() => void fetchDashboard(projectId.trim(), groupFilter)}
+        />
       ) : null}
 
       {summary ? (
         <div className="space-y-8">
-          <div className="grid grid-cols-2 gap-6 xl:grid-cols-4">
-            <StatCard
-              label="Alumnos"
-              value={summary.totalAssignments}
-              icon={<RiUserSharedLine />}
-              color="text-slate-400"
-            />
-            <StatCard
-              label="Han entregado"
-              value={summary.deliveredAtLeastOnce}
-              icon={<RiCheckboxCircleLine />}
-              color="text-primary"
-            />
-            <StatCard
-              label="Con PASS"
-              value={summary.passedAllTests}
-              icon={<RiAwardLine />}
-              color="text-emerald-500"
-            />
-            <StatCard
-              label="Pendientes"
-              value={summary.neverDelivered}
-              icon={<RiTimeLine />}
-              color="text-rose-400"
-            />
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
-                  Participación global
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Porcentaje de alumnos que ya registraron al menos una entrega.
-                </p>
-              </div>
-              <span className="text-3xl font-bold text-primary">{rate}%</span>
-            </div>
-            <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full bg-primary transition-[width] duration-300 ease-out motion-reduce:transition-none"
-                style={{ width: `${rate}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-6 xl:grid-cols-2">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
-                Estados de entrega
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Distribución por último estado conocido dentro del filtro de grupo.
-              </p>
-              <div className="mt-5 flex h-4 overflow-hidden rounded-full bg-slate-100">
-                {[
-                  { key: "pending", value: summary.statusTotals.pending, color: "bg-slate-400" },
-                  { key: "submitted", value: summary.statusTotals.submitted, color: "bg-primary" },
-                  { key: "inReview", value: summary.statusTotals.inReview, color: "bg-amber-500" },
-                  { key: "evaluated", value: summary.statusTotals.evaluated, color: "bg-emerald-500" },
-                ].map((segment) => (
-                  <div
-                    key={segment.key}
-                    className={segment.color}
-                    style={{
-                      width: total > 0 ? `${(segment.value / total) * 100}%` : "0%",
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3 text-sm text-slate-600">
-                <div>Pendientes: <strong>{summary.statusTotals.pending}</strong></div>
-                <div>Entregadas: <strong>{summary.statusTotals.submitted}</strong></div>
-                <div>En revisión: <strong>{summary.statusTotals.inReview}</strong></div>
-                <div>Evaluadas: <strong>{summary.statusTotals.evaluated}</strong></div>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
-                Resultado del builder
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Último outcome automático registrado por alumno.
-              </p>
-              <div className="mt-5 flex h-4 overflow-hidden rounded-full bg-slate-100">
-                {(["PASS", "PARTIAL", "FAIL", "UNKNOWN"] as BuilderOutcome[]).map((outcome) => (
-                  <div
-                    key={outcome}
-                    className={
-                      outcome === "PASS"
-                        ? "bg-emerald-500"
-                        : outcome === "PARTIAL"
-                          ? "bg-amber-500"
-                          : outcome === "FAIL"
-                            ? "bg-rose-500"
-                            : "bg-slate-400"
-                    }
-                    style={{
-                      width: total > 0 ? `${(summary.outcomeTotals[outcome] / total) * 100}%` : "0%",
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3 text-sm text-slate-600">
-                <div>PASS: <strong>{summary.outcomeTotals.PASS}</strong></div>
-                <div>PARTIAL: <strong>{summary.outcomeTotals.PARTIAL}</strong></div>
-                <div>FAIL: <strong>{summary.outcomeTotals.FAIL}</strong></div>
-                <div>UNKNOWN: <strong>{summary.outcomeTotals.UNKNOWN}</strong></div>
-              </div>
-            </div>
-          </div>
+          <ProgressStatsPanel summary={summary} />
+          <ParticipationProgress rate={rate} />
+          <DistributionCharts summary={summary} total={total} />
 
           <div className="flex items-center gap-1 border-b border-slate-200">
             <button
               onClick={() => setActiveTab("gradebook")}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-colors duration-150 motion-reduce:transition-none ${activeTab === "gradebook"
-                  ? "border-b-2 border-primary text-primary bg-primary-subtle"
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none ${
+                activeTab === "gradebook"
+                  ? "border-b-2 border-primary bg-primary-subtle text-primary"
                   : "text-slate-500 hover:text-slate-900"
-                }`}
+              }`}
             >
               <RiTeamLine />
               Gradebook de Alumnos
             </button>
             <button
               onClick={() => setActiveTab("insights")}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-colors duration-150 motion-reduce:transition-none ${activeTab === "insights"
-                  ? "border-b-2 border-accent text-accent bg-accent-subtle"
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none ${
+                activeTab === "insights"
+                  ? "border-b-2 border-accent bg-accent-subtle text-accent"
                   : "text-slate-500 hover:text-slate-900"
-                }`}
+              }`}
             >
               <RiBarChartFill />
               Insights de Calidad
@@ -514,7 +359,7 @@ export function ProgressDashboard({
             <QualityInsightsDashboard
               projectId={projectId}
               students={
-                summary?.perStudent.map((student) => ({
+                summary.perStudent.map((student) => ({
                   studentId: student.studentId,
                   studentName: student.studentName,
                   studentEmail: student.studentEmail,
@@ -541,7 +386,7 @@ export function ProgressDashboard({
               }}
             />
           ) : (
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-lg border border-app-border bg-white">
               <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
@@ -561,313 +406,59 @@ export function ProgressDashboard({
                 </button>
               </div>
 
-              <div className="grid gap-4 border-b border-slate-100 bg-slate-50 p-6 lg:grid-cols-6">
-                <div className="lg:col-span-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <RiFilter3Line />
-                  Filtros operativos
-                </div>
-                <div className="lg:col-span-2 relative">
-                  <RiSearchLine className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    className="input-field pl-10 bg-white"
-                    placeholder="Busca por nombre o correo..."
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                  />
-                </div>
-                <select
-                  className="input-field bg-white"
-                  value={groupFilter}
-                  onChange={(event) => void handleGroupChange(event.target.value)}
-                >
-                  <option value="ALL">Todos los grupos</option>
-                  {availableGroups.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="input-field bg-white"
-                  value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value as DeliveryStatus | "ALL")
-                  }
-                >
-                  <option value="ALL">Todos los estados</option>
-                  <option value="SUBMITTED">Entregadas</option>
-                  <option value="IN_REVIEW">En revisión</option>
-                  <option value="EVALUATED">Evaluadas</option>
-                  <option value="DRAFT">Borrador</option>
-                </select>
-                <select
-                  className="input-field bg-white"
-                  value={outcomeFilter}
-                  onChange={(event) =>
-                    setOutcomeFilter(event.target.value as BuilderOutcome | "ALL")
-                  }
-                >
-                  <option value="ALL">Todos los outcomes</option>
-                  <option value="PASS">PASS</option>
-                  <option value="PARTIAL">PARTIAL</option>
-                  <option value="FAIL">FAIL</option>
-                  <option value="UNKNOWN">UNKNOWN</option>
-                </select>
-                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={lateOnly}
-                    onChange={(event) => setLateOnly(event.target.checked)}
-                  />
-                  Solo tardías
-                </label>
-                <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-                  <RiTeamLine className="mr-2 text-base" />
-                  {groupFilter === "ALL"
-                    ? "Vista completa del proyecto"
-                    : `${availableGroups.find((group) => group.id === groupFilter)?.label ?? "Grupo filtrado"}`}
-                </div>
-              </div>
+              <GradebookFilters
+                search={search}
+                onSearchChange={setSearch}
+                availableGroups={availableGroups}
+                groupFilter={groupFilter}
+                onGroupChange={(nextGroupId) => void handleGroupChange(nextGroupId)}
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+                outcomeFilter={outcomeFilter}
+                onOutcomeChange={setOutcomeFilter}
+                lateOnly={lateOnly}
+                onLateOnlyChange={setLateOnly}
+              />
 
-              {deferredRows.length === 0 ? (
-                <div className="px-6 py-12 text-center text-sm text-slate-500">
-                  No hay filas de gradebook para los filtros seleccionados.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border-collapse text-left">
-                    <thead>
-                      <tr className="border-b border-slate-200 bg-white text-xs uppercase tracking-wider text-slate-500">
-                        <th className="px-4 py-3 font-medium">Alumno</th>
-                        <th className="px-4 py-3 font-medium">Grupos</th>
-                        <th className="px-4 py-3 font-medium">Estado</th>
-                        <th className="px-4 py-3 font-medium">Builder</th>
-                        <th className="px-4 py-3 font-medium">Nota</th>
-                        <th className="px-4 py-3 font-medium">Intentos</th>
-                        <th className="px-4 py-3 font-medium text-center">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {deferredRows.map((row) => (
-                        <tr key={row.assignmentId} className="transition hover:bg-slate-50">
-                          <td className="px-4 py-4">
-                            <div className="font-medium text-slate-950">{row.studentName}</div>
-                            <div className="mt-1 text-sm text-slate-500">{row.studentEmail}</div>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-slate-600">
-                            {row.groupLabels.length > 0 ? row.groupLabels.join(" · ") : "Sin grupo"}
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[row.latestStatus ?? "DRAFT"] ?? STATUS_STYLE.DRAFT}`}>
-                              {STATUS_LABEL[row.latestStatus ?? "DRAFT"] ?? "Pending"}
-                            </span>
-                            {row.isLate ? (
-                              <div className="mt-2 text-xs font-medium text-amber-700">
-                                Fuera de plazo
-                              </div>
-                            ) : null}
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${OUTCOME_STYLE[row.latestBuilderOutcome ?? "UNKNOWN"]}`}>
-                              {row.latestBuilderOutcome ?? "UNKNOWN"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-slate-600">
-                            <div className="font-semibold text-slate-900">
-                              {row.grade !== null ? row.grade.toFixed(2) : "Pendiente"}
-                            </div>
-                            <div className="mt-1 line-clamp-2 text-xs text-slate-500">
-                              {extractLegacyAiEvidence(row.graderNotes).manualNotes ||
-                                "Sin observaciones manuales"}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-slate-600">
-                            <div>{row.deliveryCount} enviadas</div>
-                            <div className="mt-1 text-xs text-slate-500">
-                              {row.remainingDeliveries} restantes
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-slate-600">
-                            {new Date(row.lastActivityAt).toLocaleString("es-ES")}
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                className="btn-secondary h-9 w-9 p-0 justify-center"
-                                title="Ver código de la última entrega"
-                                onClick={() => { if (row.latestDeliveryId) handlePreview(row.latestDeliveryId) }}
-                                disabled={!row.latestDeliveryId}
-                              >
-                                <RiCodeSSlashLine />
-                              </button>
-                              <button
-                                className="btn-secondary h-9 w-9 p-0 justify-center"
-                                title="Abrir informe técnico"
-                                onClick={() =>
-                                  row.latestDeliveryId &&
-                                  openTeacherReview(
-                                    row.assignmentId,
-                                    row.latestDeliveryId,
-                                    "report",
-                                  )
-                                }
-                                disabled={!row.latestDeliveryId}
-                              >
-                                <RiFileTextLine />
-                              </button>
-                              <button
-                                className="btn-secondary h-9 w-9 p-0 justify-center"
-                                title="Abrir corrección docente"
-                                onClick={() =>
-                                  row.latestDeliveryId &&
-                                  openTeacherReview(
-                                    row.assignmentId,
-                                    row.latestDeliveryId,
-                                    "grading",
-                                  )
-                                }
-                                disabled={!row.latestDeliveryId}
-                              >
-                                <RiAwardLine />
-                              </button>
-                              <button
-                                className="btn-secondary h-9 w-9 p-0 justify-center"
-                                title="Ver historial de entregas"
-                                onClick={() => void handleViewHistory(row.assignmentId, row.studentName)}
-                              >
-                                <RiHistoryLine />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <GradebookTable
+                rows={deferredRows}
+                loading={loading}
+                onPreview={(deliveryId) => void handlePreview(deliveryId)}
+                onOpenReview={openTeacherReview}
+                onViewHistory={(assignmentId, studentName) =>
+                  void handleViewHistory(assignmentId, studentName)
+                }
+              />
             </div>
           )}
         </div>
       ) : (
         !embedded && (
-          <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-app-border bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
             Selecciona un proyecto para cargar métricas, distribución y gradebook.
           </div>
         )
       )}
 
-      {/* Modal de Historial de Entregas */}
-      {isHistoryModalOpen && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm motion-modal-backdrop">
-          <div className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl motion-modal-panel">
-            <header className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-              <div>
-                <h3 className="text-xl font-bold text-slate-950">Historial de Entregas</h3>
-                <p className="text-sm text-slate-500">Explorando versiones enviadas por {selectedStudentName}</p>
-              </div>
-              <button
-                onClick={() => setIsHistoryModalOpen(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors"
-              >
-                <RiCloseLine className="text-2xl" />
-              </button>
-            </header>
+      <DeliveryHistoryModal
+        isOpen={isHistoryModalOpen}
+        studentName={selectedStudentName}
+        deliveries={historyDeliveries}
+        loading={isLoadingHistory}
+        onClose={() => setIsHistoryModalOpen(false)}
+        onPreview={(deliveryId) => void handlePreview(deliveryId)}
+      />
 
-            <div className="flex-1 overflow-y-auto p-6">
-              {isLoadingHistory ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <RiLoader4Line className="text-4xl text-primary animate-spin motion-reduce:animate-none" />
-                  <span className="text-sm text-slate-500 font-medium">Cargando versiones...</span>
-                </div>
-              ) : historyDeliveries.length === 0 ? (
-                <div className="text-center py-10">
-                  <RiStackLine className="mx-auto text-4xl text-slate-300 mb-2" />
-                  <p className="text-sm text-slate-500">No hay entregas registradas para este alumno.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {historyDeliveries.map((d) => (
-                    <div key={d.id} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-colors duration-150 motion-reduce:transition-none hover:border-slate-200 hover:bg-white hover:shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">
-                          v{d.version}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[d.status]}`}>
-                              {STATUS_LABEL[d.status]}
-                            </span>
-                            {d.isLate && (
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                                Fuera de plazo
-                              </span>
-                            )}
-                          </div>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {new Date(d.createdAt).toLocaleString("es-ES")}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        className="btn-secondary h-10 px-4 gap-2"
-                        onClick={() => handlePreview(d.id)}
-                      >
-                        <RiCodeSSlashLine />
-                        Ver código
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {canWrite && selectedDelivery ? (
-        <TeacherGradingStudio
-          isOpen={isPreviewModalOpen}
-          onClose={() => setIsPreviewModalOpen(false)}
-          delivery={selectedDelivery}
-          reportRun={selectedReportRun}
-          files={previewFiles}
-          isLoadingFiles={isLoadingPreview}
-          onSubmitGrading={async (grade, graderNotes) => {
-            try {
-              await deliveriesApi.updateGrading(selectedDelivery.id, {
-                grade: grade.trim() ? Number(grade) : null,
-                graderNotes: graderNotes,
-              });
-              pushToast({
-                title: "Calificación guardada",
-                description: "La nota oficial ha sido consolidada.",
-                tone: "success",
-              });
-              setIsPreviewModalOpen(false);
-              if (projectId.trim()) {
-                await fetchDashboard(projectId.trim(), groupFilter);
-              }
-            } catch (error) {
-              pushToast({
-                title: "Error al calificar",
-                description: getErrorMessage(error),
-                tone: "error",
-              });
-            }
-          }}
-          initialGrade={selectedDelivery.grade !== null ? String(selectedDelivery.grade) : ""}
-          initialNotes={extractLegacyAiEvidence(selectedDelivery.graderNotes).manualNotes ?? ""}
-        />
-      ) : (
-        <CodePreviewModal
-          isOpen={isPreviewModalOpen}
-          onClose={() => setIsPreviewModalOpen(false)}
-          title="Explorador de Entrega"
-          subtitle={selectedDelivery ? `v${selectedDelivery.version} — ${selectedDelivery.studentName}` : "Previsualizando código enviado por el alumno"}
-          isLoading={isLoadingPreview}
-          files={previewFiles}
-        />
-      )}
+      <PreviewOrGradingModal
+        isOpen={isPreviewModalOpen}
+        canWrite={canWrite}
+        delivery={selectedDelivery}
+        reportRun={selectedReportRun}
+        files={previewFiles}
+        isLoadingFiles={isLoadingPreview}
+        onClose={() => setIsPreviewModalOpen(false)}
+        onSubmitGrading={handleSubmitGrading}
+      />
     </div>
   );
 }

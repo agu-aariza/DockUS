@@ -1,15 +1,15 @@
 import { type FormEvent, useState } from 'react';
 import { usersApi } from '../../shared/api/services';
-import type { PaginatedResponse, UserRole } from "../../shared/types";
+import type { UserRole } from "../../shared/types";
 import type { UserEntity, UserStatus } from "../../features/auth/types";
 import { useSession } from '../../shared/session/SessionContext';
 import { useManagementPermissions } from '../../shared/session/useManagementPermissions';
 import { getErrorMessage } from '../../shared/utils/errors';
+import { useCrudResource } from '../../shared/hooks/useCrudResource';
 
 export function useUserManagement() {
   const { activeSession: session } = useSession();
   const [query, setQuery] = useState({ page: '1', limit: '20', role: '', status: '', search: '' });
-  const [listResponse, setListResponse] = useState<PaginatedResponse<UserEntity> | null>(null);
   const [detailId, setDetailId] = useState('');
   const [createForm, setCreateForm] = useState({ email: '', password: '', firstName: '', lastName: '', role: 'STUDENT' as UserRole, status: 'ACTIVE' as UserStatus });
   const [updateForm, setUpdateForm] = useState<{
@@ -33,62 +33,91 @@ export function useUserManagement() {
   const { canAdmin, hasAnyRole } = useManagementPermissions(session);
   const canList = hasAnyRole(['ADMIN', 'TEACHER']);
 
+  type CreateUserPayload = Parameters<typeof usersApi.create>[0];
+  type UpdateUserPayload = Parameters<typeof usersApi.update>[1];
+
+  const crud = useCrudResource<UserEntity, CreateUserPayload, UpdateUserPayload>({
+    api: {
+      list: usersApi.list,
+      create: usersApi.create,
+      update: usersApi.update,
+      remove: usersApi.remove,
+    },
+    canRead: canList,
+    initialQuery: {
+      page: Number(query.page) || 1,
+      limit: Number(query.limit) || 20,
+      role: query.role || undefined,
+      status: query.status || undefined,
+      search: query.search || undefined,
+    },
+  });
+
   const handleList = async () => {
     if (!canList) return;
-    try {
-      const response = await usersApi.list({
-        page: Number(query.page) || 1,
-        limit: Number(query.limit) || 20,
-        role: (query.role || undefined) as UserRole | undefined,
-        status: (query.status || undefined) as UserStatus | undefined,
-        search: query.search || undefined,
-      });
-      setListResponse(response);
-      setResult(response);
-    } catch (e) { setMessage(getErrorMessage(e)); }
+    crud.setQuery({
+      page: Number(query.page) || 1,
+      limit: Number(query.limit) || 20,
+      role: query.role || undefined,
+      status: query.status || undefined,
+      search: query.search || undefined,
+    });
+    await crud.refresh();
+    setResult(crud.listResponse);
+    if (crud.notice?.tone === 'warning') {
+      setMessage(crud.notice.text);
+    }
   };
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canAdmin) return;
-    try {
-      const response = await usersApi.create(createForm);
+    const response = await crud.create(createForm);
+    if (response) {
       setResult(response);
       setMessage('Usuario creado.');
-      await handleList();
-    } catch (e) { setMessage(getErrorMessage(e)); }
+      await crud.refresh();
+    } else if (crud.notice) {
+      setMessage(crud.notice.text);
+    }
   };
 
   const handleUpdate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canAdmin || !updateForm.id.trim()) return;
-    try {
-      const response = await usersApi.update(updateForm.id.trim(), {
-        email: updateForm.email || undefined,
-        password: updateForm.password || undefined,
-        firstName: updateForm.firstName || undefined,
-        lastName: updateForm.lastName || undefined,
-        role: updateForm.role || undefined,
-        status: updateForm.status || undefined,
-      });
+    const response = await crud.update(updateForm.id.trim(), {
+      email: updateForm.email || undefined,
+      password: updateForm.password || undefined,
+      firstName: updateForm.firstName || undefined,
+      lastName: updateForm.lastName || undefined,
+      role: updateForm.role || undefined,
+      status: updateForm.status || undefined,
+    });
+    if (response) {
       setResult(response);
       setMessage('Usuario actualizado.');
-      await handleList();
-    } catch (e) { setMessage(getErrorMessage(e)); }
+      await crud.refresh();
+    } else if (crud.notice) {
+      setMessage(crud.notice.text);
+    }
   };
 
   const executeDelete = async () => {
     if (!canAdmin || !deleteId.trim()) return;
     try {
-      await usersApi.remove(deleteId.trim());
+      await crud.remove(deleteId.trim());
       setMessage('Usuario eliminado.');
-      await handleList();
-    } catch (e) { setMessage(getErrorMessage(e)); throw e; }
+      await crud.refresh();
+    } catch (e) {
+      setMessage(getErrorMessage(e));
+      throw e;
+    }
   };
 
   return {
     query, setQuery,
-    listResponse,
+    listResponse: crud.listResponse,
+    loading: crud.loading,
     detailId, setDetailId,
     createForm, setCreateForm,
     updateForm, setUpdateForm,

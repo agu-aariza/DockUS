@@ -1,6 +1,6 @@
 import { useState, useDeferredValue, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useWorkspace } from "../../shared/workspace/WorkspaceContext";
+import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { deliveriesApi } from "../../shared/api/services";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useToast } from "../../shared/toast/ToastContext";
@@ -14,7 +14,7 @@ export type DetailTab = "overview" | "grading" | "report";
 export function useDeliveriesPanel() {
   const [searchParams, setSearchParams] = useSearchParams();
   const dc = useDeliveryManagement({ initialDeliveryId: searchParams.get("deliveryId") });
-  const { selection, setProject, setAssignment, setDelivery } = useWorkspace();
+  const { selection, setProject, setAssignment, setDelivery } = useWorkspaceSelection();
   const lastSyncedRef = useRef<{
     projectId: string | null;
     assignmentId: string | null;
@@ -256,7 +256,17 @@ export function useDeliveriesPanel() {
     if (delivery && detailTab !== "overview") {
       void dc.handleViewReport(requestedDeliveryId);
     }
-  }, [deliveries, requestedDeliveryId, selection.deliveryLabel, setDelivery, detailTab, dc]);
+    // Se depende de `handleViewReport`, no del objeto `dc`: `dc` es un literal
+    // nuevo en cada render, así que tenerlo en las dependencias hacía correr
+    // este efecto en todos los renders.
+  }, [
+    deliveries,
+    requestedDeliveryId,
+    selection.deliveryLabel,
+    setDelivery,
+    detailTab,
+    dc.handleViewReport,
+  ]);
 
   return {
     dc,

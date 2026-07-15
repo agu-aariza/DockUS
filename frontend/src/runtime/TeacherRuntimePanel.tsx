@@ -5,7 +5,6 @@ import {
   RiPlayLine,
   RiPulseFill,
   RiRefreshLine,
-  RiServerLine,
   RiStackFill,
   RiStopLine,
   RiUser3Fill,
@@ -17,16 +16,16 @@ import { CodePreviewModal } from "../shared/components/CodePreviewModal";
 import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
 import { useToast } from "../shared/toast/ToastContext";
 import { useRuntimeManagement } from "./hooks/useRuntimeManagement";
-import { useWorkspace } from "../shared/workspace/WorkspaceContext";
+import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import { deliveriesApi } from "../shared/api/services";
 import { getErrorMessage } from "../shared/utils/errors";
-import { MetricCard } from "../shared/components/MetricCard";
 import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import { VisualPicker, type VisualPickerOption } from "../shared/components/ui/VisualPicker";
 import { ProjectSelectionHub, type ProjectHubOption } from "../shared/components/ui/ProjectSelectionHub";
 import { PageHeader } from "../shared/components/ui/PageHeader";
 import { Button } from "../shared/components/ui/Button";
 import { Tabs } from "../shared/components/ui/Tabs";
+import { RuntimeStatusBar } from "./components/RuntimeStatusBar";
 
 type RuntimeTab = "control" | "history" | "live";
 
@@ -37,7 +36,7 @@ function formatStudentName(name?: string, email?: string) {
 
 export function TeacherRuntimePanel(): JSX.Element {
   const rc = useRuntimeManagement();
-  const { selection, setProject, setAssignment, setDelivery, setRun } = useWorkspace();
+  const { selection, setProject, setAssignment, setDelivery, setRun } = useWorkspaceSelection();
   const [activeTab, setActiveTab] = useState<RuntimeTab>("control");
   const { pushToast } = useToast();
 
@@ -212,36 +211,11 @@ export function TeacherRuntimePanel(): JSX.Element {
         }
       />
 
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Estado Plataforma"
-          value="OPERATIVA"
-          helper="Motor de ejecución listo"
-          icon={<RiPulseFill />}
-          variant="info"
-        />
-        <MetricCard
-          label="Capacidad Evaluación"
-          value="LLM + Builder"
-          helper="Análisis integral activo"
-          icon={<RiServerLine />}
-          variant="info"
-        />
-        <MetricCard
-          label="Runs Recientes"
-          value={runs.length}
-          helper="Procesos en este proyecto"
-          icon={<RiPlayLine />}
-          variant="default"
-        />
-        <MetricCard
-          label="Flujo SSE"
-          value={rc.latestSequence}
-          helper={rc.streamState === 'streaming' ? 'Conexión activa' : 'Esperando stream'}
-          icon={<RiRefreshLine />}
-          variant={rc.streamState === 'streaming' ? 'info' : 'default'}
-        />
-      </div>
+      <RuntimeStatusBar
+        runCount={runs.length}
+        streamState={rc.streamState}
+        latestSequence={rc.latestSequence}
+      />
 
       {activeTab === "control" ? (
         <section className="card">

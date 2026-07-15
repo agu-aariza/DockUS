@@ -26,6 +26,8 @@ const TeacherGroupsPanel = lazy(() => import("./groups/pages/TeacherGroupsPanel"
 const StoragePanel = lazy(() => import("./storage/StoragePanel").then(m => ({ default: m.StoragePanel })));
 const UsersPanel = lazy(() => import("./users/UsersPanel").then(m => ({ default: m.UsersPanel })));
 const StudentWorkspacePanel = lazy(() => import("./student/StudentWorkspacePanel").then(m => ({ default: m.StudentWorkspacePanel })));
+const LlmConfigPanel = lazy(() => import("./llm/LlmConfigPanel").then(m => ({ default: m.LlmConfigPanel })));
+const StudentProfilePanel = lazy(() => import("./students/StudentProfilePanel").then(m => ({ default: m.StudentProfilePanel })));
 
 const SuspenseLoader = () => (
   <div className="flex-1 flex items-center justify-center min-h-[400px]">
@@ -221,6 +223,9 @@ function App(): JSX.Element {
   }
 
   const isStudent = activeSession?.role === 'STUDENT';
+  // La configuración de proveedores incluye credenciales de facturación: es
+  // administración de la instancia, no del aula.
+  const isAdmin = activeSession?.role === 'ADMIN';
   const activeStudentTab = isStudent ? (new URLSearchParams(location.search).get('tab') || 'summary') : undefined;
 
   return (
@@ -268,11 +273,13 @@ function App(): JSX.Element {
                 <>
                   <Route path="/summary" element={<TeacherHomePanel />} />
                   <Route path="/users" element={<UsersPanel />} />
+                  <Route path="/students/:studentId" element={<StudentProfilePanel />} />
                   <Route path="/groups" element={<TeacherGroupsPanel />} />
                   <Route path="/projects" element={<TeacherProjectsPanel />} />
                   <Route path="/deliveries" element={<TeacherDeliveriesPanel />} />
                   <Route path="/storage" element={<StoragePanel />} />
                   <Route path="/runtime" element={<TeacherRuntimePanel />} />
+                  {isAdmin && <Route path="/llm" element={<LlmConfigPanel />} />}
                   <Route path="/builder" element={<Navigate to="/runtime" replace />} />
                   <Route path="*" element={<Navigate to="/summary" replace />} />
                 </>

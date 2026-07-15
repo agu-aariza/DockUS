@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   RiUser3Fill,
   RiUserAddFill,
@@ -19,8 +20,7 @@ import { Button, IconButton } from '../shared/components/ui/Button';
 import { Tabs } from '../shared/components/ui/Tabs';
 import { Card } from '../shared/components/ui/Layout';
 import { SectionCard } from '../shared/components/ui/Layout';
-import { Badge } from '../shared/components/ui/Layout';
-import { StatusBadge } from '../shared/components/ui/StatusBadge';
+import { StatusBadge, type StatusTone } from '../shared/components/ui/StatusBadge';
 import { SearchInput } from '../shared/components/ui/SearchInput';
 import { DataTable } from '../shared/components/ui/DataTable';
 import type { Column } from '../shared/components/ui/DataTable';
@@ -36,14 +36,21 @@ const ROLE_LABELS: Record<UserRole, string> = {
   STUDENT: 'Estudiante',
 };
 
-const STATUS_TONE: Record<UserStatus, import('../shared/components/ui/StatusBadge').StatusTone> = {
+const STATUS_TONE: Record<UserStatus, StatusTone> = {
   ACTIVE: 'active',
   INACTIVE: 'idle',
   SUSPENDED: 'warning',
   PENDING_VERIFICATION: 'pending',
 };
 
+const ROLE_TONE: Record<UserRole, StatusTone> = {
+  ADMIN: 'danger',
+  TEACHER: 'info',
+  STUDENT: 'success',
+};
+
 export function UsersPanel(): JSX.Element {
+  const navigate = useNavigate();
   const uc = useUserManagement();
   const [activeTab, setActiveTab] = useState<UsersTab>('consulta');
   const { pushToast } = useToast();
@@ -63,6 +70,8 @@ export function UsersPanel(): JSX.Element {
       {
         header: 'Usuario',
         accessor: 'firstName',
+        sortable: true,
+        sortValue: (user) => `${user.lastName} ${user.firstName}`,
         render: (user) => (
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-xs font-semibold text-primary">
@@ -84,9 +93,11 @@ export function UsersPanel(): JSX.Element {
       {
         header: 'Rol / Estado',
         accessor: 'role',
+        sortable: true,
+        sortValue: (user) => `${user.role} ${user.status}`,
         render: (user) => (
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="info">{user.role}</Badge>
+            <StatusBadge tone={ROLE_TONE[user.role]}>{user.role}</StatusBadge>
             <StatusBadge tone={STATUS_TONE[user.status]}>{user.status}</StatusBadge>
           </div>
         ),
@@ -198,7 +209,21 @@ export function UsersPanel(): JSX.Element {
                 caption="Registros encontrados"
                 columns={columns}
                 data={uc.listResponse.data}
+                loading={uc.loading}
+                stickyHeader
+                maxHeight="32rem"
                 keyExtractor={(user) => user.id}
+                // Solo los alumnos tienen expediente: un profesor no tiene entregas.
+                onRowClick={(user) =>
+                  user.role === 'STUDENT'
+                    ? navigate(`/students/${user.id}`)
+                    : undefined
+                }
+                rowAriaLabel={(user) =>
+                  user.role === 'STUDENT'
+                    ? `Abrir expediente de ${user.lastName}, ${user.firstName}`
+                    : `${user.lastName}, ${user.firstName}`
+                }
                 emptyState={
                   <EmptyState
                     icon={<RiSearchLine className="text-2xl text-slate-400" />}

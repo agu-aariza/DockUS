@@ -14,6 +14,7 @@ import type {
 import { useSession } from "../../shared/session/SessionContext";
 import { useManagementPermissions } from "../../shared/session/useManagementPermissions";
 import { getErrorMessage } from "../../shared/utils/errors";
+import { useCrudResource } from "../../shared/hooks/useCrudResource";
 import type { NoticeState } from "./projectManagement.types";
 import {
   normalizeOptionalDateTime,
@@ -63,8 +64,6 @@ function useAutoDismissNotice(
 
 export function useProjectManagement() {
   const { activeSession: session } = useSession();
-  const [projects, setProjects] =
-    useState<PaginatedResponse<ProjectEntity> | null>(null);
   const [students, setStudents] = useState<UserEntity[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [createForm, setCreateForm] = useState({
@@ -105,6 +104,28 @@ export function useProjectManagement() {
 
   const { canRead, canWrite, canAdmin } = useManagementPermissions(session);
 
+  type CreateProjectPayload = Parameters<typeof projectsApi.create>[0];
+  type UpdateProjectPayload = Parameters<typeof projectsApi.update>[1];
+
+  const projectCrud = useCrudResource<ProjectEntity, CreateProjectPayload, UpdateProjectPayload>({
+    api: {
+      list: projectsApi.list,
+      create: projectsApi.create,
+      update: projectsApi.update,
+      remove: projectsApi.remove,
+      restore: projectsApi.restore,
+    },
+    canRead,
+    initialQuery: {
+      page: 1,
+      limit: 50,
+      sortBy: "updatedAt",
+      sortOrder: "DESC",
+    },
+  });
+
+  const projects = projectCrud.listResponse;
+
   const selectedProject =
     projects?.data.find((project) => project.id === selectedProjectId) ?? null;
 
@@ -118,20 +139,16 @@ export function useProjectManagement() {
     if (!canRead) return;
     setLoadingProjects(true);
     try {
-      const response = await projectsApi.list({
-        page: 1,
-        limit: 50,
-        sortBy: "updatedAt",
-        sortOrder: "DESC",
-      });
-      setProjects(response);
-      setDebugPayload(response);
-      setProjectNotice(noticeText ? { text: noticeText, tone: "info" } : null);
-      setSelectedProjectId((current) =>
-        current && response.data.some((project) => project.id === current)
-          ? current
-          : "",
-      );
+      const response = await projectCrud.refresh();
+      if (response) {
+        setDebugPayload(response);
+        setProjectNotice(noticeText ? { text: noticeText, tone: "info" } : null);
+        setSelectedProjectId((current) =>
+          current && response.data.some((project) => project.id === current)
+            ? current
+            : "",
+        );
+      }
     } catch (error) {
       setProjectNotice({ text: getErrorMessage(error), tone: "warning" });
     } finally {
@@ -146,7 +163,7 @@ export function useProjectManagement() {
 
   const handleRestore = async (id: string) => {
     try {
-      await projectsApi.restore(id);
+      await projectCrud.restore(id);
       await refreshProjects();
     } catch (err) {
       console.error("Error al restaurar proyecto:", err);
@@ -193,7 +210,7 @@ export function useProjectManagement() {
     }
 
     try {
-      const response = await projectsApi.create({
+      const response = await projectCrud.create({
         title: createForm.title,
         contextAcademico: normalizeOptionalText(createForm.contextAcademico),
         status: createForm.status,
@@ -206,6 +223,8 @@ export function useProjectManagement() {
         closesAt: normalizeOptionalDateTime(createForm.closesAt),
         assignedGroupIds: createForm.assignedGroupIds,
       });
+
+      if (!response) return;
 
       if (createForm.suiteFile) {
         await projectsApi.uploadTestSuite(response.id, createForm.suiteFile);
@@ -248,7 +267,7 @@ export function useProjectManagement() {
     }
 
     try {
-      const response = await projectsApi.update(selectedProject.id, {
+      const response = await projectCrud.update(selectedProject.id, {
         title: editForm.title,
         contextAcademico: normalizeOptionalText(editForm.contextAcademico),
         status: editForm.status,
@@ -260,6 +279,7 @@ export function useProjectManagement() {
         opensAt: normalizeOptionalDateTime(editForm.opensAt),
         closesAt: normalizeOptionalDateTime(editForm.closesAt),
       });
+      if (!response) return;
       setDebugPayload(response);
       setEditorNotice({
         text: "Proyecto actualizado correctamente.",
@@ -274,7 +294,7 @@ export function useProjectManagement() {
   const executeDelete = async () => {
     if (!canAdmin || !deleteId.trim()) return;
     try {
-      await projectsApi.remove(deleteId.trim());
+      await projectCrud.remove(deleteId.trim());
       setEditorNotice({
         text: `Proyecto ${deleteId.trim()} eliminado.`,
         tone: "info",
@@ -341,7 +361,7 @@ export function useProjectManagement() {
 
   return {
     projects,
-    setProjects,
+    setProjects: () => {}, // preserved for API compatibility; list is managed by CRUD hook
     students,
     setStudents,
     groups: assignmentManagement.groups,
