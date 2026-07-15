@@ -107,11 +107,19 @@ export interface CourseGroupRef {
   code: string | null;
 }
 
+export interface TeacherRef {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
 export interface ProjectAssignmentResponse {
   id: string;
   projectId: string;
   projectTitle: string;
   projectExpectedType: string | null;
+  /** Equipo docente del proyecto. El alumno solo ve nombres, nunca enlaces al perfil. */
+  teachers: TeacherRef[];
   maxDeliveriesPerStudent: number;
   sourceGroupIds: string[];
   studentId: string;
@@ -259,4 +267,74 @@ export interface ProjectQualityInsightsSummary {
   totalStudentsAnalyzed: number;
   insights: ProjectQualityInsight[];
   category?: CodeQualityCategory;
+}
+
+// ---------------------------------------------------------------------------
+// Perfil de estudiante (expediente transversal: alumno -> proyectos)
+// ---------------------------------------------------------------------------
+
+export type BuildRunStatusRef =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'SUCCESS'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export interface StudentProfileRun {
+  id: string;
+  status: BuildRunStatusRef;
+  createdAt: string;
+  finishedAt: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  executionCostUsd: number;
+}
+
+export interface StudentProfileDelivery {
+  id: string;
+  version: number;
+  status: DeliveryStatus;
+  isLate: boolean;
+  grade: number | null;
+  /**
+   * `Delivery` no tiene `submittedAt`: el único sello temporal fiable es
+   * `createdAt`, que es el que ya usa el gradebook como fecha de entrega.
+   */
+  createdAt: string;
+  runs: StudentProfileRun[];
+}
+
+export interface StudentProfileProject {
+  id: string;
+  title: string;
+  status: string;
+  expectedType: string | null;
+  teachers: TeacherRef[];
+  /** Nota de la última entrega evaluada, o null si aún no hay ninguna. */
+  grade: number | null;
+  /** Entregas de la más reciente a la más antigua. */
+  deliveries: StudentProfileDelivery[];
+}
+
+export interface StudentProfileSummary {
+  projectsCount: number;
+  deliveriesCount: number;
+  /** Runs sobre las entregas del alumno. NO se cuentan por `triggeredById`: los lanza el profesor. */
+  runsCount: number;
+  evaluatedCount: number;
+  averageGrade: number | null;
+}
+
+export interface StudentProfileResponse {
+  student: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    status: string;
+  };
+  groups: CourseGroupRef[];
+  summary: StudentProfileSummary;
+  projects: StudentProfileProject[];
 }
