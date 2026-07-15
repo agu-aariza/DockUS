@@ -24,4 +24,5 @@ Manejar las entregas (deliveries) que realizan los estudiantes en respuesta a un
 
 ## Puntos de Entrada (Entrypoints)
 - `DeliveriesController` (Crear entrega, listar historial).
-- `DeliveriesService` (Orquestación de la creación, almacenamiento y despacho al builder).
+- `DeliveriesQueryService` (Consultas, paginación, proyección de respuestas y scopes de actor).
+- `DeliveriesCommandService` (Creación, actualización, calificación, borrado lógico, restauración y cambio de estado).

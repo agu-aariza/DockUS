@@ -1,11 +1,12 @@
 /**
- * @fileoverview Servicio de negocio para gestion de entregas.
+ * @fileoverview Servicio de comandos para entregas.
  *
  * Contexto:
- * - Implementa alta, consulta, actualizacion y ciclo soft delete.
- * - Genera ordinales por asignación y deriva progreso por alumno/proyecto.
+ * - Responsable de creación, actualización, calificación, borrado lógico,
+ *   restauración y cambio de estado de entregas.
+ * - Delega lecturas y proyecciones en DeliveriesQueryService.
  *
- * @module DeliveriesService
+ * @module DeliveriesCommandService
  */
 
 import {
@@ -19,177 +20,31 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
-import { ProjectStatus } from '../entities/project.entity';
 import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
-import {
-  buildPaginationMeta,
-  PaginationMeta,
-} from '../../../shared/utils/pagination.util';
+import { ProjectStatus } from '../entities/project.entity';
+import { StorageService } from '../storage/storage.service';
 import { throwIfUniqueViolation } from '../../../shared/database/unique-violation.util';
 import {
   CreateDeliveryDto,
   UpdateDeliveryGradingDto,
   UpdateDeliveryDto,
 } from './dto/create-delivery.dto';
-import {
-  DeliverySortField,
-  ListDeliveriesQueryDto,
-} from './dto/list-deliveries-query.dto';
 import { Delivery, DeliveryStatus } from './entities/delivery.entity';
-import { StorageService } from '../storage/storage.service';
-
-const DELIVERY_SORT_COLUMNS: Record<DeliverySortField, string> = {
-  createdAt: 'delivery.createdAt',
-  updatedAt: 'delivery.updatedAt',
-  version: 'delivery.version',
-  status: 'delivery.status',
-};
-
-// Shape compartida con el frontend: fuente única en @dockus/contracts.
-export type { DeliveryResponse } from '@dockus/contracts';
-import type { DeliveryResponse } from '@dockus/contracts';
-
-export type DeliveriesPaginationMeta = PaginationMeta;
-
-export interface PaginatedDeliveriesResponse {
-  data: DeliveryResponse[];
-  meta: DeliveriesPaginationMeta;
-}
+import {
+  DeliveriesQueryService,
+  DeliveryResponse,
+} from './deliveries-query.service';
 
 @Injectable()
-export class DeliveriesService {
+export class DeliveriesCommandService {
   constructor(
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
     @InjectRepository(ProjectAssignment)
     private readonly assignmentsRepository: Repository<ProjectAssignment>,
     private readonly storageService: StorageService,
+    private readonly deliveriesQueryService: DeliveriesQueryService,
   ) {}
-
-  async preview(
-    id: string,
-    actor: AuthenticatedUser,
-  ): Promise<Array<{ path: string; content: string }>> {
-    const delivery = await this.findEntityById(id, actor);
-    if (!delivery) {
-      throw new NotFoundException('Entrega no encontrada para previsualizar.');
-    }
-    return this.storageService.previewDelivery(id, actor);
-  }
-
-  async findById(
-    id: string,
-    actor: AuthenticatedUser,
-    includeDeleted = false,
-  ): Promise<DeliveryResponse | null> {
-    const delivery = await this.findEntityById(id, actor, includeDeleted);
-    if (!delivery) {
-      return null;
-    }
-
-    return this.toResponse(delivery);
-  }
-
-  async findEntityById(
-    id: string,
-    actor?: AuthenticatedUser,
-    includeDeleted = false,
-  ): Promise<Delivery | null> {
-    const queryBuilder = this.deliveriesRepository
-      .createQueryBuilder('delivery')
-      .innerJoinAndSelect('delivery.assignment', 'assignment')
-      .innerJoinAndSelect('assignment.project', 'project')
-      .innerJoinAndSelect('assignment.student', 'student')
-      .where('delivery.id = :id', { id });
-
-    if (includeDeleted) {
-      queryBuilder.withDeleted();
-    }
-
-    if (actor) {
-      this.applyActorScope(queryBuilder, actor);
-    }
-
-    return queryBuilder.getOne();
-  }
-
-  async findAll(
-    query: ListDeliveriesQueryDto,
-    actor: AuthenticatedUser,
-  ): Promise<PaginatedDeliveriesResponse> {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
-    const sortBy = query.sortBy;
-    const sortOrder = query.sortOrder;
-
-    const queryBuilder = this.deliveriesRepository
-      .createQueryBuilder('delivery')
-      .innerJoinAndSelect('delivery.assignment', 'assignment')
-      .innerJoinAndSelect('assignment.project', 'project')
-      .innerJoinAndSelect('assignment.student', 'student');
-
-    this.applyActorScope(queryBuilder, actor);
-
-    if (query.projectId) {
-      queryBuilder.andWhere('assignment.projectId = :projectId', {
-        projectId: query.projectId,
-      });
-    }
-
-    if (query.assignmentId) {
-      queryBuilder.andWhere('delivery.assignmentId = :assignmentId', {
-        assignmentId: query.assignmentId,
-      });
-    }
-
-    if (query.authorId) {
-      queryBuilder.andWhere('delivery.authorId = :authorId', {
-        authorId: query.authorId,
-      });
-    }
-
-    if (query.status) {
-      queryBuilder.andWhere('delivery.status = :status', {
-        status: query.status,
-      });
-    }
-
-    queryBuilder
-      .orderBy(DELIVERY_SORT_COLUMNS[sortBy], sortOrder)
-      .skip((page - 1) * limit)
-      .take(limit);
-
-    const [deliveries, total] = await queryBuilder.getManyAndCount();
-
-    const assignmentIds = Array.from(
-      new Set(deliveries.map((d) => d.assignmentId).filter(Boolean)),
-    );
-    const maxVersionsMap = new Map<string, number>();
-
-    if (assignmentIds.length > 0) {
-      const results = await this.deliveriesRepository
-        .createQueryBuilder('delivery')
-        .withDeleted()
-        .select('delivery.assignmentId', 'assignmentId')
-        .addSelect('MAX(delivery.version)', 'maxVersion')
-        .where('delivery.assignmentId IN (:...assignmentIds)', { assignmentIds })
-        .groupBy('delivery.assignmentId')
-        .getRawMany<{ assignmentId: string; maxVersion: string | null }>();
-
-      for (const r of results) {
-        maxVersionsMap.set(r.assignmentId, Number.parseInt(r.maxVersion ?? '0', 10) || 0);
-      }
-    }
-
-    return {
-      data: await Promise.all(
-        deliveries.map((delivery) =>
-          this.toResponse(delivery, maxVersionsMap.get(delivery.assignmentId)),
-        ),
-      ),
-      meta: buildPaginationMeta(page, limit, total),
-    };
-  }
 
   async create(
     dto: CreateDeliveryDto,
@@ -199,7 +54,9 @@ export class DeliveriesService {
     this.assertCanCreateDelivery(assignment, actor);
 
     const nextVersion =
-      (await this.resolveCurrentMaxVersion(assignment.id)) + 1;
+      (await this.deliveriesQueryService.resolveCurrentMaxVersion(
+        assignment.id,
+      )) + 1;
     if (nextVersion > assignment.project.maxDeliveriesPerStudent) {
       throw new ConflictException(
         'Se alcanzó el máximo de entregas permitidas para esta asignación.',
@@ -233,13 +90,16 @@ export class DeliveriesService {
 
     try {
       const saved = await this.deliveriesRepository.save(delivery);
-      const enriched = await this.findEntityById(saved.id, actor);
+      const enriched = await this.deliveriesQueryService.findEntityById(
+        saved.id,
+        actor,
+      );
       if (!enriched) {
         throw new NotFoundException(
           'No se pudo reconstruir la entrega creada.',
         );
       }
-      return this.toResponse(enriched, nextVersion);
+      return this.deliveriesQueryService.toResponse(enriched, nextVersion);
     } catch (error) {
       throwIfUniqueViolation(
         error,
@@ -277,14 +137,17 @@ export class DeliveriesService {
     }
 
     const saved = await this.deliveriesRepository.save(delivery);
-    const enriched = await this.findEntityById(saved.id, actor);
+    const enriched = await this.deliveriesQueryService.findEntityById(
+      saved.id,
+      actor,
+    );
     if (!enriched) {
       throw new NotFoundException(
         'No se pudo reconstruir la entrega actualizada.',
       );
     }
 
-    return this.toResponse(enriched);
+    return this.deliveriesQueryService.toResponse(enriched);
   }
 
   async updateStatus(
@@ -301,14 +164,17 @@ export class DeliveriesService {
 
     delivery.status = status;
     const saved = await this.deliveriesRepository.save(delivery);
-    const enriched = await this.findEntityById(saved.id, actor);
+    const enriched = await this.deliveriesQueryService.findEntityById(
+      saved.id,
+      actor,
+    );
     if (!enriched) {
       throw new NotFoundException(
         'No se pudo reconstruir la entrega actualizada.',
       );
     }
 
-    return this.toResponse(enriched);
+    return this.deliveriesQueryService.toResponse(enriched);
   }
 
   async updateGrading(
@@ -330,14 +196,17 @@ export class DeliveriesService {
     }
 
     const saved = await this.deliveriesRepository.save(delivery);
-    const enriched = await this.findEntityById(saved.id, actor);
+    const enriched = await this.deliveriesQueryService.findEntityById(
+      saved.id,
+      actor,
+    );
     if (!enriched) {
       throw new NotFoundException(
         'No se pudo reconstruir la entrega calificada.',
       );
     }
 
-    return this.toResponse(enriched);
+    return this.deliveriesQueryService.toResponse(enriched);
   }
 
   async remove(
@@ -368,14 +237,17 @@ export class DeliveriesService {
 
     await this.deliveriesRepository.recover(delivery);
 
-    const restoredDelivery = await this.findEntityById(id, actor);
+    const restoredDelivery = await this.deliveriesQueryService.findEntityById(
+      id,
+      actor,
+    );
     if (!restoredDelivery) {
       throw new NotFoundException(
         'No se pudo restaurar la entrega solicitada.',
       );
     }
 
-    return this.toResponse(restoredDelivery);
+    return this.deliveriesQueryService.toResponse(restoredDelivery);
   }
 
   async updateStatusInternal(
@@ -396,7 +268,11 @@ export class DeliveriesService {
     actor: AuthenticatedUser,
     includeDeleted = false,
   ): Promise<Delivery | null> {
-    const delivery = await this.findEntityById(id, actor, includeDeleted);
+    const delivery = await this.deliveriesQueryService.findEntityById(
+      id,
+      actor,
+      includeDeleted,
+    );
     if (!delivery) {
       return null;
     }
@@ -470,77 +346,5 @@ export class DeliveriesService {
     throw new ForbiddenException(
       'No tiene permisos para crear entregas sobre esta asignación.',
     );
-  }
-
-  private applyActorScope(
-    queryBuilder: ReturnType<Repository<Delivery>['createQueryBuilder']>,
-    actor: AuthenticatedUser,
-  ): void {
-    if (actor.role === UserRole.ADMIN) {
-      return;
-    }
-
-    if (actor.role === UserRole.TEACHER) {
-      queryBuilder.andWhere('project.creatorId = :requestUserId', {
-        requestUserId: actor.userId,
-      });
-      return;
-    }
-
-    queryBuilder.andWhere('delivery.authorId = :requestUserId', {
-      requestUserId: actor.userId,
-    });
-  }
-
-  private async resolveCurrentMaxVersion(
-    assignmentId: string,
-  ): Promise<number> {
-    const row = await this.deliveriesRepository
-      .createQueryBuilder('delivery')
-      .withDeleted()
-      .select('MAX(delivery.version)', 'maxVersion')
-      .where('delivery.assignmentId = :assignmentId', { assignmentId })
-      .getRawOne<{ maxVersion: string | null }>();
-
-    return Number.parseInt(row?.maxVersion ?? '0', 10) || 0;
-  }
-
-  private async toResponse(
-    delivery: Delivery,
-    deliveryCountOverride?: number,
-  ): Promise<DeliveryResponse> {
-    const deliveryCount =
-      deliveryCountOverride ??
-      (await this.resolveCurrentMaxVersion(delivery.assignmentId));
-    const assignment = delivery.assignment;
-    const project = assignment?.project;
-    const student = assignment?.student;
-    const studentName = student
-      ? `${student.lastName}, ${student.firstName}`.trim()
-      : 'Alumno no disponible';
-    const maxDeliveriesPerStudent =
-      project?.maxDeliveriesPerStudent ?? deliveryCount;
-
-    return {
-      id: delivery.id,
-      assignmentId: delivery.assignmentId,
-      projectId: assignment?.projectId,
-      projectTitle: project?.title ?? 'Proyecto no disponible',
-      authorId: delivery.authorId,
-      studentEmail: student?.email,
-      studentName,
-      version: delivery.version,
-      status: delivery.status,
-      notes: delivery.notes,
-      isLate: delivery.isLate,
-      grade: delivery.grade ?? null,
-      graderNotes: delivery.graderNotes ?? null,
-      deliveryCount,
-      remainingDeliveries: Math.max(0, maxDeliveriesPerStudent - deliveryCount),
-      minimumRequirementMet: deliveryCount >= 1,
-      createdAt: delivery.createdAt.toISOString(),
-      updatedAt: delivery.updatedAt.toISOString(),
-      deletedAt: delivery.deletedAt?.toISOString(),
-    };
   }
 }

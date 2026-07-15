@@ -1,11 +1,11 @@
 /**
- * @fileoverview Pruebas unitarias del servicio de entregas.
+ * @fileoverview Pruebas unitarias del servicio de comandos de entregas.
  *
  * Contexto:
  * - Valida creación, restauración y restricciones clave del dominio.
  * - Mantiene las pruebas alineadas con el modelo actual basado en asignaciones.
  *
- * @module DeliveriesServiceSpec
+ * @module DeliveriesCommandServiceSpec
  */
 
 import { ConflictException } from '@nestjs/common';
@@ -19,57 +19,36 @@ import {
 import { UserRole } from '../../users/entities/user.entity';
 import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
 import { Delivery, DeliveryStatus } from './entities/delivery.entity';
-import { DeliveriesService } from './deliveries.service';
+import { DeliveriesCommandService } from './deliveries-command.service';
+import { DeliveriesQueryService } from './deliveries-query.service';
 
-const createQueryBuilder = (config: {
-  one?: Delivery | null;
-  rawOne?: { maxVersion: string | null };
-}) => {
-  const builder = {
-    leftJoinAndSelect: () => builder,
-    innerJoinAndSelect: () => builder,
-    where: () => builder,
-    withDeleted: () => builder,
-    andWhere: () => builder,
-    orderBy: () => builder,
-    skip: () => builder,
-    take: () => builder,
-    select: () => builder,
-    getOne: () => Promise.resolve(config.one ?? null),
-    getRawOne: () => Promise.resolve(config.rawOne ?? { maxVersion: '0' }),
-  };
-
-  return builder;
-};
-
-describe('DeliveriesService', () => {
-  let service: DeliveriesService;
-  let nextBuilders: Array<ReturnType<typeof createQueryBuilder>>;
+describe('DeliveriesCommandService', () => {
+  let service: DeliveriesCommandService;
 
   const deliveriesRepository = {
     create: jest.fn(),
     save: jest.fn(),
     recover: jest.fn(),
-    createQueryBuilder: jest.fn(() => {
-      const builder = nextBuilders.shift();
-      if (!builder) {
-        throw new Error('No query builder configured for test.');
-      }
-      return builder;
-    }),
+    findOne: jest.fn(),
   };
 
   const assignmentsRepository = {
     findOne: jest.fn(),
   };
 
+  const deliveriesQueryService = {
+    findEntityById: jest.fn(),
+    toResponse: jest.fn(),
+    resolveCurrentMaxVersion: jest.fn(),
+  } as unknown as jest.Mocked<DeliveriesQueryService>;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    nextBuilders = [];
-    service = new DeliveriesService(
+    service = new DeliveriesCommandService(
       deliveriesRepository as unknown as Repository<Delivery>,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
       {} as any, // storageService mock
+      deliveriesQueryService,
     );
   });
 
@@ -89,10 +68,15 @@ describe('DeliveriesService', () => {
     assignmentsRepository.findOne.mockResolvedValue(assignment);
     deliveriesRepository.create.mockReturnValue(created);
     deliveriesRepository.save.mockResolvedValue(created);
-    nextBuilders = [
-      createQueryBuilder({ rawOne: { maxVersion: '0' } }),
-      createQueryBuilder({ one: created }),
-    ];
+    deliveriesQueryService.resolveCurrentMaxVersion.mockResolvedValue(0);
+    deliveriesQueryService.findEntityById.mockResolvedValue(created);
+    deliveriesQueryService.toResponse.mockResolvedValue({
+      id: created.id,
+      assignmentId: assignment.id,
+      projectId: assignment.projectId,
+      studentEmail: 'student@dockus.test',
+      remainingDeliveries: 1,
+    } as any);
 
     const result = await service.create(
       {
@@ -129,8 +113,9 @@ describe('DeliveriesService', () => {
     const assignment = buildAssignment({
       project: buildProject({ maxDeliveriesPerStudent: 1 }),
     });
+
     assignmentsRepository.findOne.mockResolvedValue(assignment);
-    nextBuilders = [createQueryBuilder({ rawOne: { maxVersion: '1' } })];
+    deliveriesQueryService.resolveCurrentMaxVersion.mockResolvedValue(1);
 
     await expect(
       service.create(
@@ -151,12 +136,13 @@ describe('DeliveriesService', () => {
       deletedAt: undefined,
     });
 
-    nextBuilders = [
-      createQueryBuilder({ one: deleted }),
-      createQueryBuilder({ one: restored }),
-      createQueryBuilder({ rawOne: { maxVersion: '1' } }),
-    ];
+    deliveriesQueryService.findEntityById
+      .mockResolvedValueOnce(deleted)
+      .mockResolvedValueOnce(restored);
     deliveriesRepository.recover.mockResolvedValue(restored);
+    deliveriesQueryService.toResponse.mockResolvedValue({
+      id: restored.id,
+    } as any);
 
     const result = await service.restore(deleted.id, actor);
 

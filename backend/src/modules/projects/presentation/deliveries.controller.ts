@@ -3,7 +3,7 @@
  *
  * Contexto:
  * - Expone endpoints CRUD de entregas con JWT + RBAC.
- * - Delega reglas de negocio en DeliveriesService.
+ * - Delega consultas en DeliveriesQueryService y comandos en DeliveriesCommandService.
  *
  * @module DeliveriesController
  */
@@ -49,10 +49,11 @@ import {
 } from '../deliveries/dto/create-delivery.dto';
 import { ListDeliveriesQueryDto } from '../deliveries/dto/list-deliveries-query.dto';
 import {
-  DeliveriesService,
+  DeliveriesQueryService,
   DeliveryResponse,
   PaginatedDeliveriesResponse,
-} from '../deliveries/deliveries.service';
+} from '../deliveries/deliveries-query.service';
+import { DeliveriesCommandService } from '../deliveries/deliveries-command.service';
 import { DeliveryStatus } from '../deliveries/entities/delivery.entity';
 
 const DELIVERY_ID_PARAM = {
@@ -68,7 +69,10 @@ const DELIVERY_NOT_FOUND_DESCRIPTION = 'Entrega no encontrada.';
 @Controller('deliveries')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DeliveriesController {
-  constructor(private readonly deliveriesService: DeliveriesService) {}
+  constructor(
+    private readonly deliveriesQueryService: DeliveriesQueryService,
+    private readonly deliveriesCommandService: DeliveriesCommandService,
+  ) {}
 
   @ApiOperation({
     summary: 'Crear entrega',
@@ -92,7 +96,10 @@ export class DeliveriesController {
     @Body() createDeliveryDto: CreateDeliveryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<DeliveryResponse> {
-    return this.deliveriesService.create(createDeliveryDto, request.user);
+    return this.deliveriesCommandService.create(
+      createDeliveryDto,
+      request.user,
+    );
   }
 
   @ApiOperation({
@@ -116,7 +123,7 @@ export class DeliveriesController {
     @Query() query: ListDeliveriesQueryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<PaginatedDeliveriesResponse> {
-    return this.deliveriesService.findAll(query, request.user);
+    return this.deliveriesQueryService.findAll(query, request.user);
   }
 
   @ApiOperation({
@@ -142,7 +149,10 @@ export class DeliveriesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<DeliveryResponse> {
-    const delivery = await this.deliveriesService.findById(id, request.user);
+    const delivery = await this.deliveriesQueryService.findById(
+      id,
+      request.user,
+    );
     if (!delivery) {
       throw new NotFoundException(DELIVERY_NOT_FOUND_DESCRIPTION);
     }
@@ -166,7 +176,7 @@ export class DeliveriesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<Array<{ path: string; content: string }>> {
-    return this.deliveriesService.preview(id, request.user);
+    return this.deliveriesQueryService.preview(id, request.user);
   }
 
   @ApiOperation({
@@ -193,7 +203,11 @@ export class DeliveriesController {
     @Body() updateDeliveryDto: UpdateDeliveryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<DeliveryResponse> {
-    return this.deliveriesService.update(id, updateDeliveryDto, request.user);
+    return this.deliveriesCommandService.update(
+      id,
+      updateDeliveryDto,
+      request.user,
+    );
   }
 
   @ApiOperation({
@@ -225,7 +239,7 @@ export class DeliveriesController {
     @Param('status', new ParseEnumPipe(DeliveryStatus)) status: DeliveryStatus,
     @Req() request: AuthenticatedRequest,
   ): Promise<DeliveryResponse> {
-    return this.deliveriesService.updateStatus(id, status, request.user);
+    return this.deliveriesCommandService.updateStatus(id, status, request.user);
   }
 
   @ApiOperation({
@@ -249,7 +263,7 @@ export class DeliveriesController {
     @Body() updateDeliveryGradingDto: UpdateDeliveryGradingDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<DeliveryResponse> {
-    return this.deliveriesService.updateGrading(
+    return this.deliveriesCommandService.updateGrading(
       id,
       updateDeliveryGradingDto,
       request.user,
@@ -277,7 +291,7 @@ export class DeliveriesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<void> {
-    await this.deliveriesService.remove(id, request.user);
+    await this.deliveriesCommandService.remove(id, request.user);
   }
 
   @ApiOperation({
@@ -307,6 +321,6 @@ export class DeliveriesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<DeliveryResponse> {
-    return this.deliveriesService.restore(id, request.user);
+    return this.deliveriesCommandService.restore(id, request.user);
   }
 }
