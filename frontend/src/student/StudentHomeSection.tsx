@@ -15,8 +15,9 @@ import { builderApi } from "../shared/api/builderApi";
 
 import type { StudentWorkflowState } from "../shared/types";
 import { MetricCard } from "../shared/components/MetricCard";
+import { Skeleton } from "../shared/components/Skeleton";
 import { Button } from "../shared/components/ui/Button";
-import { useWorkspace } from "../shared/workspace/WorkspaceContext";
+import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { StudentKeyValueList, StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
 import {
@@ -64,7 +65,7 @@ function formatOutcome(outcome: ReturnType<typeof resolveStudentRunOutcome>): {
     case "FAIL":
       return {
         label: "No apto",
-        className: "border-rose-200 bg-rose-50/70 text-rose-700 font-semibold",
+        className: "border-danger/30 bg-danger-subtle/70 text-rose-700 font-semibold",
       };
     case "PARTIAL":
       return {
@@ -93,7 +94,7 @@ function gradeColor(grade: number): string {
 function timelineStyle(state: string): string {
   switch (state) {
     case "late":
-      return "border-rose-200 bg-rose-50/70 text-rose-700 font-semibold";
+      return "border-danger/30 bg-danger-subtle/70 text-rose-700 font-semibold";
     case "upcoming":
       return "border-primary/20 bg-primary/5 text-primary font-semibold";
     default:
@@ -105,7 +106,7 @@ export function StudentHomeSection({
   data,
   onNavigate,
 }: Props): JSX.Element {
-  const { selection } = useWorkspace();
+  const { selection } = useWorkspaceSelection();
   const [launchingId, setLaunchingId] = useState<string | null>(null);
 
   const handleLaunchEvaluation = async (deliveryId: string) => {
@@ -168,21 +169,25 @@ export function StudentHomeSection({
 
   if (loading) {
     return (
-      <div className="grid gap-6 lg:grid-cols-[1.55fr,0.95fr]">
-        <div className="rounded-lg border border-app-border bg-white p-8">
-          <div className="h-5 w-28 animate-pulse rounded bg-app-bg-subtle/30" />
-          <div className="mt-5 h-12 w-3/4 animate-pulse rounded bg-slate-50/60" />
-          <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-50/60" />
-          <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-slate-50/60" />
+      <div
+        className="grid gap-6 lg:grid-cols-[1.55fr,0.95fr]"
+        aria-busy="true"
+        aria-label="Cargando tu resumen"
+      >
+        <div className="rounded-lg border border-app-border bg-white p-8 shadow-sm">
+          <Skeleton type="text" className="h-5 w-28" />
+          <Skeleton type="text" className="mt-5 h-12 w-3/4" />
+          <Skeleton type="text" className="mt-4 h-4 w-full" />
+          <Skeleton type="text" className="mt-2 h-4 w-5/6" />
         </div>
         <div className="grid gap-4">
           {[1, 2, 3].map((index) => (
             <div
               key={index}
-              className="rounded-lg border border-app-border bg-white p-6"
+              className="rounded-lg border border-app-border bg-white p-6 shadow-sm"
             >
-              <div className="h-4 w-28 animate-pulse rounded bg-app-bg-subtle/30" />
-              <div className="mt-4 h-8 w-2/3 animate-pulse rounded bg-slate-50/60" />
+              <Skeleton type="text" className="h-4 w-28" />
+              <Skeleton type="text" className="mt-4 h-8 w-2/3" />
             </div>
           ))}
         </div>
@@ -192,7 +197,7 @@ export function StudentHomeSection({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-800">
+      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-red-800">
         Error: {error}
       </div>
     );
@@ -309,7 +314,7 @@ export function StudentHomeSection({
                   >
                     {launchingId === activeDelivery?.id ? (
                       <>
-                        <RiLoader4Line className="animate-spin" />
+                        <RiLoader4Line className="animate-spin motion-reduce:animate-none" />
                         Lanzando...
                       </>
                     ) : (

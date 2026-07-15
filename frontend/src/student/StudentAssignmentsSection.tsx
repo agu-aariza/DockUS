@@ -8,7 +8,7 @@ import {
 import type { ProjectAssignmentEntity } from "../shared/types";
 import { EmptyState } from "../shared/components/EmptyState";
 import { Skeleton } from "../shared/components/Skeleton";
-import { useWorkspace } from "../shared/workspace/WorkspaceContext";
+import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { describeAssignmentTimeline } from "./deadlineUtils";
 
@@ -68,7 +68,7 @@ export function StudentAssignmentsSection({
   data,
   onNavigate,
 }: Props): JSX.Element {
-  const { setAssignment, setProject } = useWorkspace();
+  const { setAssignment, setProject } = useWorkspaceSelection();
   const { assignments, loading, error } = data;
 
   const handleSelect = (assignment: ProjectAssignmentEntity) => {
@@ -111,31 +111,36 @@ export function StudentAssignmentsSection({
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="rounded-lg border border-app-border bg-white p-6">
-          <div className="h-5 w-40 animate-pulse rounded bg-slate-50" />
-          <div className="mt-4 h-4 w-3/4 animate-pulse rounded bg-slate-50/60" />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {[1, 2, 3].map((index) => (
-            <div
-              key={index}
-              className="rounded-lg border border-app-border bg-white p-6"
-            >
-              <Skeleton type="rounded" className="h-12 w-12 bg-slate-50" />
-              <div className="mt-6 h-5 w-3/4 animate-pulse rounded bg-slate-50/60" />
-              <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-50/60" />
-              <div className="mt-2 h-4 w-5/6 animate-pulse rounded bg-slate-50/60" />
+      <div
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        aria-busy="true"
+        aria-label="Cargando proyectos"
+      >
+        {[1, 2, 3].map((index) => (
+          <div
+            key={index}
+            className="rounded-lg border border-app-border bg-white p-6 shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <Skeleton type="rounded" className="h-12 w-12" />
+              <Skeleton type="text" className="h-6 w-24 rounded-full" />
             </div>
-          ))}
-        </div>
+            <Skeleton type="text" className="mt-6 h-5 w-3/4" />
+            <Skeleton type="text" className="mt-3 h-4 w-full" />
+            <Skeleton type="rounded" className="mt-5 h-28 w-full" />
+            <Skeleton type="text" className="mt-6 h-4 w-1/2" />
+          </div>
+        ))}
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-800">
+      <div
+        className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-red-800"
+        role="alert"
+      >
         Error al cargar proyectos: {error}
       </div>
     );
@@ -161,16 +166,25 @@ export function StudentAssignmentsSection({
           const timeline = describeAssignmentTimeline(assignment, now);
 
           return (
-            <article
+            <div
               key={assignment.id}
-              className={`group flex h-full cursor-pointer flex-col rounded-lg border bg-white p-6  transition-all duration-300  ${urgency.border}`}
+              role="button"
+              tabIndex={0}
+              aria-label={`Abrir historial de ${assignment.projectTitle}`}
+              className={`card-interactive group flex h-full cursor-pointer flex-col rounded-lg border bg-white p-6 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${urgency.border}`}
               onClick={() => handleSelect(assignment)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleSelect(assignment);
+                }
+              }}
             >
               <div className="flex items-start justify-between gap-4">
                 <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-lg ${urgency.iconBg} ${urgency.iconColor}`}
+                  className={`flex h-12 w-12 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none ${urgency.iconBg} ${urgency.iconColor}`}
                 >
-                  <RiFolderOpenLine className="text-xl" />
+                  <RiFolderOpenLine className="text-xl" aria-hidden="true" />
                 </div>
                 <span
                   className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase  ${urgency.chip}`}
@@ -213,6 +227,27 @@ export function StudentAssignmentsSection({
                     </span>
                   </div>
                 </div>
+
+                {assignment.teachers.length > 0 && (
+                  <div className="mt-4">
+                    <span className="ui-label text-slate-400">Equipo docente</span>
+                    <ul className="mt-2 flex flex-wrap gap-3">
+                      {assignment.teachers.map((teacher) => (
+                        <li
+                          key={teacher.id}
+                          className="flex items-center gap-2 text-sm text-slate-700"
+                        >
+                          {/* Solo nombre: el alumno no navega al perfil de un docente. */}
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-app-border bg-slate-100 text-[10px] font-semibold uppercase text-slate-600">
+                            {teacher.firstName[0]}
+                            {teacher.lastName[0]}
+                          </span>
+                          {teacher.firstName} {teacher.lastName}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 flex items-center justify-between border-t border-app-border pt-4">
@@ -225,7 +260,7 @@ export function StudentAssignmentsSection({
                   <RiArrowRightLine />
                 </span>
               </div>
-            </article>
+            </div>
           );
         })}
       </div>

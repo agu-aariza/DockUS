@@ -18,10 +18,11 @@ import type {
   DeliveryEntity,
 } from "../shared/types";
 import { getErrorMessage } from "../shared/utils/errors";
-import { useWorkspace } from "../shared/workspace/WorkspaceContext";
+import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import { EvaluationProgressCard } from "./components/EvaluationProgressCard";
 import { StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
+import { DeliveryOutcomeBadge } from "../features/deliveries/components/DeliveryOutcomeBadge";
 import { resolveStudentRunOutcome } from "./studentWorkspaceInsights";
 import { ReportView } from "../shared/components/ReportView";
 
@@ -109,62 +110,6 @@ function GradeTimeline({ deliveries }: { deliveries: DeliveryEntity[] }) {
   );
 }
 
-function DeliveryStatusBadge({
-  delivery,
-  summaryRun,
-}: {
-  delivery: DeliveryEntity;
-  summaryRun: BuildRunEntity | null;
-}) {
-  const outcome = resolveStudentRunOutcome(summaryRun);
-
-  if (delivery.grade !== null) {
-    return (
-      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-        Nota {delivery.grade.toFixed(2)}
-      </span>
-    );
-  }
-
-  if (!summaryRun) {
-    return (
-      <span className="inline-flex rounded-full border border-app-border/30 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500">
-        Sin evaluación
-      </span>
-    );
-  }
-
-  if (outcome === "PASS") {
-    return (
-      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-        Apto
-      </span>
-    );
-  }
-
-  if (outcome === "FAIL") {
-    return (
-      <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-        No apto
-      </span>
-    );
-  }
-
-  if (outcome === "PARTIAL") {
-    return (
-      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-        Necesita mejoras
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
-      En seguimiento
-    </span>
-  );
-}
-
 function ReportContainer({
   delivery,
   summaryRun,
@@ -239,7 +184,7 @@ function ReportContainer({
               <h4 className="text-lg font-semibold text-slate-900">
                 Entrega v{delivery.version}
               </h4>
-              <DeliveryStatusBadge delivery={delivery} summaryRun={summaryRun} />
+              <DeliveryOutcomeBadge delivery={delivery} summaryRun={summaryRun} />
               {delivery.isLate ? (
                 <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
                   Fuera de plazo
@@ -318,7 +263,7 @@ function ReportContainer({
               <SkeletonCard />
             </div>
           ) : error ? (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <div className="rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-red-800">
               Error: {error}
             </div>
           ) : !run ? (
@@ -335,7 +280,7 @@ function ReportContainer({
 }
 
 export function StudentReportsSection({ data }: Props): JSX.Element {
-  const { selection } = useWorkspace();
+  const { selection } = useWorkspaceSelection();
   const { assignments, deliveries, latestRunByDeliveryId, loading, error } = data;
   const [displayLimit, setDisplayLimit] = useState(10);
 
@@ -441,8 +386,8 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
     return (
       <div className="space-y-6">
         <div className="rounded-lg border border-app-border bg-white p-6">
-          <Skeleton type="text" className="h-6 w-52 bg-slate-50" />
-          <Skeleton type="text" className="mt-4 h-4 w-3/4 bg-slate-50/60" />
+          <Skeleton type="text" className="h-6 w-52" />
+          <Skeleton type="text" className="mt-4 h-4 w-3/4" />
         </div>
         {[1, 2].map((index) => (
           <SkeletonCard key={index} />
@@ -453,7 +398,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-800">
+      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-red-800">
         Error: {error}
       </div>
     );
@@ -522,7 +467,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
                     </span>
                     
                     {latestDelivery && (
-                      <DeliveryStatusBadge
+                      <DeliveryOutcomeBadge
                         delivery={latestDelivery}
                         summaryRun={latestRun}
                       />

@@ -7,6 +7,7 @@ import { EvaluationNotificationBanner } from "./EvaluationNotificationBanner";
 import { StudentAssignmentsSection } from "./StudentAssignmentsSection";
 import { StudentDeliveriesSection } from "./StudentDeliveriesSection";
 import { StudentHomeSection } from "./StudentHomeSection";
+import { StudentRecordSection } from "./StudentRecordSection";
 import { StudentReportsSection } from "./StudentReportsSection";
 import { StudentSubmissionFlow } from "./StudentSubmissionFlow";
 import { useBuildRunStream } from "./hooks/useBuildRunStream";
@@ -18,7 +19,8 @@ type StudentTab =
   | "proyectos"
   | "entregas"
   | "subir"
-  | "informes";
+  | "informes"
+  | "expediente";
 
 export function StudentWorkspacePanel(): JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -155,6 +157,7 @@ export function StudentWorkspacePanel(): JSX.Element {
         {activeTab === "informes" ? (
           <StudentReportsSection data={workspaceData} />
         ) : null}
+        {activeTab === "expediente" ? <StudentRecordSection /> : null}
       </main>
     </div>
   );

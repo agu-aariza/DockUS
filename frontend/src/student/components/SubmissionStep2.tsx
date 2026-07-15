@@ -1,6 +1,14 @@
 import { useRef } from "react";
-import { RiAlertLine, RiArrowLeftLine, RiArrowRightLine, RiFileZipLine } from "react-icons/ri";
+import {
+  RiAlertLine,
+  RiArrowLeftLine,
+  RiArrowRightLine,
+  RiCheckboxCircleFill,
+  RiFileZipLine,
+  RiLoader4Line,
+} from "react-icons/ri";
 import { Button } from "../../shared/components/ui/Button";
+import { formatBytes } from "../../shared/utils/format";
 import { FileTreePreview } from "./FileTreePreview";
 import type { SubmissionFlowState } from "../hooks/useSubmissionFlow";
 
@@ -66,10 +74,12 @@ export function SubmissionStep2({ flow }: Props) {
         tabIndex={0}
         role="button"
         aria-label="Arrastra o selecciona un archivo"
-        className={`relative rounded-lg border-2 border-dashed px-6 py-10 text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+        className={`relative rounded-lg border-2 border-dashed px-6 py-10 text-center transition-[border-color,background-color,transform,box-shadow] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none ${
           isDragging
-            ? "border-primary bg-primary/5 shadow-inner"
-            : "border-app-border bg-slate-50 hover:border-primary/40 hover:bg-primary/5"
+            ? "scale-[1.01] border-primary bg-primary-subtle shadow-md"
+            : file
+              ? "border-success/50 bg-success-subtle"
+              : "border-app-border bg-slate-50 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary-subtle hover:shadow-sm"
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -85,48 +95,79 @@ export function SubmissionStep2({ flow }: Props) {
           aria-describedby={`${FILE_INPUT_ID}-hint`}
           onChange={(event) => handleFileSelection(event.target.files?.[0] ?? null)}
         />
-        <RiFileZipLine className="mx-auto text-5xl text-primary/60" />
         {file ? (
-          <div className="mt-4">
-            <div className="text-lg font-semibold text-slate-900">
-              {file.name}
-            </div>
-            <div className="mt-1 text-sm text-slate-500">
-              {(file.size / 1024 / 1024).toFixed(2)} MB
-            </div>
-          </div>
+          <RiCheckboxCircleFill
+            className="mx-auto text-5xl text-success"
+            aria-hidden="true"
+          />
         ) : (
-          <div className="mt-4">
+          <RiFileZipLine
+            className={`mx-auto text-5xl transition-transform duration-200 motion-reduce:transition-none ${
+              isDragging ? "-translate-y-1 text-primary" : "text-primary/60"
+            }`}
+            aria-hidden="true"
+          />
+        )}
+        <div className="mt-4">
+          {file ? (
+            <>
+              <div className="break-all text-lg font-semibold text-slate-900">
+                {file.name}
+              </div>
+              <div className="mt-1 text-sm text-slate-600">
+                {formatBytes(file.size)} · listo para revisar
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                Haz clic de nuevo para elegir otro archivo
+              </div>
+            </>
+          ) : (
             <div className="text-lg font-semibold text-slate-900">
               {isDragging
                 ? "Suelta el archivo aquí"
                 : "Haz clic o arrastra el archivo a esta zona"}
             </div>
-            <div
-              id={`${FILE_INPUT_ID}-hint`}
-              className="mt-2 text-sm text-slate-500"
-            >
-              Máximo 50 MB · Formatos admitidos: .zip, .tar.gz
-            </div>
+          )}
+
+          {/* Siempre presente: el input lo referencia con aria-describedby. */}
+          <div
+            id={`${FILE_INPUT_ID}-hint`}
+            className={`text-sm text-slate-500 ${file ? "sr-only" : "mt-2"}`}
+          >
+            Máximo 50 MB · Formatos admitidos: .zip, .tar.gz
           </div>
-        )}
+        </div>
       </div>
 
       {fileSizeError ? (
-        <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
-          <RiAlertLine className="shrink-0 text-base" />
+        <div
+          className="motion-rise-in flex items-center gap-2 rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-red-800"
+          role="alert"
+        >
+          <RiAlertLine className="shrink-0 text-base" aria-hidden="true" />
           El archivo no puede superar los 50 MB. Selecciona uno más ligero antes de continuar.
         </div>
       ) : null}
 
       {previewLoading ? (
-        <div className="rounded-lg border border-app-border bg-slate-50 px-4 py-3 text-sm text-slate-500">
+        <div
+          className="flex items-center gap-3 rounded-lg border border-app-border bg-slate-50 px-4 py-3 text-sm text-slate-600"
+          aria-busy="true"
+          aria-live="polite"
+        >
+          <RiLoader4Line
+            className="shrink-0 animate-spin text-base text-primary motion-reduce:animate-none"
+            aria-hidden="true"
+          />
           Analizando la estructura del archivo para mostrar la vista previa...
         </div>
       ) : null}
 
       {previewError ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div
+          className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-3 text-sm text-amber-900"
+          role="alert"
+        >
           {previewError}
         </div>
       ) : null}
@@ -146,7 +187,7 @@ export function SubmissionStep2({ flow }: Props) {
       ) : null}
 
       {shouldWarnBeforeContinue ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+        <div className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-4 text-sm text-amber-900">
           <div className="font-semibold">
             Detectamos señales que conviene revisar antes de seguir
           </div>
@@ -176,8 +217,20 @@ export function SubmissionStep2({ flow }: Props) {
           disabled={!file || previewLoading}
           onClick={handleNextStep}
         >
-          Continuar
-          <RiArrowRightLine />
+          {previewLoading ? (
+            <>
+              <RiLoader4Line
+                className="animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              Analizando...
+            </>
+          ) : (
+            <>
+              Continuar
+              <RiArrowRightLine aria-hidden="true" />
+            </>
+          )}
         </Button>
       </div>
     </div>

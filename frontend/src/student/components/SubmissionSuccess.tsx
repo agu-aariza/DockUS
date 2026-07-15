@@ -32,13 +32,14 @@ export function SubmissionSuccess({ flow, onNavigate }: Props) {
 
   return (
     <div className="space-y-6">
-      <StudentSurface tone="accent">
+      <StudentSurface tone="accent" className="motion-rise-in">
         <StudentSurfaceHeader
           eyebrow="Entrega registrada"
           title={`Versión v${createdVersion ?? "?"} enviada correctamente`}
           description={`Tu archivo ${file?.name ?? ""} ya forma parte del historial de la práctica. Ahora puedes dejar lanzada la evaluación técnica o volver al workspace para seguirla después.`}
           badge={
-            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success-subtle px-3 py-1 text-xs font-semibold text-emerald-700">
+              <RiCheckboxCircleLine aria-hidden="true" />
               Entrega confirmada
             </span>
           }
@@ -110,7 +111,7 @@ export function SubmissionSuccess({ flow, onNavigate }: Props) {
               </div>
 
               {buildError ? (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                <div className="rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-red-800">
                   {buildError}
                 </div>
               ) : null}
@@ -123,7 +124,7 @@ export function SubmissionSuccess({ flow, onNavigate }: Props) {
                 >
                   {buildLaunching ? (
                     <>
-                      <RiLoader4Line className="animate-spin" />
+                      <RiLoader4Line className="animate-spin motion-reduce:animate-none" />
                       Lanzando evaluación
                     </>
                   ) : (

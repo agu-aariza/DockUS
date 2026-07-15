@@ -1,5 +1,6 @@
 import { RiArrowLeftLine, RiLoader4Line, RiUploadCloud2Line } from "react-icons/ri";
 import { Button } from "../../shared/components/ui/Button";
+import { formatBytes } from "../../shared/utils/format";
 import { StudentKeyValueList } from "./StudentWorkspaceSurface";
 import { formatAssignmentDate } from "../deadlineUtils";
 import type { SubmissionFlowState } from "../hooks/useSubmissionFlow";
@@ -24,6 +25,8 @@ export function SubmissionStep3({ flow }: Props) {
   if (step !== 3) {
     return null;
   }
+
+  const isUploading = status === "uploading";
 
   return (
     <div className="space-y-6">
@@ -52,9 +55,7 @@ export function SubmissionStep3({ flow }: Props) {
             },
             {
               label: "Tamaño",
-              value: file
-                ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
-                : "Sin archivo",
+              value: file ? formatBytes(file.size) : "Sin archivo",
             },
             {
               label: "Intentos despues del envio",
@@ -78,7 +79,7 @@ export function SubmissionStep3({ flow }: Props) {
             <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
               {previewValidation.diff.persisted.length} persistentes
             </span>
-            <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+            <span className="rounded-full border border-danger/30 bg-danger-subtle px-3 py-1 text-xs font-semibold text-rose-700">
               -{previewValidation.diff.removed.length} eliminados
             </span>
           </div>
@@ -91,34 +92,63 @@ export function SubmissionStep3({ flow }: Props) {
       </div>
 
       {afterDeadline ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+        <div
+          className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-3 text-sm leading-6 text-amber-900"
+          role="alert"
+        >
           La fecha de cierre ya pasó. La entrega quedará marcada como fuera
           de plazo, aunque seguirá registrada y evaluable.
+        </div>
+      ) : null}
+
+      {isUploading ? (
+        <div
+          className="motion-rise-in rounded-lg border border-primary/20 bg-primary-subtle px-4 py-4"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div className="flex items-center gap-3 text-sm font-semibold text-primary">
+            <RiLoader4Line
+              className="shrink-0 animate-spin text-base motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            Subiendo tu entrega y encolando la evaluación...
+          </div>
+          <p className="mt-1 pl-7 text-xs leading-5 text-slate-600">
+            No cierres esta ventana. En cuanto se registre, verás el progreso de
+            la evaluación en vivo.
+          </p>
+          <div className="mt-3 h-1 overflow-hidden rounded-full bg-primary/15">
+            <div className="progress-indeterminate h-full w-1/4 rounded-full bg-primary" />
+          </div>
         </div>
       ) : null}
 
       <div className="flex flex-col gap-3 border-t border-app-border pt-4 sm:flex-row sm:justify-between">
         <Button
           variant="secondary"
-          disabled={status === "uploading"}
+          disabled={isUploading}
           onClick={() => setStep(2)}
         >
-          <RiArrowLeftLine />
+          <RiArrowLeftLine aria-hidden="true" />
           Volver
         </Button>
         <Button
           variant="primary"
-          disabled={status === "uploading"}
+          disabled={isUploading}
           onClick={handleSubmit}
         >
-          {status === "uploading" ? (
+          {isUploading ? (
             <>
-              <RiLoader4Line className="animate-spin" />
-              Enviando
+              <RiLoader4Line
+                className="animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              Enviando...
             </>
           ) : (
             <>
-              <RiUploadCloud2Line />
+              <RiUploadCloud2Line aria-hidden="true" />
               Enviar ahora
             </>
           )}

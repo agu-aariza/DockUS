@@ -39,7 +39,7 @@ export function StudentSubmissionFlow({
 
           <div className="p-6 sm:p-8">
             {status === "error" ? (
-              <div className="mb-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+              <div className="mb-6 rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-red-800" role="alert">
                 Error al procesar la entrega: {errorMessage}
               </div>
             ) : null}

@@ -46,12 +46,12 @@ export function SubmissionStep1({ flow }: Props) {
           return (
             <label
               key={assignment.id}
-              className={`flex cursor-pointer items-start gap-4 rounded-lg border p-5 transition-all ${
+              className={`flex cursor-pointer items-start gap-4 rounded-lg border p-5 shadow-sm focus-within:ring-2 focus-within:ring-primary/40 ${
                 disabled
-                  ? "cursor-not-allowed border-app-border/30 bg-slate-50/20 opacity-70"
+                  ? "cursor-not-allowed border-app-border/30 bg-slate-50/20 opacity-70 shadow-none"
                   : selectedAssignmentId === assignment.id
-                    ? "border-primary bg-primary/5 shadow-sm"
-                    : "border-app-border bg-white  hover:shadow-sm"
+                    ? "border-primary bg-primary-subtle ring-1 ring-primary/20"
+                    : "card-interactive border-app-border bg-white"
               }`}
             >
               <input
@@ -63,8 +63,14 @@ export function SubmissionStep1({ flow }: Props) {
                 onChange={() => setSelectedAssignmentId(assignment.id)}
                 className="mt-1 h-4 w-4 text-primary focus:ring-primary"
               />
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-primary">
-                <RiFolderOpenLine className="text-xl" />
+              <div
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 motion-reduce:transition-none ${
+                  selectedAssignmentId === assignment.id
+                    ? "bg-primary text-white"
+                    : "bg-slate-50 text-primary"
+                }`}
+              >
+                <RiFolderOpenLine className="text-xl" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">

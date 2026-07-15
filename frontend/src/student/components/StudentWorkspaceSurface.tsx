@@ -38,9 +38,12 @@ export function StudentSurface({
   className = "",
   tone = "default",
 }: StudentSurfaceProps): JSX.Element {
+  // `subtle` se usa como panel anidado: elevarlo aplanaría la jerarquía en vez de crearla.
+  const elevation = tone === "subtle" ? "" : "shadow-sm";
+
   return (
     <section
-      className={`rounded-lg border p-5 ${SURFACE_TONE[tone]} ${className}`}
+      className={`rounded-lg border p-5 ${elevation} ${SURFACE_TONE[tone]} ${className}`}
     >
       {children}
     </section>

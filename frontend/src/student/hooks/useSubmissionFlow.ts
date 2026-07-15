@@ -5,7 +5,7 @@ import { builderApi } from "../../shared/api/builderApi";
 import { deliveriesApi, storageApi } from "../../shared/api/services";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { computeSha256Hex } from "../../shared/utils/hash";
-import { useWorkspace } from "../../shared/workspace/WorkspaceContext";
+import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { describeAssignmentTimeline, pickPrimaryAssignment } from "../deadlineUtils";
 import { deriveStudentWorkflowState, describeStudentWorkflowState } from "../studentWorkflowState";
 import { deriveStudentWorkspaceInsights } from "../studentWorkspaceInsights";
@@ -74,7 +74,7 @@ function computeMedianDurationMs(
 export type SubmissionFlowState = ReturnType<typeof useSubmissionFlow>;
 
 export function useSubmissionFlow(data: StudentWorkspaceData) {
-  const { selection, setDelivery, setProject, setAssignment } = useWorkspace();
+  const { selection, setDelivery, setProject, setAssignment } = useWorkspaceSelection();
   const { assignments, deliveries, latestRunByDeliveryId, refresh } = data;
 
   const initialAssignment =

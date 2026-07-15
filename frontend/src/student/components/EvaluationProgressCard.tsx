@@ -72,10 +72,13 @@ export function EvaluationProgressCard({
     }
   }, [run.status]);
 
+  const progressPercent = Math.round(progress.progress * 100);
+
   return (
     <section
-      className="rounded-lg border border-app-border bg-white p-5"
+      className="rounded-lg border border-app-border bg-white p-5 shadow-sm"
       aria-live="polite"
+      aria-busy={isActive}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -95,7 +98,17 @@ export function EvaluationProgressCard({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex rounded-full border border-app-border bg-slate-50 px-3 py-1 text-xs font-semibold uppercase text-slate-600">
+          <span className="inline-flex items-center gap-2 rounded-full border border-app-border bg-slate-50 px-3 py-1 text-xs font-semibold uppercase text-slate-600">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                streamState === "streaming"
+                  ? "bg-success status-pulse status-pulse-success"
+                  : streamState === "polling"
+                    ? "bg-warning"
+                    : "bg-slate-400"
+              }`}
+              aria-hidden="true"
+            />
             {streamLabel}
           </span>
           {onOpenReport ? (
@@ -106,14 +119,21 @@ export function EvaluationProgressCard({
         </div>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-full bg-slate-100">
+      <div
+        className="mt-6 overflow-hidden rounded-full bg-slate-100"
+        role="progressbar"
+        aria-valuenow={progressPercent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Progreso de la evaluación"
+      >
         <div
-          className="h-2 rounded-full bg-primary transition-all duration-300"
-          style={{ width: `${Math.round(progress.progress * 100)}%` }}
+          className="h-2 rounded-full bg-primary transition-[width] duration-500 ease-out motion-reduce:transition-none"
+          style={{ width: `${progressPercent}%` }}
         />
       </div>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-4">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
         {steps.map((step) => {
           const reached = isStageReached(progress.stage, step.key);
           const isCurrent = progress.stage === step.key;
@@ -121,25 +141,38 @@ export function EvaluationProgressCard({
           return (
             <div
               key={step.key}
-              className={`rounded-lg border px-4 py-4 ${
+              className={`rounded-lg border px-4 py-4 transition-colors duration-300 motion-reduce:transition-none ${
                 isCurrent
-                  ? "border-primary bg-white"
+                  ? "border-primary bg-primary-subtle status-pulse status-pulse-primary"
                   : reached
-                    ? "border-app-border bg-slate-50"
+                    ? "border-success/30 bg-success-subtle"
                     : "border-app-border bg-white"
               }`}
             >
               <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
                 {isCurrent ? (
-                  <RiLoader4Line className="animate-spin text-primary" />
+                  <RiLoader4Line
+                    className="animate-spin text-primary motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
                 ) : reached ? (
-                  <span className="h-2 w-2 rounded-full bg-success" />
+                  <span
+                    className="h-2 w-2 rounded-full bg-success"
+                    aria-hidden="true"
+                  />
                 ) : (
-                  <span className="h-2 w-2 rounded-full bg-slate-300" />
+                  <span
+                    className="h-2 w-2 rounded-full bg-slate-300"
+                    aria-hidden="true"
+                  />
                 )}
                 {step.label}
               </div>
-              <div className="mt-2 text-sm font-medium text-slate-900">
+              <div
+                className={`mt-2 text-sm font-medium ${
+                  isCurrent ? "text-primary" : "text-slate-900"
+                }`}
+              >
                 {isCurrent ? "En curso" : reached ? "Completado" : "Pendiente"}
               </div>
             </div>

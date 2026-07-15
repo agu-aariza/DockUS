@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { DeliveryEntity } from "../shared/types";
-import { useWorkspace } from "../shared/workspace/WorkspaceContext";
+import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import {
   RiFileTextLine,
   RiFilter3Line,
@@ -75,7 +75,7 @@ function renderOutcomeBadge(outcome: ReturnType<typeof resolveStudentRunOutcome>
     outcome === "PASS"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : outcome === "FAIL"
-        ? "border-rose-200 bg-rose-50 text-rose-700"
+        ? "border-danger/30 bg-danger-subtle text-rose-700"
         : outcome === "PARTIAL"
           ? "border-amber-200 bg-amber-50 text-amber-700"
           : "border-app-border/30 bg-slate-50 text-slate-500";
@@ -100,7 +100,7 @@ export function StudentDeliveriesSection({
   data,
   onNavigate,
 }: Props): JSX.Element {
-  const { setDelivery, setAssignment, setProject } = useWorkspace();
+  const { setDelivery, setAssignment, setProject } = useWorkspaceSelection();
   const [launchingId, setLaunchingId] = useState<string | null>(null);
 
   const handleLaunchEvaluation = async (deliveryId: string) => {
@@ -176,7 +176,7 @@ export function StudentDeliveriesSection({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-800">
+      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-red-800">
         Error: {error}
       </div>
     );
@@ -349,7 +349,7 @@ export function StudentDeliveriesSection({
                       >
                         {launchingId === delivery.id ? (
                           <>
-                            <RiLoader4Line className="animate-spin" />
+                            <RiLoader4Line className="animate-spin motion-reduce:animate-none" />
                             Lanzando...
                           </>
                         ) : (
@@ -372,8 +372,9 @@ export function StudentDeliveriesSection({
             })}
           </div>
 
-          <div className="hidden overflow-hidden rounded-lg border border-app-border bg-white md:block">
-            <table className="min-w-full border-collapse text-left">
+          <div className="hidden overflow-hidden rounded-lg border border-app-border bg-white shadow-sm md:block">
+            <div className="custom-scrollbar overflow-x-auto">
+              <table className="min-w-full border-collapse text-left">
               <thead className="bg-slate-50">
                 <tr className="border-b border-app-border">
                   {["Versión", "Práctica", "Estado", "Resultado y nota", "Fecha", "Acciones"].map((label) => (
@@ -441,7 +442,7 @@ export function StudentDeliveriesSection({
                               onClick={() => handleLaunchEvaluation(delivery.id)}
                             >
                               {launchingId === delivery.id ? (
-                                <RiLoader4Line className="animate-spin" />
+                                <RiLoader4Line className="animate-spin motion-reduce:animate-none" />
                               ) : (
                                 <RiRocketLine />
                               )}
@@ -459,8 +460,9 @@ export function StudentDeliveriesSection({
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}

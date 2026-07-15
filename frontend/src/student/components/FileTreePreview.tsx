@@ -1,6 +1,7 @@
 import { RiFile3Line, RiFolder3Line, RiGitCommitLine, RiHistoryLine } from "react-icons/ri";
 
-import { Badge } from "../../shared/components/ui/Layout";
+import { StatusBadge } from "../../shared/components/ui/StatusBadge";
+import { formatBytes } from "../../shared/utils/format";
 import type {
   SubmissionPreviewDiff,
   SubmissionPreviewFile,
@@ -24,16 +25,6 @@ interface FileTreePreviewProps {
   files: SubmissionPreviewFile[];
   diff: SubmissionPreviewDiff;
   totalSizeBytes: number;
-}
-
-function formatBytes(sizeBytes: number): string {
-  if (sizeBytes < 1024) {
-    return `${sizeBytes} B`;
-  }
-  if (sizeBytes < 1024 * 1024) {
-    return `${(sizeBytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(sizeBytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
 function sortNodes(nodes: TreeNode[]): TreeNode[] {
@@ -147,15 +138,15 @@ export function FileTreePreview({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge variant="success" icon={<RiGitCommitLine />}>
+          <StatusBadge tone="success" icon={<RiGitCommitLine />}>
             +{diff.added.length} añadidos
-          </Badge>
-          <Badge variant="warning" icon={<RiHistoryLine />}>
+          </StatusBadge>
+          <StatusBadge tone="warning" icon={<RiHistoryLine />}>
             {diff.persisted.length} persistentes
-          </Badge>
-          <Badge variant="danger" icon={<RiHistoryLine />}>
+          </StatusBadge>
+          <StatusBadge tone="danger" icon={<RiHistoryLine />}>
             -{diff.removed.length} eliminados
-          </Badge>
+          </StatusBadge>
         </div>
       </div>
 

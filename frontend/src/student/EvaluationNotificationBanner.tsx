@@ -65,11 +65,14 @@ export function EvaluationNotificationBanner({
   if (notifications.length === 0) return null;
 
   return (
-    <div className="mb-6 space-y-3" aria-live="polite">
+    <div
+      className="surface-floating sticky top-0 z-20 space-y-3 rounded-none border-x-0 border-t-0 px-5 py-4 lg:px-8"
+      aria-live="polite"
+    >
       {notifications.length > 1 ? (
         <div className="flex justify-end">
           <button
-            className="text-xs font-semibold text-slate-400 transition hover:text-slate-900"
+            className="rounded-md px-2 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 motion-reduce:transition-none"
             onClick={onDismissAll}
           >
             Descartar todas
@@ -81,28 +84,31 @@ export function EvaluationNotificationBanner({
         const config = getNotificationConfig(notification);
 
         return (
-          <div key={notification.id} className="relative">
+          <div key={notification.id} className="motion-rise-in relative">
             <Alert variant={config.variant} title={config.label} icon={config.icon}>
-              <div className="space-y-2">
+              <div className="space-y-2 pr-8">
                 <p className="text-xs text-slate-500">
                   <strong>v{notification.deliveryVersion}</strong> · {notification.projectTitle}
                 </p>
                 <p className="text-xs text-slate-500">{config.description}</p>
                 <button
-                  className="flex items-center gap-1.5 text-xs font-semibold text-primary transition hover:text-primary-hover"
+                  className="group flex items-center gap-1.5 rounded-md py-1 text-xs font-semibold text-primary transition-colors hover:text-primary-hover motion-reduce:transition-none"
                   onClick={() => onViewReport(notification.deliveryId)}
                 >
-                  <RiFileTextLine />
+                  <RiFileTextLine aria-hidden="true" />
                   Consultar informe
+                  <span className="transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none">
+                    →
+                  </span>
                 </button>
               </div>
             </Alert>
             <button
-              className="absolute right-3 top-3 text-slate-400 transition hover:text-slate-600"
+              className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 motion-reduce:transition-none"
               onClick={() => onDismiss(notification.id)}
               aria-label="Descartar notificación"
             >
-              <RiCloseLine className="text-lg" />
+              <RiCloseLine className="text-lg" aria-hidden="true" />
             </button>
           </div>
         );
