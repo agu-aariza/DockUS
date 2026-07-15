@@ -9,6 +9,7 @@ import type { ILlmGenerationService } from './llm-generation.token';
 import type {
   LlmGenerateRequest,
   LlmGenerateResult,
+  LlmProviderCredentials,
   LlmUsage,
 } from './llm.types';
 import {
@@ -20,36 +21,78 @@ import {
 @Injectable()
 export class BedrockGenerationService implements ILlmGenerationService {
   private readonly logger = new Logger(BedrockGenerationService.name);
-  private readonly client: BedrockRuntimeClient;
   private readonly region: string;
+  private readonly maxAttempts: number;
+  private readonly retryBaseDelayMs: number;
+  /**
+   * Un cliente por combinación de región y credenciales. Bedrock se configura
+   * desde la pestaña "Modelos de IA", así que la región y la cuenta pueden
+   * cambiar sin reiniciar; crear el cliente en cada llamada sería tirar a la
+   * basura el pool de conexiones del SDK.
+   */
+  private readonly clients = new Map<string, BedrockRuntimeClient>();
 
   constructor(private readonly configService: ConfigService) {
     this.region = this.configService.get<string>('AWS_REGION', 'us-east-1');
-    const maxAttempts = this.configService.get<number>(
+    this.maxAttempts = this.configService.get<number>(
       'BUILDER_BEDROCK_MAX_ATTEMPTS',
       3,
     );
-    const retryBaseDelayMs = this.configService.get<number>(
+    this.retryBaseDelayMs = this.configService.get<number>(
       'BUILDER_BEDROCK_RETRY_BASE_DELAY_MS',
       250,
     );
-
-    this.client = new BedrockRuntimeClient({
-      region: this.region,
-      retryStrategy: new ConfiguredRetryStrategy(
-        maxAttempts,
-        (attempt) => retryBaseDelayMs * 2 ** attempt,
-      ),
-    });
   }
 
   getRuntimeConfig(): { region: string } {
     return { region: this.region };
   }
 
+  /**
+   * Cliente para las credenciales de la petición. Sin `accessKeyId` explícito se
+   * delega en la cadena de credenciales del SDK (variables de entorno, rol IAM),
+   * que es como funcionaba antes de que la región fuese configurable.
+   */
+  private resolveClient(
+    credentials: LlmProviderCredentials | null | undefined,
+  ): BedrockRuntimeClient {
+    const region = credentials?.region?.trim() || this.region;
+    const accessKeyId = credentials?.accessKeyId?.trim();
+    const secretAccessKey = credentials?.apiKey?.trim();
+    const useExplicit = Boolean(accessKeyId && secretAccessKey);
+
+    const cacheKey = `${region}|${useExplicit ? accessKeyId : 'env'}`;
+    const cached = this.clients.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const client = new BedrockRuntimeClient({
+      region,
+      ...(useExplicit
+        ? {
+            credentials: {
+              accessKeyId: accessKeyId as string,
+              secretAccessKey: secretAccessKey as string,
+            },
+          }
+        : {}),
+      retryStrategy: new ConfiguredRetryStrategy(
+        this.maxAttempts,
+        (attempt) => this.retryBaseDelayMs * 2 ** attempt,
+      ),
+    });
+
+    this.clients.set(cacheKey, client);
+    return client;
+  }
+
   async generate(request: LlmGenerateRequest): Promise<LlmGenerateResult> {
-    const { profile, prompt, systemPrompt, stage, promptId } = request;
+    const { profile, prompt, systemPrompt, stage, promptId, credentials } =
+      request;
     const timeoutMs = request.timeoutMs ?? profile.timeoutMs;
+    const client = this.resolveClient(credentials);
+    const region = credentials?.region?.trim() || this.region;
 
     const effectiveSystem =
       request.format === 'json'
@@ -63,7 +106,7 @@ export class BedrockGenerationService implements ILlmGenerationService {
         promptId,
         modelId: profile.modelId,
         profileVersion: profile.profileVersion,
-        region: this.region,
+        region,
         timeoutMs,
         maxTokens: profile.maxTokens,
         temperature: profile.temperature,
@@ -89,7 +132,7 @@ export class BedrockGenerationService implements ILlmGenerationService {
         },
       });
 
-      const response = await this.client.send(command, {
+      const response = await client.send(command, {
         abortSignal: controller.signal,
       });
 
