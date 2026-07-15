@@ -55,6 +55,9 @@ export const envValidationSchema = Joi.object({
   AWS_ACCESS_KEY_ID: Joi.string().optional(),
   AWS_SECRET_ACCESS_KEY: Joi.string().optional(),
   AWS_SESSION_TOKEN: Joi.string().optional(),
+  // Clave maestra con la que se cifran las API keys de los proveedores de LLM
+  // configurados desde la UI. Sin ella, el backend rechaza guardarlas.
+  LLM_CREDENTIALS_SECRET: Joi.string().min(32).optional(),
   BUILDER_BEDROCK_MAX_ATTEMPTS: Joi.number()
     .integer()
     .min(1)

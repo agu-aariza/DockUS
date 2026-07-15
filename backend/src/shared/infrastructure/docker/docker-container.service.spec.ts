@@ -198,6 +198,7 @@ describe('DockerExecutionService', () => {
       {
         runEphemeralContainer,
       } as any,
+      {} as any,
     );
 
     await service.runEphemeralContainer({
