@@ -124,11 +124,30 @@ export function mapTransportError(
   });
 }
 
+/** Reintentos por defecto para `postJson`: solo Bedrock tenia backoff propio (SDK de AWS); el resto de proveedores fallaban permanentemente ante un 429/5xx transitorio. */
+const DEFAULT_MAX_ATTEMPTS = 3;
+const DEFAULT_RETRY_BASE_DELAY_MS = 300;
+
+function isRetryableLlmError(error: LlmRequestError): boolean {
+  if (error.code === 'throttling' || error.code === 'connectivity') {
+    return true;
+  }
+  return (
+    error.code === 'http_error' &&
+    typeof error.httpStatus === 'number' &&
+    error.httpStatus >= 500
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * `fetch` con timeout duro. Los proveedores HTTP no exponen un cliente con
  * cancelación propia, así que el corte lo impone el `AbortController`.
  */
-export async function postJson(
+async function postJsonOnce(
   providerName: string,
   url: string,
   headers: Record<string, string>,
@@ -160,6 +179,43 @@ export async function postJson(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Reintenta `postJsonOnce` con backoff exponencial + jitter ante errores
+ * transitorios (throttling, conectividad, 5xx). Errores no reintentables
+ * (401/403/404, contrato invalido, etc.) fallan de inmediato en el primer
+ * intento. `maxAttempts` es opcional para no romper a los llamadores
+ * existentes que ya pasaban solo los primeros 5 parametros.
+ */
+export async function postJson(
+  providerName: string,
+  url: string,
+  headers: Record<string, string>,
+  body: unknown,
+  timeoutMs: number,
+  maxAttempts: number = DEFAULT_MAX_ATTEMPTS,
+): Promise<unknown> {
+  let lastError: LlmRequestError | undefined;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await postJsonOnce(providerName, url, headers, body, timeoutMs);
+    } catch (error) {
+      const llmError = error as LlmRequestError;
+      lastError = llmError;
+      if (attempt === maxAttempts || !isRetryableLlmError(llmError)) {
+        throw llmError;
+      }
+      const backoffMs = DEFAULT_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+      await sleep(
+        backoffMs + Math.floor(Math.random() * DEFAULT_RETRY_BASE_DELAY_MS),
+      );
+    }
+  }
+  throw (
+    lastError ??
+    mapTransportError(providerName, new Error('Fallo desconocido en postJson.'))
+  );
 }
 
 /** Concatena base y ruta sin duplicar ni perder la barra intermedia. */

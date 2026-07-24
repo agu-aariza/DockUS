@@ -46,6 +46,57 @@ export class DockerImageService {
     return true;
   }
 
+  /**
+   * Elimina las imágenes de entorno más antiguas que `olderThanHours`.
+   *
+   * Se apoya en la etiqueta `dockus.role=environment` que ya aplica
+   * `BuilderEnvironmentImageService` al construirlas, de modo que la poda no
+   * puede alcanzar imágenes ajenas al sistema. Docker no borra una imagen en
+   * uso por un contenedor vivo, así que una evaluación en curso no se ve
+   * afectada.
+   *
+   * `--all` es imprescindible y no una optimización. Sin él, `docker image
+   * prune` **solo considera imágenes colgantes** (las que han perdido su
+   * etiqueta), y las imágenes de entorno siempre están etiquetadas como
+   * `dockus-env-<hash>:latest`. Verificado en la fase 4 (T4.6): el comando sin
+   * `--all` recuperaba 0 B dejando intacta una imagen de entorno de nueve días
+   * y 1,39 GB que cumplía ambos filtros. El filtro por etiqueta sigue acotando
+   * el alcance, de modo que `--all` no amplía lo que la poda puede tocar: solo
+   * hace que llegue a tocarlo.
+   *
+   * @returns número de imágenes eliminadas.
+   */
+  async pruneEnvironmentImages(options: {
+    olderThanHours: number;
+    timeoutMs: number;
+  }): Promise<number> {
+    const result = await runCommand(
+      'docker',
+      [
+        'image',
+        'prune',
+        '--all',
+        '--force',
+        '--filter',
+        'label=dockus.role=environment',
+        '--filter',
+        `until=${Math.max(1, Math.floor(options.olderThanHours))}h`,
+      ],
+      { timeoutMs: options.timeoutMs },
+    );
+
+    if (result.timedOut || result.exitCode !== 0) {
+      throw new ServiceUnavailableException(
+        `No se pudo podar las imagenes de entorno: ${normalizeDockerCommandError(result)}`,
+      );
+    }
+
+    // La salida lista una línea por imagen bajo la cabecera "Deleted Images:".
+    return result.stdout
+      .split('\n')
+      .filter((line) => line.trim().startsWith('deleted:')).length;
+  }
+
   async buildImage(options: DockerImageBuildOptions): Promise<void> {
     const args = [
       'image',

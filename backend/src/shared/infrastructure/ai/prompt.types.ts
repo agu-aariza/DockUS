@@ -79,13 +79,30 @@ export function interpolatePromptBundle(
   };
 }
 
+/**
+ * El nombre de la variable se incrusta en una expresión regular: sin escapar,
+ * una clave con metacaracteres (`a.b`) coincidiría con marcadores que no son
+ * el suyo.
+ */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function interpolateString(
   value: string,
   variables: Record<string, string>,
 ): string {
   let rendered = value;
   for (const [key, replacement] of Object.entries(variables)) {
-    rendered = rendered.replace(new RegExp(`{{${key}}}`, 'g'), replacement);
+    // La función de reemplazo es obligatoria, no estilística: pasar el valor
+    // como string haría que `String.replace` interpretase `$&`, `$$`, `` $` ``
+    // y `$'` como referencias a la coincidencia, corrompiendo en silencio
+    // cualquier variable que contenga esos patrones. Con una función, el valor
+    // se inserta literal.
+    rendered = rendered.replace(
+      new RegExp(escapeRegExp(`{{${key}}}`), 'g'),
+      () => replacement,
+    );
   }
   return rendered;
 }

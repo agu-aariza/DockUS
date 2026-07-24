@@ -31,7 +31,7 @@ export class DockerHostService {
 
   async assertDockerAvailable(
     options: DockerHostAvailabilityOptions,
-  ): Promise<void> {
+  ): Promise<DockerHostInfo> {
     const dockerInfo = await this.inspectDockerHost(options);
     if (!dockerInfo.ServerVersion) {
       throw new ServiceUnavailableException(
@@ -55,6 +55,8 @@ export class DockerHostService {
         'Docker daemon no disponible: runtime runsc no registrado.',
       );
     }
+
+    return dockerInfo;
   }
 
   async tryVersion(

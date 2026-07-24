@@ -10,6 +10,7 @@
 
 import {
   CreateBucketCommand,
+  GetBucketLifecycleConfigurationCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
@@ -23,11 +24,31 @@ import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
 import { toBoolean } from '../../utils/to-boolean.util';
 
+/**
+ * Prefijo bajo el que el motor de evaluación guarda su evidencia
+ * (`evidence.service.ts`: `runs/<buildRunId>/<tipo>/...`). Es el único de los
+ * tres prefijos del bucket que puede caducar: `deliveries/` y `projects/`
+ * guardan entregas y suites docentes, cuyo borrado es una decisión académica.
+ */
+const EVIDENCE_PREFIX = 'runs/';
+
 interface PutObjectParams {
   bucket: string;
   key: string;
-  body: Buffer;
+  /**
+   * Acepta un flujo además de un `Buffer` (ESC-ALTO-05): las subidas grandes
+   * llegan como fichero en disco y transmitirlas por trozos evita volver a
+   * cargarlas enteras en el montículo justo antes de enviarlas.
+   */
+  body: Buffer | Readable;
   contentType: string;
+  /**
+   * Obligatorio cuando `body` es un flujo. El SDK de S3 no puede deducir la
+   * longitud de un `Readable` y, sin ella, lo acumula en memoria para calcularla
+   * —anulando por completo el motivo de usar un flujo—. Con `Buffer` se omite:
+   * el SDK ya conoce el tamaño.
+   */
+  contentLength?: number;
 }
 
 @Injectable()
@@ -36,6 +57,8 @@ export class MinioStorageService implements OnModuleInit {
   private readonly s3Client: S3Client;
   private readonly bucketName: string;
   private readonly signedUrlTtlSeconds: number;
+  /** Días tras los que expira la evidencia generada. 0 desactiva la regla. */
+  private readonly evidenceRetentionDays: number;
   private readonly bootstrapOnStartup: boolean;
   private readonly nodeEnv: string;
 
@@ -80,6 +103,10 @@ export class MinioStorageService implements OnModuleInit {
       'STORAGE_SIGNED_URL_TTL_SECONDS',
       600,
     );
+    this.evidenceRetentionDays = configService.get<number>(
+      'STORAGE_EVIDENCE_RETENTION_DAYS',
+      90,
+    );
     this.bootstrapOnStartup = toBoolean(
       this.configService.get<string | boolean>(
         'STORAGE_BOOTSTRAP_ON_STARTUP',
@@ -95,6 +122,93 @@ export class MinioStorageService implements OnModuleInit {
     }
 
     await this.ensureBucketExists(this.bucketName);
+    await this.verifyRetentionPolicy(this.bucketName);
+  }
+
+  /**
+   * Comprueba —**sin escribirla**— que la regla de caducidad de evidencia esté
+   * puesta en el bucket (ESC-ALTO-09).
+   *
+   * Por qué solo se comprueba y no se aplica:
+   * - La versión de MinIO desplegada (`RELEASE.2024-08-29`) rechaza
+   *   `PutBucketLifecycleConfiguration` porque exige el encabezado
+   *   `Content-Md5`, que el SDK de AWS v3 no envía. Se probó también con
+   *   `requestChecksumCalculation: 'WHEN_REQUIRED'`, sin efecto. El cliente
+   *   oficial `mc` sí lo envía, de modo que la regla se fija **fuera de la
+   *   aplicación**, como paso de despliegue:
+   *
+   *   ```sh
+   *   mc alias set dockus http://<host>:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+   *   mc ilm rule add dockus/<bucket> --prefix "runs/" --expire-days 90
+   *   ```
+   *
+   * - `GetBucketLifecycleConfiguration` **sí funciona** contra esta versión
+   *   (verificado), y es lo que permite conservar aquí una red de seguridad.
+   *
+   * Por qué la comprobación merece la pena:
+   * - La versión anterior de este método *aparentaba* aplicar la política y
+   *   registraba «política aplicada» mientras filtraba por un prefijo
+   *   (`evidence/`) que **no existe en el bucket**: la evidencia vive bajo
+   *   `runs/`. Dos fallos superpuestos que se tapaban entre sí. Un aviso
+   *   explícito al arrancar es justo lo que habría delatado el segundo.
+   *
+   * Nunca impide arrancar: sin regla el sistema funciona igual —es el estado
+   * previo— pero el disco crece sin límite, y eso debe verse.
+   */
+  private async verifyRetentionPolicy(bucket: string): Promise<void> {
+    if (this.evidenceRetentionDays <= 0) {
+      return;
+    }
+
+    const warn = (motivo: string): void => {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'storage_retention_policy_missing',
+          bucket,
+          prefix: EVIDENCE_PREFIX,
+          motivo,
+          accion: `mc ilm rule add <alias>/${bucket} --prefix "${EVIDENCE_PREFIX}" --expire-days ${this.evidenceRetentionDays}`,
+        }),
+      );
+    };
+
+    try {
+      const config = await this.s3Client.send(
+        new GetBucketLifecycleConfigurationCommand({ Bucket: bucket }),
+      );
+
+      // Basta con que alguna regla activa cubra el prefijo de evidencia. No se
+      // exige que los días coincidan con `STORAGE_EVIDENCE_RETENTION_DAYS`: la
+      // regla la gobierna quien opera el despliegue y puede tener motivos para
+      // fijar otro plazo; lo que no puede es faltar.
+      const cubierta = (config.Rules ?? []).some(
+        (rule) =>
+          rule.Status === 'Enabled' &&
+          rule.Expiration?.Days !== undefined &&
+          (rule.Filter?.Prefix ?? '') === EVIDENCE_PREFIX,
+      );
+
+      if (cubierta) {
+        this.logger.log(
+          `Politica de retencion verificada en ${bucket} para el prefijo "${EVIDENCE_PREFIX}".`,
+        );
+        return;
+      }
+
+      warn(
+        'existe configuracion de ciclo de vida pero ninguna regla activa cubre el prefijo de evidencia',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // MinIO devuelve NoSuchLifecycleConfiguration cuando no hay ninguna regla:
+      // es el caso normal de un despliegue nuevo, no una avería.
+      warn(
+        message.includes('NoSuchLifecycleConfiguration') ||
+          message.includes('does not exist')
+          ? 'el bucket no tiene ninguna regla de ciclo de vida'
+          : `no se pudo consultar la configuracion: ${message}`,
+      );
+    }
   }
 
   getBucketName(): string {
@@ -106,12 +220,23 @@ export class MinioStorageService implements OnModuleInit {
   }
 
   async putObject(params: PutObjectParams): Promise<void> {
+    if (params.body instanceof Readable && params.contentLength === undefined) {
+      // Fallar aquí y no dejarlo pasar: sin `ContentLength` el SDK bufferiza el
+      // flujo entero para deducirla, de modo que el fallo sería un consumo de
+      // memoria silencioso —justo lo que este parámetro existe para evitar—
+      // en lugar de un error visible.
+      throw new Error(
+        'putObject requiere contentLength cuando el cuerpo es un flujo.',
+      );
+    }
+
     await this.s3Client.send(
       new PutObjectCommand({
         Bucket: params.bucket,
         Key: params.key,
         Body: params.body,
         ContentType: params.contentType,
+        ContentLength: params.contentLength,
       }),
     );
   }

@@ -180,6 +180,184 @@ describe('DockerContainerService', () => {
       expect.objectContaining({ timeoutMs: 5_000 }),
     );
   });
+
+  it('HIGH-02: registra un error explicito cuando la limpieza forzada tras timeout no confirma exito', async () => {
+    mockedRunCommand
+      .mockResolvedValueOnce({
+        exitCode: -1,
+        stdout: '',
+        stderr: '',
+        timedOut: true,
+      })
+      .mockResolvedValueOnce({
+        exitCode: 1,
+        stdout: '',
+        stderr: 'daemon overloaded',
+        timedOut: false,
+      });
+
+    const errorSpy = jest
+      .spyOn(
+        (service as unknown as { logger: { error: (msg: string) => void } })
+          .logger,
+        'error',
+      )
+      .mockImplementation(() => undefined);
+
+    await service.runEphemeralContainer({
+      containerName: 'orphan-run-123',
+      imageTag: 'python:3.11-slim',
+      command: ['python', '-c', 'while True: pass'],
+      runtime: 'runc',
+      networkMode: 'none',
+      timeoutMs: 5_000,
+    });
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('podria haber quedado huerfano'),
+    );
+  });
+
+  it('HIGH-01: trata el exit code 125 del CLI de Docker como fallo de infraestructura, no como salida del programa del alumno', async () => {
+    mockedRunCommand.mockResolvedValueOnce({
+      exitCode: 125,
+      stdout: '',
+      stderr:
+        'docker: Error response from daemon: unknown runtime specified unsafe-runtime.',
+      timedOut: false,
+    });
+
+    await expect(
+      service.runEphemeralContainer({
+        containerName: 'bad-runtime-run-123',
+        imageTag: 'python:3.11-slim',
+        command: ['python', 'main.py'],
+        runtime: 'unsafe-runtime',
+        networkMode: 'none',
+        timeoutMs: 5_000,
+      }),
+    ).rejects.toThrow('bad-runtime-run-123');
+  });
+  describe('MED-05: confinamiento por defecto cuando el llamador omite las opciones', () => {
+    function argsOf(callIndex: number): string[] {
+      return mockedRunCommand.mock.calls[callIndex][1] as string[];
+    }
+
+    function valueAfter(args: string[], flag: string): string | undefined {
+      const index = args.indexOf(flag);
+      return index === -1 ? undefined : args[index + 1];
+    }
+
+    it('aplica limites de recursos y aislamiento de red en la ruta efimera aunque no se pasen', async () => {
+      mockedRunCommand.mockResolvedValueOnce({
+        exitCode: 0,
+        stdout: 'ok',
+        stderr: '',
+        timedOut: false,
+      } as any);
+
+      await service.runEphemeralContainer({
+        containerName: 'sin-opciones',
+        imageTag: 'alpine:3.21',
+        command: ['echo', 'ok'],
+        runtime: 'runc',
+        timeoutMs: 1000,
+      });
+
+      const args = argsOf(0);
+      expect(valueAfter(args, '--network')).toBe('none');
+      expect(valueAfter(args, '--pids-limit')).toBe('256');
+      expect(valueAfter(args, '--cpus')).toBe('0.5');
+      expect(valueAfter(args, '--memory')).toBe('512m');
+      expect(args).toContain('--read-only');
+      expect(args).toContain('--cap-drop');
+      expect(valueAfter(args, '--cap-drop')).toBe('ALL');
+    });
+
+    it('respeta los valores explicitos del llamador por encima de los de por defecto', async () => {
+      mockedRunCommand.mockResolvedValueOnce({
+        exitCode: 0,
+        stdout: 'ok',
+        stderr: '',
+        timedOut: false,
+      } as any);
+
+      await service.runEphemeralContainer({
+        containerName: 'con-opciones',
+        imageTag: 'alpine:3.21',
+        command: ['echo', 'ok'],
+        runtime: 'runsc',
+        timeoutMs: 1000,
+        cpus: '2',
+        memory: '1g',
+        pidsLimit: 64,
+        user: '1000:1000',
+        networkName: 'dockus-workspace-1',
+      });
+
+      const args = argsOf(0);
+      expect(valueAfter(args, '--cpus')).toBe('2');
+      expect(valueAfter(args, '--memory')).toBe('1g');
+      expect(valueAfter(args, '--pids-limit')).toBe('64');
+      expect(valueAfter(args, '--user')).toBe('1000:1000');
+      expect(valueAfter(args, '--network')).toBe('dockus-workspace-1');
+    });
+
+    it('aplica limite de procesos tambien en la ruta de contenedor de servicio, que antes no lo tenia', async () => {
+      mockedRunCommand
+        .mockResolvedValueOnce({
+          exitCode: 0,
+          stdout: 'container-abc\n',
+          stderr: '',
+          timedOut: false,
+        } as any)
+        .mockResolvedValueOnce({
+          exitCode: 0,
+          stdout: '',
+          stderr: '',
+          timedOut: false,
+        } as any);
+
+      await service.runContainer({
+        containerName: 'servicio',
+        imageTag: 'python:3.11-slim',
+        command: ['python', 'app.py'],
+        runtime: 'runc',
+        timeoutMs: 1000,
+      });
+
+      const args = argsOf(0);
+      expect(args).toContain('container');
+      expect(args).toContain('create');
+      expect(valueAfter(args, '--pids-limit')).toBe('256');
+      expect(valueAfter(args, '--network')).toBe('none');
+    });
+
+    it('registra un aviso cuando no se pasa --user, porque no admite un valor por defecto seguro', async () => {
+      const warnSpy = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+      mockedRunCommand.mockResolvedValueOnce({
+        exitCode: 0,
+        stdout: 'ok',
+        stderr: '',
+        timedOut: false,
+      } as any);
+
+      await service.runEphemeralContainer({
+        containerName: 'sin-user',
+        imageTag: 'alpine:3.21',
+        command: ['echo', 'ok'],
+        runtime: 'runc',
+        timeoutMs: 1000,
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('sin --user'),
+      );
+      warnSpy.mockRestore();
+    });
+  });
 });
 
 describe('DockerExecutionService', () => {

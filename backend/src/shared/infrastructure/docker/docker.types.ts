@@ -40,6 +40,8 @@ export interface DockerContainerRunOptions extends DockerLabelledTimeoutOptions 
   environment?: Record<string, string>;
   onStdoutChunk?: (chunk: string) => void;
   onStderrChunk?: (chunk: string) => void;
+  /** Cancelacion cooperativa: aborta y fuerza la eliminacion del contenedor. */
+  signal?: AbortSignal;
 }
 
 export type DockerRunOptions = Omit<

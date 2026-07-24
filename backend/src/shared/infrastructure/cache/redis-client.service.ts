@@ -44,6 +44,108 @@ export class RedisClientService implements OnApplicationShutdown {
     return this.withTimeout(client.publish(channel, payload));
   }
 
+  /**
+   * Primitivas de caché clave-valor.
+   *
+   * Aceptan un presupuesto de tiempo propio porque el de la clase (2 s) está
+   * dimensionado para sondas de salud, donde esperar es preferible a fallar. En
+   * una ruta caliente —la validación del JWT corre en cada petición— ese mismo
+   * valor convertiría una degradación de Redis en 2 s de latencia añadida a
+   * *todas* las peticiones, bastante peor que la consulta que la caché evita.
+   * Quien llama decide cuánto está dispuesto a esperar antes de darse por
+   * fallido y recurrir al origen.
+   */
+  async get(key: string, timeoutMs?: number): Promise<string | null> {
+    const client = await this.getClient();
+    return this.withTimeout(client.get(key), timeoutMs);
+  }
+
+  async exists(key: string, timeoutMs?: number): Promise<boolean> {
+    const client = await this.getClient();
+    const result = await this.withTimeout(client.exists(key), timeoutMs);
+    return result > 0;
+  }
+
+  /**
+   * Incrementa un contador y le fija ventana de caducidad en la misma ida y
+   * vuelta. El `EXPIRE` va siempre, no solo cuando el contador arranca: es un
+   * contador de ventana deslizante, y refrescarlo mantiene viva la racha
+   * mientras los fallos sigan llegando.
+   */
+  async incrementWithTtl(
+    key: string,
+    ttlSeconds: number,
+    timeoutMs?: number,
+  ): Promise<number> {
+    const client = await this.getClient();
+    const results = await this.withTimeout(
+      client.multi().incr(key).expire(key, ttlSeconds).exec(),
+      timeoutMs,
+    );
+
+    const incremented = results?.[0]?.[1];
+    return typeof incremented === 'number' ? incremented : 0;
+  }
+
+  async set(
+    key: string,
+    value: string,
+    ttlSeconds: number,
+    timeoutMs?: number,
+  ): Promise<void> {
+    const client = await this.getClient();
+    await this.withTimeout(client.set(key, value, 'EX', ttlSeconds), timeoutMs);
+  }
+
+  async del(key: string, timeoutMs?: number): Promise<void> {
+    const client = await this.getClient();
+    await this.withTimeout(client.del(key), timeoutMs);
+  }
+
+  /**
+   * `SET key value PX ttl NX`: escribe solo si la clave no existe.
+   *
+   * Es la operación atómica sobre la que se construyen los cerrojos
+   * distribuidos. Devuelve `true` si esta llamada fue la que creó la clave.
+   */
+  async setIfAbsent(
+    key: string,
+    value: string,
+    ttlMs: number,
+    timeoutMs?: number,
+  ): Promise<boolean> {
+    const client = await this.getClient();
+    const result = await this.withTimeout(
+      client.set(key, value, 'PX', ttlMs, 'NX'),
+      timeoutMs,
+    );
+    return result === 'OK';
+  }
+
+  /**
+   * Libera una clave **solo si sigue conteniendo el testigo indicado**.
+   *
+   * La comparación y el borrado tienen que ser atómicos, y por eso va en Lua.
+   * Con un `GET` seguido de `DEL` desde el cliente existe una ventana en la que
+   * el cerrojo puede vencer entre ambas operaciones y ser readquirido por otro
+   * proceso: el `DEL` borraría entonces un cerrojo ajeno y ambos titulares
+   * creerían tenerlo en exclusiva, que es justo lo que el cerrojo debía evitar.
+   */
+  async releaseIfMatches(
+    key: string,
+    token: string,
+    timeoutMs?: number,
+  ): Promise<boolean> {
+    const client = await this.getClient();
+    const script =
+      'if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end';
+    const result = await this.withTimeout(
+      client.eval(script, 1, key, token) as Promise<number>,
+      timeoutMs,
+    );
+    return result === 1;
+  }
+
   createSubscriber(): Redis {
     return this.createClient();
   }
@@ -96,11 +198,14 @@ export class RedisClientService implements OnApplicationShutdown {
   /**
    * Aplica un timeout defensivo a operaciones de Redis.
    */
-  private withTimeout<T>(promise: Promise<T>): Promise<T> {
+  private withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number = REDIS_TIMEOUT_MS,
+  ): Promise<T> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error('Redis no respondio dentro del tiempo esperado.'));
-      }, REDIS_TIMEOUT_MS);
+      }, timeoutMs);
 
       promise
         .then((value) => {

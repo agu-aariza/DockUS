@@ -1,5 +1,7 @@
 import { Module, Global } from '@nestjs/common';
+import { CacheModule } from '../cache/cache.module';
 import { SecretCipherService } from '../security/secret-cipher.service';
+import { LlmCircuitBreakerService } from './llm-circuit-breaker.service';
 import { BedrockGenerationService } from './bedrock-generation.service';
 import { LlmGenerationRouter } from './llm-generation.router';
 import { PromptRegistryService } from './prompt-registry.service';
@@ -9,7 +11,12 @@ import { OpenAiCompatibleGenerationService } from './providers/openai-compatible
 
 @Global()
 @Module({
+  // `CacheModule` da el cliente Redis que respalda el cortacircuitos por
+  // proveedor: su estado se comparte entre workers para que el primero que
+  // detecta la indisponibilidad proteja a los demás (ESC-ALTO-02).
+  imports: [CacheModule],
   providers: [
+    LlmCircuitBreakerService,
     PromptRegistryService,
     SecretCipherService,
     BedrockGenerationService,
@@ -19,6 +26,7 @@ import { OpenAiCompatibleGenerationService } from './providers/openai-compatible
     LlmGenerationRouter,
   ],
   exports: [
+    LlmCircuitBreakerService,
     PromptRegistryService,
     SecretCipherService,
     BedrockGenerationService,

@@ -59,16 +59,19 @@ export class GeminiGenerationService
       body.systemInstruction = { parts: [{ text: systemPrompt }] };
     }
 
-    // La clave viaja en query string: no la registramos en ningún log.
-    const url = `${joinUrl(
+    // La clave viaja en cabecera, no en query string: una URL acaba en los logs
+    // de acceso de cualquier intermediario y en el campo `http.url` que las
+    // herramientas de trazado capturan por defecto. `x-goog-api-key` es la
+    // alternativa soportada por la API de Gemini.
+    const url = joinUrl(
       endpoint,
       `models/${encodeURIComponent(profile.modelId)}:generateContent`,
-    )}?key=${encodeURIComponent(apiKey)}`;
+    );
 
     const raw = (await postJson(
       this.providerName,
       url,
-      {},
+      { 'x-goog-api-key': apiKey },
       body,
       timeoutMs,
     )) as GeminiGenerateContentResponse;

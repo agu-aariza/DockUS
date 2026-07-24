@@ -36,4 +36,25 @@ describe('DockerHostService', () => {
       }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
+
+  it('devuelve la info del daemon cuando las comprobaciones pasan', async () => {
+    const dockerInfo = {
+      ServerVersion: '26.1.0',
+      Runtimes: { runc: {}, runsc: {} },
+    };
+    mockedRunCommand.mockResolvedValue({
+      exitCode: 0,
+      stdout: JSON.stringify(dockerInfo),
+      stderr: '',
+      timedOut: false,
+    });
+
+    await expect(
+      service.assertDockerAvailable({
+        nodeEnv: 'production',
+        sandboxRuntime: 'runsc',
+        timeoutMs: 15_000,
+      }),
+    ).resolves.toEqual(dockerInfo);
+  });
 });

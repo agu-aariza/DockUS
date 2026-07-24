@@ -15,7 +15,7 @@ describe('prompts.json', () => {
   it('stores each builder prompt as a structured bundle with stable sections', () => {
     const manifest = loadManifest();
 
-    for (const key of ['plan', 'eval', 'repair', 'technical-feedback']) {
+    for (const key of ['plan', 'eval', 'technical-feedback']) {
       expect(manifest[key]).toEqual(
         expect.objectContaining({
           role: expect.any(String),

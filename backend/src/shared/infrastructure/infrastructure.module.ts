@@ -13,14 +13,19 @@ import { Module, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import { envValidationSchema } from '../config/env.validation';
-import { RedisClientService } from './cache/redis-client.service';
+import { CacheModule } from './cache/cache.module';
 import { buildTypeOrmConfig } from './database/typeorm.config';
 import { buildPinoHttpConfig } from '../config/logger.config';
-import { buildBullConfig } from '../config/redis.config';
+import {
+  buildBullConfig,
+  buildRedisConnectionOptions,
+} from '../config/redis.config';
 import { throttlerConfig } from './security/throttler.config';
+import { DockusThrottlerGuard } from './security/dockus-throttler.guard';
 import { AdminSeedService } from './seed/admin-seed.service';
 import { DemoSeedService } from './seed/demo-seed.service';
 import { User } from '../../modules/users/entities/user.entity';
@@ -48,7 +53,24 @@ import { AiModule } from './ai/ai.module';
       }),
     }),
 
-    ThrottlerModule.forRoot(throttlerConfig),
+    // Almacenamiento compartido en Redis (ESC-A11): con el contador en memoria
+    // del proceso, cada réplica de API llevaba su propia cuenta y el límite
+    // efectivo se multiplicaba por el número de instancias.
+    //
+    // Se usa `buildRedisConnectionOptions` y NO la conexión de
+    // `RedisClientService`: esa está tuneada con `enableOfflineQueue: false`
+    // para fallar rápido en las sondas de salud, y con ella un corte breve de
+    // Redis haría fallar peticiones legítimas en lugar de contarlas.
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: throttlerConfig,
+        storage: new ThrottlerStorageRedisService(
+          buildRedisConnectionOptions(configService),
+        ),
+      }),
+    }),
     ScheduleModule.forRoot(),
 
     TypeOrmModule.forRootAsync({
@@ -69,8 +91,14 @@ import { AiModule } from './ai/ai.module';
 
     DockerInfrastructureModule,
     AiModule,
+    CacheModule,
   ],
-  providers: [RedisClientService, AdminSeedService, DemoSeedService],
-  exports: [RedisClientService, DockerInfrastructureModule, AiModule],
+  providers: [AdminSeedService, DemoSeedService, DockusThrottlerGuard],
+  exports: [
+    CacheModule,
+    DockerInfrastructureModule,
+    AiModule,
+    DockusThrottlerGuard,
+  ],
 })
 export class InfrastructureModule {}
