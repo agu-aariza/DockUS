@@ -1,25 +1,37 @@
-## Propósito de la carpeta
-Gestiona el estado de autenticación, el token de sesión y el proveedor global para React.
+# Gestión de Sesión de Usuario (shared/session)
 
-## Límites y Reglas Estrictas
-Toda interacción y acceso al estado de sesión o al token desde los componentes debe realizarse a través del hook `useSession`.
+> **Resumen rápido:** Store de estado de sesión (`sessionStore.ts`) para el almacenamiento seguro de tokens y datos del usuario activo.
 
-## Anti-Patrones y Gotchas ⚠️
-Acceder al local storage o session storage directamente desde otros módulos en lugar de usar las utilidades provistas en esta carpeta.
+---
 
-## Dependencias de Contexto Asumidas
-El `SessionContext` debe envolver a la raíz de la aplicación para poder acceder al estado con `useSession()`.
+## Propósito y Responsabilidades
+Mantener la información del usuario autenticado en la memoria del navegador y sincronizada en LocalStorage.
+- **Persistencia de Token:** Almacenamiento seguro del JWT.
+- **Estado Global:** Exposición del usuario activo a toda la aplicación.
 
-## Inputs / Outputs Esperados
-Hooks que devuelven el estado de usuario (autenticado, cargando) y funciones para el inicio y cierre de sesión.
+---
 
-## Ejemplo de uso
-```tsx
-import { useSession } from '@/shared/session/SessionContext';
+## Estructura Interna
 
-const { user, logout } = useSession();
+```text
+.
+├── sessionStore.ts       # Implementación del store de sesión
+└── sessionStore.spec.ts  # Pruebas unitarias de gestión de sesión
 ```
 
-## Formato de Archivos
-- `SessionContext.tsx` para el Provider y Hook.
-- `sessionStore.ts` para persistencia e interceptores locales.
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Auth Login Success ] ──> sessionStore.setSession(user, token) ──> LocalStorage
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de sesión:
+```bash
+npm run test -- src/shared/session
+```

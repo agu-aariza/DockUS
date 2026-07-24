@@ -1,24 +1,36 @@
-## Propósito de la carpeta
-Agrupa funciones puras utilitarias para validaciones, transformaciones de texto, manejo de errores, fechas y hashing.
+# Utilidades Compartidas Frontend (shared/utils)
 
-## Límites y Reglas Estrictas
-Estas funciones deben ser PURAS. No pueden importar componentes de React, y no pueden mantener estado interno ni ejecutar llamadas al backend.
+> **Resumen rápido:** Funciones puras auxiliares de formateo, tratamiento de datos y cálculos de tiempo de espera (backoff).
 
-## Anti-Patrones y Gotchas ⚠️
-No añadir funciones relacionadas al estado global, ni mezclar lógicas que aplican únicamente a un módulo particular de negocio.
+---
 
-## Dependencias de Contexto Asumidas
-Ninguna. Todo debe poder ser probado de manera aislada (unit test fácil).
+## Propósito y Responsabilidades
+Proporcionar lógica utilitaria común y testeable.
+- **Backoff:** Algoritmo de retraso en reintentos de conexión.
 
-## Inputs / Outputs Esperados
-Datos primitivos de entrada produciendo un dato formateado o procesado (ej. String a String).
+---
 
-## Ejemplo de uso
-```typescript
-import { formatBytes } from '@/shared/utils/format';
+## Estructura Interna
 
-const sizeStr = formatBytes(1024); // "1 KB"
+```text
+.
+├── backoff.ts       # Funciones de cálculo de retraso de reintento
+└── backoff.spec.ts  # Pruebas unitarias de las utilidades de backoff
 ```
 
-## Formato de Archivos
-Agrupaciones por temática en camelCase (ej. `format.ts`, `errors.ts`, `hash.ts`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Network Retry Logic ] ──> calculateBackoff(attempt) ──> Delay in ms
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de utilidades frontend:
+```bash
+npm run test -- src/shared/utils
+```

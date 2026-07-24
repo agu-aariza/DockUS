@@ -1,26 +1,40 @@
-## Responsabilidad del Módulo
-Gestionar la vinculación entre proyectos y estudiantes/grupos. Define quién tiene acceso a un proyecto y establece las fechas de entrega y condiciones de matriculación.
+# Submódulo de Asignaciones de Proyectos (assignments)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-- No evalúa el código de los estudiantes.
-- No almacena las entregas (eso lo hace `deliveries`).
-- No gestiona el ciclo de vida del proyecto en sí.
+> **Resumen rápido:** Asignación de prácticas a grupos docentes, control de fechas límite, eventos de matriculación y visibilidad de proyectos.
 
-## Conceptos Clave (Glosario)
-- **Assignment**: La asignación de un proyecto a un grupo específico de estudiantes o curso.
-- **Enrollment**: El acto de inscribir estudiantes automáticamente a las asignaciones de un proyecto.
+---
 
-## Dependencias Externas Clave
-- Entidades y servicios del módulo raíz `Projects`.
-- `GroupsService` (para resolver los estudiantes que pertenecen a un grupo asignado).
+## Propósito y Responsabilidades
+Gestionar la vinculación entre una definición de proyecto y los grupos de alumnos que deben realizarlo.
+- **Fechas Límite:** Establecimiento de plazos de entrega y periodos de gracia por grupo (`project-assignments.service.ts`).
+- **Escuchador de Eventos:** Reacción a eventos de matriculación de estudiantes en grupos (`project-assignment-group-enrollment.listener.ts`).
 
-## Efectos Secundarios (Side Effects)
-- Actualiza la tabla de relaciones entre proyectos y grupos.
-- Escucha eventos de matriculación (ej. un estudiante se une a un grupo) para otorgar automáticamente acceso a los proyectos asignados a ese grupo.
+---
 
-## Estado / BBDD
-- `ProjectAssignment` (o tablas pivote relacionadas en base de datos)
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `ProjectAssignmentsService`
-- `ProjectAssignmentGroupEnrollmentListener`
+```text
+.
+├── dto/                                            # DTOs de creación y actualización de asignaciones
+├── entities/                                       # Entidades TypeORM ProjectAssignment
+├── project-assignment-group-enrollment.listener.ts # Event listener de cambios en matrículas
+└── project-assignments.service.ts                  # Servicio de negocio para asignaciones
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Profesor UI ] ──> Asignar Proyecto a Grupo ──> [ ProjectAssignmentsService ] ──> [ PostgreSQL ]
+[ Evento Grupo ] ──> [ ProjectAssignmentGroupEnrollmentListener ] ──> Actualiza Estado Asignación
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de asignaciones:
+```bash
+npm run test -- src/modules/projects/assignments
+```

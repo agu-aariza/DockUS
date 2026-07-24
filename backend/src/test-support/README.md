@@ -1,30 +1,36 @@
-## Propósito de la carpeta
-Contener constructores de dominio (Builders/Factories) y helpers diseñados exclusivamente para facilitar y estandarizar la creación de entidades durante los tests unitarios.
+# Utilidades de Soporte para Pruebas (test-support)
 
-## Límites y Reglas Estrictas
-- NINGÚN archivo de aquí debe importarse en código de producción. Este directorio está excluido del build de producción en `tsconfig.build.json`.
-- Los builders de dominio no deben realizar validaciones estrictas, su propósito es retornar datos de prueba válidos rápidamente con valores por defecto sensatos.
+> **Resumen rápido:** Mocks, fábricas de entidades de prueba y helpers reutilizables para los tests unitarios e integración del backend.
 
-## Anti-Patrones y Gotchas ⚠️
-- Usar datos "mágicos" inconsistentes en cada suite de tests (usar estos builders en su lugar).
-- Referenciar repositorios reales de TypeORM desde estos factories; deben devolver objetos en memoria o Data Transfer Objects de prueba.
+---
 
-## Dependencias de Contexto Asumidas
-- Entorno de ejecución `NODE_ENV=test`.
-- Importaciones de entidades de negocio del resto del backend.
+## Propósito y Responsabilidades
+Facilitar la escritura de pruebas unitarias limpias sin duplicar código de configuración.
+- **Fábricas de objetos (Mocks):** Creación de objetos ficticios de proyectos, entregas y usuarios.
+- **Helpers de prueba:** Utilidades para simular repositorios de TypeORM y clientes de Redis.
 
-## Inputs / Outputs Esperados
-- Inputs: Sobrescituras parciales (`Partial<Entity>`).
-- Outputs: Instancias hidratadas de entidades con mock data (`Project`, `User`, `Delivery`, etc).
+---
 
-## Ejemplo de uso
-```typescript
-import { buildProject } from 'src/test-support/domain-builders';
+## Estructura Interna
 
-const project = buildProject({ name: 'Test Overriden Name' });
-expect(project.name).toBe('Test Overriden Name');
-// El resto de los atributos se rellenaron automáticamente con faker
+```text
+.
+└── ... # Mocks y utilidades auxiliares para pruebas
 ```
 
-## Formato de Archivos
-- Exportación de funciones puras (`domain-builders.ts`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Test Unitario (.spec.ts) ] ──> [ Mock Factory ] ──> (Retorna Objeto Simulado)
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Importar helpers en un test:
+```typescript
+import { createMockUser } from '../test-support';
+```

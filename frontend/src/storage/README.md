@@ -1,21 +1,36 @@
-## Responsabilidad del Módulo
-Gestiona la administración y visualización de archivos de almacenamiento, permitiendo navegar y operar con objetos en S3/MinIO desde el panel de control del profesor o administrador.
+# Módulo de Inspección de Almacenamiento (src/storage)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No gestiona la carga de archivos de entregas de estudiantes directamente. Solo proporciona una interfaz genérica de administración de buckets/objetos.
+> **Resumen rápido:** Vista de administración del espacio de almacenamiento de archivos, buckets y artefactos de entregas.
 
-## Conceptos Clave (Glosario)
-- **StoragePanel**: Interfaz principal para explorar y administrar el almacenamiento.
-- **StorageObject**: Entidad que representa un archivo o directorio en el bucket.
+---
 
-## Dependencias Externas Clave
-Depende de `shared/api/storageApi.ts` y componentes de la UI base desde `shared/components/ui`.
+## Propósito y Responsabilidades
+Supervisar el uso del almacenamiento de objetos MinIO/S3.
+- **Visualización de Archivos:** Explorador de artefactos y entregas guardadas.
+- **Monitoreo de Espacio:** Métricas de espacio consumido por asignaturas o grupos.
 
-## Efectos Secundarios (Side Effects)
-Realiza llamadas directas para mutar archivos en el almacenamiento remoto a través del API.
+---
 
-## Estado / BBDD
-Maneja el estado local de navegación (directorios actuales, selección de archivos) y de carga de elementos de almacenamiento en el cliente.
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `StoragePanel.tsx`
+```text
+.
+└── StoragePanel.tsx # Panel principal de visualización del almacenamiento
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ StoragePanel ] ──> [ API HTTP /storage ] ──> [ MinIO Backend ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests del panel de storage:
+```bash
+npm run test -- src/storage
+```

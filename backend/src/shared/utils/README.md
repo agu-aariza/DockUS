@@ -1,28 +1,37 @@
-## Propósito de la carpeta
-Contiene utilidades puras agnósticas de dominio. Proporciona funciones helper para cálculos genéricos de paginación, conversiones de tipos y operaciones aritméticas o lógicas simples utilizadas en todo el backend.
+# Funciones Auxiliares y Utilidades (shared/utils)
 
-## Límites y Reglas Estrictas
-- NINGUNA dependencia de módulos de negocio.
-- NO pueden tener inyección de dependencias de NestJS (deben ser funciones exportadas puras, fáciles de testear).
+> **Resumen rápido:** Funciones puras de utilidad: algoritmos de backoff, formateo de cadenas, manipulación de fechas y operaciones puras.
 
-## Anti-Patrones y Gotchas ⚠️
-- Incluir lógica de negocio encubierta o validaciones que corresponden a DTOs.
-- Crear clases complejas instanciables para utilidades puras.
+---
 
-## Dependencias de Contexto Asumidas
-- Cero dependencias externas complejas. Solo TypeScript estándar y eventualmente lodash o utilidades nativas ligeras.
+## Propósito y Responsabilidades
+Proporcionar funciones auxiliares sin estado ni dependencias externas.
+- **Estrategias de Reintento:** Implementación de backoff exponencial para reintentos.
+- **Formateo:** Normalización de nombres de archivo y cadenas de texto.
 
-## Inputs / Outputs Esperados
-- Inputs primitivos, outputs predecibles sin efectos secundarios.
+---
 
-## Ejemplo de uso
-```typescript
-import { buildPaginationMeta } from 'src/shared/utils/pagination.util';
-import { toBoolean } from 'src/shared/utils/to-boolean.util';
+## Estructura Interna
 
-const isFeatureActive = toBoolean(process.env.FEATURE_FLAG);
-const meta = buildPaginationMeta(currentPage, limit, totalItems);
+```text
+.
+├── backoff.ts  # Algoritmos de tiempo de espera y reintentos exponencial
+└── ...
 ```
 
-## Formato de Archivos
-- Archivos pequeños con nombres descriptivos `<concepto>.util.ts`.
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Service ] ──> calculateBackoffDelay(attempt) ──> Retorna Milisegundos
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de utilidades:
+```bash
+npm run test -- src/shared/utils
+```

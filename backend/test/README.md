@@ -1,36 +1,37 @@
-## Propósito de la carpeta
-Alojamiento principal para los tests de extremo a extremo (E2E) del backend y su configuración asociada (Jest E2E configuration y scripts runners).
+# Pruebas End-to-End e Integración (backend/test)
 
-## Límites y Reglas Estrictas
-- Los tests unitarios deben estar junto a su código (`src/**/*.spec.ts`), NO aquí.
-- Los tests aquí deben cubrir interacciones de la API pública usando `Supertest` sobre una instancia completa de la aplicación NestJS.
+> **Resumen rápido:** Suite de pruebas e2e para validar los endpoints HTTP, flujos completos de autenticación y comportamiento del servidor NestJS.
 
-## Anti-Patrones y Gotchas ⚠️
-- Hacer mocks exhaustivos en tests E2E. Solo las llamadas a servicios puramente externos de infraestructura (como llamadas HTTP a un proveedor de cobros o la propia API de AWS Bedrock) deberían simularse aquí, y preferiblemente mediante adaptadores locales (MinIO en lugar de S3).
-- Ejecutar estos tests sin una base de datos levantada y purgada, lo que causará falsos positivos o fallos intermitentes.
+---
 
-## Dependencias de Contexto Asumidas
-- Se requiere un entorno de infraestructura levantado (PostgreSQL, Redis, Docker Dind) generalmente aprovisionado en `docker-compose`.
+## Propósito y Responsabilidades
+Garantizar la estabilidad de la API mediante pruebas automatizadas de integración contra una instancia de base de datos de test.
+- **Pruebas e2e:** Verificación de controladores, pipes, guards y respuestas HTTP.
+- **Fixtures de prueba:** Configuración de datos iniciales para la suite de integración.
 
-## Inputs / Outputs Esperados
-- Manda peticiones HTTP y verifica respuestas, side effects en bases de datos y colas.
+---
 
-## Ejemplo de uso
-Se ejecuta mediante comandos `npm`:
+## Estructura Interna
+
+```text
+.
+├── app.e2e-spec.ts  # Pruebas end-to-end de los endpoints principales
+└── jest-e2e.json    # Configuración de Jest para pruebas e2e
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Jest Test Runner ] ──> [ Supertest ] ──> [ NestJS App In-Memory / Test DB ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar pruebas e2e:
 ```bash
-# E2E Tests
 npm run test:e2e
 ```
-Un test típico (e.g. `app.e2e-spec.ts`):
-```typescript
-import * as request from 'supertest';
-// App setup...
-return request(app.getHttpServer())
-  .get('/health')
-  .expect(200)
-  .expect({ status: 'ok' });
-```
-
-## Formato de Archivos
-- Archivos `.e2e-spec.ts` para pruebas.
-- Archivos de configuración como `jest-e2e.json` y wrappers de ejecución (`run-jest.cjs`).

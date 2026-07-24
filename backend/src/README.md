@@ -1,28 +1,50 @@
-## Propósito (TL;DR)
-Punto de entrada principal y configuración raíz de la API NestJS.
+# Directores y Código Fuente Backend (src)
 
-## Arquitectura de alto nivel
-Monolito modular basado en NestJS, separando dominios de negocio (módulos) e infraestructura transversal (shared).
+> **Resumen rápido:** Código fuente de la aplicación NestJS, estructurado en módulos de dominio de negocio y componentes de infraestructura compartidos.
 
-## Límites Arquitectónicos (Boundaries) ⚠️
-El código aquí (main.ts, bootstrap.ts) NUNCA debe contener lógica de negocio. Toda la lógica de dominio debe residir estrictamente dentro de `modules/`.
+---
 
-## Flujo Principal de Datos
-Las peticiones HTTP entran por `main.ts`, pasan por los middlewares globales configurados en `bootstrap.ts` (CORS, Helmet, ValidationPipe), y son enrutadas por `app.module.ts` hacia el módulo de dominio correspondiente.
+## Propósito y Responsabilidades
+Contener la implementación completa del servidor NestJS siguiendo los principios de arquitectura limpia y segregación por procesos (API HTTP y Workers de fondo).
+- **Segregación de roles de proceso:** Permite ejecutar la API web y los procesadores asíncronos mediante `process-role.module.ts`.
+- **Estructura modular:** Organización independiente de módulos de dominio y servicios globales.
 
-## Stack Tecnológico Principal
-TypeScript, NestJS.
+---
 
-## Mapa de Directorios (Tree)
-- `main.ts`: Punto de entrada HTTP.
-- `bootstrap.ts`: Configuración de middleware global y utilidades.
-- `app.module.ts`: Módulo raíz de inyección de dependencias.
-- `modules/`: Módulos de dominio de negocio.
-- `shared/`: Infraestructura transversal y utilidades compartidas.
-- `test-support/`: Helpers y builders para tests.
+## Estructura Interna
 
-## Variables de Entorno Globales
-- `PORT`: Puerto de escucha del servidor HTTP.
+```text
+.
+├── modules/              # Módulos del dominio de la aplicación (auth, projects, academic, etc.)
+├── shared/               # Servicios de infraestructura y configuración reutilizables
+├── api.module.ts         # Módulo raíz para el rol de proceso API
+├── core.module.ts        # Módulo central con proveedores globales
+├── process-role.module.ts # Selector dinámico de módulos según el rol del contenedor
+├── worker.module.ts      # Módulo raíz para el rol de trabajador en segundo plano
+├── bootstrap.ts          # Configuración e inicialización común de NestJS
+├── main.ts               # Punto de entrada HTTP
+└── worker.ts             # Punto de entrada del worker BullMQ
+```
 
-## Comandos clave
-- `npm run start:dev`: Levanta el servidor en modo desarrollo.
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+main.ts ──> bootstrap() ──> process-role.module ──> api.module ──> [ HTTP Controllers & Services ]
+worker.ts ──> bootstrap() ──> process-role.module ──> worker.module ──> [ BullMQ Processors ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Compilar el código TypeScript:
+```bash
+npm run build
+```
+
+### Ejecutar validación de arquitectura:
+```bash
+npm run boundaries
+```

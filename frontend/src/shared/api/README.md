@@ -1,25 +1,37 @@
-## Propósito de la carpeta
-Contiene los clientes HTTP, interceptores y métodos tipados para comunicarse con todos los endpoints del backend.
+# Cliente API HTTP (shared/api)
 
-## Límites y Reglas Estrictas
-Los archivos aquí NUNCA deben contener lógica de interfaz gráfica, manejo de estado de React, ni depender de componentes visuales. Solo funciones asíncronas puras.
+> **Resumen rápido:** Cliente HTTP configurado con Axios, inyección de tokens JWT, interceptores y manejo de errores de red.
 
-## Anti-Patrones y Gotchas ⚠️
-No guardar tokens o información de sesión en el módulo directamente; usar interceptores dinámicos configurados desde `SessionContext`. Evitar URLs hardcodeadas.
+---
 
-## Dependencias de Contexto Asumidas
-Requiere configuración previa del interceptor HTTP si se necesita autenticación, y asume que el backend respeta los tipos retornados.
+## Propósito y Responsabilidades
+Centralizar las comunicaciones HTTP del frontend hacia la API NestJS backend.
+- **Interceptores de Petición:** Inyección del token Bearer JWT recuperado de la sesión.
+- **Interceptores de Respuesta:** Tratamiento global de errores 401/403 y redirección automática.
 
-## Inputs / Outputs Esperados
-Funciones que reciben DTOs o parámetros primitivos y devuelven Promesas resolviendo objetos tipados del backend.
+---
 
-## Ejemplo de uso
-```typescript
-import { apiGetDeliveries } from '@/shared/api/deliveriesApi';
+## Estructura Interna
 
-const data = await apiGetDeliveries({ projectId: 1 });
+```text
+.
+├── http.ts       # Instancia configurada de Axios con interceptores
+└── http.spec.ts  # Pruebas unitarias de interceptores HTTP
 ```
 
-## Formato de Archivos
-- `http.ts` para configuración base.
-- `<Domain>Api.ts` para agrupación de endpoints de dominio.
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Feature Hook ] ──> [ http.ts (Axios) ] ──> Interceptor Add Token ──> [ API Backend ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests del cliente HTTP:
+```bash
+npm run test -- src/shared/api
+```

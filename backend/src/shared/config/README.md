@@ -1,37 +1,36 @@
-## Propósito de la carpeta
-Centraliza la configuración transversal del backend, la validación estricta de variables de entorno al arranque y la construcción de opciones de conexión para herramientas base (Redis, Logger).
+# Configuración y Variables de Entorno (shared/config)
 
-## Límites y Reglas Estrictas
-- La aplicación DEBE fallar ("fail-fast") en el arranque si falta una variable de entorno crítica.
-- Las variables se validan y parsean en `env.validation.ts` usando Joi.
-- Las contraseñas y secretos no deben tener valores por defecto de desarrollo en entornos de producción (e.g. validación contra placeholders como `CHANGE_ME`).
-- No debe contener lógica de dominio ni consultas a bases de datos.
+> **Resumen rápido:** Esquemas de validación (Joi) y centralización de variables de entorno para el backend.
 
-## Anti-Patrones y Gotchas ⚠️
-- Usar `process.env.VARIABLE` a lo largo del código. Siempre se debe usar `ConfigService` de NestJS con el esquema validado aquí.
-- Duplicar lógica de conexión de Redis. Usar `buildRedisConnectionOptions` o `buildBullConfig` provistos en `redis.config.ts`.
-- Silenciar el logger en desarrollo sin revisar `logger.config.ts`.
+---
 
-## Dependencias de Contexto Asumidas
-- Se asume que `ConfigModule` de NestJS cargará y validará esto antes de inicializar cualquier otro módulo (TypeORM, BullMQ, etc).
+## Propósito y Responsabilidades
+Cargar y validar la configuración de la aplicación antes del arranque del servidor.
+- **Validación Joi:** Garantizar que las variables críticas (puertos, claves DB, secretos JWT) estén presentes y tengan el formato correcto.
+- **Inyección mediante ConfigModule:** Exposición tipada de valores mediante el `ConfigService` de NestJS.
 
-## Inputs / Outputs Esperados
-- Valida entradas puras (`process.env`).
-- Retorna esquemas Joi, objetos `RedisOptions` y `Options` (BullMQ).
+---
 
-## Ejemplo de uso
-```typescript
-import { buildBullConfig } from 'src/shared/config/redis.config';
-import { ConfigService } from '@nestjs/config';
+## Estructura Interna
 
-// En un módulo de NestJS:
-BullModule.forRootAsync({
-  inject: [ConfigService],
-  useFactory: (configService: ConfigService) => buildBullConfig(configService),
-});
+```text
+.
+└── ... # Archivos de validación y esquemas de configuración
 ```
 
-## Formato de Archivos
-- `*.config.ts`: Exporta funciones fábricas `build*Config(...)` que reciben `ConfigService`.
-- `env.validation.ts`: Exporta un esquema Joi global.
-- Pruebas en `*.spec.ts`.
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+.env File ──> [ ConfigModule + Joi Schema ] ──> [ ConfigService ] ──> [ NestJS App ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar pruebas de configuración:
+```bash
+npm run test -- src/shared/config
+```

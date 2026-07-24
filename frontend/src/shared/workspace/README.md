@@ -1,33 +1,35 @@
-## Propósito de la carpeta
-Contiene el contexto global de entorno de trabajo, permitiendo cambiar el scope de la aplicación (ej. de qué proyecto estamos viendo datos) y controlar el estado del UI chrome.
+# Componentes de Workspace (shared/workspace)
 
-## Estructura
-- `WorkspaceSelectionContext.tsx`: selección jerárquica `project → assignment → delivery → lastRun`.
-- `WorkspaceUIContext.tsx`: estado de chrome (`isMinimized` de la barra lateral).
-- `WorkspaceContext.tsx`: provider combinado y re-exports. También expone `useWorkspace()` (deprecated).
-- `WorkspaceBar.tsx`: barra flotante de scope.
+> **Resumen rápido:** Barras de herramientas de área de trabajo, selectores de contexto y paneles de navegación de workspace.
 
-## Límites y Reglas Estrictas
-Modificar el workspace debe invalidar o recargar los datos de la vista dependiente. Toda vista que dependa de un proyecto debe suscribirse al contexto de selección.
+---
 
-## Anti-Patrones y Gotchas ⚠️
-- No mantener el identificador del proyecto activo en estado local, ni pasarlo manualmente en un taladro de props (prop-drilling) infinito.
-- No usar `useWorkspace()` en nuevo código; prefiere `useWorkspaceSelection()` o `useWorkspaceUI()` para evitar re-renders por cambios no relacionados.
+## Propósito y Responsabilidades
+Facilitar la navegación entre secciones dentro de la experiencia de workspace.
+- **WorkspaceBar:** Barra contextual superior para cambiar entre vistas de proyecto y entregas.
 
-## Dependencias de Contexto Asumidas
-Requiere que `WorkspaceProvider` envuelva las rutas donde se deba poder interactuar con un entorno seleccionado (ej. dentro del AppShell).
+---
 
-## Inputs / Outputs Esperados
-`useWorkspaceSelection` retorna `selection` con `projectId`, `assignmentId`, `deliveryId`, `lastRunId` y setters.
-`useWorkspaceUI` retorna `isMinimized` y `setIsMinimized`.
+## Estructura Interna
 
-## Ejemplo de uso
-```tsx
-import { useWorkspaceSelection, useWorkspaceUI } from '@/shared/workspace/WorkspaceContext';
-
-const { selection, setProject } = useWorkspaceSelection();
-const { isMinimized, setIsMinimized } = useWorkspaceUI();
+```text
+.
+└── WorkspaceBar.tsx # Barra de navegación de workspace
 ```
 
-## Formato de Archivos
-Archivos de Contexto y UI relacionada directamente con el bar de selección (`WorkspaceSelectionContext.tsx`, `WorkspaceUIContext.tsx`, `WorkspaceContext.tsx`, `WorkspaceBar.tsx`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Workspace Page ] ──> [ WorkspaceBar ] ──> [ Student/Teacher Workspace Surface ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de componentes workspace:
+```bash
+npm run test -- src/shared/workspace
+```

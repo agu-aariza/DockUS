@@ -1,21 +1,38 @@
-## Responsabilidad del Módulo
-Interfaz para la configuración, monitorización y administración del entorno de ejecución (Runtime/Recetas) de los proyectos y contenedores utilizados por Builder.
+# Módulo de Runtimes de Ejecución (src/runtime)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No muestra la consola de ejecución al estudiante. No define el protocolo subyacente del Runtime.
+> **Resumen rápido:** Panel de configuración y monitoreo del catálogo de lenguajes y entornos Docker disponibles para la evaluación.
 
-## Conceptos Clave (Glosario)
-- **TeacherRuntimePanel**: Panel para configurar qué entornos (ej. Node, Python, C) están disponibles y monitorizar recursos/ejecuciones activas.
-- **Runtime Recipe**: Receta o plantilla de ejecución (imagen Docker + comandos).
+---
 
-## Dependencias Externas Clave
-Interactúa con el estado y APIs de `features/runtime` y `features/builder` para leer el estado de ejecución y modificar configuraciones.
+## Propósito y Responsabilidades
+Permitir la supervisión de los entornos de ejecución (Node.js, Python, Java, etc.) soportados por la plataforma.
+- **Catálogo de Runtimes:** Visualización de versiones y límites de cómputo.
+- **Estado de Infraestructura:** Comprobación del estado del Daemon de Docker.
 
-## Efectos Secundarios (Side Effects)
-Envía configuraciones al backend que alterarán cómo se construyen o evalúan los proyectos futuros.
+---
 
-## Estado / BBDD
-Maneja selecciones de entornos, configuraciones JSON visuales (si aplica) y actualización en vivo del estado de los runtimes.
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `TeacherRuntimePanel.tsx`: Montado en `/runtime`.
+```text
+.
+├── components/              # Subcomponentes visuales de tarjetas de runtimes
+├── hooks/                   # Custom hooks para consultar el estado de runtimes (useRuntimeManagement)
+└── TeacherRuntimePanel.tsx  # Panel principal del profesor para consultar los runtimes
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ TeacherRuntimePanel ] ──> [ useRuntimeManagement ] ──> [ API HTTP /runtimes ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests del módulo de runtimes:
+```bash
+npm run test -- src/runtime
+```

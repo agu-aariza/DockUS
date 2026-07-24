@@ -1,24 +1,43 @@
-## Responsabilidad del Módulo
-Gestiona el contexto académico de la plataforma, incluyendo grupos de asignaturas y la matriculación (incluso masiva) de estudiantes en dichos grupos.
+# Módulo Académico (academic)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No gestiona la creación de cuentas de usuario ni la autenticación. No aprovisiona los entornos de trabajo ni los proyectos; solo publica eventos de matriculación.
+> **Resumen rápido:** Gestión de la estructura académica: grupos de alumnos, asignaturas, cursos lectivos y adscripción de estudiantes a grupos.
 
-## Conceptos Clave (Glosario)
-- **CourseGroup**: Un grupo o clase (ej. "Programación 1 - Turno Mañana").
-- **GroupEnrollment**: Entidad pivote que registra la matrícula de un estudiante en un grupo específico.
-- **Bulk Enroll**: Proceso de matriculación masiva a partir de texto o CSV.
+---
 
-## Dependencias Externas Clave
-- `UsersRepository` (del módulo de usuarios) para resolver correos a identificadores.
-- `GroupEnrollmentEventsService` para publicar eventos asíncronos tras matriculaciones.
+## Propósito y Responsabilidades
+Permitir a los profesores organizar la docencia en grupos y asignar estudiantes.
+- **Gestión de Grupos:** Creación, modificación y cierre de grupos académicos.
+- **Asignación de Estudiantes:** Matrícula e inscripción de estudiantes a sus respectivos grupos.
 
-## Efectos Secundarios (Side Effects)
-Publica eventos de dominio (domain events) en colas de mensajería cuando un alumno es matriculado, permitiendo que otros módulos (como Projects o Workspaces) reaccionen aprovisionando recursos.
+---
 
-## Estado / BBDD
-- `course_groups` (entidad `CourseGroup`).
-- `group_enrollments` (entidad `GroupEnrollment`).
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `groups.controller.ts`: Rutas REST para CRUD de grupos y endpoints de matriculación.
+```text
+.
+├── academic.module.ts # Módulo NestJS que registra la infraestructura académica
+├── application/      # Casos de uso de la gestión académica
+├── controllers/      # Controladores HTTP para grupos y estudiantes
+├── domain/           # Entidades y reglas puras del dominio académico
+├── dto/              # DTOs para creación y edición de grupos y matrículas
+├── entities/         # Entidades TypeORM de Grupo, Asignatura y Matrícula
+├── infrastructure/   # Repositorios concretos de base de datos
+└── services/         # Servicios de aplicación (GroupsService, etc.)
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Profesor UI ] ──> HTTP API ──> [ AcademicControllers ] ──> [ GroupsService ] ──> [ PostgreSQL ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests del módulo académico:
+```bash
+npm run test -- src/modules/academic
+```

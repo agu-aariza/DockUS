@@ -1,24 +1,39 @@
-## Propósito de la carpeta
-Proporciona el sistema de diseño base: botones, inputs, tablas, modales y layouts estructurales agnósticos de datos.
+# Componentes de Interfaz Base (shared/components/ui)
 
-## Límites y Reglas Estrictas
-PROHIBIDO importar dependencias de la lógica de negocio o de `api/`. Estos componentes deben ser 100% aislados y puramente visuales (dumb components).
+> **Resumen rápido:** Componentes atómicos e infraestructura de layout del sistema de diseño (AppShell, botones, modales, badges).
 
-## Anti-Patrones y Gotchas ⚠️
-No inyectar estilos custom o overrides inline que rompan la consistencia del tema global. No mutar el estado global desde aquí.
+---
 
-## Dependencias de Contexto Asumidas
-Asume la presencia de un tema global o framework CSS base.
+## Propósito y Responsabilidades
+Construir los bloques de construcción visuales reutilizables.
+- **Layout:** `AppShell.tsx`, `PageHeader.tsx`, `WorkspaceBar.tsx`.
+- **Átomos:** `Button.tsx`, `StatusBadge.tsx`, `VisualPicker.tsx`.
 
-## Inputs / Outputs Esperados
-Propiedades estándar HTML/React extendidas con variantes visuales (ej. `variant="primary"`).
+---
 
-## Ejemplo de uso
-```tsx
-import { Button } from '@/shared/components/ui/Button';
+## Estructura Interna
 
-<Button variant="danger" onClick={handleDelete}>Borrar</Button>
+```text
+.
+├── AppShell.tsx            # Marco principal de la aplicación con navegación
+├── Button.tsx             # Botón configurable con variantes y estados de carga
+├── PageHeader.tsx         # Encabezado estándar de página
+└── StatusBadge.tsx        # Insignia de estado visual
 ```
 
-## Formato de Archivos
-Componentes tipados exportados nombrados en PascalCase (`Button.tsx`, `Alert.tsx`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Página Componente ] ──> [ AppShell ] ──> [ PageHeader + Button ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de UI base:
+```bash
+npm run test -- src/shared/components/ui
+```

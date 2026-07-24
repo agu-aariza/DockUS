@@ -1,24 +1,35 @@
-## Propósito de la carpeta
-Aloja los sub-componentes específicos del dominio de "Resumen/Analítica", como dashboards interactivos de métricas y cohortes.
+# Componentes de Analíticas del Cohorte (summary/components)
 
-## Límites y Reglas Estrictas
-Solo componentes altamente acoplados al dominio de reportes agregados y gráficas del profesor. No colocar componentes UI genéricos aquí.
+> **Resumen rápido:** Dashboards e indicadores gráficos para el resumen estadístico de la clase.
 
-## Anti-Patrones y Gotchas ⚠️
-Exportar y re-usar estos componentes en otras partes de la app como el entorno del estudiante. Están diseñados asumiendo roles de profesor/admin.
+---
 
-## Dependencias de Contexto Asumidas
-Requiere datos pasados mediante props desde el Panel principal, a menudo dependiendo de llamadas al backend previamente resueltas.
+## Propósito y Responsabilidades
+Renderizar gráficos interactivos y métricas agregadas del rendimiento del grupo.
+- **Dashboard:** `CohortAnalyticsDashboard.tsx` para análisis visual de calificaciones.
 
-## Inputs / Outputs Esperados
-Componentes React que aceptan métricas o arreglos de datos estadísticos para renderizarlos en dashboards.
+---
 
-## Ejemplo de uso
-```tsx
-import { CohortAnalyticsDashboard } from '@/summary/components/CohortAnalyticsDashboard';
+## Estructura Interna
 
-<CohortAnalyticsDashboard cohortStats={data} />
+```text
+.
+└── CohortAnalyticsDashboard.tsx # Componente de cuadro de mando estadístico
 ```
 
-## Formato de Archivos
-Componentes de presentación complejos en PascalCase (`CohortAnalyticsDashboard.tsx`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Cohort Summary Page ] ──> [ CohortAnalyticsDashboard ] ──> Chart Visualizations
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de componentes de resumen:
+```bash
+npm run test -- src/summary/components
+```

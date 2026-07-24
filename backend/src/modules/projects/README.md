@@ -1,35 +1,51 @@
-## Responsabilidad del Módulo
-Gestionar el ciclo de vida completo de los proyectos de programación, sirviendo como núcleo (hub) que orquesta la creación, evaluación (builder), asignación a estudiantes (assignments) y recepción de entregas (deliveries).
+# Módulo de Proyectos y Entregas (projects)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-- No ejecuta código directamente (eso lo delega al Builder y la infraestructura Docker).
-- No realiza cálculos de calificaciones finales (eso depende de `ProjectGradebookService`).
-- No maneja la persistencia binaria de los archivos de estudiantes (usa el módulo `Storage`).
+> **Resumen rápido:** Dominio central para la creación de proyectos prácticos, entregas de código por parte de alumnos, libro de calificaciones y el submódulo de construcción/evaluación (builder).
 
-## Conceptos Clave (Glosario)
-- **Project**: Entidad raíz que representa una tarea académica o reto de programación.
-- **Delivery**: Entrega específica realizada por un estudiante para un proyecto.
-- **Assignment**: Vínculo entre un grupo de estudiantes y un proyecto.
-- **Gradebook**: Resumen del progreso y calificaciones de los estudiantes en el proyecto.
-- **Operational Issue**: Problema detectado en la configuración o ejecución de un proyecto (ej. receta inválida).
+---
 
-## Dependencias Externas Clave
-- **Builder Module**: Para la validación, evaluación de código y generación de insights de calidad.
-- **Auth Module**: Para control de acceso basado en roles.
-- **Storage Module**: Para persistir artefactos y recuperar código fuente.
-- **DockerHostService**: Para aislar la ejecución durante la evaluación.
+## Propósito y Responsabilidades
+Gestionar el ciclo de vida completo de un proyecto docente.
+- **Configuración de Proyectos:** Definición de enunciados, plazos y rúbricas.
+- **Gestión de Entregas:** Recepción de código de alumnos y almacenamiento seguro.
+- **Calificación y Feedback:** Cálculo de notas finales mediante `ProjectGradebookService`.
 
-## Efectos Secundarios (Side Effects)
-- Altera la base de datos de proyectos, entregas y asignaciones.
-- Invoca la ejecución asíncrona del Builder, encolando trabajos intensivos (BullMQ).
-- Emite eventos de dominio cuando los proyectos cambian de estado.
+---
 
-## Estado / BBDD
-- `Project`
-- `Delivery`
-- `AssignmentGroupEnrollment`
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `ProjectsController` (REST API pública)
-- `ProjectsService` (Fachada del dominio y lógica de negocio)
-- Listeners de eventos de matriculación (`ProjectAssignmentGroupEnrollmentListener`)
+```text
+.
+├── assignments/      # Asignación de proyectos a grupos académicos
+├── builder/          # Submódulo complejo de compilación y evaluación aislada en Docker
+├── deliveries/       # Estado y gestión de entregas individuales o grupales
+├── domain/           # Entidades del dominio de proyectos y reglas pura
+├── dto/              # DTOs de transferencia de datos
+├── entities/         # Entidades de persistencia TypeORM
+├── infrastructure/   # Repositorios concretos e integración con base de datos
+├── presentation/     # Controladores HTTP expuestos
+└── storage/          # Subida de ficheros de entregas mediante Multer/MinIO
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Estudiante UI ] ──> Subida Entrega ──> [ Deliveries Service ] ──> [ Storage Service ]
+                                                      │
+                                                      ▼
+                                            [ Builder Submodule ]
+                                                      │
+                                                      ▼
+                                          (Evaluación Docker + LLM)
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de proyectos y entregas:
+```bash
+npm run test -- src/modules/projects
+```

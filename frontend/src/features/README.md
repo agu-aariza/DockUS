@@ -1,20 +1,33 @@
-## Responsabilidad del Módulo
-Actuar como la capa de abstracción de negocio del frontend. Contiene los tipos, interfaces, DTOs compartidos y utilidades puras mapeadas directamente a los dominios del backend.
+# Tipos y Definiciones de Características (src/features)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-NO renderiza componentes UI (botones, paneles, layouts). NO incluye llamadas directas a Axios o hooks de estado de React, limitándose a definiciones estáticas y utilidades puras.
+> **Resumen rápido:** Tipos de TypeScript e interfaces centrales para las características de proyectos, builders y dominio del frontend.
 
-## Conceptos Clave (Glosario)
-- **Feature Slice**: Dominio de negocio (ej. `auth`, `projects`, `groups`) organizado con sus respectivos tipos, constantes y reglas de validación.
+---
 
-## Dependencias Externas Clave
-Dependencias mínimas. Representa los "contratos" (Types/Interfaces) entre la API y la UI de React.
+## Propósito y Responsabilidades
+Centralizar las definiciones de tipos e interfaces compartidas entre componentes de características.
+- **Tipado Estricto:** Definiciones de interfaces para proyectos, tareas y ejecuciones del builder.
 
-## Efectos Secundarios (Side Effects)
-Ninguno. Este módulo contiene lógica pura (types, mappers simples, constantes).
+---
 
-## Estado / BBDD
-No guarda estado. Define la forma estructural de los objetos (entidades) que los Contexts o hooks consumirán.
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- Cada subcarpeta (`auth/`, `builder/`, `projects/`, etc.) exporta sus `types.ts` o constantes para ser importadas libremente en los componentes UI (`src/auth`, `src/projects`).
+```text
+.
+├── builder/  # Tipos de ejecuciones y estados del builder
+└── projects/ # Tipos de proyectos, entregas y rúbricas
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Feature Component ] ──> import type { Project } from 'src/features/projects/types'
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+Uso como repositorio de tipos TypeScript de importación directa.

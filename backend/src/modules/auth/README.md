@@ -1,24 +1,43 @@
-## Responsabilidad del Módulo
-Maneja la autenticación de usuarios, emisión/renovación de tokens JWT y la infraestructura de guardias (guards) para proteger rutas y verificar roles (RBAC).
+# Módulo de Autenticación y Autorización (auth)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No gestiona el CRUD de usuarios ni el estado detallado de sus perfiles; delega la obtención y validación de usuarios al `UsersModule`.
+> **Resumen rápido:** Registro, inicio de sesión, generación de Json Web Tokens (JWT), encriptación de contraseñas y validación de roles de usuario.
 
-## Conceptos Clave (Glosario)
-- **AccessToken**: Token JWT de corta duración para autenticar peticiones HTTP.
-- **RefreshToken**: Token JWT de larga duración usado para obtener un nuevo AccessToken sin reloguearse.
-- **JwtAuthGuard**: Protección de endpoints para asegurar que la petición posee un JWT válido.
-- **RolesGuard**: Verifica que el rol del usuario autenticado cumpla con los requisitos de la ruta.
+---
 
-## Dependencias Externas Clave
-- `UsersService` (del `UsersModule`) para validar credenciales y comprobar el estado del usuario.
-- `@nestjs/passport` y `@nestjs/jwt` para la criptografía y estrategias de autenticación.
+## Propósito y Responsabilidades
+Garantizar la identidad segura de los usuarios en la plataforma.
+- **Autenticación:** Validación de credenciales y expedición de tokens JWT.
+- **Control de Acceso:** Estrategias y guards para restringir rutas según el rol (estudiante, profesor, admin).
 
-## Efectos Secundarios (Side Effects)
-No altera estado global directamente, más allá de emitir tokens que los clientes deben almacenar.
+---
 
-## Estado / BBDD
-No posee tablas propias (usa la tabla `users` mediante `UsersModule` para validar contraseñas).
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `auth.controller.ts`: Endpoints `/auth/login`, `/auth/register`, `/auth/refresh` y `/auth/me`.
+```text
+.
+├── application/       # Servicios de aplicación y casos de uso de autenticación
+├── auth.controller.ts # Endpoints /auth/login, /auth/register, /auth/refresh, etc.
+├── auth.module.ts     # Registro de NestJS, Passport y Passport-JWT
+├── auth.service.ts    # Lógica de verificación de hash de contraseñas y firma JWT
+├── dto/               # Data Transfer Objects para credenciales y tokens
+├── guards/            # Guards JwtAuthGuard y RolesGuard
+├── interfaces/        # Interfaces y tipos de payload JWT
+└── strategies/        # Estrategias Passport (JwtStrategy, LocalStrategy)
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Cliente HTTP ] ──> POST /auth/login ──> [ AuthController ] ──> [ AuthService ] ──> (Retorna Access Token JWT)
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de autenticación:
+```bash
+npm run test -- src/modules/auth
+```

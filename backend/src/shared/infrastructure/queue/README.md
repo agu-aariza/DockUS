@@ -1,28 +1,36 @@
-## Propósito de la carpeta
-Proveer una abstracción y configuración base para la mensajería asíncrona y procesamiento en segundo plano (colas). Actual o conceptualmente maneja BullMQ / RabbitMQ.
+# Infraestructura de Colas (shared/infrastructure/queue)
 
-## Límites y Reglas Estrictas
-- NINGUNA lógica de dominio (como Jobs específicos de "Evaluación" o "Compilación") debe vivir aquí.
-- Los módulos de negocio deben inyectar interfaces de productores genéricos definidos aquí, si aplica.
+> **Resumen rápido:** Configuración de colas BullMQ respaldadas por Redis para el procesamiento asíncrono de tareas pesadas de evaluación.
 
-## Anti-Patrones y Gotchas ⚠️
-- Mezclar la configuración de la conexión de caché genérica (PubSub/Healthcheck) con el Worker Thread que consume los mensajes de la cola (requieren bloqueos diferentes).
+---
 
-## Dependencias de Contexto Asumidas
-- Se asume un broker activo (Redis para BullMQ, o RabbitMQ).
+## Propósito y Responsabilidades
+Permitir el desacoplamiento entre las peticiones HTTP y el procesamiento en segundo plano.
+- **Configuración BullMQ:** Conexión con Redis y opciones de reintento.
+- **Encolado de Trabajos:** Productores de tareas de evaluación e inspección de trabajos.
 
-## Inputs / Outputs Esperados
-- Provee servicios de infraestructura en forma de inyectables (ej. `QueueService`).
+---
 
-## Ejemplo de uso
-```typescript
-// Conceptual
-constructor(private readonly queueManager: IQueueManager) {}
+## Estructura Interna
 
-async dispatchEvent() {
-    await this.queueManager.publish('builder_events', { action: 'start' });
-}
+```text
+.
+└── ... # Módulo NestJS de colas e integración BullMQ
 ```
 
-## Formato de Archivos
-- Exporta configuración y módulos globales de NestJS para colas.
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ API Controller ] ──> QueueProducer.add(job) ──> Redis / BullMQ ──> [ Worker Processor ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de colas:
+```bash
+npm run test -- src/shared/infrastructure/queue
+```

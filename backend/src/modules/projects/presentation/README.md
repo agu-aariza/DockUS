@@ -1,30 +1,35 @@
-## Propósito de la carpeta
-Capa de Presentación (REST API) del módulo de Proyectos. Aloja los controladores de NestJS responsables de recibir las solicitudes HTTP, aplicar Guards/Interceptors y derivar la ejecución a los servicios de negocio correspondientes.
+# Capa de Presentación de Proyectos (modules/projects/presentation)
 
-## Límites y Reglas Estrictas
-- NUNCA incluir lógica de negocio aquí.
-- TODO endpoint debe tener sus respectivos decoradores de Swagger (`@ApiOperation`, `@ApiResponse`).
-- Los roles y permisos (`@Roles`, `@RequirePermissions`) deben ser definidos explícitamente en cada endpoint.
+> **Resumen rápido:** Controladores HTTP de NestJS que exponen la API REST de proyectos, rúbricas y entregas.
 
-## Anti-Patrones y Gotchas ⚠️
-- Interacciones directas con la base de datos o Repositorios desde el controlador.
-- Capturar errores de forma genérica o atrapar excepciones de dominio sin mapearlas a `HttpException` de NestJS. (Se prefiere usar Exception Filters globales).
+---
 
-## Dependencias de Contexto Asumidas
-- El Request de Express es inyectado. La información del usuario autenticado proviene del `@CurrentUser()` decorador.
+## Propósito y Responsabilidades
+Exponer los endpoints HTTP y manejar la deserialización/validaciones de entrada.
+- **Controladores HTTP:** Endpoints de creación, listado y consulta de notas.
 
-## Inputs / Outputs Esperados
-- Inputs: DTOs, Path params, Query params.
-- Outputs: Promesas que resuelven los objetos a serializar como JSON.
+---
 
-## Ejemplo de uso
-```typescript
-@Get()
-@ApiOperation({ summary: 'Listar proyectos' })
-async findAll(@Query() query: ListProjectsQueryDto, @CurrentUser() user: AuthenticatedUser) {
-  return this.projectsService.findAll(query, user);
-}
+## Estructura Interna
+
+```text
+.
+└── ... # Controladores HTTP de proyectos
 ```
 
-## Formato de Archivos
-- `*.controller.ts` (ej. `projects.controller.ts`, `deliveries.controller.ts`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+HTTP Request ──> [ ProjectsController ] ──> [ Application Service ] ──> HTTP Response
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de presentación:
+```bash
+npm run test -- src/modules/projects/presentation
+```

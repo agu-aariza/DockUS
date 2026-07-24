@@ -1,24 +1,39 @@
-## Responsabilidad del Módulo
-Provee endpoints de monitoreo para comprobar la disponibilidad y estado (liveness y readiness) del backend y de sus dependencias críticas.
+# Módulo de Salud y Diagnóstico (modules/health)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No ejecuta procesos de reparación, no gestiona métricas complejas de negocio, ni controla el ciclo de vida de los servicios a los que hace ping.
+> **Resumen rápido:** Endpoints de salud técnica de la aplicación (`/health/live` y `/health/readiness`) para la verificación de liveness y readiness del servidor NestJS e infraestructura.
 
-## Conceptos Clave (Glosario)
-- **Liveness**: Indica si el proceso HTTP principal está vivo y respondiendo.
-- **Readiness**: Indica si la aplicación está lista para procesar tráfico validando la conexión con sus dependencias.
+---
 
-## Dependencias Externas Clave
-- **PostgreSQL**: Vía `DataSource` de TypeORM.
-- **Redis**: Vía `RedisClientService`.
-- **Docker daemon**: Vía `DockerHostService`.
-- **AWS Bedrock**: Valida acceso listando modelos de la región.
+## Propósito y Responsabilidades
+Exponer la disponibilidad operativa del backend y la conectividad con sus dependencias críticas (PostgreSQL, Redis, Docker, Amazon Bedrock).
+- **Liveness Check (`/health/live`):** Confirma que el proceso HTTP de la API está vivo y respondiendo solicitudes.
+- **Readiness Check (`/health/readiness`):** Comprueba conectividad real con PostgreSQL, Redis, Docker y Bedrock antes de recibir tráfico de usuarios u orquestadores.
 
-## Efectos Secundarios (Side Effects)
-Solo operaciones de lectura (ping) en las dependencias. No altera ningún estado en bases de datos, cachés ni servicios externos.
+---
 
-## Estado / BBDD
-No posee entidades ni estado propio.
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `health.controller.ts`: Endpoints `GET /health/live` y `GET /health/ready`.
+```text
+.
+├── health.controller.ts # Endpoints /health/live y /health/readiness
+├── health.service.ts    # Lógica de comprobación de conectividad con servicios
+└── health.module.ts     # Módulo NestJS que registra el servicio y controlador de salud
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Docker Healthcheck / Orquestador ] ──> GET /health/live ──> [ HealthController ] ──> HTTP 200 OK
+[ Load Balancer / Readiness Probe ] ──> GET /health/readiness ──> [ HealthService ] ──> HTTP 200 OK / 503
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de salud:
+```bash
+npm run test -- src/modules/health
+```

@@ -1,29 +1,49 @@
-## Propósito (TL;DR)
-Aplicación SPA en React que sirve como interfaz unificada de DockUS, proporcionando vistas de gestión para profesores (Teacher) y un entorno de trabajo personal para estudiantes (Student).
+# Código Fuente Frontend (src)
 
-## Arquitectura de alto nivel
-Single Page Application (SPA) en React + Vite + TypeScript. Gestión de sesión compartida mediante Context API y renderizado condicional/enrutamiento basado en roles.
+> **Resumen rápido:** Directorio raíz del código fuente de React, organizado en características específicas (features) y servicios compartidos.
 
-## Límites Arquitectónicos (Boundaries) ⚠️
-El frontend NUNCA debe comunicarse directamente con bases de datos ni con Docker/servicios internos. Todo acceso se realiza a través de la API del backend. No debe contener secretos ni claves privadas.
+---
 
-## Flujo Principal de Datos
-El usuario ingresa credenciales, se valida vía API y el token se guarda en `SessionContext`. React Router redirige al panel correspondiente (Teacher o Student). Los componentes consumen datos mediante llamadas Axios y renderizan el estado.
+## Propósito y Responsabilidades
+Contener los componentes, hooks, estados globales y páginas que conforman la interfaz de DockUS.
+- **Modularización por dominio:** Separación en carpetas independientes (`auth`, `student`, `projects`, `builder`).
+- **Reusabilidad:** Recursos transversales centralizados en `shared/`.
 
-## Stack Tecnológico Principal
-React 18, React Router v6, TypeScript, Vite, TailwindCSS.
+---
 
-## Mapa de Directorios (Tree)
-- `auth/`: Interfaz UI de login y debug.
-- `builder/`, `deliveries/`, `groups/`, `projects/`, `runtime/`, `storage/`, `users/`: Paneles y vistas de gestión para el rol Teacher.
-- `features/`: Tipos de datos, interfaces y lógica de negocio transversal de los dominios.
-- `shared/`: Componentes UI reutilizables (AppShell), contextos globales (Session, Toast) y clientes API.
-- `student/`: Panel y entorno de trabajo exclusivo para el rol Student.
-- `summary/`: Vista principal (Home) para Teachers.
+## Estructura Interna
 
-## Variables de Entorno Globales
-`VITE_API_URL`: URL base para interactuar con el backend.
+```text
+.
+├── auth/             # Componentes y estado de autenticación
+├── builder/          # Vistas de ejecución en vivo y consola de logs
+├── groups/           # Paneles de gestión de grupos académicos
+├── llm/              # Componentes de interacción con modelos LLM
+├── projects/         # Creación de proyectos, edición de rúbricas y notas
+├── runtime/          # Configuración e inspección de entornos Docker
+├── shared/           # Design system, hooks generales, cliente HTTP y sesión
+├── student/          # Experiencia completa de entregas y workspace de alumnos
+├── student-profile/  # Timeline y expediente del estudiante
+├── summary/          # Cuadros de mando y analíticas del cohorte
+├── users/            # Administración de usuarios
+├── App.tsx           # Componente raíz y enrutamiento principal
+├── main.tsx          # Punto de entrada ReactDOM
+└── styles.css        # Importación de TailwindCSS y estilos globales
+```
 
-## Comandos clave
-- `npm run dev`: Inicia el entorno de desarrollo Vite.
-- `npm run build`: Compila los assets de producción.
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+main.tsx ──> App.tsx ──> [ AppShell / ContextProviders ] ──> [ Feature Section ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Compilar TypeScript y assets para producción:
+```bash
+npm run build
+```

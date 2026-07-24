@@ -1,32 +1,35 @@
-## Propósito de la carpeta
-Contiene las definiciones de las entidades de dominio y modelos de persistencia (TypeORM) para el módulo de proyectos. Define la estructura real de la base de datos (tablas, columnas y relaciones).
+# Entidades de Persistencia de Proyectos (modules/projects/entities)
 
-## Límites y Reglas Estrictas
-- Usar decoradores de TypeORM (`@Entity()`, `@Column()`, `@ManyToOne()`).
-- No debe existir lógica de negocio compleja ni métodos de orquestación dentro de las entidades (modelo anémico o ligeramente rico, pero sin inyectar servicios).
-- Asegurarse de usar `@Index()` donde el rendimiento de consultas lo requiera.
+> **Resumen rápido:** Entidades de TypeORM que mapean las tablas de proyectos, rúbricas, entregas y evaluaciones en PostgreSQL.
 
-## Anti-Patrones y Gotchas ⚠️
-- Referenciar repositorios o servicios dentro de las entidades.
-- No definir las relaciones bidireccionales correctamente y generar cascadas no deseadas (`cascade: true` sin cuidado).
+---
 
-## Dependencias de Contexto Asumidas
-- TypeORM debe estar configurado globalmente en la aplicación.
+## Propósito y Responsabilidades
+Definir las tablas y relaciones relacionales con TypeORM para el dominio de proyectos.
+- **Mapeo ORM:** Tablas `projects`, `project_assignments`, `deliveries` y `build_runs`.
 
-## Inputs / Outputs Esperados
-- Objetos que se mapean 1:1 con las tablas de PostgreSQL.
+---
 
-## Ejemplo de uso
-```typescript
-@Entity('projects')
-export class Project {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+## Estructura Interna
 
-  @Column()
-  title: string;
-}
+```text
+.
+└── ... # Entidades con decoradores @Entity, @Column, @ManyToOne, etc.
 ```
 
-## Formato de Archivos
-- `*.entity.ts` (ej. `project.entity.ts`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ TypeORM Repository ] ──> [ Entity Instance ] ──> PostgreSQL Row
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de entidades:
+```bash
+npm run test -- src/modules/projects/entities
+```

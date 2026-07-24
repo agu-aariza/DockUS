@@ -1,27 +1,36 @@
-## Propósito de la carpeta
-Almacenar constantes, tipos y estructuras de datos reutilizables asociadas a protocolos web, códigos de estado HTTP y formatos de respuesta, evitando números mágicos o strings literales en los controladores.
+# Filtros y Transformadores HTTP (shared/http)
 
-## Límites y Reglas Estrictas
-- NINGUNA lógica de negocio.
-- NINGUNA dependencia de base de datos o herramientas complejas.
-- Constantes agnósticas (generalmente usando Enums o constantes inmutables).
+> **Resumen rápido:** Filtros globales de excepciones HTTP, interceptores de respuesta y formateadores de payload API.
 
-## Anti-Patrones y Gotchas ⚠️
-- Usar `404` directamente en el código de NestJS; en su lugar usar `HttpStatus.NOT_FOUND` y complementarlo con las constantes estandarizadas de mensajes definidas aquí si es necesario.
+---
 
-## Dependencias de Contexto Asumidas
-- Solo depende de JS/TS básico. Usado en controladores y filtros de excepción.
+## Propósito y Responsabilidades
+Normalizar la respuesta de la API HTTP y gestionar de forma centralizada las excepciones no capturadas.
+- **Global Exception Filter:** Captura de errores NestJS y conversión a respuestas JSON estándar RFC 7807.
+- **Transformación de Respuestas:** Formateo consistente de metadatos y payloads.
 
-## Inputs / Outputs Esperados
-Exportación de strings y diccionarios estáticos.
+---
 
-## Ejemplo de uso
-```typescript
-import { HTTP_MESSAGES } from 'src/shared/http/http.constants';
-import { NotFoundException } from '@nestjs/common';
+## Estructura Interna
 
-throw new NotFoundException(HTTP_MESSAGES.RESOURCE_NOT_FOUND);
+```text
+.
+└── ... # Interceptores y filtros de excepciones HTTP
 ```
 
-## Formato de Archivos
-- Constantes agrupadas y exportadas (`*.constants.ts`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Controller Exception ] ──> [ GlobalExceptionFilter ] ──> Formato JSON Estandarizado (4xx/5xx)
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de filtros HTTP:
+```bash
+npm run test -- src/shared/http
+```

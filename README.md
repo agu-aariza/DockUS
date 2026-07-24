@@ -1,41 +1,162 @@
-## Propósito (TL;DR)
-Plataforma académica de evaluación automática de proyectos de programación que combina análisis estático, ejecución aislada en contenedores Docker y evaluación automatizada asistida por modelos de lenguaje (LLM).
+# DockUS - Plataforma de Evaluación Automatizada y Asistida por IA
 
-## Arquitectura de alto nivel
-Arquitectura de aplicación cliente-servidor distribuida. Consiste en una Single Page Application (SPA) para la interfaz de usuario, una API monolítica modular para la gestión del dominio, y workers asíncronos orientados a tareas pesadas de inferencia LLM y ejecución de Docker.
+> **Resumen rápido:** Plataforma de evaluación de código y proyectos docentes basada en arquitectura hexagonal, aislamiento dinámico mediante contenedores Docker, procesamiento asíncrono de colas y retroalimentación asistida por modelos de lenguaje (LLM).
 
-## Límites Arquitectónicos (Boundaries) ⚠️
-El frontend NUNCA debe comunicarse directamente con la base de datos, colas de mensajes, MinIO o servicios LLM; todo acceso debe cruzar exclusivamente a través de los endpoints REST expuestos por la API.
-El código de estudiante (entregas) NUNCA debe ejecutarse en el mismo proceso ni host que el servidor; debe aislarse estrictamente en un runtime de Docker (`runc` o preferiblemente `runsc` / gVisor) sin privilegios y sin conectividad saliente.
-Los agentes y orquestadores asíncronos no deben evadir el motor TypeORM para actualizar estados globales de la aplicación de manera imprevista.
+---
 
-## Flujo Principal de Datos
-1. Los docentes configuran proyectos, directrices de evaluación y repositorios con tests.
-2. El estudiante sube una entrega en formato comprimido al sistema, que es persistido inmediatamente en el bucket S3 (MinIO).
-3. Se encola un trabajo asíncrono (`BuildRun`) en BullMQ gestionado por Redis.
-4. El worker backend planifica la estrategia usando LLM (Bedrock), infiere una receta Docker y ejecuta el código en un contenedor aislado.
-5. Los resultados de los tests y logs son evaluados nuevamente por el LLM para detectar alucinaciones y emitir feedback pedagógico estructurado.
-6. El informe consolidado y todo el estado se guarda en la base de datos (PostgreSQL), quedando disponible para consumo vía REST.
+## Propósito y Responsabilidades
 
-## Stack Tecnológico Principal
-- **Frontend**: React 18, Vite 5, Tailwind CSS
-- **Backend**: NestJS 11, TypeScript, TypeORM
-- **BBDD y Estado**: PostgreSQL, Redis (BullMQ)
-- **Almacenamiento**: MinIO (S3)
-- **Motor de Evaluación**: AWS Bedrock Runtime (Claude), Docker Engine
+DockUS es un ecosistema de software diseñado para automatizar, escalar y supervisar el proceso de evaluación de entregas prácticas de programación en entornos académicos y técnicos. La plataforma resuelve el problema de la ejecución no confiable de código de estudiantes garantizando el aislamiento absoluto en tiempo de ejecución, la resiliencia ante picos de carga y la generación de análisis cualitativos de calidad mediante IA.
 
-## Mapa de Directorios (Tree)
-- `backend/`: API NestJS principal, cola de ejecución de trabajos y orquestación del Builder.
-- `frontend/`: SPA React que provee paneles separados para estudiantes, profesores y administradores.
-- `docs/`: Documentación de arquitectura adicional y diagramas.
-- `academic_proyects/`: Proyectos de demostración y suites de prueba usados para desarrollo.
-- `docker-compose.yml`: Archivo de orquestación local de todos los servicios.
+### Responsabilidades Clave del Sistema:
+- **Ejecución Segura en Sandbox:** Aislar la compilación y ejecución del código no confiable entregado por los alumnos mediante contenedores efímeros de Docker con restricciones de recursos (CPU, memoria, tiempo de ejecución y red).
+- **Orquestación Asíncrona Resiliente:** Gestionar picos de entrega concurrentes mediante colas distribuidas BullMQ sobre Redis, evitando la saturación del servidor HTTP principal y aislando los workers de procesamiento.
+- **Evaluación Híbrida (Estática, Dinámica e IA):** Combinar pruebas unitarias tradicionales, linteo estático, análisis de calidad de código y evaluación cualitativa asistida por modelos LLM (Google Gemini / AWS Bedrock).
+- **Guardias de Inteligencia Artificial:** Implementar filtros de validación de esquemas y detectores de alucinaciones en las respuestas de los LLM para asegurar la consistencia del feedback presentado al alumno.
+- **Gestión Académica Integral:** Controlar el ciclo de vida docente de proyectos, rúbricas ponderadas, asignaciones a grupos, entregas versión a versión y cuadros de mando analíticos de rendimiento de cohorte.
 
-## Variables de Entorno Globales
-`NODE_ENV`, `PORT`, `FRONTEND_URL`, `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `REDIS_HOST`, `MINIO_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `JWT_SECRET`, credenciales LLM (`AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) y configuración de runtime Docker.
+---
 
-## Comandos clave
-`docker compose --profile dev up --build` (levanta toda la infraestructura para desarrollo local)
-`npm run start:dev` (inicia API backend con hot-reload en `backend/`)
-`npm run dev` (inicia UI frontend con Vite en `frontend/`)
-`graphify update .` (actualiza el grafo semántico tras realizar cambios arquitectónicos)
+## Estructura Interna del Repositorio
+
+El repositorio está organizado como una monorepositorio ligero segregado por responsabilidades claras de capa:
+
+```text
+.
+├── backend/                  # Servidor NestJS y motor de evaluación (Node.js & TypeScript)
+│   ├── src/
+│   │   ├── api.module.ts     # Módulo raíz para el proceso API HTTP
+│   │   ├── worker.module.ts  # Módulo raíz para el procesador de colas asíncronas
+│   │   ├── process-role.module.ts # Selector dinámico de módulos por rol de contenedor
+│   │   ├── modules/          # Bounded Contexts (auth, academic, projects, users, health)
+│   │   │   └── projects/builder/ # Submódulo motor de compilación y orquestación Docker
+│   │   └── shared/           # Adaptadores de infraestructura (DB, Redis, Docker, LLM, Security)
+│   ├── .dependency-cruiser.cjs # Linter estricto de fronteras de arquitectura
+│   └── test/                 # Suite de pruebas de integración e2e
+├── frontend/                 # Aplicación SPA web en React, TypeScript, Vite y TailwindCSS
+│   ├── src/
+│   │   ├── auth/             # Módulo de autenticación y gestión de credenciales
+│   │   ├── builder/          # Vistas de monitorización en tiempo real y streaming de logs
+│   │   ├── projects/         # Edición de prácticas, rúbricas y libro de calificaciones
+│   │   ├── student/          # Experiencia del alumno, entregas guiadas y workspace
+│   │   ├── summary/          # Dashboards de analíticas y distribución de notas
+│   │   └── shared/           # Sistema de diseño, cliente HTTP Axios y estado de sesión
+│   └── vite.config.ts        # Configuración del bundler Vite
+├── shared/                   # Contratos de interfaz DTO y tipos compartidos
+│   └── contracts/            # Definiciones de tipos comunes backend-frontend
+├── docker-compose.yml        # Orquestación de infraestructura local (PostgreSQL, Redis, MinIO)
+└── ARCHITECTURE.md           # Documentación técnica avanzada sobre decisiones de diseño
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+La arquitectura del sistema sigue los principios de **Clean Architecture / Hexagonal Architecture** dividida en procesos especializados (API HTTP decoupled del Worker de fondo).
+
+### Diagrama de Arquitectura End-to-End
+
+```text
+[ Cliente Web / React SPA ]
+             │
+             ├── (HTTP REST / JWT)
+             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ API Process (NestJS HTTP Engine)                                │
+│                                                                 │
+│ [ Controllers ] ──> [ Use Cases ] ──> [ Storage / DB Adapter ]  │
+└────────────────────────────────┬────────────────────────────────┘
+                                 │ (Encola trabajo de evaluación)
+                                 ▼
+                     ┌───────────────────────┐
+                     │  Redis / BullMQ Queue │
+                     └───────────┬───────────┘
+                                 │ (Desencola trabajo)
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Worker Process (Builder Engine)                                 │
+│                                                                 │
+│  ┌──────────────────────┐        ┌────────────────────────────┐ │
+│  │ Docker Image Service │        │ LLM Circuit Breaker        │ │
+│  └──────────┬───────────┘        └─────────────┬──────────────┘ │
+└─────────────┼──────────────────────────────────┼────────────────┘
+              │                                  │
+              ▼                                  ▼
+   (Contenedores Efímeros)               (Modelos LLM Externe)
+  [ Runner Node/Python/Java ]           [ Gemini API / Bedrock ]
+```
+
+### Principios Arquitectónicos Aplicados:
+1. **Inversión de Dependencias (DIP):** El dominio de negocio no conoce los detalles de persistencia (TypeORM), almacenamiento de objetos (MinIO) ni modelos de IA. Todos interactúan mediante puertos definidos.
+2. **Segregación de Procesos por Rol:** El mismo código fuente puede compilarse para ejecutar un nodo HTTP enfocado a baja latencia de respuesta (`api.module.ts`) o un nodo procesador de colas de alto cómputo (`worker.module.ts`).
+3. **Resiliencia de Infraestructura:** Las peticiones a modelos LLM externos están protegidas por el patrón **Circuit Breaker** (`LlmCircuitBreakerService`), evitando bloqueos o caídas en cascada ante interrupciones de servicios de terceros.
+4. **Verificación Estática de Fronteras:** La arquitectura está verificada automáticamente en cada integración con `dependency-cruiser`, impidiendo importaciones circulares o violaciones de capa entre `shared/` y `modules/`.
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### 1. Requisitos Previos
+- Node.js v20.x o superior
+- Docker Desktop / Engine v24.x o superior con soporte para sockets UNIX o TCP
+- PostgreSQL 16+ y Redis 7+ (proporcionados vía Docker Compose)
+
+### 2. Levantar Infraestructura Local
+```bash
+# Iniciar servicios de base de datos, caché y almacenamiento de objetos
+docker compose up -d postgres redis minio
+```
+
+### 3. Configuración de Entorno
+Copiar y ajustar los archivos de configuración:
+```bash
+cp .env.example .env
+cp backend/.env.example backend/.env
+```
+
+### 4. Instalación de Dependencias
+```bash
+# Instalar dependencias del backend
+cd backend && npm install
+
+# Instalar dependencias del frontend
+cd ../frontend && npm install
+```
+
+### 5. Ejecución en Modo Desarrollo
+```bash
+# Servidor Backend (API HTTP)
+cd backend && npm run start:dev
+
+# Servidor Backend (Worker de Evaluaciones)
+cd backend && npm run start:worker
+
+# Servidor Frontend (Vite Dev Server)
+cd frontend && npm run dev
+```
+
+### 6. Ejecución de Pruebas y Validación de Calidad
+
+#### Tests Unitarios y de Integración (Backend):
+```bash
+cd backend
+npm run test
+```
+
+#### Validar Fronteras Arquitectónicas (Linter de Arquitectura):
+```bash
+cd backend
+npm run boundaries
+```
+
+#### Tests del Frontend (Vitest):
+```bash
+cd frontend
+npm run test
+```
+
+#### Ejecutar Pruebas End-to-End (e2e):
+```bash
+cd backend
+npm run test:e2e
+```

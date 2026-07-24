@@ -1,29 +1,38 @@
-## Propósito de la carpeta
-Implementa el cliente Redis transversal (`RedisClientService`) para operaciones ajenas al ciclo de vida de las colas de trabajo, como healthchecks o Pub/Sub.
+# Infraestructura de Caché y Bloqueos (cache)
 
-## Límites y Reglas Estrictas
-- Esta conexión a Redis es independiente de la conexión usada por BullMQ.
-- El cliente debe tener configuración de "fail-fast" extrema (e.g. `connectTimeout: 2000`, `maxRetriesPerRequest: 1`) para evitar bloqueos durante los healthchecks de NestJS.
-- No debe encolar comandos offline (`enableOfflineQueue: false`).
+> **Resumen rápido:** Capa de almacenamiento en memoria distribuido con Redis para caché de identidades y sincronización mediante bloqueos distribuidos.
 
-## Anti-Patrones y Gotchas ⚠️
-- Usar este servicio para encolar o procesar trabajos pesados (para eso usar BullMQ).
-- Bloquear el event loop principal si Redis cae. El método `withTimeout` envuelve las llamadas para mitigarlo.
+---
 
-## Dependencias de Contexto Asumidas
-- Se asume el entorno de configuración `buildRedisConnectionOptions` provisto en `shared/config/redis.config.ts`.
+## Propósito y Responsabilidades
+Mejorar el rendimiento del backend y garantizar la concurrencia segura en tareas de evaluación y autenticación.
+- **Bloqueos distribuidos:** `DistributedLockService` para prevenir condiciones de carrera en tareas asíncronas.
+- **Caché de identidades:** `AuthIdentityCacheService` para agilizar la validación de tokens y sesiones.
 
-## Inputs / Outputs Esperados
-- Provee un cliente inyectable con métodos `ping()`, `publish()`, y `createSubscriber()`.
+---
 
-## Ejemplo de uso
-```typescript
-constructor(private readonly redisClient: RedisClientService) {}
+## Estructura Interna
 
-async check() {
-  await this.redisClient.ping();
-}
+```text
+.
+├── auth-identity-cache.service.ts  # Caché rápida de información de usuarios autenticados
+├── cache.module.ts                 # Módulo NestJS que registra el cliente Redis
+└── distributed-lock.service.ts    # Implementación de locks con Redis / Redlock
 ```
 
-## Formato de Archivos
-- Exporta un servicio inyectable con ciclo de vida manejado por Nest (`OnApplicationShutdown`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Process Worker ] ──> [ DistributedLockService ] ──> (Adquiere Lock en Redis) ──> [ Ejecuta Tarea ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar pruebas de caché y bloqueos:
+```bash
+npm run test -- src/shared/infrastructure/cache
+```

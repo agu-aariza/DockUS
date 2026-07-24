@@ -1,37 +1,73 @@
-## Propósito (TL;DR)
-API REST que gestiona el dominio académico (usuarios, grupos, entregas) y orquesta el pipeline de evaluación asíncrona mediante análisis estático, LLM (AWS Bedrock) y ejecución aislada en Docker.
+# Backend Module
 
-## Arquitectura de alto nivel
-Monolito modular construido con NestJS que expone controladores HTTP (REST) y procesa flujos pesados a través de colas de trabajos asíncronos (`BullMQ`) apoyadas por servicios de infraestructura dedicados (S3, Redis, Docker CLI).
+> **Resumen rápido:** Servidor NestJS y arquitectura hexagonal que proporciona la API REST, autenticación, orquestación de entregas de alumnos, evaluación mediante contenedores Docker y procesamiento de IA/LLM.
 
-## Límites Arquitectónicos (Boundaries) ⚠️
-Los controladores HTTP NUNCA deben contener lógica de negocio ni orquestar operaciones directas con Docker, MinIO o LLM. Todo debe pasar por los servicios del dominio (ej. `BuilderRunCommandsService`).
-La API de backend NUNCA debe ejecutar el código de estudiante en su propio espacio de memoria. Debe hacerlo estricta y delegadamente bajo el aislamiento de Docker (`--read-only`, `--cap-drop ALL`, `--network none`).
-Los prompts y respuestas puras del LLM NUNCA deben exponerse directamente al rol `STUDENT`; solo el informe final consolidado.
+---
 
-## Flujo Principal de Datos
-1. Las peticiones REST entran validadas y pasan por filtros de autenticación y RBAC (JWT).
-2. Para operaciones síncronas, TypeORM lee/escribe en la base de datos PostgreSQL, mientras que MinIO almacena/entrega binarios de los estudiantes.
-3. Para la evaluación, los controladores depositan un job en Redis (`BullMQ`).
-4. El worker recoge el job, planifica la ejecución con el LLM, materializa una receta Docker y arranca los contenedores.
-5. Se extrae evidencia, se genera un análisis pedagógico a través del LLM, y se consolida un informe final.
-6. El pipeline actualiza el estado y persiste trazas generadas en MinIO, disponibles luego vía API.
+## Propósito y Responsabilidades
+Proporcionar el núcleo de servicios backend para el ecosistema DockUS, garantizando la seguridad, persistencia de datos y ejecución aislada de evaluaciones.
+- **Gestionar la lógica de negocio principal:** Proyectos, entregas, calificaciones y usuarios.
+- **Orquestar el Builder y contenedores:** Ejecución segura de entornos de desarrollo y pruebas automáticas en Docker.
+- **Integrar proveedores de IA/LLM:** Evaluación guiada y detección de alucinaciones o errores en entregas.
 
-## Stack Tecnológico Principal
-NestJS 11, TypeScript 5, TypeORM, PostgreSQL, BullMQ, Redis, MinIO (S3 SDK), Docker CLI, AWS Bedrock Runtime.
+---
 
-## Mapa de Directorios (Tree)
-- `src/modules/auth/`: Gestión de JWT, refresco y hashing.
-- `src/modules/users/` y `src/modules/academic/`: Control de roles y asignación de cohortes.
-- `src/modules/projects/`: Core de dominio (proyectos, asignaciones, entregas) y pipeline de orquestación (`builder/`).
-- `src/shared/config/`: Esquemas de validación de variables de entorno y logger (`nestjs-pino`).
-- `src/shared/infrastructure/`: Clientes y abstracciones (Base de datos, Cache, S3, cliente AI y orquestación Docker pura).
+## Estructura Interna
 
-## Variables de Entorno Globales
-`DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `MINIO_ENDPOINT`, `MINIO_BUCKET_NAME`, `JWT_SECRET`, configuración del LLM (`AWS_REGION`, `AWS_ACCESS_KEY_ID`, `BUILDER_BEDROCK_*_MODEL_ID`), configuración de seguridad del builder (`BUILDER_DOCKER_RUNTIME`, `BUILDER_BATCH_CPU_LIMIT`).
+```text
+.
+├── src/
+│   ├── modules/          # Módulos de dominio (auth, academic, projects, users, health)
+│   ├── shared/           # Infraestructura compartida (database, cache, ai, docker, security)
+│   ├── bootstrap.ts      # Inicialización del servidor NestJS
+│   ├── main.ts           # Punto de entrada de la aplicación API
+│   ├── worker.ts         # Punto de entrada del worker en segundo plano
+│   ├── api.module.ts     # Módulo principal para la API
+│   └── worker.module.ts  # Módulo principal para el procesador worker
+├── test/                 # Pruebas e2e e integración
+├── .dependency-cruiser.cjs # Reglas de linteo de arquitectura
+└── package.json
+```
 
-## Comandos clave
-`npm run start:dev` (inicia el servidor en modo desarrollo / hot-reload)
-`npm run build` (compila la aplicación a JavaScript)
-`npm test -- --runInBand` (ejecuta tests unitarios forzando de manera secuencial)
-`npm run typecheck` (verifica tipado estricto en el proyecto sin emitir bundle)
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Cliente Frontend ]
+         │
+         ▼
+[ NestJS API Controllers ] (presentation)
+         │
+         ▼
+[ Application Services ] (application)
+         │
+    ┌────┴─────────────────────────┐
+    ▼                              ▼
+[ Domain Logic ]           [ Shared Infrastructure ]
+(Entities & Ports)         (TypeORM, Redis, Docker, Gemini/Bedrock)
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Instalar dependencias:
+```bash
+npm install
+```
+
+### Ejecutar en modo desarrollo:
+```bash
+npm run start:dev
+```
+
+### Validar fronteras de arquitectura:
+```bash
+npm run boundaries
+```
+
+### Ejecutar tests:
+```bash
+npm run test
+```

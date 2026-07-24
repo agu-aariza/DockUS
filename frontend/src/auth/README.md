@@ -1,21 +1,39 @@
-## Responsabilidad del Módulo
-Proporcionar la interfaz de usuario (UI) principal y formularios para el inicio de sesión, cambio de entorno de desarrollo (DebugSwitcher) y gestión de sesiones visual.
+# Módulo de Autenticación (src/auth)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No gestiona el almacenamiento persistente de tokens ni el estado global del usuario (es responsabilidad de `SessionContext` en `shared/`). Tampoco define los tipos de datos (alojados en `features/auth/`).
+> **Resumen rápido:** Vistas de inicio de sesión, registro de usuarios, validaciones de credenciales y contexto de autenticación.
 
-## Conceptos Clave (Glosario)
-- **AuthPanel**: Vista pública donde el usuario ingresa sus credenciales de acceso.
-- **DebugSwitcher**: Herramienta de desarrollo UI para inyectar y alternar rápidamente entre múltiples sesiones.
+---
 
-## Dependencias Externas Clave
-Depende de `shared/api/services` (específicamente `authApi`) para realizar las llamadas de login al backend y del `SessionContext` para actualizar la sesión activa.
+## Propósito y Responsabilidades
+Permitir el acceso seguro a la plataforma y gestionar el flujo de inicio de sesión.
+- **Formularios de Autenticación:** Validación de entradas de usuario y presentación de errores.
+- **Gestión del Estado de Entrada:** Integración con la API backend `/auth/login`.
 
-## Efectos Secundarios (Side Effects)
-Al tener éxito en la autenticación, desencadena redirecciones del router de React hacia el dashboard correspondiente (`/summary` o `/mi-espacio`).
+---
 
-## Estado / BBDD
-Maneja estado local de React (useState) para campos de formulario (email, password), estados de carga y visualización de errores.
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `AuthPanel.tsx`: Componente raíz consumido por las rutas públicas (`/` y `/auth`) en `App.tsx`.
+```text
+.
+├── authPanel.css        # Estilos específicos del panel de inicio de sesión
+├── authValidation.ts    # Validadores de formato de correo y requisitos de contraseña
+├── components/          # Formularios y tarjetas de autenticación
+└── hooks/               # Custom hooks para manejar el envío de credenciales
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Usuario ] ──> [ Formulario de Login ] ──> [ authValidation ] ──> [ API /auth/login ] ──> [ Guarda Token ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de autenticación:
+```bash
+npm run test -- src/auth
+```

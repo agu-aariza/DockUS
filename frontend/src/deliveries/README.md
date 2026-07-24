@@ -1,21 +1,35 @@
-## Responsabilidad del Módulo
-Proporcionar la interfaz de gestión (UI) para listar, revisar, corregir y asignar calificaciones a las entregas (Deliveries) por parte de los profesores.
+# Módulo de Entregas y Calificaciones (src/deliveries)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No es responsable de la lógica de envío por parte del alumno (ubicada en `student/`). No contiene las definiciones base del modelo de datos de entregas.
+> **Resumen rápido:** Hooks y componentes para la gestión y revisión de entregas por parte de profesores y alumnos.
 
-## Conceptos Clave (Glosario)
-- **TeacherDeliveriesPanel**: Panel administrativo para que el profesor visualice el flujo de entregas.
-- **Review**: Acción de calificar y proporcionar feedback a una entrega específica.
+---
 
-## Dependencias Externas Clave
-Depende de `features/deliveries/` para los DTOs y lógica de negocio. Utiliza utilidades de navegación como `teacherReviewNavigation.ts` para moverse por las interfaces de corrección.
+## Propósito y Responsabilidades
+Facilitar la consulta del estado de entregas y el proceso de evaluación manual o automática.
+- **Gestión de Calificaciones:** Custom hooks para calificar entregas (`useDeliveryManagement`).
 
-## Efectos Secundarios (Side Effects)
-Lanza mutaciones (peticiones API) para actualizar el estado, nota o feedback de una entrega, y refresca las tablas y paneles de la UI en consecuencia.
+---
 
-## Estado / BBDD
-Mantiene estado de UI para filtros, modales, vistas detalladas de entregas y formularios de corrección manual.
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `TeacherDeliveriesPanel.tsx`: Componente raíz montado en la ruta `/deliveries`.
+```text
+.
+└── hooks/ # Custom hooks de gestión de entregas (useDeliveryManagement)
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Delivery Management Panel ] ──> [ useDeliveryManagement ] ──> [ API HTTP /deliveries ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests del módulo de entregas:
+```bash
+npm run test -- src/deliveries
+```

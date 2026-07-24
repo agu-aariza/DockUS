@@ -1,24 +1,43 @@
-## Responsabilidad del Módulo
-Gestión de la identidad de los usuarios (CRUD), persistencia de credenciales de forma segura y administración de roles y estados de cuenta.
+# Módulo de Usuarios (users)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No emite tokens JWT, no procesa logins HTTP directamente, ni maneja sesiones. La autenticación es responsabilidad exclusiva del módulo `auth`.
+> **Resumen rápido:** Administración de cuentas de usuario, perfiles, cambio de roles y consulta de información personal.
 
-## Conceptos Clave (Glosario)
-- **UserRole**: Nivel de privilegio del usuario (STUDENT, TEACHER, ADMIN).
-- **UserStatus**: Ciclo de vida de la cuenta (ACTIVE, INACTIVE, SUSPENDED, PENDING_VERIFICATION).
-- **Soft Delete**: Eliminación lógica de un usuario (marcado como borrado pero retenido en BD).
+---
 
-## Dependencias Externas Clave
-- Módulo `TypeOrm` para la persistencia en PostgreSQL.
-- Sistema de encriptación `bcrypt` para cifrado de contraseñas.
+## Propósito y Responsabilidades
+Mantener la información de los usuarios del sistema y gestionar sus preferencias y estado.
+- **Gestión de Perfiles:** Consulta y edición de datos de usuario.
+- **Administración:** Listado y filtrado de usuarios para administradores y profesores.
 
-## Efectos Secundarios (Side Effects)
-Modifica el estado persistente de identidades en la base de datos. Ningún otro módulo debe modificar usuarios directamente.
+---
 
-## Estado / BBDD
-- Tabla `users` (entidad `User`).
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `users.controller.ts`: Rutas administrativas REST para gestión de usuarios.
-- `users.service.ts`: Métodos internos consumidos por otros módulos (especialmente `findByEmailForAuth` para el módulo `auth`).
+```text
+.
+├── application/       # Servicios de aplicación y casos de uso de gestión de usuarios
+├── domain/            # Entidades y reglas puras del dominio de usuarios
+├── dto/               # DTOs para la creación, actualización y filtrado de usuarios
+├── entities/          # Entidades TypeORM del modelo User
+├── infrastructure/    # Repositorios de base de datos e integración con TypeORM
+├── users.controller.ts # Endpoints HTTP de consulta y gestión de usuarios
+├── users.module.ts    # Registro del módulo de usuarios en NestJS
+└── users.service.ts   # Servicio de búsqueda, actualización y eliminación de usuarios
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Cliente HTTP ] ──> GET /users/me ──> [ UsersController ] ──> [ UsersService ] ──> [ User Repository ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de usuarios:
+```bash
+npm run test -- src/modules/users
+```

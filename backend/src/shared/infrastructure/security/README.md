@@ -1,31 +1,36 @@
-## Propósito de la carpeta
-Definir las políticas de rate limiting global que protegen los endpoints de la API contra ataques de fuerza bruta y saturación de peticiones (DDoS/Flood).
+# Seguridad y Control de Frecuencia (security)
 
-## Límites y Reglas Estrictas
-- Se utilizan dos cubos de rate limiting con `@nestjs/throttler`: `global` (ventanas largas, e.g. 1000req/60s para navegación normal) y `burst` (ventanas cortas, e.g. 40req/1s para evitar scripts rápidos).
-- Esta configuración debe estar activa en todos los entornos productivos.
+> **Resumen rápido:** Mecanismos de protección contra sobrecargas, limitación de frecuencia de peticiones (throttling) y guardias de seguridad.
 
-## Anti-Patrones y Gotchas ⚠️
-- Los endpoints de autenticación (`/auth/login`) están altamente expuestos a fuerza bruta. NUNCA deben depender solo de los límites globales, deben sobrescribir los límites usando el decorador `@Throttle()` con valores mucho más bajos (ej. 3req/1s).
-- Rate limits extremadamente estrictos en el bucket global pueden causar que paneles complejos que hacen varias peticiones GET (dashboard, workspaces) fallen repentinamente.
+---
 
-## Dependencias de Contexto Asumidas
-- Se asume el uso de `ThrottlerModule` de NestJS en `AppModule`.
+## Propósito y Responsabilidades
+Proteger la API contra abusos, peticiones masivas no autorizadas y ataques de denegación de servicio.
+- **Throttling personalizado:** `DockusThrottlerGuard` para limitar peticiones por IP, usuario o endpoint.
 
-## Inputs / Outputs Esperados
-- Provee un array de configuración compatible con `ThrottlerModule.forRoot()`.
+---
 
-## Ejemplo de uso
-```typescript
-import { throttlerConfig } from 'src/shared/infrastructure/security/throttler.config';
+## Estructura Interna
 
-@Module({
-  imports: [
-    ThrottlerModule.forRoot(throttlerConfig),
-  ],
-})
-export class AppModule {}
+```text
+.
+└── dockus-throttler.guard.ts # Guardia NestJS para la restricción de tasa de peticiones
 ```
 
-## Formato de Archivos
-- Exporta constantes de configuración inmutables (`*.config.ts`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Cliente HTTP ] ──> [ DockusThrottlerGuard ] ──> (Petición Aceptada) ──> [ Controller ]
+                                             └──> (Petición Rechazada) ──> HTTP 429
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar pruebas del throttler:
+```bash
+npm run test -- src/shared/infrastructure/security
+```

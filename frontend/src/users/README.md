@@ -1,20 +1,36 @@
-## Responsabilidad del Módulo
-Administra la gestión del ciclo de vida de los usuarios en la plataforma, permitiendo visualizarlos, crearlos y asignar roles y grupos.
+# Módulo de Administración de Usuarios (src/users)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No gestiona la sesión actual ni el proceso de autenticación o login (esto pertenece a `shared/session`).
+> **Resumen rápido:** Vista de administración para consultar, crear y modificar usuarios, roles y permisos de la plataforma.
 
-## Conceptos Clave (Glosario)
-- **UsersPanel**: Interfaz administrativa de la tabla de usuarios.
+---
 
-## Dependencias Externas Clave
-Depende de `shared/api/usersApi.ts` para operaciones CRUD y de `shared/components/ui/DataTable.tsx` para la presentación.
+## Propósito y Responsabilidades
+Permitir a los administradores la gestión de las cuentas de usuario.
+- **Gestión de Cuentas:** Alta de nuevos profesores y estudiantes.
+- **Filtros y Búsqueda:** Búsqueda rápida por nombre, email o rol.
 
-## Efectos Secundarios (Side Effects)
-Abre modales de creación o edición que envían mutaciones de datos de usuario al backend.
+---
 
-## Estado / BBDD
-Mantiene listas de usuarios locales en cliente para la vista de tabla, con paginación y filtros.
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `UsersPanel.tsx`
+```text
+.
+└── UsersPanel.tsx # Vista principal de gestión de usuarios
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ UsersPanel ] ──> [ API HTTP /users ] ──> [ PostgreSQL User Service ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests del panel de usuarios:
+```bash
+npm run test -- src/users
+```

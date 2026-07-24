@@ -1,29 +1,45 @@
-## Propósito de la carpeta
-Alojamiento de la configuración concreta de TypeORM y la definición del `DatabaseModule` para inyectar la base de datos PostgreSQL a toda la aplicación.
+# Infraestructura de Base de Datos (database)
 
-## Límites y Reglas Estrictas
-- NUNCA activar `synchronize: true` en producción. Solo es para `development` y `test`.
-- Las entidades deben auto-descubrirse o registrarse adecuadamente aquí usando rutas relativas seguras (`autoLoadEntities: true`).
+> **Resumen rápido:** Configuración de TypeORM, cliente PostgreSQL, pool de conexiones y gestión de migraciones de esquemas.
 
-## Anti-Patrones y Gotchas ⚠️
-- Incluir queries SQL manuales o repositorios concretos. Esto es solo inicialización y configuración.
+---
 
-## Dependencias de Contexto Asumidas
-- Depende de que las variables de entorno de BD hayan sido validadas por `ConfigModule`.
+## Propósito y Responsabilidades
+Administrar la persistencia relacional en PostgreSQL para todos los módulos de la aplicación de forma consistente y segura.
+- **Configuración de conexiones:** Pool optimizado de conexiones PG (`POOLS_DEFAULTS`) e integración con `@nestjs/typeorm`.
+- **Migraciones:** Ejecución de scripts DDL para evoluciones del esquema sin pérdida de datos.
 
-## Inputs / Outputs Esperados
-- Define un `TypeOrmModule.forRootAsync(...)`.
+---
 
-## Ejemplo de uso
-Añadido en el módulo principal:
-```typescript
-import { DatabaseModule } from 'src/shared/infrastructure/database/database.module';
+## Estructura Interna
 
-@Module({
-  imports: [DatabaseModule],
-})
-export class InfrastructureModule {}
+```text
+.
+├── migrations/         # Archivos TypeScript de migraciones con timestamps
+├── data-source.ts      # Instancia DataSource para la CLI de TypeORM
+└── typeorm.config.ts   # Fábrica de configuración para NestJS y TypeOrmModule
 ```
 
-## Formato de Archivos
-- Ficheros de configuración de módulo de NestJS (`*.module.ts`, `*.config.ts`).
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ NestJS Module ] ──> [ typeorm.config.ts ] ──> [ PostgreSQL Server ]
+                                                     ▲
+[ TypeORM CLI ] ────> [ data-source.ts ] ────────────┘
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar migraciones pendientes:
+```bash
+npm run migration:run
+```
+
+### Generar una nueva migración:
+```bash
+npm run migration:generate -- src/shared/infrastructure/database/migrations/NombreMigracion
+```

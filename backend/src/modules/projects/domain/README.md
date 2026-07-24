@@ -1,29 +1,36 @@
-## Propósito de la carpeta
-Definir los contratos principales (interfaces) y tipos fundamentales del dominio para el módulo Projects, siguiendo principios de Clean Architecture/Hexagonal. 
+# Dominio de Proyectos (modules/projects/domain)
 
-## Límites y Reglas Estrictas
-- NUNCA importar entidades concretas de TypeORM o controladores aquí si rompen la abstracción.
-- NUNCA incluir dependencias de base de datos concretas.
-- Solo exportar interfaces e inyectables abstractos (`IProjectRepository`, etc.).
+> **Resumen rápido:** Lógica de negocio pura y reglas del dominio de proyectos, sin dependencias de infraestructura ni frameworks externos.
 
-## Anti-Patrones y Gotchas ⚠️
-- Poner lógica de negocio en las interfaces.
-- Importar TypeORM o Mongoose en estas interfaces de repositorio. Deben ser agnósticas.
+---
 
-## Dependencias de Contexto Asumidas
-- Ninguna. Esta es la capa más interna.
+## Propósito y Responsabilidades
+Definir las entidades puras, objetos de valor (Value Objects) y reglas del dominio de evaluación.
+- **Pureza del Dominio:** Sin importaciones de TypeORM, Express o NestJS (salvo tipos decorativos).
+- **Reglas de Calificación:** Cálculo de notas y evaluación de rúbricas.
 
-## Inputs / Outputs Esperados
-- Types e Interfaces de Typescript.
+---
 
-## Ejemplo de uso
-```typescript
-constructor(
-  @Inject('IProjectRepository')
-  private readonly projectRepo: IProjectRepository,
-) {}
+## Estructura Interna
+
+```text
+.
+└── ... # Entidades puras y reglas de dominio
 ```
 
-## Formato de Archivos
-- `*.interface.ts`
-- Carpetas como `repositories/` para contratos de persistencia.
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Application Service ] ──> [ Domain Rule / Entity ] ──> Calcula Calificación / Valida Estado
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests del dominio de proyectos:
+```bash
+npm run test -- src/modules/projects/domain
+```

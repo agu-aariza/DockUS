@@ -1,25 +1,36 @@
-## Responsabilidad del Módulo
-Manejar el almacenamiento de archivos (ej. código fuente subido por los estudiantes, artefactos generados) asociados a los proyectos. Actúa como intermediario con MinIO / S3.
+# Submódulo de Almacenamiento de Proyectos (modules/projects/storage)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-- No define la lógica de cómo procesar las entregas (el Builder hace eso).
-- No asocia el archivo subido a una entrega o estudiante en la BBDD (eso es responsabilidad de `Deliveries`).
+> **Resumen rápido:** Middleware de subida de archivos (Multer) y validación de contenidos comprimidos (ZIP/tar) para entregas.
 
-## Conceptos Clave (Glosario)
-- **Storage Object**: Metadatos asociados a un archivo físico almacenado en el bucket.
-- **MinIO/S3**: Proveedor de almacenamiento compatible con S3.
+---
 
-## Dependencias Externas Clave
-- `MinioService` o el servicio de S3 para subir y recuperar streams de archivos.
-- Base de datos (para registrar los metadatos de los objetos almacenados en la tabla `storage_objects`).
+## Propósito y Responsabilidades
+Interceptar y validar los ficheros subidos por los alumnos antes de su almacenamiento en MinIO.
+- **Configuración Multer:** `upload-multer.config.ts` para restringir tamaño y tipos MIME permitidos.
 
-## Efectos Secundarios (Side Effects)
-- Escribe y lee bytes directamente del proveedor S3 configurado.
-- Crea registros en la tabla `storage_objects` con el tamaño, mime-type, y metadatos del archivo.
+---
 
-## Estado / BBDD
-- Entidad `StorageObject`.
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `StorageController` (API REST para subida y descarga de archivos).
-- `StorageService`, `StorageUploadService`, `StorageQueryService` (para uso interno desde otros módulos como `Builder`).
+```text
+.
+├── upload-multer.config.ts # Configuración del interceptor de archivos
+└── upload-payload.util.ts  # Utilidad de validación y extracción del archivo subido
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+HTTP multipart/form-data ──> [ Multer Interceptor ] ──> [ UploadPayloadUtil ] ──> [ MinIO Storage ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de almacenamiento de proyectos:
+```bash
+npm run test -- src/modules/projects/storage
+```

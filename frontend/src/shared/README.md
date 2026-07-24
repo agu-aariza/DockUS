@@ -1,24 +1,44 @@
-## Responsabilidad del Módulo
-Provee la base arquitectónica y los recursos compartidos para toda la aplicación frontend, centralizando API clients, componentes UI genéricos, manejo de sesión y utilidades.
+# Recursos Compartidos Frontend (src/shared)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No contiene lógica de negocio específica de un dominio (ej. entregas, estudiantes o análisis). No maneja flujos de vistas completas más allá de la estructura general (AppShell/Layout).
+> **Resumen rápido:** Componentes de interfaz de usuario del sistema de diseño, utilidades de red, gestión de sesión y hooks compartidos.
 
-## Conceptos Clave (Glosario)
-- **Session**: Estado global de autenticación del usuario actual.
-- **Workspace**: Contexto de trabajo activo que afecta qué recursos se muestran o editan.
-- **API**: Capa de abstracción para la comunicación HTTP.
+---
 
-## Dependencias Externas Clave
-Ninguna a nivel de módulo externo interno; todos los demás módulos dependen de este. Depende fuertemente de React, bibliotecas de UI base y clientes HTTP.
+## Propósito y Responsabilidades
+Proporcionar una base sólida y uniforme para el desarrollo de nuevas vistas en el frontend.
+- **UI Components:** Botones, modales, barras de navegación, badges e indicadores de estado.
+- **Gestión de Red y Sesión:** Cliente HTTP Axios configurado (`http.ts`), almacenamiento de sesión y notificaciones Toast.
 
-## Efectos Secundarios (Side Effects)
-Provee providers de contexto que alteran el estado global (sesión, notificaciones/toasts, workspace activo).
+---
 
-## Estado / BBDD
-Maneja el estado en cliente de la sesión de usuario y el workspace seleccionado temporalmente.
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `session/SessionContext.tsx`
-- `workspace/WorkspaceContext.tsx`
-- `components/ui/AppShell.tsx`
+```text
+.
+├── api/              # Cliente HTTP, interceptores y tratamiento de errores
+├── components/       # Componentes visuales reutilizables (ui/, report/, file-preview/)
+├── hooks/            # Hooks generales (useFocusTrap, useVisibilityAwareInterval)
+├── session/          # Store de sesión y persistencia local de tokens
+├── theme/            # Tokens de diseño y colores
+├── toast/            # Sistema global de notificaciones Toast
+├── utils/            # Funciones auxiliares (backoff, formatters)
+└── workspace/        # Barras de trabajo y navegación de workspace
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ Feature Component ] ──> [ Shared UI Component ]
+                  └──> [ Shared Session Store / HTTP Client ] ──> [ Backend API ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests de utilidades compartidas:
+```bash
+npm run test -- src/shared
+```

@@ -1,21 +1,38 @@
-## Responsabilidad del Módulo
-Interfaz administrativa para la creación, visualización y gestión de grupos (Groups) y la matriculación/asignación de usuarios (estudiantes y profesores) a ellos.
+# Módulo de Gestión de Grupos Académicos (src/groups)
 
-## Lo que este módulo NO hace (Anti-Goals) ⚠️
-No gestiona el perfil individual del usuario fuera del contexto de su pertenencia a un grupo. 
+> **Resumen rápido:** Paneles de administración de grupos de estudiantes, matrículas y listados docentes para profesores.
 
-## Conceptos Clave (Glosario)
-- **TeacherGroupsPanel**: Tabla/Dashboard para que el profesor administre la jerarquía y pertenencia de grupos.
-- **Group**: Colección de usuarios unidos bajo una misma cohorte o clase.
+---
 
-## Dependencias Externas Clave
-Integra llamadas de API y hooks específicos del dominio `groups` para realizar operaciones de CRUD sobre la pertenencia y estructura de los grupos.
+## Propósito y Responsabilidades
+Permitir a los profesores organizar sus alumnos en grupos de clase.
+- **Gestión de Grupos:** Creación y modificación de grupos docentes.
+- **Inscripción de Alumnos:** Asignación y desasignación de estudiantes a grupos.
 
-## Efectos Secundarios (Side Effects)
-Dispara re-renders en las tablas de usuarios y modales al mutar (crear/eliminar) un grupo o al añadir/quitar un estudiante.
+---
 
-## Estado / BBDD
-Maneja el estado de paginación, filtros de la vista de tabla y estado transaccional de modales de creación.
+## Estructura Interna
 
-## Puntos de Entrada (Entrypoints)
-- `pages/TeacherGroupsPanel.tsx`: Vista principal montada en la ruta `/groups`.
+```text
+.
+├── hooks/                      # Custom hooks para la gestión de datos de grupos (useGroupManagement)
+└── pages/
+    └── TeacherGroupsPanel.tsx  # Vista principal de administración de grupos
+```
+
+---
+
+## Flujo de Trabajo / Arquitectura
+
+```text
+[ TeacherGroupsPanel ] ──> [ useGroupManagement ] ──> [ API HTTP /groups ]
+```
+
+---
+
+## Cómo Usar / Probar este Módulo
+
+### Ejecutar tests del módulo de grupos:
+```bash
+npm run test -- src/groups
+```
