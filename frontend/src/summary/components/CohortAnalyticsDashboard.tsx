@@ -4,12 +4,12 @@ import {
   RiFileList3Line,
   RiAlertLine,
   RiBarChartGroupedLine,
-  RiLoader4Line,
   RiFolderOpenLine,
   RiShieldCheckLine,
 } from "react-icons/ri";
 import { projectsApi } from "../../shared/api/services";
 import { MetricCard } from "../../shared/components/MetricCard";
+import { Skeleton } from "../../shared/components/Skeleton";
 import type { ProjectEntity, ProjectProgressSummary, ProjectQualityInsight } from "../../features/projects/types";
 
 interface CohortAnalyticsDashboardProps {
@@ -150,16 +150,16 @@ export function CohortAnalyticsDashboard({
       const suspensos = gradedStudents.filter((s) => s.grade! < 5.0).length;
 
       distribution = [
-        { label: "Sobresaliente [9.0 - 10.0]", count: sobresalientes, percent: totalGraded ? Math.round((sobresalientes / totalGraded) * 100) : 0, color: "bg-emerald-500" },
-        { label: "Notable [7.0 - 8.9]", count: notables, percent: totalGraded ? Math.round((notables / totalGraded) * 100) : 0, color: "bg-blue-500" },
-        { label: "Aprobado [5.0 - 6.9]", count: aprobados, percent: totalGraded ? Math.round((aprobados / totalGraded) * 100) : 0, color: "bg-amber-500" },
-        { label: "Suspenso [0.0 - 4.9]", count: suspensos, percent: totalGraded ? Math.round((suspensos / totalGraded) * 100) : 0, color: "bg-red-500" },
+        { label: "Sobresaliente [9.0 - 10.0]", count: sobresalientes, percent: totalGraded ? Math.round((sobresalientes / totalGraded) * 100) : 0, color: "bg-success-500" },
+        { label: "Notable [7.0 - 8.9]", count: notables, percent: totalGraded ? Math.round((notables / totalGraded) * 100) : 0, color: "bg-primary-500" },
+        { label: "Aprobado [5.0 - 6.9]", count: aprobados, percent: totalGraded ? Math.round((aprobados / totalGraded) * 100) : 0, color: "bg-warning-500" },
+        { label: "Suspenso [0.0 - 4.9]", count: suspensos, percent: totalGraded ? Math.round((suspensos / totalGraded) * 100) : 0, color: "bg-danger-500" },
       ];
     } else {
       const totalStudents = summary.totalAssignments;
       distribution = [
-        { label: "Pasan todos los tests", count: summary.passedAllTests, percent: totalStudents ? Math.round((summary.passedAllTests / totalStudents) * 100) : 0, color: "bg-emerald-500" },
-        { label: "Tests fallidos", count: summary.deliveredAtLeastOnce - summary.passedAllTests, percent: totalStudents ? Math.round(((summary.deliveredAtLeastOnce - summary.passedAllTests) / totalStudents) * 100) : 0, color: "bg-red-500" },
+        { label: "Pasan todos los tests", count: summary.passedAllTests, percent: totalStudents ? Math.round((summary.passedAllTests / totalStudents) * 100) : 0, color: "bg-success-500" },
+        { label: "Tests fallidos", count: summary.deliveredAtLeastOnce - summary.passedAllTests, percent: totalStudents ? Math.round(((summary.deliveredAtLeastOnce - summary.passedAllTests) / totalStudents) * 100) : 0, color: "bg-danger-500" },
         { label: "Sin entregas", count: summary.neverDelivered, percent: totalStudents ? Math.round((summary.neverDelivered / totalStudents) * 100) : 0, color: "bg-slate-300" },
       ];
     }
@@ -185,12 +185,31 @@ export function CohortAnalyticsDashboard({
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-app-border bg-white py-12">
-          <RiLoader4Line className="animate-spin text-2xl text-primary" />
-          <span className="text-sm text-slate-500">Analizando cohorte...</span>
+        // Misma cuadrícula que el contenido cargado (4 MetricCard + 2
+        // artículos) en vez de un spinner centrado, para que las tarjetas no
+        // cambien de forma al llegar los datos (FE-MED-03).
+        <div className="space-y-5" aria-busy="true" aria-label="Analizando cohorte">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <MetricCard key={idx} loading label="" value="" icon={null} />
+            ))}
+          </div>
+          <div className="grid gap-5 lg:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, idx) => (
+              <article key={idx} className="rounded-lg border border-app-border bg-white p-4">
+                <Skeleton type="text" className="h-4 w-40" />
+                <Skeleton type="text" className="mt-2 h-3 w-56" />
+                <div className="mt-4 space-y-3">
+                  <Skeleton type="text" className="h-2.5 w-full" />
+                  <Skeleton type="text" className="h-2.5 w-full" />
+                  <Skeleton type="text" className="h-2.5 w-2/3" />
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       ) : error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center text-sm text-red-700">
+        <div className="rounded-lg border border-danger-200 bg-danger-50 p-4 text-center text-sm text-danger-700">
           {error}
         </div>
       ) : !summary ? (
@@ -247,7 +266,7 @@ export function CohortAnalyticsDashboard({
               </p>
               {insights.length === 0 ? (
                 <div className="mt-4 flex flex-col items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50 py-8 text-center">
-                  <RiShieldCheckLine className="mb-2 text-2xl text-emerald-500" />
+                  <RiShieldCheckLine className="mb-2 text-2xl text-success-500" />
                   <p className="px-4 text-xs font-medium text-slate-600">
                     No se han detectado incidencias de calidad destacables.
                   </p>

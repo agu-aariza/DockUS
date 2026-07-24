@@ -48,10 +48,10 @@ export function TeacherDeliveriesPanel(): JSX.Element {
       id: p.id,
       title: p.title,
       description: p.contextAcademico || "Sin descripción operativa disponible.",
-      studentCount: (p as any).assignmentCount || 0,
-      activeRuns: 0, 
+      studentCount: p.assignmentCount ?? 0,
+      activeRuns: 0,
       status: p.status === 'ACTIVE' ? 'READY' : 'HALTED',
-      teachers: (p as any).teachers,
+      teachers: p.teachers,
     })), [panel.dc.projects]);
 
   if (!panel.dc.selectedProjectId) {

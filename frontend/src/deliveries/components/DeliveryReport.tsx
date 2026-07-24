@@ -1,5 +1,5 @@
 import { RiFileTextLine, RiLoader4Line } from "react-icons/ri";
-import { DeliveryEntity } from "../../shared/types";
+import { BuildRunEntity, DeliveryEntity } from "../../shared/types";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { Button } from "../../shared/components/ui/Button";
 import { EmptyState } from "../../shared/components/EmptyState";
@@ -15,10 +15,10 @@ export function DeliveryReport({
   onHandleViewReport,
 }: {
   selectedDelivery: DeliveryEntity;
-  reportRun: any;
+  reportRun: BuildRunEntity | null;
   reportDeliveryVersion: number | undefined;
   reportLoading: boolean;
-  selectedDeliveryReviewNotes: { manualNotes?: string | null; legacyBlocks?: any };
+  selectedDeliveryReviewNotes: { manualNotes?: string | null; legacyBlocks?: string[] };
   onHandleViewReport: (_id?: string, _options?: { force?: boolean }) => void;
 }) {
   const { selection } = useWorkspaceSelection();

@@ -114,7 +114,7 @@ export function UsersPanel(): JSX.Element {
               uc.setConfirmOpen(true);
             }}
             disabled={!uc.canAdmin}
-            className="text-slate-400 hover:text-red-700 hover:bg-red-50"
+            className="text-slate-400 hover:text-danger-700 hover:bg-danger-50"
           >
             <RiDeleteBin7Line className="text-base" />
           </IconButton>

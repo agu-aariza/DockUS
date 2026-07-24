@@ -30,7 +30,7 @@ const SURFACE_TONE: Record<NonNullable<StudentSurfaceProps["tone"]>, string> = {
   default: "border-app-border bg-white",
   accent: "border-primary/20 bg-primary-subtle",
   subtle: "border-app-border bg-slate-50",
-  warm: "border-amber-200 bg-amber-50",
+  warm: "border-warning-200 bg-warning-50",
 };
 
 export function StudentSurface({

@@ -28,10 +28,11 @@ import { deriveStudentRetryAction } from "./studentRetryActions";
 import { describeAssignmentTimeline } from "./deadlineUtils";
 import { PipelineStepper } from "./PipelineStepper";
 import { deriveStudentWorkspaceInsights, resolveStudentRunOutcome } from "./studentWorkspaceInsights";
+import type { StudentTab } from "./studentTabs";
 
 interface Props {
   data: StudentWorkspaceData;
-  onNavigate: (_tab: any) => void;
+  onNavigate: (_tab: StudentTab) => void;
 }
 
 const HEADLINE_MAP: Record<StudentWorkflowState, string> = {
@@ -60,7 +61,7 @@ function formatOutcome(outcome: ReturnType<typeof resolveStudentRunOutcome>): {
       return {
         label: "Apto",
         className:
-          "border-emerald-200 bg-emerald-50/70 text-emerald-700 font-semibold",
+          "border-success-200 bg-success-50/70 text-success-700 font-semibold",
       };
     case "FAIL":
       return {
@@ -70,7 +71,7 @@ function formatOutcome(outcome: ReturnType<typeof resolveStudentRunOutcome>): {
     case "PARTIAL":
       return {
         label: "Parcial",
-        className: "border-amber-200 bg-amber-50/70 text-amber-700 font-semibold",
+        className: "border-warning-200 bg-warning-50/70 text-warning-700 font-semibold",
       };
     case "UNKNOWN":
       return {
@@ -86,8 +87,8 @@ function formatOutcome(outcome: ReturnType<typeof resolveStudentRunOutcome>): {
 }
 
 function gradeColor(grade: number): string {
-  if (grade >= 9) return "text-emerald-700";
-  if (grade >= 5) return "text-emerald-600";
+  if (grade >= 9) return "text-success-700";
+  if (grade >= 5) return "text-success-600";
   return "text-rose-700";
 }
 
@@ -98,7 +99,7 @@ function timelineStyle(state: string): string {
     case "upcoming":
       return "border-primary/20 bg-primary/5 text-primary font-semibold";
     default:
-      return "border-emerald-100 bg-emerald-50/70 text-emerald-700 font-semibold";
+      return "border-success-100 bg-success-50/70 text-success-700 font-semibold";
   }
 }
 
@@ -197,7 +198,7 @@ export function StudentHomeSection({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-red-800">
+      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-danger-800">
         Error: {error}
       </div>
     );

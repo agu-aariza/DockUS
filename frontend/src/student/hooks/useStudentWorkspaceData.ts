@@ -37,21 +37,14 @@ export function useStudentWorkspaceData(): StudentWorkspaceData {
       ]);
       setAssignments(asgs);
       setDeliveries(dels.data);
-      const latestRunsEntries = await Promise.all(
-        dels.data.map(async (delivery) => {
-          try {
-            const response = await builderApi.listByDelivery({
-              deliveryId: delivery.id,
-              limit: 1,
-              sortOrder: "DESC",
-            });
-            return [delivery.id, response.data[0] ?? null] as const;
-          } catch {
-            return [delivery.id, null] as const;
-          }
-        }),
-      );
-      setLatestRunByDeliveryId(Object.fromEntries(latestRunsEntries));
+      try {
+        const latestRuns = await builderApi.listLatestRunsByDeliveries(
+          dels.data.map((delivery) => delivery.id),
+        );
+        setLatestRunByDeliveryId(latestRuns);
+      } catch {
+        setLatestRunByDeliveryId({});
+      }
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {

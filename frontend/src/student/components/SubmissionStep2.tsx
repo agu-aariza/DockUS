@@ -141,7 +141,7 @@ export function SubmissionStep2({ flow }: Props) {
 
       {fileSizeError ? (
         <div
-          className="motion-rise-in flex items-center gap-2 rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-red-800"
+          className="motion-rise-in flex items-center gap-2 rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger-800"
           role="alert"
         >
           <RiAlertLine className="shrink-0 text-base" aria-hidden="true" />
@@ -165,7 +165,7 @@ export function SubmissionStep2({ flow }: Props) {
 
       {previewError ? (
         <div
-          className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-3 text-sm text-amber-900"
+          className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-3 text-sm text-warning-900"
           role="alert"
         >
           {previewError}
@@ -187,7 +187,7 @@ export function SubmissionStep2({ flow }: Props) {
       ) : null}
 
       {shouldWarnBeforeContinue ? (
-        <div className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-4 text-sm text-amber-900">
+        <div className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-4 text-sm text-warning-900">
           <div className="font-semibold">
             Detectamos señales que conviene revisar antes de seguir
           </div>

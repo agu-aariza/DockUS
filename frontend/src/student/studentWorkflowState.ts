@@ -132,7 +132,7 @@ export function describeStudentWorkflowState(
         description:
           "El builder está analizando, construyendo o validando tu entrega ahora mismo." +
           lateSuffix,
-        badgeClassName: "border-amber-200 bg-amber-50 text-amber-700",
+        badgeClassName: "border-warning-200 bg-warning-50 text-warning-700",
       };
     case "BUILD_FAILED":
       return {
@@ -150,7 +150,7 @@ export function describeStudentWorkflowState(
         description:
           "El informe técnico ya está listo para consulta. Revísalo antes de decidir si subes otra versión." +
           lateSuffix,
-        badgeClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        badgeClassName: "border-success-200 bg-success-50 text-success-700",
       };
     case "AWAITING_TEACHER_REVIEW":
       return {

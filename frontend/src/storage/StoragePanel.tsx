@@ -85,35 +85,38 @@ export function StoragePanel(): JSX.Element {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="space-y-4">
                 <div>
-                  <label className="label-text">ID de Entrega (UUID)</label>
-                  <input 
-                    required 
-                    className="input-field" 
+                  <label htmlFor="storage-upload-delivery-id" className="label-text">ID de Entrega (UUID)</label>
+                  <input
+                    id="storage-upload-delivery-id"
+                    required
+                    className="input-field"
                     placeholder="00000000-0000-0000-0000-000000000000"
-                    value={sc.uploadForm.deliveryId} 
+                    value={sc.uploadForm.deliveryId}
                     onChange={e => sc.setUploadForm(p => ({ ...p, deliveryId: e.target.value }))} 
                   />
                 </div>
                 <div>
-                  <label className="label-text">Nombre Lógico</label>
-                  <input 
-                    required 
-                    className="input-field" 
+                  <label htmlFor="storage-upload-logical-name" className="label-text">Nombre Lógico</label>
+                  <input
+                    id="storage-upload-logical-name"
+                    required
+                    className="input-field"
                     placeholder="ej: build_v1.zip"
-                    value={sc.uploadForm.logicalName} 
+                    value={sc.uploadForm.logicalName}
                     onChange={e => sc.setUploadForm(p => ({ ...p, logicalName: e.target.value }))} 
                   />
                 </div>
               </div>
               
               <div>
-                <label className="label-text">Selección de Binario</label>
+                <label htmlFor="storage-upload-file" className="label-text">Selección de Binario</label>
                 <div className={`relative border-2 border-dashed rounded-lg p-6 transition-colors flex flex-col items-center justify-center text-center cursor-pointer ${sc.file ? 'border-primary bg-primary-subtle' : 'border-app-border bg-slate-50 hover:border-slate-400'}`}>
-                  <input 
-                    type="file" 
-                    className="absolute inset-0 opacity-0 cursor-pointer" 
-                    required 
-                    onChange={e => sc.handleFileChange(e.target.files?.[0] ?? null)} 
+                  <input
+                    id="storage-upload-file"
+                    type="file"
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    required
+                    onChange={e => sc.handleFileChange(e.target.files?.[0] ?? null)}
                   />
                   <RiCloudFill className={`text-2xl mb-2 ${sc.file ? 'text-primary' : 'text-slate-400'}`} />
                   <div className="text-sm font-medium text-slate-900 truncate max-w-full">
@@ -153,10 +156,11 @@ export function StoragePanel(): JSX.Element {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left mb-6">
               <div className="space-y-4 col-span-2 sm:col-span-1">
                 <div>
-                  <label className="label-text">Proyecto</label>
-                  <select 
-                    className="input-field" 
-                    value={sc.query.projectId} 
+                  <label htmlFor="storage-query-project" className="label-text">Proyecto</label>
+                  <select
+                    id="storage-query-project"
+                    className="input-field"
+                    value={sc.query.projectId}
                     onChange={e => sc.setQuery(p => ({ ...p, projectId: e.target.value }))}
                   >
                     <option value="">-- Todos los Proyectos --</option>
@@ -166,10 +170,11 @@ export function StoragePanel(): JSX.Element {
                   </select>
                 </div>
                 <div>
-                  <label className="label-text">Entrega (Versión / Alumno)</label>
-                  <select 
-                    className="input-field" 
-                    value={sc.query.deliveryId} 
+                  <label htmlFor="storage-query-delivery" className="label-text">Entrega (Versión / Alumno)</label>
+                  <select
+                    id="storage-query-delivery"
+                    className="input-field"
+                    value={sc.query.deliveryId}
                     disabled={!sc.query.projectId}
                     onChange={e => sc.setQuery(p => ({ ...p, deliveryId: e.target.value }))}
                   >
@@ -182,10 +187,11 @@ export function StoragePanel(): JSX.Element {
                   </select>
                 </div>
                 <div>
-                  <label className="label-text">Ejecución (Run / Estado)</label>
-                  <select 
-                    className="input-field" 
-                    value={sc.query.runId} 
+                  <label htmlFor="storage-query-run" className="label-text">Ejecución (Run / Estado)</label>
+                  <select
+                    id="storage-query-run"
+                    className="input-field"
+                    value={sc.query.runId}
                     disabled={!sc.query.deliveryId}
                     onChange={e => sc.setQuery(p => ({ ...p, runId: e.target.value }))}
                   >
@@ -202,21 +208,21 @@ export function StoragePanel(): JSX.Element {
               <div className="space-y-4 col-span-2 sm:col-span-1">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label-text">Página</label>
-                    <input type="number" className="input-field" value={sc.query.page} onChange={e => sc.setQuery(p => ({ ...p, page: e.target.value }))} />
+                    <label htmlFor="storage-query-page" className="label-text">Página</label>
+                    <input id="storage-query-page" type="number" className="input-field" value={sc.query.page} onChange={e => sc.setQuery(p => ({ ...p, page: e.target.value }))} />
                   </div>
                   <div>
-                    <label className="label-text">Límite</label>
-                    <input type="number" className="input-field" value={sc.query.limit} onChange={e => sc.setQuery(p => ({ ...p, limit: e.target.value }))} />
+                    <label htmlFor="storage-query-limit" className="label-text">Límite</label>
+                    <input id="storage-query-limit" type="number" className="input-field" value={sc.query.limit} onChange={e => sc.setQuery(p => ({ ...p, limit: e.target.value }))} />
                   </div>
                 </div>
                 <div>
-                  <label className="label-text">Subido Desde</label>
-                  <input type="date" className="input-field" value={sc.query.createdFrom} onChange={e => sc.setQuery(p => ({ ...p, createdFrom: e.target.value }))} />
+                  <label htmlFor="storage-query-created-from" className="label-text">Subido Desde</label>
+                  <input id="storage-query-created-from" type="date" className="input-field" value={sc.query.createdFrom} onChange={e => sc.setQuery(p => ({ ...p, createdFrom: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="label-text">Subido Hasta</label>
-                  <input type="date" className="input-field" value={sc.query.createdTo} onChange={e => sc.setQuery(p => ({ ...p, createdTo: e.target.value }))} />
+                  <label htmlFor="storage-query-created-to" className="label-text">Subido Hasta</label>
+                  <input id="storage-query-created-to" type="date" className="input-field" value={sc.query.createdTo} onChange={e => sc.setQuery(p => ({ ...p, createdTo: e.target.value }))} />
                 </div>
               </div>
             </div>
@@ -261,7 +267,7 @@ export function StoragePanel(): JSX.Element {
                                 ? 'bg-slate-100 text-slate-600 border-slate-200'
                                 : item.contentType.includes('zip')
                                   ? 'bg-primary-subtle text-primary border-primary/20'
-                                  : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                  : 'bg-success-50 text-success-600 border-success-200'
                             }`}>
                               {isRunArtifact ? <RiFileList3Fill /> : <RiDatabase2Fill />}
                             </div>
@@ -325,7 +331,7 @@ export function StoragePanel(): JSX.Element {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="text-slate-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100"
+                                className="text-slate-500 hover:text-danger-600 hover:bg-danger-50 opacity-0 group-hover:opacity-100"
                                 onClick={() => { sc.setActionId(item.id); sc.setDangerAction('DELETE'); sc.setConfirmOpen(true); }}
                                 aria-label="Eliminar"
                               >

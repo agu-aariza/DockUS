@@ -11,10 +11,11 @@ import { Skeleton } from "../shared/components/Skeleton";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { describeAssignmentTimeline } from "./deadlineUtils";
+import type { StudentTab } from "./studentTabs";
 
 interface Props {
   data: StudentWorkspaceData;
-  onNavigate: (_tab: any) => void;
+  onNavigate: (_tab: StudentTab) => void;
 }
 
 function getUrgencyStyle(
@@ -45,10 +46,10 @@ function getUrgencyStyle(
 
   if (closesAt && closesAt - now < 48 * 60 * 60 * 1000) {
     return {
-      border: "border-amber-100 bg-amber-50/10",
-      iconBg: "bg-amber-50",
-      iconColor: "text-amber-600",
-      chip: "bg-amber-50 text-amber-700 border-amber-100",
+      border: "border-warning-100 bg-warning-50/10",
+      iconBg: "bg-warning-50",
+      iconColor: "text-warning-600",
+      chip: "bg-warning-50 text-warning-700 border-warning-100",
     };
   }
 
@@ -138,7 +139,7 @@ export function StudentAssignmentsSection({
   if (error) {
     return (
       <div
-        className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-red-800"
+        className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-danger-800"
         role="alert"
       >
         Error al cargar proyectos: {error}

@@ -4,7 +4,7 @@ import { SkeletonCard } from "../shared/components/Skeleton";
 import { EmptyState } from "../shared/components/EmptyState";
 import { studentsApi } from "../shared/api/services";
 import { getErrorMessage } from "../shared/utils/errors";
-import { StudentProfileView } from "../students/components/StudentProfileView";
+import { StudentProfileView } from "../student-profile/components/StudentProfileView";
 import type { StudentProfileResponse } from "../features/students/types";
 
 /**

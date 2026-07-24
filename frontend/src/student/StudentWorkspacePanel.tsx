@@ -13,14 +13,7 @@ import { StudentSubmissionFlow } from "./StudentSubmissionFlow";
 import { useBuildRunStream } from "./hooks/useBuildRunStream";
 import { useEvaluationNotifications } from "./hooks/useEvaluationNotifications";
 import { useStudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
-
-type StudentTab =
-  | "summary"
-  | "proyectos"
-  | "entregas"
-  | "subir"
-  | "informes"
-  | "expediente";
+import type { StudentTab } from "./studentTabs";
 
 export function StudentWorkspacePanel(): JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();

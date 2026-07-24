@@ -48,7 +48,7 @@ export function DeliveryListItem({
       <button type="button" onClick={onSelect} className="w-full text-left focus:outline-none">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className={`text-xs font-semibold ${active ? "text-blue-100 opacity-80" : "text-slate-400"}`}>
+            <div className={`text-xs font-semibold ${active ? "text-primary-100 opacity-80" : "text-slate-400"}`}>
               v{delivery.version}
             </div>
             <div className="mt-0.5 truncate text-sm font-bold text-current">
@@ -64,14 +64,14 @@ export function DeliveryListItem({
           )}
         </div>
 
-        <div className={`mt-3 space-y-1 text-xs font-medium leading-tight ${active ? "text-blue-100/90" : "text-slate-500"}`}>
+        <div className={`mt-3 space-y-1 text-xs font-medium leading-tight ${active ? "text-primary-100/90" : "text-slate-500"}`}>
           <div className="flex items-center gap-1.5">
             <RiTimeLine className="text-sm opacity-60" />
             {formatDateTime(delivery.createdAt)}
           </div>
           <div className="flex items-center gap-1.5">
             <RiFileChartLine className="text-sm opacity-60" />
-            <span className={delivery.isLate ? "text-rose-500 font-bold" : "text-emerald-500 font-bold"}>
+            <span className={delivery.isLate ? "text-rose-500 font-bold" : "text-success-500 font-bold"}>
               {delivery.isLate ? "Retrasada" : "En plazo"}
             </span>
           </div>
@@ -79,6 +79,10 @@ export function DeliveryListItem({
       </button>
 
       {canInlineGrade ? (
+        // El div no realiza ninguna acción propia: solo evita que un clic en
+        // el input burbujee hasta el <button> de selección de la tarjeta. El
+        // input y el botón de abajo ya gestionan su propio teclado.
+        // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
         <div
           className="mt-3 flex items-center gap-2"
           onClick={(e) => e.stopPropagation()}
@@ -113,7 +117,7 @@ export function DeliveryListItem({
       )}
 
       <div className={`mt-3 flex items-center justify-between border-t pt-3 ${active ? "border-white/10" : "border-slate-100"}`}>
-        <div className={`flex items-center gap-1 text-xs font-medium ${active ? "text-blue-100/90" : "text-slate-400"}`}>
+        <div className={`flex items-center gap-1 text-xs font-medium ${active ? "text-primary-100/90" : "text-slate-400"}`}>
           <RiStackLine className="text-xs" />
           {delivery.remainingDeliveries} disponibles
         </div>

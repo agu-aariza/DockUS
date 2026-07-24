@@ -88,7 +88,7 @@ export function SubmissionSidebar({ flow }: Props) {
         />
 
         {(noRemainingDeliveries || notYetOpen || afterDeadline) && activeAssignment ? (
-          <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+          <div className="mt-6 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm leading-6 text-warning-900">
             {noRemainingDeliveries
               ? "Esta práctica ya no tiene intentos restantes. Puedes seguir revisando el informe y el historial, pero no se habilitará otra subida."
               : notYetOpen

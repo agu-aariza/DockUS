@@ -11,10 +11,11 @@ import { MetricCard } from "../../shared/components/MetricCard";
 import { StudentKeyValueList, StudentSurface, StudentSurfaceHeader } from "./StudentWorkspaceSurface";
 import { EvaluationProgressCard } from "./EvaluationProgressCard";
 import type { SubmissionFlowState } from "../hooks/useSubmissionFlow";
+import type { StudentTab } from "../studentTabs";
 
 interface Props {
   flow: SubmissionFlowState;
-  onNavigate: (tab: any) => void;
+  onNavigate: (tab: StudentTab) => void;
 }
 
 export function SubmissionSuccess({ flow, onNavigate }: Props) {
@@ -38,7 +39,7 @@ export function SubmissionSuccess({ flow, onNavigate }: Props) {
           title={`Versión v${createdVersion ?? "?"} enviada correctamente`}
           description={`Tu archivo ${file?.name ?? ""} ya forma parte del historial de la práctica. Ahora puedes dejar lanzada la evaluación técnica o volver al workspace para seguirla después.`}
           badge={
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success-subtle px-3 py-1 text-xs font-semibold text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success-subtle px-3 py-1 text-xs font-semibold text-success-700">
               <RiCheckboxCircleLine aria-hidden="true" />
               Entrega confirmada
             </span>
@@ -79,16 +80,16 @@ export function SubmissionSuccess({ flow, onNavigate }: Props) {
 
           {buildLaunched ? (
             <div className="mt-6 space-y-4">
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+              <div className="rounded-lg border border-success-200 bg-success-50 p-5">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white text-emerald-600 shadow-sm">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white text-success-600 shadow-sm">
                     <RiCheckboxCircleLine className="text-xl" />
                   </div>
                   <div>
-                    <div className="font-semibold text-emerald-900">
+                    <div className="font-semibold text-success-900">
                       Evaluación ya lanzada
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-emerald-800">
+                    <p className="mt-2 text-sm leading-6 text-success-800">
                       El run técnico ya está en marcha. Puedes seguirlo desde informes o volver al resumen para esperar el resultado.
                     </p>
                   </div>
@@ -111,7 +112,7 @@ export function SubmissionSuccess({ flow, onNavigate }: Props) {
               </div>
 
               {buildError ? (
-                <div className="rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-red-800">
+                <div className="rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger-800">
                   {buildError}
                 </div>
               ) : null}

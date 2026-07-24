@@ -77,9 +77,9 @@ export function PipelineStepper({
         let labelColor: string;
 
         if (isCompleted) {
-          circleClasses = "border-emerald-400 bg-emerald-50 text-emerald-600";
+          circleClasses = "border-success-400 bg-success-50 text-success-600";
           IconComponent = RiCheckLine;
-          labelColor = "text-emerald-600";
+          labelColor = "text-success-600";
         } else if (isFailedStep) {
           circleClasses = "border-rose-300 bg-rose-50 text-rose-600";
           IconComponent = RiAlertLine;
@@ -93,7 +93,7 @@ export function PipelineStepper({
         }
 
         const connectorColor = isCompleted
-          ? "bg-emerald-400"
+          ? "bg-success-400"
           : isCurrent && !isFuture
             ? isFailedStep
               ? "bg-rose-300"

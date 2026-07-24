@@ -23,10 +23,11 @@ import {
 import { deriveStudentRetryAction } from "./studentRetryActions";
 import { StudentSurface } from "./components/StudentWorkspaceSurface";
 import { deriveStudentWorkspaceInsights, resolveStudentRunOutcome } from "./studentWorkspaceInsights";
+import type { StudentTab } from "./studentTabs";
 
 interface Props {
   data: StudentWorkspaceData;
-  onNavigate: (_tab: any) => void;
+  onNavigate: (_tab: StudentTab) => void;
 }
 
 function renderGradeBadge(grade: number | null): JSX.Element {
@@ -34,8 +35,8 @@ function renderGradeBadge(grade: number | null): JSX.Element {
     return (
       <span className="inline-flex items-center gap-1.5 text-sm italic text-slate-400">
         <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning-400 opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-warning-500" />
         </span>
         Pendiente
       </span>
@@ -44,9 +45,9 @@ function renderGradeBadge(grade: number | null): JSX.Element {
 
   let badgeClasses: string;
   if (grade >= 9.0) {
-    badgeClasses = "bg-emerald-100 text-emerald-800 border border-emerald-200";
+    badgeClasses = "bg-success-100 text-success-800 border border-success-200";
   } else if (grade >= 7.0) {
-    badgeClasses = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+    badgeClasses = "bg-success-50 text-success-700 border border-success-200";
   } else if (grade >= 5.0) {
     badgeClasses = "bg-sky-50 text-sky-700 border border-sky-200";
   } else {
@@ -73,11 +74,11 @@ function renderOutcomeBadge(outcome: ReturnType<typeof resolveStudentRunOutcome>
 
   const styles =
     outcome === "PASS"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-success-200 bg-success-50 text-success-700"
       : outcome === "FAIL"
         ? "border-danger/30 bg-danger-subtle text-rose-700"
         : outcome === "PARTIAL"
-          ? "border-amber-200 bg-amber-50 text-amber-700"
+          ? "border-warning-200 bg-warning-50 text-warning-700"
           : "border-app-border/30 bg-slate-50 text-slate-500";
 
   const label =
@@ -176,7 +177,7 @@ export function StudentDeliveriesSection({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-red-800">
+      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-danger-800">
         Error: {error}
       </div>
     );
@@ -310,7 +311,7 @@ export function StudentDeliveriesSection({
                     </span>
                     {renderOutcomeBadge(outcome)}
                     {delivery.isLate ? (
-                      <span className="inline-flex rounded-full border border-amber-100 bg-amber-50/70 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                      <span className="inline-flex rounded-full border border-warning-100 bg-warning-50/70 px-2.5 py-0.5 text-xs font-semibold text-warning-700">
                         Fuera de plazo
                       </span>
                     ) : null}

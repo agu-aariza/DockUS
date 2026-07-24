@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import JSZip from "jszip";
 
 import { builderApi } from "../../shared/api/builderApi";
 import { deliveriesApi, storageApi } from "../../shared/api/services";
@@ -16,6 +15,9 @@ import type { StudentWorkspaceData } from "./useStudentWorkspaceData";
 type Step = 1 | 2 | 3 | 4;
 
 async function previewZipFile(file: File): Promise<SubmissionPreviewFile[]> {
+  // jszip (~100 KB) solo se necesita al previsualizar un archivo comprimido,
+  // no en la carga inicial del flujo de entrega (FE-MED-02).
+  const { default: JSZip } = await import("jszip");
   const zip = await JSZip.loadAsync(file);
   const previewFiles: SubmissionPreviewFile[] = [];
 

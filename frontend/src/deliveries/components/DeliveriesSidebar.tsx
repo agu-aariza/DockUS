@@ -62,13 +62,13 @@ export function DeliveriesSidebar({
   const selectedDeliveryId = selection.deliveryId ?? "";
 
   return (
-    <aside className="flex h-full flex-col overflow-hidden rounded-lg border border-app-border bg-white p-4 lg:sticky lg:top-24">
+    <aside className="flex h-full flex-col overflow-hidden rounded-lg border border-app-border bg-app-surface p-4 lg:sticky lg:top-24">
       <div className="flex items-center justify-between gap-3 mb-5">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">
+          <h3 className="text-sm font-semibold text-app-text">
             Cola Operativa
           </h3>
-          <p className="mt-0.5 text-xs text-slate-500">Entregas</p>
+          <p className="mt-0.5 text-xs text-app-text-secondary">Entregas</p>
         </div>
         <Button
           variant="secondary"
@@ -83,8 +83,9 @@ export function DeliveriesSidebar({
 
       <div className="space-y-4">
         <div>
-          <label className="label-text">Proyecto</label>
+          <label htmlFor="deliveries-sidebar-project-picker" className="label-text">Proyecto</label>
           <VisualPicker
+            id="deliveries-sidebar-project-picker"
             options={projectOptions}
             value={selectedProjectId}
             onSelect={onProjectSelect}
@@ -94,8 +95,9 @@ export function DeliveriesSidebar({
         </div>
 
         <div>
-          <label className="label-text">Asignación</label>
+          <label htmlFor="deliveries-sidebar-assignment-picker" className="label-text">Asignación</label>
           <VisualPicker
+            id="deliveries-sidebar-assignment-picker"
             options={assignmentOptions}
             value={selectedAssignmentId}
             onSelect={onAssignmentSelect}
@@ -120,7 +122,7 @@ export function DeliveriesSidebar({
               className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-[0.97] hover:shadow-sm ${
                 quickFilterKey === key
                   ? "bg-primary text-white shadow-sm shadow-primary/20"
-                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  : "border border-app-border bg-app-surface text-app-text-secondary hover:border-slate-400 hover:bg-app-bg-subtle"
               }`}
             >
               {label}

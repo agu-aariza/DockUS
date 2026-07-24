@@ -80,7 +80,7 @@ function GradeTimeline({ deliveries }: { deliveries: DeliveryEntity[] }) {
           const isLatest = index === graded.length - 1;
           const color =
             grade >= 5
-              ? "bg-emerald-400"
+              ? "bg-success-400"
               : "bg-rose-400";
 
           return (
@@ -186,7 +186,7 @@ function ReportContainer({
               </h4>
               <DeliveryOutcomeBadge delivery={delivery} summaryRun={summaryRun} />
               {delivery.isLate ? (
-                <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                <span className="inline-flex rounded-full border border-warning-200 bg-warning-50 px-3 py-1 text-xs font-semibold text-warning-700">
                   Fuera de plazo
                 </span>
               ) : null}
@@ -263,7 +263,7 @@ function ReportContainer({
               <SkeletonCard />
             </div>
           ) : error ? (
-            <div className="rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-red-800">
+            <div className="rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger-800">
               Error: {error}
             </div>
           ) : !run ? (
@@ -398,7 +398,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-red-800">
+      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-danger-800">
         Error: {error}
       </div>
     );

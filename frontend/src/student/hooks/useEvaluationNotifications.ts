@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { builderApi } from "../../shared/api/builderApi";
 import { deliveriesApi } from "../../shared/api/services";
+import { useVisibilityAwareInterval } from "../../shared/hooks/useVisibilityAwareInterval";
 import type { BuildRunEntity } from "../../shared/types";
 import {
   deriveEvaluationNotifications,
@@ -31,20 +32,9 @@ export function useEvaluationNotifications(options?: {
       });
 
       const recentDeliveries = response.data;
-      const latestRunsByDeliveryId: Record<string, BuildRunEntity | null> = {};
-
-      for (const delivery of recentDeliveries) {
-        try {
-          const runs = await builderApi.listByDelivery({
-            deliveryId: delivery.id,
-            limit: 1,
-            sortOrder: "DESC",
-          });
-          latestRunsByDeliveryId[delivery.id] = runs.data[0] ?? null;
-        } catch {
-          latestRunsByDeliveryId[delivery.id] = null;
-        }
-      }
+      const latestRunsByDeliveryId = await builderApi
+        .listLatestRunsByDeliveries(recentDeliveries.map((delivery) => delivery.id))
+        .catch(() => ({}) as Record<string, BuildRunEntity | null>);
 
       const nextNotifications = deriveEvaluationNotifications({
         deliveries: recentDeliveries,
@@ -68,17 +58,19 @@ export function useEvaluationNotifications(options?: {
 
     void checkForCompletedRuns();
 
-    const interval = setInterval(() => {
-      if (activeRef.current) {
-        void checkForCompletedRuns();
-      }
-    }, pollIntervalMs);
-
     return () => {
       activeRef.current = false;
-      clearInterval(interval);
     };
-  }, [checkForCompletedRuns, pollIntervalMs]);
+  }, [checkForCompletedRuns]);
+
+  // El sondeo se suspende con la pestaña oculta (ESC-ALTO-10): son dos
+  // peticiones cada 15 s por alumno conectado, y sostenerlas para pestañas que
+  // nadie está mirando era la mayor fuente de carga en reposo del sistema.
+  useVisibilityAwareInterval(() => {
+    if (activeRef.current) {
+      void checkForCompletedRuns();
+    }
+  }, pollIntervalMs);
 
   const dismissNotification = useCallback((notificationId: string) => {
     setNotifications((prev) =>

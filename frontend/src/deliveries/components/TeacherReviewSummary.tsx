@@ -30,7 +30,7 @@ export function TeacherReviewSummary({
   return (
     <div className="space-y-4">
       {needsOfficialGrade ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-900">
           <strong>Falta consolidar nota oficial.</strong> El builder ya dejó
           cierre técnico legible, pero esta entrega aún no tiene calificación
           docente publicada.

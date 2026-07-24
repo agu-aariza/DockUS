@@ -73,10 +73,10 @@ export function SubmissionStep3({ flow }: Props) {
             Resumen de la comparación con tu última versión
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+            <span className="rounded-full border border-success-200 bg-success-50 px-3 py-1 text-xs font-semibold text-success-700">
               +{previewValidation.diff.added.length} añadidos
             </span>
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+            <span className="rounded-full border border-warning-200 bg-warning-50 px-3 py-1 text-xs font-semibold text-warning-700">
               {previewValidation.diff.persisted.length} persistentes
             </span>
             <span className="rounded-full border border-danger/30 bg-danger-subtle px-3 py-1 text-xs font-semibold text-rose-700">
@@ -93,7 +93,7 @@ export function SubmissionStep3({ flow }: Props) {
 
       {afterDeadline ? (
         <div
-          className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-3 text-sm leading-6 text-amber-900"
+          className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-3 text-sm leading-6 text-warning-900"
           role="alert"
         >
           La fecha de cierre ya pasó. La entrega quedará marcada como fuera

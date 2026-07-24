@@ -1,8 +1,14 @@
 import { RiAlertLine } from "react-icons/ri";
-import { DeliveryEntity } from "../../shared/types";
+import { BuildRunEntity, DeliveryEntity } from "../../shared/types";
 import { Button } from "../../shared/components/ui/Button";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { TeacherReviewSummary } from "./TeacherReviewSummary";
+
+interface GradingFormValue {
+  id: string;
+  grade: string;
+  graderNotes: string;
+}
 
 export function DeliveryGrading({
   selectedDelivery,
@@ -14,11 +20,11 @@ export function DeliveryGrading({
   onHandleGradingUpdate,
 }: {
   selectedDelivery: DeliveryEntity;
-  reportRun: any;
-  selectedDeliveryReviewNotes: { manualNotes?: string | null; legacyBlocks?: any };
+  reportRun: BuildRunEntity | null;
+  selectedDeliveryReviewNotes: { manualNotes?: string | null; legacyBlocks?: string[] };
   canWrite: boolean;
-  gradingForm: { grade: string; graderNotes: string };
-  onSetGradingForm: (_updater: (_current: any) => any) => void;
+  gradingForm: GradingFormValue;
+  onSetGradingForm: (_updater: (_current: GradingFormValue) => GradingFormValue) => void;
   onHandleGradingUpdate: (_event: React.FormEvent<HTMLFormElement>) => void;
 }) {
   return (
@@ -47,8 +53,9 @@ export function DeliveryGrading({
 
           <div className="mt-5 grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
             <div>
-              <label className="label-text">Nota oficial</label>
+              <label htmlFor="delivery-grading-grade" className="label-text">Nota oficial</label>
               <input
+                id="delivery-grading-grade"
                 type="number"
                 min="0"
                 max="10"
@@ -64,8 +71,9 @@ export function DeliveryGrading({
               />
             </div>
             <div>
-              <label className="label-text">Observaciones del corrector</label>
+              <label htmlFor="delivery-grading-notes" className="label-text">Observaciones del corrector</label>
               <textarea
+                id="delivery-grading-notes"
                 className="input-field min-h-[160px]"
                 value={gradingForm.graderNotes}
                 onChange={(event) =>

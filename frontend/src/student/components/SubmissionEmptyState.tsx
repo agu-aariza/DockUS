@@ -2,9 +2,10 @@ import { RiFolderOpenLine } from "react-icons/ri";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { Button } from "../../shared/components/ui/Button";
 import { StudentSurface, StudentSurfaceHeader } from "./StudentWorkspaceSurface";
+import type { StudentTab } from "../studentTabs";
 
 interface Props {
-  onNavigate: (tab: any) => void;
+  onNavigate: (tab: StudentTab) => void;
 }
 
 export function SubmissionEmptyState({ onNavigate }: Props) {
