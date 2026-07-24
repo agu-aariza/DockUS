@@ -12,12 +12,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { writeFile } from 'fs/promises';
-import { AppWorkerModule } from './app.worker.module';
-
-// Declara el rol antes de instanciar el contenedor: tareas de arranque que solo
-// deben correr en el worker (p. ej. el barrido de runs huérfanos) se guían por
-// esta señal, porque `AppModule` lo importan tanto la API como el worker.
-process.env.DOCKUS_ROLE = 'worker';
+import { WorkerModule } from './worker.module';
 
 // El worker no abre puerto HTTP, así que su healthcheck no puede sondear un
 // endpoint. En su lugar refresca un fichero: si el proceso se cuelga o entra en
@@ -27,7 +22,7 @@ const HEARTBEAT_PATH =
 const HEARTBEAT_INTERVAL_MS = 10_000;
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.createApplicationContext(AppWorkerModule, {
+  const app = await NestFactory.createApplicationContext(WorkerModule, {
     bufferLogs: true,
   });
 

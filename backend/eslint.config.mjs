@@ -50,4 +50,13 @@ export default tseslint.config(
       '@typescript-eslint/unbound-method': 'off',
     },
   },
+  {
+    // Las migraciones las genera el CLI de TypeORM: su contenido son cadenas
+    // SQL largas y reformatearlas produciría ruido en cada regeneracion sin
+    // ganar legibilidad. Se revisan a mano, no se estilan.
+    files: ['src/shared/infrastructure/database/migrations/*.ts'],
+    rules: {
+      'prettier/prettier': 'off',
+    },
+  },
 );

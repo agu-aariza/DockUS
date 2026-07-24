@@ -11,7 +11,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { DockusThrottlerGuard } from './shared/infrastructure/security/dockus-throttler.guard';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 
@@ -74,7 +74,7 @@ export function applyAppBootstrap(
       transform: true,
     }),
   );
-  app.useGlobalGuards(app.get(ThrottlerGuard));
+  app.useGlobalGuards(app.get(DockusThrottlerGuard));
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -121,7 +121,7 @@ export function applyAppBootstrap(
     const config = new DocumentBuilder()
       .setTitle('DockUS API')
       .setDescription(
-        'Especificación técnica de los microservicios de DockUS para la gestión de entornos reproducibles.',
+        'Especificación técnica de la API de DockUS para la gestión de entornos reproducibles.',
       )
       .setVersion('1.3.0')
       .addBearerAuth()

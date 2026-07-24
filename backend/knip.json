@@ -2,7 +2,9 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "src/main.ts",
-    "src/worker.ts"
+    "src/worker.ts",
+    "src/shared/infrastructure/database/data-source.ts",
+    "src/shared/infrastructure/database/migrations/*.ts"
   ],
   "project": [
     "src/**/*.ts"
