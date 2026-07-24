@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { RiSearch2Line, RiCheckLine, RiCloseLine } from 'react-icons/ri';
 
 export interface VisualPickerOption {
@@ -19,12 +19,20 @@ interface VisualPickerProps {
   searchPlaceholder?: string;
   emptyMessage?: string;
   className?: string;
+  /** Fija el id del botón disparador para poder asociar un <label htmlFor>. */
+  id?: string;
+  /**
+   * Búsqueda server-side (debounced 300ms). Si se define, `options` se usa
+   * tal cual llega —ya filtrada por el backend— en vez de aplicar el filtro
+   * local por substring, que solo veía la página ya cargada (FE-MED-01).
+   */
+  onSearchChange?: (_query: string) => void;
 }
 
 const BADGE_TONES = {
-  success: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-  warning: 'bg-amber-50 text-amber-700 border-amber-100',
-  info: 'bg-blue-50 text-blue-700 border-blue-100',
+  success: 'bg-success-50 text-success-700 border-success-100',
+  warning: 'bg-warning-50 text-warning-700 border-warning-100',
+  info: 'bg-primary-50 text-primary-700 border-primary-100',
   default: 'bg-slate-50 text-slate-700 border-slate-100',
 };
 
@@ -36,23 +44,33 @@ export function VisualPicker({
   searchPlaceholder = "Buscar...",
   emptyMessage = "No se encontraron resultados",
   className = "",
+  id: idProp,
+  onSearchChange,
 }: VisualPickerProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
-  const id = useId();
-  const buttonId = id + '-button';
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
+  const buttonId = idProp ?? id + '-button';
   const listboxId = id + '-listbox';
   const searchId = id + '-search';
 
+  useEffect(() => {
+    if (!onSearchChange) return;
+    const handle = window.setTimeout(() => onSearchChange(search), 300);
+    return () => window.clearTimeout(handle);
+  }, [search, onSearchChange]);
+
   const filteredOptions = useMemo(() => {
+    if (onSearchChange) return options;
     const query = search.toLowerCase().trim();
     if (!query) return options;
-    return options.filter(opt => 
-      opt.label.toLowerCase().includes(query) || 
+    return options.filter(opt =>
+      opt.label.toLowerCase().includes(query) ||
       opt.description?.toLowerCase().includes(query)
     );
-  }, [options, search]);
+  }, [options, search, onSearchChange]);
 
   const selectedOption = options.find(opt => opt.id === value);
   const activeOption = filteredOptions[activeIndex];
@@ -60,6 +78,14 @@ export function VisualPicker({
   useEffect(() => {
     setActiveIndex(0);
   }, [search, isOpen]);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      searchInputRef.current?.focus();
+    }
+  }, [isOpen]);
 
   const closePicker = () => {
     setIsOpen(false);
@@ -145,8 +171,8 @@ export function VisualPicker({
               <div className="relative">
                 <RiSearch2Line className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
                 <input
+                  ref={searchInputRef}
                   id={searchId}
-                  autoFocus
                   aria-label={searchPlaceholder}
                   aria-controls={listboxId}
                   aria-activedescendant={activeOption ? id + '-option-' + activeOption.id : undefined}

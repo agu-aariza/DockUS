@@ -29,9 +29,9 @@ export function TerminalViewer({
     if (lowerLine.includes("error") || lowerLine.includes("exception") || lowerLine.includes("fail")) {
       className = "text-rose-400 font-bold";
     } else if (lowerLine.includes("warn")) {
-      className = "text-amber-300";
+      className = "text-warning-300";
     } else if (lowerLine.includes("success") || lowerLine.includes("pass")) {
-      className = "text-emerald-400";
+      className = "text-success-400";
     }
 
     return (
@@ -56,8 +56,8 @@ export function TerminalViewer({
           {/* macOS style dots */}
           <div className="flex gap-1.5 mr-2">
             <div className="w-3 h-3 rounded-full bg-rose-500/80" />
-            <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-            <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
+            <div className="w-3 h-3 rounded-full bg-warning-500/80" />
+            <div className="w-3 h-3 rounded-full bg-success-500/80" />
           </div>
           <RiTerminalBoxLine className="text-slate-400" />
           <span className="text-xs font-semibold tracking-wider text-slate-300 uppercase">
@@ -70,7 +70,7 @@ export function TerminalViewer({
           title="Copiar logs"
           aria-label="Copiar logs"
         >
-          {copied ? <RiCheckLine className="text-emerald-400" /> : <RiFileCopyLine />}
+          {copied ? <RiCheckLine className="text-success-400" /> : <RiFileCopyLine />}
           {copied ? "Copiado" : "Copiar"}
         </button>
       </div>

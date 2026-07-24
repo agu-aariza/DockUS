@@ -21,16 +21,16 @@ interface ProjectSelectionHubProps {
 
 const STATUS_CONFIG = {
   READY: {
-    color: 'bg-emerald-500',
+    color: 'bg-success-500',
     text: 'Listo',
-    iconWrap: 'bg-emerald-50 text-emerald-600',
-    chip: 'bg-emerald-100 text-emerald-700',
+    iconWrap: 'bg-success-50 text-success-600',
+    chip: 'bg-success-100 text-success-700',
   },
   PROVISIONING: {
-    color: 'bg-blue-500',
+    color: 'bg-primary-500',
     text: 'Provisionando',
-    iconWrap: 'bg-blue-50 text-blue-600',
-    chip: 'bg-blue-100 text-blue-700',
+    iconWrap: 'bg-primary-50 text-primary-600',
+    chip: 'bg-primary-100 text-primary-700',
   },
   ERROR: {
     color: 'bg-rose-500',
@@ -134,7 +134,7 @@ export function ProjectSelectionHub({
                       {project.teachers.slice(0, 3).map((teacher) => (
                         <div 
                           key={teacher.id}
-                          className="h-6 w-6 rounded-full border-2 border-white bg-gradient-to-tr from-primary to-blue-400 flex items-center justify-center text-[8px] font-bold text-white uppercase shadow-sm"
+                          className="h-6 w-6 rounded-full border-2 border-white bg-gradient-to-tr from-primary to-primary-400 flex items-center justify-center text-[8px] font-bold text-white uppercase shadow-sm"
                           title={`${teacher.firstName} ${teacher.lastName}`}
                         >
                           {teacher.firstName[0]}{teacher.lastName[0]}

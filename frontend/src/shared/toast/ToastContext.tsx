@@ -43,8 +43,8 @@ const TOAST_CONFIG: Record<
   }
 > = {
   success: {
-    panel: "border-emerald-200 bg-emerald-50/95 text-emerald-950",
-    iconWrap: "bg-emerald-100 text-emerald-700",
+    panel: "border-success-200 bg-success-50/95 text-success-950",
+    iconWrap: "bg-success-100 text-success-700",
     icon: RiCheckLine,
     fallbackTitle: "Operación completada",
   },
@@ -55,8 +55,8 @@ const TOAST_CONFIG: Record<
     fallbackTitle: "Información",
   },
   warning: {
-    panel: "border-amber-200 bg-amber-50/95 text-amber-950",
-    iconWrap: "bg-amber-100 text-amber-700",
+    panel: "border-warning-200 bg-warning-50/95 text-warning-950",
+    iconWrap: "bg-warning-100 text-warning-700",
     icon: RiErrorWarningLine,
     fallbackTitle: "Revisa esto",
   },

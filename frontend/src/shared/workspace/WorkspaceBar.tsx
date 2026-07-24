@@ -23,13 +23,13 @@ type PickerType = 'project' | 'assignment' | 'delivery' | 'run' | null;
 type PickerOption = ProjectEntity | ProjectAssignmentEntity | DeliveryEntity | BuildRunEntity;
 
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: 'text-emerald-400',
-  SUCCESS: 'text-emerald-400',
-  EVALUATED: 'text-emerald-400',
-  DRAFT: 'text-amber-400',
-  IN_PROGRESS: 'text-amber-400',
-  IN_REVIEW: 'text-amber-400',
-  PENDING: 'text-amber-400',
+  ACTIVE: 'text-success-400',
+  SUCCESS: 'text-success-400',
+  EVALUATED: 'text-success-400',
+  DRAFT: 'text-warning-400',
+  IN_PROGRESS: 'text-warning-400',
+  IN_REVIEW: 'text-warning-400',
+  PENDING: 'text-warning-400',
   ARCHIVED: 'text-rose-400',
   FAILED: 'text-rose-400',
 };
@@ -79,6 +79,15 @@ export function WorkspaceBar(): JSX.Element | null {
   // Reset search when picker changes
   useEffect(() => {
     setSearch("");
+  }, [openPicker]);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Foco en el buscador al abrir un picker (sustituye a autoFocus, UX-MED-01)
+  useEffect(() => {
+    if (openPicker) {
+      searchInputRef.current?.focus();
+    }
   }, [openPicker]);
 
   // Fetch Data
@@ -158,15 +167,15 @@ export function WorkspaceBar(): JSX.Element | null {
           <div className="relative">
             <RiSearch2Line className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
-              autoFocus
+              ref={searchInputRef}
               aria-label="Buscar opciones del espacio de trabajo"
               aria-controls="workspace-picker-listbox"
-              className="w-full rounded-md border-none bg-slate-800/50 py-2 pl-9 pr-4 text-xs font-bold text-white placeholder:text-slate-500 focus:ring-1 focus:ring-amber-400 focus:outline-none"
+              className="w-full rounded-md border-none bg-slate-800/50 py-2 pl-9 pr-4 text-xs font-bold text-white placeholder:text-slate-500 focus:ring-1 focus:ring-warning-400 focus:outline-none"
               placeholder={`Buscar ${type === 'project' ? 'proyecto' : type === 'assignment' ? 'alumno' : type === 'delivery' ? 'entrega' : 'ejecución'}...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            {loading && <RiLoader4Line className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-400 animate-spin" />}
+            {loading && <RiLoader4Line className="absolute right-3 top-1/2 -translate-y-1/2 text-warning-400 animate-spin" />}
           </div>
         </div>
 
@@ -192,7 +201,7 @@ export function WorkspaceBar(): JSX.Element | null {
                 label = a.studentName;
                 sub = a.studentEmail;
                 active = selection.assignmentId === id;
-                icon = <RiLayoutGridFill className="text-amber-400" />;
+                icon = <RiLayoutGridFill className="text-warning-400" />;
               } else if (type === 'delivery') {
                 const d = opt as DeliveryEntity;
                 label = d.studentName
@@ -234,7 +243,7 @@ export function WorkspaceBar(): JSX.Element | null {
                        {icon}
                      </div>
                      <div className="truncate">
-                       <div className={`text-[10px] font-bold uppercase tracking-wider ${active ? 'text-amber-400' : 'text-white'}`}>
+                       <div className={`text-[10px] font-bold uppercase tracking-wider ${active ? 'text-warning-400' : 'text-white'}`}>
                          {label}
                        </div>
                        <div className="flex items-center gap-1.5 mt-0.5">
@@ -251,7 +260,7 @@ export function WorkspaceBar(): JSX.Element | null {
                        </div>
                      </div>
                    </div>
-                   {active && <RiCheckLine className="text-amber-400 shrink-0" />}
+                   {active && <RiCheckLine className="text-warning-400 shrink-0" />}
                  </button>
               );
             })
@@ -341,7 +350,7 @@ export function WorkspaceBar(): JSX.Element | null {
                   openPicker === 'assignment' ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white'
                 }`}
               >
-                <RiLayoutGridFill className="text-amber-400 text-sm shrink-0" />
+                <RiLayoutGridFill className="text-warning-400 text-sm shrink-0" />
                 <span className="truncate max-w-[90px] sm:max-w-[130px] uppercase tracking-wider">{selection.assignmentLabel || "Alumno"}</span>
                 <RiArrowDownSLine className="text-slate-500 text-xs shrink-0 group-hover:text-white transition-colors duration-150" />
               </button>

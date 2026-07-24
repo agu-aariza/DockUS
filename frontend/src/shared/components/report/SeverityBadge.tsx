@@ -27,7 +27,7 @@ const SEVERITY_CONFIG: Record<
   medium: {
     label: "Severidad media",
     icon: RiInformationLine,
-    badge: "border-amber-200 bg-amber-50 text-amber-700",
+    badge: "border-warning-200 bg-warning-50 text-warning-700",
   },
   low: {
     label: "Severidad baja",

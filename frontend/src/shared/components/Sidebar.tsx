@@ -14,8 +14,11 @@ import {
   RiCpuLine,
   RiSearch2Line,
   RiUser3Line,
+  RiMoonLine,
+  RiSunLine,
 } from 'react-icons/ri';
 import { useWorkspaceSelection, useWorkspaceUI } from '../workspace/WorkspaceContext';
+import { useTheme } from '../theme/ThemeContext';
 
 interface SidebarProps {
   activeTab: string;
@@ -35,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isStudent = userRole === 'STUDENT';
   const { selection } = useWorkspaceSelection();
   const { isMinimized, setIsMinimized } = useWorkspaceUI();
+  const { theme, toggleTheme } = useTheme();
   const isWorkspaceActive = Boolean(selection.projectId || selection.assignmentId || selection.deliveryId);
 
   const userInitial = userEmail ? userEmail.charAt(0).toUpperCase() : 'U';
@@ -112,7 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Icon className="text-lg" />
         </span>
         <span className="flex-1 text-left transition-transform duration-200">{item.label}</span>
-        {showBadge && <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" aria-hidden="true" />}
+        {showBadge && <span className="h-2 w-2 shrink-0 rounded-full bg-danger-500" aria-hidden="true" />}
       </button>
     );
   };
@@ -200,7 +204,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* User Session Profile Widget */}
         <div className="flex items-center gap-3 rounded-xl border border-slate-800/80 bg-slate-900/50 p-3 shadow-inner">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-blue-400 text-sm font-bold text-white shadow">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-primary-400 text-sm font-bold text-white shadow">
             {userInitial}
           </div>
           <div className="min-w-0 flex-1">
@@ -213,12 +217,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
+        {/* Theme toggle */}
+        <button
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all duration-200 hover:bg-white/5 hover:text-slate-200 group"
+          onClick={toggleTheme}
+          aria-pressed={theme === 'dark'}
+        >
+          {theme === 'dark' ? (
+            <RiSunLine className="text-lg text-slate-500 group-hover:text-slate-300 transition-colors duration-200" />
+          ) : (
+            <RiMoonLine className="text-lg text-slate-500 group-hover:text-slate-300 transition-colors duration-200" />
+          )}
+          <span>{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>
+        </button>
+
         {/* Logout button */}
         <button
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-400 group"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all duration-200 hover:bg-danger-500/10 hover:text-danger-400 group"
           onClick={onLogout}
         >
-          <RiLogoutBoxRLine className="text-lg text-slate-500 group-hover:text-red-400 transition-colors duration-200" />
+          <RiLogoutBoxRLine className="text-lg text-slate-500 group-hover:text-danger-400 transition-colors duration-200" />
           <span>Cerrar sesión</span>
         </button>
       </div>

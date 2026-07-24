@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { builderApi } from "../api/builderApi";
-import type { BuilderPreflightSummary, BuilderReportEntity, BuilderRuntimeFamily, BuildRunEntity, TechnicalFeedbackItem } from "../../features/builder/types";
+import type { BuilderReportEntity, BuilderRuntimeFamily, BuildRunEntity, TechnicalFeedbackItem } from "../../features/builder/types";
 import {
   RiAlarmWarningLine,
   RiCheckLine,
@@ -44,124 +44,6 @@ const AXIS_ICON: Record<string, typeof RiShieldCheckLine> = {
   "Cumplimiento de rubrica": RiInformationLine,
   Rubrica: RiInformationLine,
 };
-
-const PREFLIGHT_COMPATIBILITY_LABEL: Record<string, string> = {
-  SUPPORTED_AUTO: "soportado automáticamente",
-  SUPPORTED_WITH_MANIFEST: "soportado mediante dockus.yml",
-  PARTIAL: "parcial",
-  UNSUPPORTED: "no soportado",
-};
-
-const PREFLIGHT_PROJECT_TYPE_LABEL: Record<string, string> = {
-  CLI: "CLI script",
-  MODULE_CLI: "CLI por modulo",
-  WEB_ASGI: "Servicio ASGI",
-  WEB_WSGI: "Servicio WSGI",
-  DJANGO_SERVICE: "Servicio Django",
-  BATCH_WORKER: "Worker batch",
-  PYPROJECT_GENERIC: "Proyecto pyproject generico",
-  CUSTOM_MANIFEST: "Contrato custom",
-  UNKNOWN: "Tipo sin resolver",
-};
-
-function PreflightSummaryBlock({
-  preflight,
-}: {
-  preflight: BuilderPreflightSummary;
-}): JSX.Element {
-  const statusTone =
-    preflight.compatibility === "SUPPORTED_AUTO" ||
-    preflight.compatibility === "SUPPORTED_WITH_MANIFEST"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-      : preflight.compatibility === "PARTIAL"
-        ? "border-amber-200 bg-amber-50 text-amber-800"
-        : "border-rose-200 bg-rose-50 text-rose-800";
-
-  return (
-    <ReportCard
-      tone="default"
-      title="Preflight Python-first"
-      description={PREFLIGHT_PROJECT_TYPE_LABEL[preflight.supportedProjectType] ??
-        preflight.supportedProjectType}
-    >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <p className="text-sm text-slate-600">
-          {PREFLIGHT_COMPATIBILITY_LABEL[preflight.compatibility] ??
-            preflight.compatibility}{" "}
-          · perfil {preflight.executionProfile} · gestor{" "}
-          {preflight.dependencyManager}
-        </p>
-        <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 border border-app-border">
-          {preflight.manifestSource === "DOCKUS_MANIFEST"
-            ? `Manifest ${preflight.manifestPath ?? "dockus.yml"}`
-            : preflight.entrypointCandidates.length > 0
-              ? `${preflight.entrypointCandidates.length} entrypoint(s)`
-              : "Sin entrypoint claro"}
-        </span>
-      </div>
-
-      <div className="mt-5 grid gap-4 xl:grid-cols-3">
-        <div className={`rounded-xl border p-4 text-sm ${statusTone}`}>
-          <div className="font-semibold">Señales detectadas</div>
-          <ul className="mt-3 space-y-2">
-            <li>Tests detectados: {preflight.testsPresent ? "si" : "no"}</li>
-            <li>Working dir: {preflight.workingDirectory}</li>
-            <li>
-              Entrypoints:{" "}
-              {preflight.entrypointCandidates.length > 0
-                ? preflight.entrypointCandidates.join(", ")
-                : "sin candidatos claros"}
-            </li>
-            <li>Framework: {preflight.detectedFramework ?? "sin framework claro"}</li>
-            {preflight.failureCode ? (
-              <li>Motivo técnico: {preflight.failureCode}</li>
-            ) : null}
-          </ul>
-        </div>
-        <div className="rounded-xl border border-app-border bg-white p-4 text-sm">
-          <div className="font-semibold text-slate-900">Plan resuelto</div>
-          <ul className="mt-3 space-y-2 break-all text-slate-600">
-            <li>
-              Run:{" "}
-              {preflight.resolvedCommands.run
-                ? preflight.resolvedCommands.run.join(" ")
-                : "sin comando"}
-            </li>
-            <li>
-              Install:{" "}
-              {preflight.resolvedCommands.install.length > 0
-                ? preflight.resolvedCommands.install
-                  .map((command) => command.join(" "))
-                  .join(" · ")
-                : "sin instalacion"}
-            </li>
-            <li>
-              Healthcheck:{" "}
-              {preflight.resolvedCommands.healthcheck
-                ? preflight.resolvedCommands.healthcheck.join(" ")
-                : "sin healthcheck"}
-            </li>
-          </ul>
-        </div>
-        <div className="rounded-xl border border-app-border bg-white p-4 text-sm">
-          <div className="font-semibold text-slate-900">Findings del preflight</div>
-          <div className="mt-3 space-y-2 text-slate-600">
-            {preflight.findings.length === 0 ? (
-              <p>Sin hallazgos adicionales.</p>
-            ) : (
-              preflight.findings.slice(0, 6).map((finding) => (
-                <div key={`${finding.code}-${finding.file ?? "global"}-${finding.line ?? 0}`}>
-                  <span className="font-semibold">{finding.code}</span>:{" "}
-                  {finding.message}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </ReportCard>
-  );
-}
 
 function FeedbackAxis({
   title,
@@ -290,7 +172,6 @@ export function ReportView({
     quality: [],
     rubricCompliance: [],
   };
-  const preflight = run.preflightSummary ?? null;
   const primarySummary =
     mode === "student"
       ? run.llmAssessment?.studentSummary
@@ -304,7 +185,6 @@ export function ReportView({
     techFeedback.architecture.length > 0 ||
     techFeedback.quality.length > 0 ||
     techFeedback.rubricCompliance.length > 0;
-  const selfHealing = report.selfHealing;
 
   const tabs = [
     { id: "overview", label: "Resumen y Notas", icon: RiDashboardLine },
@@ -503,35 +383,6 @@ export function ReportView({
                 </ul>
               </div>
             ) : null}
-
-            {mode === "teacher" && selfHealing ? (
-              <div className="rounded-xl border border-app-border bg-white p-6">
-                <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
-                  Autocorrección aplicada
-                </h3>
-                <div className="mb-3 flex flex-wrap items-center gap-3">
-                  <span
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${selfHealing.recovered
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : "border-amber-200 bg-amber-50 text-amber-700"
-                      }`}
-                  >
-                    {selfHealing.recovered
-                      ? "Recuperado"
-                      : selfHealing.attempted
-                        ? "Intentado"
-                        : "No necesario"}
-                  </span>
-                  <span className="text-sm text-slate-400">
-                    {selfHealing.attemptsUsed} intento
-                    {selfHealing.attemptsUsed === 1 ? "" : "s"}
-                  </span>
-                </div>
-                <p className="text-sm leading-relaxed text-slate-500">
-                  {selfHealing.summary}
-                </p>
-              </div>
-            ) : null}
           </div>
         )}
 
@@ -541,7 +392,7 @@ export function ReportView({
               <AssessmentContextSummary llmAssessment={run.llmAssessment} mode={mode} />
             ) : (
               <div className="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-xl border border-dashed border-app-border text-center">
-                <RiShieldCheckLine className="text-4xl text-emerald-500 mb-2" aria-hidden="true" />
+                <RiShieldCheckLine className="text-4xl text-success-500 mb-2" aria-hidden="true" />
                 <p className="text-sm font-semibold text-slate-500">
                   No se ha registrado un resumen curado de evidencia para este run.
                 </p>
@@ -552,8 +403,6 @@ export function ReportView({
 
         {activeTab === "logs" && (
           <div className="space-y-6">
-            {preflight ? <PreflightSummaryBlock preflight={preflight} /> : null}
-
             {loadingLogs ? (
               <div className="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-xl border border-dashed border-app-border text-center">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mb-3"></div>

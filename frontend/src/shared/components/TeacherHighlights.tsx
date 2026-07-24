@@ -34,8 +34,8 @@ export function TeacherHighlights({
       <div className="grid gap-4 lg:grid-cols-3">
         {highlights.strengths.length > 0 ? (
           <article className="rounded-xl border border-app-border border-t-4 border-t-emerald-500 bg-white p-4">
-            <div className="flex items-center gap-2 text-emerald-700">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50">
+            <div className="flex items-center gap-2 text-success-700">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-success-50">
                 <RiCheckLine className="text-sm" aria-hidden="true" />
               </div>
               <h4 className="text-xs font-bold uppercase tracking-wider">
@@ -74,8 +74,8 @@ export function TeacherHighlights({
 
         {highlights.followUp.length > 0 ? (
           <article className="rounded-xl border border-app-border border-t-4 border-t-amber-500 bg-white p-4">
-            <div className="flex items-center gap-2 text-amber-700">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-50">
+            <div className="flex items-center gap-2 text-warning-700">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-warning-50">
                 <RiListCheck3 className="text-sm" aria-hidden="true" />
               </div>
               <h4 className="text-xs font-bold uppercase tracking-wider">

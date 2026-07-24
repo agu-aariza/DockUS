@@ -35,14 +35,14 @@ const TONE_STYLES: Record<
     eyebrow: "text-indigo-600/80",
   },
   emerald: {
-    card: "border-emerald-200 bg-white",
-    icon: "bg-emerald-50 text-emerald-600",
-    eyebrow: "text-emerald-600/80",
+    card: "border-success-200 bg-white",
+    icon: "bg-success-50 text-success-600",
+    eyebrow: "text-success-600/80",
   },
   amber: {
-    card: "border-amber-200 bg-white",
-    icon: "bg-amber-50 text-amber-600",
-    eyebrow: "text-amber-600/80",
+    card: "border-warning-200 bg-white",
+    icon: "bg-warning-50 text-warning-600",
+    eyebrow: "text-warning-600/80",
   },
   rose: {
     card: "border-rose-200 bg-white",

@@ -21,18 +21,22 @@ export interface StatusBadgeProps {
   className?: string;
 }
 
+// Los tonos numerados (`success-50`, `danger-200`...) no responden al tema
+// (ver el porqué en styles.css); son pastel y casi invisibles sobre una
+// superficie oscura, así que aquí sí hace falta un `dark:` explícito por tono
+// en vez de depender del token — este componente lo usan 25 ficheros.
 const TONE_MAP: Record<StatusTone, string> = {
-  idle: 'border-slate-200 bg-slate-100 text-slate-600',
-  draft: 'border-slate-200 bg-slate-100 text-slate-600',
-  closed: 'border-slate-200 bg-slate-100 text-slate-500',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  active: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  warning: 'border-amber-200 bg-amber-50 text-amber-700',
-  pending: 'border-amber-200 bg-amber-50 text-amber-700',
-  danger: 'border-red-200 bg-red-50 text-red-700',
-  error: 'border-red-200 bg-red-50 text-red-700',
-  info: 'border-blue-200 bg-blue-50 text-blue-700',
-  running: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+  idle: 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  draft: 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  closed: 'border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-400',
+  success: 'border-success-200 bg-success-50 text-success-700 dark:border-success-800 dark:bg-success-950 dark:text-success-400',
+  active: 'border-success-200 bg-success-50 text-success-700 dark:border-success-800 dark:bg-success-950 dark:text-success-400',
+  warning: 'border-warning-200 bg-warning-50 text-warning-700 dark:border-warning-800 dark:bg-warning-950 dark:text-warning-400',
+  pending: 'border-warning-200 bg-warning-50 text-warning-700 dark:border-warning-800 dark:bg-warning-950 dark:text-warning-400',
+  danger: 'border-danger-200 bg-danger-50 text-danger-700 dark:border-danger-800 dark:bg-danger-950 dark:text-danger-400',
+  error: 'border-danger-200 bg-danger-50 text-danger-700 dark:border-danger-800 dark:bg-danger-950 dark:text-danger-400',
+  info: 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-950 dark:text-primary-400',
+  running: 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-400',
 };
 
 const SIZE_MAP: Record<NonNullable<StatusBadgeProps['size']>, string> = {

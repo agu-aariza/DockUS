@@ -76,10 +76,10 @@ export const AppShell: React.FC<AppShellProps> = ({
 
       <main className="relative min-w-0 flex-1 flex flex-col h-screen overflow-hidden">
         {/* Mobile header */}
-        <div className="flex items-center justify-between border-b border-app-border bg-white px-4 py-3 xl:hidden shrink-0">
+        <div className="flex items-center justify-between border-b border-app-border bg-app-surface px-4 py-3 xl:hidden shrink-0">
           <div className="flex items-center gap-3">
             <button
-              className="p-2 -ml-2 text-slate-500 hover:text-slate-900 rounded-md hover:bg-slate-100"
+              className="p-2 -ml-2 text-app-text-secondary hover:text-app-text rounded-md hover:bg-app-bg-subtle"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Abrir menú"
             >
@@ -87,11 +87,11 @@ export const AppShell: React.FC<AppShellProps> = ({
             </button>
             <div className="flex items-center gap-2">
               <img src="/logos/Logo01.png" alt="" className="h-7 w-7 rounded-full shadow-sm" />
-              <span className="font-bold tracking-tight text-slate-900">EduCode AI</span>
+              <span className="font-bold tracking-tight text-app-text">EduCode AI</span>
             </div>
           </div>
           {userEmail && (
-            <div className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md truncate max-w-[140px]">
+            <div className="text-xs font-medium text-app-text-secondary bg-app-bg-subtle px-2.5 py-1 rounded-md truncate max-w-[140px]">
               {userEmail}
             </div>
           )}

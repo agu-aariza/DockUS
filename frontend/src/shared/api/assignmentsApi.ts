@@ -9,12 +9,14 @@ export const assignmentsApi = {
       studentIds?: string[];
       studentEmails?: string[];
       groupIds?: string[];
+      rawInput?: string;
     },
   ): Promise<BulkAssignResponse> {
     const sanitizedPayload = {
       studentIds: normalizeStringArray(payload.studentIds),
       studentEmails: normalizeStringArray(payload.studentEmails),
       groupIds: normalizeStringArray(payload.groupIds),
+      rawInput: payload.rawInput,
     };
     const { data } = await http.post<BulkAssignResponse>(
       `/projects/${projectId}/assignments/bulk`,

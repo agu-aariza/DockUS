@@ -25,10 +25,12 @@ export const builderApi = {
     limit?: number;
     status?: string;
     sortOrder?: "ASC" | "DESC";
+    signal?: AbortSignal;
   }): Promise<PaginatedResponse<BuildRunEntity>> {
     const { data } = await http.get<PaginatedResponse<BuildRunEntity>>(
       `/builder/deliveries/${input.deliveryId}/runs`,
       {
+        signal: input.signal,
         params: toParams({
           page: input.page,
           limit: input.limit,
@@ -38,6 +40,22 @@ export const builderApi = {
       },
     );
     return data;
+  },
+
+  // Sustituye el fan-out N+1 (una GET por entrega) por una unica llamada
+  // batch. Ver HIGH-09 en audit/01/audit_remediated.md.
+  async listLatestRunsByDeliveries(
+    deliveryIds: string[],
+  ): Promise<Record<string, BuildRunEntity | null>> {
+    if (deliveryIds.length === 0) {
+      return {};
+    }
+    const { data } = await http.get<{
+      data: Record<string, BuildRunEntity | null>;
+    }>("/builder/deliveries/latest-runs", {
+      params: toParams({ deliveryIds: deliveryIds.join(",") }),
+    });
+    return data.data;
   },
 
   async cancel(
@@ -53,10 +71,12 @@ export const builderApi = {
     buildRunId: string;
     afterSequence?: number;
     limit?: number;
+    signal?: AbortSignal;
   }): Promise<BuildRunEventsPage> {
     const { data } = await http.get<BuildRunEventsPage>(
       `/builder/runs/${input.buildRunId}/events`,
       {
+        signal: input.signal,
         params: toParams({
           afterSequence: input.afterSequence,
           limit: input.limit,

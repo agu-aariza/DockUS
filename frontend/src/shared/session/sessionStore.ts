@@ -14,8 +14,21 @@ export function readSessions(): SessionRecord[] {
   }
 }
 
+/**
+ * El accessToken nunca se persiste (FE-MED-04): es un bearer de vida corta
+ * que, filtrado vía XSS, da acceso inmediato a la API sin ningún paso extra.
+ * El refreshToken sí se persiste —hace falta para rehidratar sesión sin
+ * volver a iniciar sesión— pero solo sirve para canjear un accessToken nuevo
+ * en /auth/refresh, no para llamar al resto de la API directamente.
+ *
+ * Al recargar la página, la sesión rehidratada trae accessToken vacío; la
+ * primera petición autenticada recibe 401 y el interceptor de http.ts la
+ * refresca y reintenta solo — el mismo camino que ya usa cuando el token
+ * expira a mitad de sesión, no una ruta nueva.
+ */
 export function writeSessions(sessions: SessionRecord[]): void {
-  localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+  const sanitized = sessions.map((session) => ({ ...session, accessToken: '' }));
+  localStorage.setItem(SESSIONS_KEY, JSON.stringify(sanitized));
 }
 
 export function readActiveSessionId(): string | null {

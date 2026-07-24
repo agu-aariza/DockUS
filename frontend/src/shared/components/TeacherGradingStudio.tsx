@@ -55,12 +55,12 @@ export function TeacherGradingStudio({
 
       <div className="flex items-center gap-4">
         {assessment ? (
-          <div className="hidden items-center gap-3 rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-1 lg:flex">
-            <span className="text-xs font-bold text-amber-700">
+          <div className="hidden items-center gap-3 rounded-lg border border-warning-200 bg-warning-50/50 px-4 py-1 lg:flex">
+            <span className="text-xs font-bold text-warning-700">
               Nota IA: {assessment.recommendedGrade?.toFixed(2) ?? "N/A"}
             </span>
-            <div className="h-3 w-px bg-amber-300" />
-            <span className="text-xs font-bold text-amber-800">
+            <div className="h-3 w-px bg-warning-300" />
+            <span className="text-xs font-bold text-warning-800">
               Estado: {assessment.evaluativeState}
             </span>
           </div>

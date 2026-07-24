@@ -46,7 +46,7 @@ export function CodeViewer({
             className={tokens.toolbarButton}
           >
             {copied ? (
-              <RiCheckLine className="text-emerald-500" />
+              <RiCheckLine className="text-success-500" />
             ) : (
               <RiFileCopyLine />
             )}

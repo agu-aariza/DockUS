@@ -124,7 +124,7 @@ export function CoachingSummary({
 
           {coaching.shouldImprove.length > 0 ? (
             <div>
-              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-600">
+              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-warning-600">
                 Podrías mejorar también
               </div>
               <FindingList
@@ -159,7 +159,7 @@ export function CoachingSummary({
           className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
             blocked
               ? "border-rose-200 bg-rose-50 text-rose-700"
-              : "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-success-200 bg-success-50 text-success-700"
           }`}
         >
           {blocked ? "Pendiente de corrección" : "Lista con mejoras opcionales"}
@@ -178,7 +178,7 @@ export function CoachingSummary({
 
       {coaching.shouldImprove.length > 0 ? (
         <div className="mt-6">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-amber-700">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-warning-700">
             <RiLightbulbFlashLine className="text-base" aria-hidden="true" />
             Qué podrías mejorar aunque ya funcione
           </div>
@@ -191,7 +191,7 @@ export function CoachingSummary({
 
       {coaching.strengths.length > 0 ? (
         <div className="mt-6">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-emerald-700">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-success-700">
             <RiSparklingLine className="text-base" aria-hidden="true" />
             Qué has hecho bien
           </div>

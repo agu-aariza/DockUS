@@ -124,7 +124,7 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
     <div className="mt-8 overflow-hidden rounded-lg border border-app-border bg-white">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-app-border bg-slate-50 px-6 py-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-50 text-warning-500">
           <RiSparklingLine className="h-5 w-5" />
         </div>
         <div>
@@ -141,7 +141,7 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
       <div className="flex h-[400px] flex-col overflow-y-auto bg-slate-50/50 p-6 custom-scrollbar">
         {messages.length === 0 && !isTyping ? (
           <div className="my-auto flex flex-col items-center justify-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-warning-50 text-warning-500">
               <RiMessage3Line className="h-7 w-7" />
             </div>
             <h4 className="font-bold text-slate-900 text-base">
@@ -163,7 +163,7 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
                   }`}
                 >
                   {isAssistant && (
-                    <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+                    <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-lg bg-warning-50 text-warning-500">
                       <RiSparklingLine className="h-4 w-4" />
                     </div>
                   )}
@@ -191,14 +191,14 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
 
             {isTyping && (
               <div className="flex gap-4 justify-start">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning-50 text-warning-500">
                   <RiSparklingLine className="h-4 w-4 animate-spin" />
                 </div>
                 <div className="max-w-[80%] rounded-lg border border-app-border bg-white px-5 py-4">
                   <div className="flex items-center gap-1.5 py-1">
-                    <span className="h-2 w-2 rounded-full bg-amber-400"></span>
-                    <span className="h-2 w-2 rounded-full bg-amber-400"></span>
-                    <span className="h-2 w-2 rounded-full bg-amber-400"></span>
+                    <span className="h-2 w-2 rounded-full bg-warning-400"></span>
+                    <span className="h-2 w-2 rounded-full bg-warning-400"></span>
+                    <span className="h-2 w-2 rounded-full bg-warning-400"></span>
                   </div>
                 </div>
               </div>

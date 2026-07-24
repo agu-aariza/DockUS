@@ -13,19 +13,19 @@ export function getFileIcon(path: string): JSX.Element {
 
   switch (ext) {
     case "py":
-      return <RiFileCodeLine className="text-blue-500" />;
+      return <RiFileCodeLine className="text-primary-500" />;
     case "md":
       return <RiMarkdownLine className="text-sky-500" />;
     case "json":
-      return <RiBracesLine className="text-amber-500" />;
+      return <RiBracesLine className="text-warning-500" />;
     case "txt":
       return <RiInformationLine className="text-slate-400" />;
     case "sh":
     case "bash":
-      return <RiTerminalBoxLine className="text-emerald-500" />;
+      return <RiTerminalBoxLine className="text-success-500" />;
     case "yml":
     case "yaml":
-      return <RiHashtag className="text-amber-500" />;
+      return <RiHashtag className="text-warning-500" />;
     default:
       return <RiFileCodeLine className="text-slate-400" />;
   }

@@ -8,7 +8,6 @@ function buildRun(partial: Partial<BuildRunEntity> = {}): BuildRunEntity {
     id: 'run-1',
     deliveryId: 'd-1',
     triggeredById: 'u-1',
-    runKind: 'STANDARD',
     status: 'SUCCESS',
     isTerminal: true,
     warnings: [],

@@ -40,7 +40,7 @@ describe('ReportCard', () => {
     );
 
     const card = screen.getByTestId('tone-card');
-    expect(card.className).toContain('border-emerald-200');
+    expect(card.className).toContain('border-success-200');
     expect(card.className).toContain('bg-white');
   });
 });

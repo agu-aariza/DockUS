@@ -7,7 +7,10 @@ export const apiBaseUrl =
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
 let isRefreshing = false;
-let refreshSubscribers: Array<(token: string) => void> = [];
+let refreshSubscribers: Array<{
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}> = [];
 
 const authWarningListeners = new Set<(message: string) => void>();
 const tokenUpdateListeners = new Set<(access: string, refresh: string) => void>();
@@ -86,12 +89,24 @@ function normalizeApiError(error: unknown): ApiErrorPayload {
 }
 
 function onRefreshed(newToken: string): void {
-  refreshSubscribers.forEach((callback) => callback(newToken));
+  refreshSubscribers.forEach(({ resolve }) => resolve(newToken));
   refreshSubscribers = [];
 }
 
-function addRefreshSubscriber(callback: (token: string) => void): void {
-  refreshSubscribers.push(callback);
+// Sin esto, cualquier peticion encolada detras de un refresh que termina
+// fallando (token de refresh expirado en servidor) obtenia una promesa que
+// nunca se resolvia ni rechazaba: quedaba colgada en estado de carga hasta
+// que el usuario recargara la pagina manualmente.
+function onRefreshFailed(error: unknown): void {
+  refreshSubscribers.forEach(({ reject }) => reject(error));
+  refreshSubscribers = [];
+}
+
+function addRefreshSubscriber(
+  resolve: (token: string) => void,
+  reject: (error: unknown) => void,
+): void {
+  refreshSubscribers.push({ resolve, reject });
 }
 
 http.interceptors.request.use((config) => {
@@ -118,11 +133,14 @@ http.interceptors.response.use(
     ) {
       if (isRefreshing) {
         // Another refresh is in progress — queue this request
-        return new Promise((resolve) => {
-          addRefreshSubscriber((newToken: string) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            resolve(http(originalRequest));
-          });
+        return new Promise((resolve, reject) => {
+          addRefreshSubscriber(
+            (newToken: string) => {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              resolve(http(originalRequest));
+            },
+            (refreshError: unknown) => reject(normalizeApiError(refreshError)),
+          );
         });
       }
 
@@ -130,9 +148,11 @@ http.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await axios.post(`${apiBaseUrl}/auth/refresh`, {
-          refreshToken,
-        });
+        const response = await axios.post(
+          `${apiBaseUrl}/auth/refresh`,
+          { refreshToken },
+          { timeout: 15000 },
+        );
 
         const newAccessToken = response.data.accessToken as string;
         const newRefreshToken = response.data.refreshToken as string;
@@ -145,13 +165,14 @@ http.interceptors.response.use(
         onRefreshed(newAccessToken);
 
         return http(originalRequest);
-      } catch {
+      } catch (refreshError) {
         // Refresh failed — session is truly expired
         setAccessToken(null);
         setRefreshToken(null);
         notifyAuthWarning(
           "Tu sesión ha expirado. Inicia sesión de nuevo.",
         );
+        onRefreshFailed(refreshError);
         return Promise.reject(normalizeApiError(error));
       } finally {
         isRefreshing = false;

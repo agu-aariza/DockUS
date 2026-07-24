@@ -20,12 +20,15 @@ export function EmptyState({
   className = ""
 }: EmptyStateProps) {
   return (
-    <div className={`flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/30 p-10 text-center transition-all duration-300 hover:border-slate-300/80 ${className}`}>
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-b from-white to-slate-100/80 border border-slate-200/60 text-slate-500 shadow-sm transition-transform duration-300 hover:scale-105 hover:rotate-3">
+    // rounded-lg: la misma esquina de tarjeta que usan las secciones que
+    // envuelven este empty state (DeliveryGrading, TeacherDeliveriesPanel,
+    // etc.), en vez de la -2xl que solo tenía este componente (UX-MED-02).
+    <div className={`flex flex-col items-center justify-center rounded-lg border border-dashed border-app-border bg-app-bg-subtle/30 p-10 text-center transition-all duration-300 hover:border-slate-300/80 dark:hover:border-slate-600 ${className}`}>
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-b from-app-surface to-app-bg-subtle/80 border border-app-border/60 text-app-text-muted shadow-sm transition-transform duration-300 hover:scale-105 hover:rotate-3">
         {icon}
       </div>
-      <h3 className="mb-1.5 text-sm font-bold text-slate-900">{title}</h3>
-      <p className="mb-5 max-w-xs text-xs leading-relaxed text-slate-500">
+      <h3 className="mb-1.5 text-sm font-bold text-app-text">{title}</h3>
+      <p className="mb-5 max-w-xs text-xs leading-relaxed text-app-text-muted">
         {description}
       </p>
       {actionLabel && onAction && (

@@ -1,5 +1,13 @@
 /** @type {import('tailwindcss').Config} */
+
+// Fábrica del patrón `rgb(var(--x) / <alpha-value>)`: es lo que permite que
+// `bg-primary/40` (opacidad) siga funcionando sobre un color que además
+// cambia con el tema. La variable CSS solo guarda el triple R G B (ver
+// styles.css); Tailwind inyecta el alfa en tiempo de generación de clase.
+const themed = (variable) => `rgb(var(${variable}) / <alpha-value>)`;
+
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -7,19 +15,36 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Core institutional palette (sober B2B dashboard)
+        // Core institutional palette (sober B2B dashboard). DEFAULT/hover/
+        // subtle en cada color de abajo resuelven vía variable CSS (modo
+        // oscuro real, UX-ALTO-02); las escalas numeradas (50-950) se quedan
+        // en hex fijo — ver el comentario largo en styles.css sobre por qué.
         app: {
-          bg: '#f8fafc',           // slate-50
-          'bg-subtle': '#f1f5f9',  // slate-100
-          surface: '#ffffff',
-          border: '#e2e8f0',       // slate-200
-          'border-subtle': '#f1f5f9',
+          bg: themed('--color-app-bg'),
+          'bg-subtle': themed('--color-app-bg-subtle'),
+          surface: themed('--color-app-surface'),
+          border: themed('--color-app-border'),
+          'border-subtle': themed('--color-app-border-subtle'),
+          text: themed('--color-text-primary'),
+          'text-secondary': themed('--color-text-secondary'),
+          'text-muted': themed('--color-text-muted'),
         },
         primary: {
-          DEFAULT: '#2563eb',      // blue-600
-          hover: '#1d4ed8',        // blue-700
-          subtle: '#eff6ff',       // blue-50
-          muted: '#93c5fd',        // blue-300
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+          950: '#172554',
+          DEFAULT: themed('--color-primary'),
+          hover: themed('--color-primary-hover'),
+          subtle: themed('--color-primary-subtle'),
+          muted: '#93c5fd',        // = 300; sin variante oscura dedicada, uso puntual
         },
         accent: {
           DEFAULT: '#5b040d',      // brand wine — institutional accent only
@@ -27,16 +52,49 @@ export default {
           subtle: '#fef2f2',
         },
         success: {
-          DEFAULT: '#059669',      // emerald-600
-          subtle: '#ecfdf5',       // emerald-50
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
+          950: '#022c22',
+          DEFAULT: themed('--color-success'),
+          subtle: themed('--color-success-subtle'),
         },
         warning: {
-          DEFAULT: '#d97706',      // amber-600
-          subtle: '#fffbeb',       // amber-50
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
+          950: '#451a03',
+          DEFAULT: themed('--color-warning'),
+          subtle: themed('--color-warning-subtle'),
         },
         danger: {
-          DEFAULT: '#dc2626',      // red-600
-          subtle: '#fee2e2',       // red-50
+          50: '#fef2f2',
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          400: '#f87171',
+          500: '#ef4444',
+          600: '#dc2626',
+          700: '#b91c1c',
+          800: '#991b1b',
+          900: '#7f1d1d',
+          950: '#450a0a',
+          DEFAULT: themed('--color-danger'),
+          subtle: themed('--color-danger-subtle'),
         },
 
       },

@@ -12,17 +12,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary/40 active:bg-blue-800",
+    "bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary/40 active:bg-primary-800",
   secondary:
-    "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-slate-300 active:bg-slate-100",
+    "border border-slate-300 bg-app-surface text-app-text-secondary hover:bg-app-bg-subtle hover:text-app-text focus-visible:ring-slate-300 active:bg-app-bg-subtle dark:border-slate-600",
   tertiary:
-    "bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-300 active:bg-slate-300",
+    "bg-app-bg-subtle text-app-text-secondary hover:bg-slate-200 focus-visible:ring-slate-300 active:bg-slate-300 dark:hover:bg-slate-700 dark:active:bg-slate-600",
   ghost:
-    "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-300 active:bg-slate-200",
+    "bg-transparent text-app-text-secondary hover:bg-app-bg-subtle hover:text-app-text focus-visible:ring-slate-300 active:bg-slate-200 dark:active:bg-slate-700",
   danger:
-    "border border-red-300 bg-white text-red-700 hover:bg-red-50 focus-visible:ring-red-300 active:bg-red-100",
+    "border border-danger-300 bg-app-surface text-danger-700 hover:bg-danger-50 focus-visible:ring-danger-300 active:bg-danger-100 dark:text-danger-400 dark:hover:bg-danger-subtle",
   success:
-    "bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500/40 active:bg-emerald-800",
+    "bg-success-600 text-white hover:bg-success-700 focus-visible:ring-success-500/40 active:bg-success-800",
 };
 
 const SIZE_STYLES: Record<ButtonSize, string> = {
@@ -61,7 +61,7 @@ export function IconButton({ children, className = "", label, ...props }: IconBu
     <button
       type="button"
       aria-label={label}
-      className={`inline-flex items-center justify-center rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 ${className}`}
+      className={`inline-flex items-center justify-center rounded-md p-2 text-app-text-muted transition-colors hover:bg-app-bg-subtle hover:text-app-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 ${className}`}
       {...props}
     >
       {children}

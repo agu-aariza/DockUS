@@ -4,19 +4,22 @@ import type { DeliveryEntity, DeliveryStatus } from "../../features/deliveries/t
 import type { PaginatedResponse } from "../types";
 
 export const deliveriesApi = {
-  async list(query: {
-    page?: number;
-    limit?: number;
-    projectId?: string;
-    assignmentId?: string;
-    authorId?: string;
-    status?: DeliveryStatus;
-    sortBy?: string;
-    sortOrder?: "ASC" | "DESC";
-  }): Promise<PaginatedResponse<DeliveryEntity>> {
+  async list(
+    query: {
+      page?: number;
+      limit?: number;
+      projectId?: string;
+      assignmentId?: string;
+      authorId?: string;
+      status?: DeliveryStatus;
+      sortBy?: string;
+      sortOrder?: "ASC" | "DESC";
+    },
+    signal?: AbortSignal,
+  ): Promise<PaginatedResponse<DeliveryEntity>> {
     const { data } = await http.get<PaginatedResponse<DeliveryEntity>>(
       "/deliveries",
-      { params: toParams(query) },
+      { params: toParams(query), signal },
     );
     return data;
   },

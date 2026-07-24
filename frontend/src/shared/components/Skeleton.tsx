@@ -6,7 +6,7 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className = "", type = "text" }: SkeletonProps) {
-  const baseClasses = "shimmer bg-slate-200/80";
+  const baseClasses = "shimmer bg-slate-200/80 dark:bg-slate-700/60";
 
   let shapeClasses: string;
   switch (type) {
@@ -33,7 +33,11 @@ export function Skeleton({ className = "", type = "text" }: SkeletonProps) {
 // Pre-built common skeletons
 export function SkeletonCard() {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    // rounded-lg, no -3xl: es la esquina real de las tarjetas que reemplaza
+    // (StudentReportsSection, StudentProfilePanel, TeacherProjectsPanel) —
+    // antes cambiaba de forma visible en el momento en que llegaban los datos
+    // (UX-MED-02).
+    <div className="rounded-lg border border-app-border bg-app-surface p-6 shadow-sm">
       <div className="flex items-center gap-4 mb-4">
         <Skeleton type="circular" className="w-12 h-12" />
         <div className="space-y-2 flex-1">
@@ -51,13 +55,15 @@ export function SkeletonCard() {
 
 export function SkeletonTable({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex gap-4">
+    // Mismo motivo que SkeletonCard: coincide con el rounded-lg de la tarjeta
+    // real (p. ej. el <aside> de DeliveriesSidebar) en vez de un -3xl propio.
+    <div className="rounded-lg border border-app-border bg-app-surface shadow-sm overflow-hidden">
+      <div className="bg-app-bg-subtle border-b border-app-border px-6 py-4 flex gap-4">
         <Skeleton type="text" className="w-1/4 h-4" />
         <Skeleton type="text" className="w-1/4 h-4" />
         <Skeleton type="text" className="w-1/4 h-4" />
       </div>
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-app-border/60">
         {Array.from({ length: rows }).map((_, i) => (
           <div key={i} className="px-6 py-4 flex gap-4 items-center">
             <Skeleton type="text" className="w-1/4 h-4" />

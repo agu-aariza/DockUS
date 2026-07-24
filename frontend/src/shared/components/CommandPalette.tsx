@@ -146,7 +146,7 @@ export function CommandPalette(): JSX.Element | null {
         description: isCurrentProject 
           ? `Email: ${a.studentEmail} (Proyecto actual)`
           : `Email: ${a.studentEmail} (Proyecto: ${a.projectTitle})`,
-        icon: <RiLayoutGridFill className="text-amber-400" />,
+        icon: <RiLayoutGridFill className="text-warning-400" />,
         action: () => {
           if (a.projectId) setProject(a.projectId, a.projectTitle || undefined);
           setAssignment(a.id, a.studentName);

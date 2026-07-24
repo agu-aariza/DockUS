@@ -23,7 +23,7 @@ const OUTCOME_CONFIG: Record<
     label: "Apto",
     icon: RiCheckLine,
     badge:
-      "border-emerald-200 bg-emerald-50 text-emerald-700",
+      "border-success-200 bg-success-50 text-success-700",
   },
   FAIL: {
     label: "No apto",
@@ -33,7 +33,7 @@ const OUTCOME_CONFIG: Record<
   PARTIAL: {
     label: "Necesita mejoras",
     icon: RiAlertLine,
-    badge: "border-amber-200 bg-amber-50 text-amber-700",
+    badge: "border-warning-200 bg-warning-50 text-warning-700",
   },
   UNKNOWN: {
     label: "Sin evaluar",

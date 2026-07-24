@@ -4,9 +4,9 @@ import { OutcomeBadge } from './OutcomeBadge';
 
 describe('OutcomeBadge', () => {
   it.each([
-    ['PASS', 'Apto', 'border-emerald-200'],
+    ['PASS', 'Apto', 'border-success-200'],
     ['FAIL', 'No apto', 'border-rose-200'],
-    ['PARTIAL', 'Necesita mejoras', 'border-amber-200'],
+    ['PARTIAL', 'Necesita mejoras', 'border-warning-200'],
     ['UNKNOWN', 'Sin evaluar', 'border-slate-200'],
   ] as const)('renders %s as "%s" with expected tone', (outcome, label, toneClass) => {
     render(<OutcomeBadge outcome={outcome} />);

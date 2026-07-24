@@ -4,11 +4,73 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Variables de color en RGB "espacio-separado" (sin comas, sin alfa): es el
+   * formato que exige el patrón `rgb(var(--x) / <alpha-value>)` de Tailwind
+   * para que modificadores de opacidad (`bg-primary/40`) sigan funcionando
+   * sobre un color que además cambia con el tema. Con esto, cualquier clase
+   * que ya usaba `app-*`/`primary`/`success`/`warning`/`danger` (DEFAULT o
+   * `subtle`) se vuelve compatible con modo oscuro sin tocar el componente
+   * que la usa — es la palanca real de UX-ALTO-02 sobre UX-ALTO-01.
+   *
+   * Las escalas numeradas (`danger-500`, `primary-700`, etc.) NO están aquí:
+   * se quedan en hexadecimal fijo (solo claro). Cubren los usos puntuales que
+   * antes eran `red-500`/`blue-700` sueltos; volverlas también sensibles al
+   * tema habría multiplicado esta lista por diez para un beneficio marginal
+   * frente a los slots DEFAULT/subtle/hover, que son los que de verdad se
+   * reutilizan en toda la app.
+   */
   :root {
     --motion-fast: 120ms;
     --motion-standard: 180ms;
     --motion-state: 220ms;
     --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+    --color-app-bg: 248 250 252;           /* slate-50 */
+    --color-app-bg-subtle: 241 245 249;    /* slate-100 */
+    --color-app-surface: 255 255 255;      /* white */
+    --color-app-border: 226 232 240;       /* slate-200 */
+    --color-app-border-subtle: 241 245 249;/* slate-100 */
+    --color-text-primary: 15 23 42;        /* slate-900 */
+    --color-text-secondary: 71 85 105;     /* slate-600 */
+    --color-text-muted: 148 163 184;       /* slate-400 */
+
+    --color-primary: 37 99 235;      /* blue-600 */
+    --color-primary-hover: 29 78 216;/* blue-700 */
+    --color-primary-subtle: 239 246 255; /* blue-50 */
+
+    --color-success: 5 150 105;      /* emerald-600 */
+    --color-success-subtle: 236 253 245; /* emerald-50 */
+
+    --color-warning: 217 119 6;      /* amber-600 */
+    --color-warning-subtle: 255 251 235; /* amber-50 */
+
+    --color-danger: 220 38 38;       /* red-600 */
+    --color-danger-subtle: 254 242 242;  /* red-50 */
+  }
+
+  :root.dark {
+    --color-app-bg: 15 23 42;              /* slate-900 */
+    --color-app-bg-subtle: 30 41 59;       /* slate-800 */
+    --color-app-surface: 30 41 59;         /* slate-800 */
+    --color-app-border: 51 65 85;          /* slate-700 */
+    --color-app-border-subtle: 30 41 59;   /* slate-800 */
+    --color-text-primary: 241 245 249;     /* slate-100 */
+    --color-text-secondary: 148 163 184;   /* slate-400 */
+    --color-text-muted: 100 116 139;       /* slate-500 */
+
+    --color-primary: 59 130 246;     /* blue-500: algo mas vivo sobre fondo oscuro */
+    --color-primary-hover: 96 165 250; /* blue-400 */
+    --color-primary-subtle: 23 37 84;  /* blue-950 */
+
+    --color-success: 16 185 129;     /* emerald-500 */
+    --color-success-subtle: 2 44 34; /* emerald-950 */
+
+    --color-warning: 245 158 11;     /* amber-500 */
+    --color-warning-subtle: 69 26 3; /* amber-950 */
+
+    --color-danger: 239 68 68;       /* red-500 */
+    --color-danger-subtle: 69 10 10; /* red-950 */
   }
 
   html {
@@ -16,12 +78,12 @@
   }
 
   body {
-    @apply bg-app-bg text-slate-900 antialiased font-sans;
+    @apply bg-app-bg text-app-text antialiased font-sans transition-colors duration-200;
   }
 
   ::selection {
     background-color: rgb(37 99 235 / 0.12);
-    @apply text-blue-700;
+    @apply text-primary-700;
   }
 
   #root {
@@ -47,27 +109,27 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary/50 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary/50 active:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-300 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-app-surface px-4 py-2 text-sm font-medium text-app-text-secondary transition-colors hover:bg-app-bg-subtle hover:text-app-text focus-visible:ring-2 focus-visible:ring-slate-300 active:bg-app-bg-subtle disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-transparent px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-300 active:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-transparent px-4 py-2 text-sm font-medium text-app-text-secondary transition-colors hover:bg-app-bg-subtle hover:text-app-text focus-visible:ring-2 focus-visible:ring-slate-300 active:bg-app-bg-subtle disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-300 active:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-danger-300 bg-app-surface px-4 py-2 text-sm font-medium text-danger-700 transition-colors hover:bg-danger-50 focus-visible:ring-2 focus-visible:ring-danger-300 active:bg-danger-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-danger-400 dark:hover:bg-danger-subtle;
   }
 
   .input-field {
-    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 hover:border-slate-400 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400;
+    @apply w-full rounded-md border border-slate-300 bg-app-surface px-3 py-2 text-sm text-app-text transition-colors placeholder:text-app-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 hover:border-slate-400 disabled:cursor-not-allowed disabled:bg-app-bg-subtle disabled:text-app-text-muted dark:border-slate-600 dark:hover:border-slate-500;
   }
 
   .card {
-    @apply overflow-hidden rounded-lg border border-app-border bg-white;
+    @apply overflow-hidden rounded-lg border border-app-border bg-app-surface;
   }
 
   .card-top-accent-primary {
@@ -79,7 +141,7 @@
   }
 
   .label-text {
-    @apply mb-1.5 block text-sm font-medium text-slate-600;
+    @apply mb-1.5 block text-sm font-medium text-app-text-secondary;
   }
 
   .panel-header {
@@ -87,23 +149,23 @@
   }
 
   .section-heading {
-    @apply text-xl font-semibold tracking-tight text-slate-900;
+    @apply text-xl font-semibold tracking-tight text-app-text;
   }
 
   .section-copy {
-    @apply text-sm leading-relaxed text-slate-600;
+    @apply text-sm leading-relaxed text-app-text-secondary;
   }
 
   .eyebrow {
-    @apply text-xs font-medium uppercase tracking-wide text-slate-500;
+    @apply text-xs font-medium uppercase tracking-wide text-app-text-muted;
   }
 
   .ui-label {
-    @apply text-[10px] font-semibold uppercase tracking-wider text-slate-500;
+    @apply text-[10px] font-semibold uppercase tracking-wider text-app-text-muted;
   }
 
   .status-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 px-2 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-app-border/70 px-2 py-0.5 text-xs font-medium;
   }
 
   /*
@@ -113,11 +175,11 @@
    * nombres y prosa, que siguen en Inter).
    */
   .data-figure {
-    @apply font-mono tabular-nums tracking-tight text-slate-900;
+    @apply font-mono tabular-nums tracking-tight text-app-text;
   }
 
   .data-meta {
-    @apply font-mono text-xs tabular-nums text-slate-500;
+    @apply font-mono text-xs tabular-nums text-app-text-muted;
   }
 
   /* Marca institucional: filete vino que abre una sección. */
@@ -134,7 +196,7 @@
   }
 
   .card-interactive:hover {
-    @apply -translate-y-0.5 border-slate-300 shadow-md;
+    @apply -translate-y-0.5 border-slate-300 shadow-md dark:border-slate-500;
   }
 
   .card-interactive:active {
@@ -146,7 +208,7 @@
    * se usa aquí, donde hay algo detrás que desenfocar y el efecto tiene sentido físico.
    */
   .surface-floating {
-    @apply border border-app-border/80 bg-white/80 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60;
+    @apply border border-app-border/80 bg-app-surface/80 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-app-surface/60;
   }
 }
 
@@ -200,6 +262,38 @@
   /* Progreso sin porcentaje fiable: el builder aún no reporta etapa. */
   .progress-indeterminate {
     animation: dockus-progress-indeterminate 1400ms var(--motion-ease-out) infinite;
+  }
+
+  /* 
+   * Adaptadores globales de modo oscuro para clases estáticas de Tailwind.
+   * Resuelve inmediatamente cualquier panel, tarjeta o texto en blanco/slate claro
+   * sin romper elementos con variantes explícitas.
+   */
+  .dark .bg-white {
+    background-color: rgb(var(--color-app-surface) / var(--tw-bg-opacity, 1));
+  }
+  .dark .bg-slate-50,
+  .dark .bg-slate-100 {
+    background-color: rgb(var(--color-app-bg-subtle) / var(--tw-bg-opacity, 1));
+  }
+  .dark .border-slate-100,
+  .dark .border-slate-200 {
+    border-color: rgb(var(--color-app-border) / var(--tw-border-opacity, 1));
+  }
+  .dark .text-slate-900,
+  .dark .text-slate-800 {
+    color: rgb(var(--color-text-primary) / var(--tw-text-opacity, 1));
+  }
+  .dark .text-slate-700,
+  .dark .text-slate-600 {
+    color: rgb(var(--color-text-secondary) / var(--tw-text-opacity, 1));
+  }
+  .dark .text-slate-500 {
+    color: rgb(var(--color-text-muted) / var(--tw-text-opacity, 1));
+  }
+  .dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+  .dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgb(var(--color-app-border) / var(--tw-border-opacity, 1));
   }
 }
 

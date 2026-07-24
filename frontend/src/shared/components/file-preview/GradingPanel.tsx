@@ -38,8 +38,8 @@ export function GradingPanel({
     <section className="flex w-[480px] flex-col overflow-hidden border-l border-app-border bg-white">
       <div className="flex-1 space-y-6 overflow-y-auto p-6">
         {assessment ? (
-          <article className="rounded-lg border border-amber-200 bg-amber-50/30 p-4">
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-800">
+          <article className="rounded-lg border border-warning-200 bg-warning-50/30 p-4">
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-warning-800">
               Dictamen de la Inteligencia Artificial
             </div>
             <h4 className="text-base font-bold text-slate-900">
@@ -84,7 +84,8 @@ export function GradingPanel({
               />
             </div>
             <div className="space-y-1 sm:col-span-2">
-              <label className="ui-label">Estado de la Entrega</label>
+              {/* Etiqueta de un valor de solo lectura, no de un control. */}
+              <span className="ui-label">Estado de la Entrega</span>
               <div className="flex h-11 items-center rounded-md border border-app-border bg-slate-50/50 px-3 text-xs font-bold text-slate-500">
                 {delivery.status}
               </div>

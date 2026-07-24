@@ -7,20 +7,23 @@ import type { PaginatedResponse } from "../types";
 import type { StorageObjectEntity } from "../../features/storage/types";
 
 export const projectsApi = {
-  async list(query: {
-    page?: number;
-    limit?: number;
-    status?: ProjectStatus;
-    creatorId?: string;
-    search?: string;
-    createdFrom?: string;
-    createdTo?: string;
-    sortBy?: string;
-    sortOrder?: "ASC" | "DESC";
-  }): Promise<PaginatedResponse<ProjectEntity>> {
+  async list(
+    query: {
+      page?: number;
+      limit?: number;
+      status?: ProjectStatus;
+      creatorId?: string;
+      search?: string;
+      createdFrom?: string;
+      createdTo?: string;
+      sortBy?: string;
+      sortOrder?: "ASC" | "DESC";
+    },
+    signal?: AbortSignal,
+  ): Promise<PaginatedResponse<ProjectEntity>> {
     const { data } = await http.get<PaginatedResponse<ProjectEntity>>(
       "/projects",
-      { params: toParams(query) },
+      { params: toParams(query), signal },
     );
     return data;
   },

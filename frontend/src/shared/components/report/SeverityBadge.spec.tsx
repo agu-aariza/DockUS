@@ -5,7 +5,7 @@ import { SeverityBadge } from './SeverityBadge';
 describe('SeverityBadge', () => {
   it.each([
     ['high', 'Severidad alta', 'border-rose-200'],
-    ['medium', 'Severidad media', 'border-amber-200'],
+    ['medium', 'Severidad media', 'border-warning-200'],
     ['low', 'Severidad baja', 'border-sky-200'],
   ] as const)('renders %s severity badge', (severity, label, toneClass) => {
     render(<SeverityBadge severity={severity} level="intermedio" />);

@@ -5,9 +5,10 @@
  * accidentales en pantallas operativas.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RiAlertFill, RiCloseLine } from 'react-icons/ri';
 import { Button } from './ui/Button';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface DangerConfirmModalProps {
   open: boolean;
@@ -32,6 +33,8 @@ export function DangerConfirmModal({
 }: DangerConfirmModalProps): JSX.Element | null {
   const [typed, setTyped] = useState('');
   const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>(open, inputRef);
 
   useEffect(() => {
     if (!open) {
@@ -71,18 +74,23 @@ export function DangerConfirmModal({
       role="dialog"
       aria-modal="true"
     >
-      {/* Backdrop */}
+      {/* Backdrop: el equivalente de teclado de "clic fuera para cerrar" es
+          Escape, ya gestionado arriba — no necesita foco ni rol propios. */}
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
       <div
         className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity"
         onClick={() => { if (!loading) onCancel(); }}
       />
 
       {/* Card */}
-      <div className="relative z-10 w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-md">
+      <div
+        ref={dialogRef}
+        className="relative z-10 w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-md"
+      >
         {/* Header */}
         <div className="flex items-start gap-4 border-b border-slate-100 px-5 py-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 border border-red-100">
-            <RiAlertFill className="text-xl text-red-600" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-50 border border-danger-100">
+            <RiAlertFill className="text-xl text-danger-600" />
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-base font-semibold text-slate-900">{title}</h3>
@@ -101,15 +109,15 @@ export function DangerConfirmModal({
         {/* Confirm input */}
         <div className="px-5 py-4 space-y-3">
           <p className="text-sm text-slate-500">
-            Escribe <code className="rounded bg-red-50 border border-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">{confirmWord}</code> para confirmar:
+            Escribe <code className="rounded bg-danger-50 border border-danger-100 px-1.5 py-0.5 text-xs font-semibold text-danger-700">{confirmWord}</code> para confirmar:
           </p>
           <input
+            ref={inputRef}
             type="text"
             value={typed}
             onChange={(event) => setTyped(event.target.value)}
             placeholder={confirmWord}
             className="input-field"
-            autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter' && canConfirm) void handleConfirm();
             }}

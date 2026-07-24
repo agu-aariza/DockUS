@@ -338,3 +338,64 @@ export interface StudentProfileResponse {
   summary: StudentProfileSummary;
   projects: StudentProfileProject[];
 }
+
+// ---------------------------------------------------------------------------
+// Builder — eventos de run y chat del Tutor IA (audit/04 ARQ-008)
+//
+// `BuildRunEntity` en frontend/src/features/builder/types.ts NO se movió
+// aquí: al verificarla contra `BuildRunResponseDto` (la respuesta real del
+// backend) resultó tener drift severo — campos que el frontend leía
+// activamente (`activeStage`, `runtimeTarget`, `preflightSummary`, `runKind`,
+// más `stackResult`/`dockerfileContent`/`buildLogs`/`timingsMs`/
+// `staticFindings`/`stageResults`/`executionContext`/`evidenceArtifacts`/
+// `imageTag`/`imageExpiresAt`) no existían en absoluto en la respuesta real,
+// así que esos paneles siempre mostraban su placeholder ("n/d", "pendiente").
+// La parte mecánica (borrar los campos fantasma y los bloques de UI que
+// nunca renderizaban nada real: `PreflightSummaryPanel`, el bloque de
+// preflight de `ReportView`, las columnas Preflight/Etapa/Entorno de
+// `BuilderRunsTable`) se limpió sin tocar `@dockus/contracts`, porque no
+// había una shape real que canonizar — no existía backing data en absoluto,
+// solo UI construida por delante de un backend que nunca se escribió.
+// Añadir esos campos de verdad (planificación de tests, healthcheck,
+// contenedor/red activos) sigue siendo una decisión de producto, no un
+// movimiento mecánico de tipos — documentado en el registro de remediación.
+// ---------------------------------------------------------------------------
+
+export type BuildRunEventType =
+  | 'RUN_ENQUEUED'
+  | 'RUN_STARTED'
+  | 'RUN_STATUS_CHANGED'
+  | 'LOG_CHUNK'
+  | 'WARNING_ADDED'
+  | 'ARTIFACT_ADDED'
+  | 'REPORT_READY'
+  | 'RUN_COMPLETED'
+  | 'RUN_FAILED'
+  | 'RUN_CANCELLED';
+
+export interface BuildRunEvent {
+  id: string;
+  buildRunId: string;
+  sequence: number;
+  eventType: BuildRunEventType;
+  runStatus: BuildRunStatusRef | null;
+  message: string;
+  payload: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface BuildRunEventsPage {
+  events: BuildRunEvent[];
+  latestSequence: number;
+  hasMore: boolean;
+}
+
+export type ChatMessageSender = 'user' | 'assistant';
+
+export interface ChatMessageResponse {
+  id: string;
+  buildRunId: string;
+  sender: ChatMessageSender;
+  message: string;
+  createdAt: string;
+}

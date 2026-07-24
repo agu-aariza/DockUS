@@ -15,14 +15,14 @@ function resolveTone(percentage: number): {
 } {
   if (percentage >= 0.8) {
     return {
-      bar: "bg-emerald-500",
-      chip: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      bar: "bg-success-500",
+      chip: "border-success-200 bg-success-50 text-success-700",
     };
   }
   if (percentage >= 0.5) {
     return {
-      bar: "bg-amber-500",
-      chip: "border-amber-200 bg-amber-50 text-amber-700",
+      bar: "bg-warning-500",
+      chip: "border-warning-200 bg-warning-50 text-warning-700",
     };
   }
   return {

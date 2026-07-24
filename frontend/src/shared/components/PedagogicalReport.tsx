@@ -31,7 +31,7 @@ const KIND_CONFIG: Record<
     label: "Logro",
     icon: RiCheckLine,
     border: "border-l-emerald-500",
-    iconBg: "bg-emerald-50 text-emerald-600",
+    iconBg: "bg-success-50 text-success-600",
   },
   gap: {
     label: "Brecha",
@@ -49,7 +49,7 @@ const KIND_CONFIG: Record<
     label: "Próximo paso",
     icon: RiRoadMapLine,
     border: "border-l-amber-500",
-    iconBg: "bg-amber-50 text-amber-600",
+    iconBg: "bg-warning-50 text-warning-600",
   },
 };
 

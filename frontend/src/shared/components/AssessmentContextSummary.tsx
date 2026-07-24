@@ -60,13 +60,13 @@ export function AssessmentContextSummary({
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {observedEvidence.length > 0 ? (
-          <article className="rounded-xl border border-emerald-200 bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+          <article className="rounded-xl border border-success-200 bg-white p-4">
+            <div className="text-xs font-semibold uppercase tracking-wider text-success-700">
               Qué observó el sistema
             </div>
             <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
               {observedEvidence.map((item) => (
-                <li key={item} className="rounded-xl bg-emerald-50 px-3 py-2">
+                <li key={item} className="rounded-xl bg-success-50 px-3 py-2">
                   {item}
                 </li>
               ))}
@@ -75,13 +75,13 @@ export function AssessmentContextSummary({
         ) : null}
 
         {evaluationLimits.length > 0 ? (
-          <article className="rounded-xl border border-amber-200 bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+          <article className="rounded-xl border border-warning-200 bg-white p-4">
+            <div className="text-xs font-semibold uppercase tracking-wider text-warning-700">
               Lo que no pudo validar
             </div>
             <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
               {evaluationLimits.map((item) => (
-                <li key={item} className="rounded-xl bg-amber-50 px-3 py-2">
+                <li key={item} className="rounded-xl bg-warning-50 px-3 py-2">
                   {item}
                 </li>
               ))}

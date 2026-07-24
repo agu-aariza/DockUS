@@ -53,7 +53,7 @@ export function CodePreviewModal({
         <button
           onClick={onClose}
           aria-label="Cerrar"
-          className="group flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-slate-300 transition hover:bg-red-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50"
+          className="group flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-slate-300 transition hover:bg-danger-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-400/50"
         >
           <RiCloseLine className="text-xl transition-colors" />
         </button>
@@ -65,7 +65,7 @@ export function CodePreviewModal({
     <footer className="flex items-center justify-between border-t border-slate-800 bg-primary/5 px-4 py-1 text-[10px] font-medium text-slate-500">
       <div className="flex items-center gap-4">
         <span className="flex items-center gap-1.5">
-          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <div className="h-1.5 w-1.5 rounded-full bg-success-500" />
           EXTRACTED_VIEW
         </span>
         <span>UTF-8</span>
