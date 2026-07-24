@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { ErrorBoundary } from './shared/components/ErrorBoundary';
 import { SessionProvider } from './shared/session/SessionContext';
+import { ThemeProvider } from './shared/theme/ThemeContext';
 import { ToastProvider } from './shared/toast/ToastContext';
 import { WorkspaceProvider } from './shared/workspace/WorkspaceContext';
 import './styles.css';
@@ -13,15 +14,17 @@ if (!rootElement) throw new Error('Root element not found');
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <BrowserRouter>
-      <SessionProvider>
-        <ToastProvider>
-          <WorkspaceProvider>
-            <ErrorBoundary>
-              <App />
-            </ErrorBoundary>
-          </WorkspaceProvider>
-        </ToastProvider>
-      </SessionProvider>
+      <ThemeProvider>
+        <SessionProvider>
+          <ToastProvider>
+            <WorkspaceProvider>
+              <ErrorBoundary>
+                <App />
+              </ErrorBoundary>
+            </WorkspaceProvider>
+          </ToastProvider>
+        </SessionProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );

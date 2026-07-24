@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:analyze": "tsc -b && ANALYZE=true vite build",
     "test": "vitest",
     "test:compile": "tsc -p tsconfig.tests.json",
     "typecheck": "tsc -b",
@@ -44,6 +45,7 @@
     "jsdom": "^29.1.1",
     "knip": "^6.25.0",
     "postcss": "^8.5.16",
+    "rollup-plugin-visualizer": "^7.0.1",
     "tailwindcss": "^3.4.19",
     "typescript": "^6.0.3",
     "vite": "^8.1.3",

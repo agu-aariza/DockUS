@@ -27,7 +27,7 @@ const StoragePanel = lazy(() => import("./storage/StoragePanel").then(m => ({ de
 const UsersPanel = lazy(() => import("./users/UsersPanel").then(m => ({ default: m.UsersPanel })));
 const StudentWorkspacePanel = lazy(() => import("./student/StudentWorkspacePanel").then(m => ({ default: m.StudentWorkspacePanel })));
 const LlmConfigPanel = lazy(() => import("./llm/LlmConfigPanel").then(m => ({ default: m.LlmConfigPanel })));
-const StudentProfilePanel = lazy(() => import("./students/StudentProfilePanel").then(m => ({ default: m.StudentProfilePanel })));
+const StudentProfilePanel = lazy(() => import("./student-profile/StudentProfilePanel").then(m => ({ default: m.StudentProfilePanel })));
 
 const SuspenseLoader = () => (
   <div className="flex-1 flex items-center justify-center min-h-[400px]">
@@ -83,8 +83,8 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (_res: AuthResponse) 
         onClick={() => setOpen(!open)}
         className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold border shadow-sm transition-colors ${
           open
-            ? "bg-slate-900 text-white border-slate-900"
-            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+            ? "bg-slate-900 text-white border-slate-900 dark:bg-slate-800 dark:border-slate-700"
+            : "bg-app-surface text-app-text-secondary border-app-border hover:bg-app-bg-subtle"
         }`}
       >
         <RiSpyLine className="text-base" />
@@ -92,11 +92,11 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (_res: AuthResponse) 
       </button>
 
       {open && (
-        <div className="absolute bottom-12 right-0 w-72 bg-white border border-app-border rounded-lg shadow-lg p-4 space-y-4 animate-in fade-in slide-in-from-bottom-2">
+        <div className="absolute bottom-12 right-0 w-72 bg-app-surface border border-app-border rounded-lg shadow-lg p-4 space-y-4 animate-in fade-in slide-in-from-bottom-2">
           <div>
             <div className="ui-label mb-2">Sesiones activas</div>
             {sessions.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">No hay sesiones.</p>
+              <p className="text-xs text-app-text-muted italic">No hay sesiones.</p>
             ) : (
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {sessions.map(s => (
@@ -107,12 +107,12 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (_res: AuthResponse) 
                       className={`flex flex-1 items-center justify-between rounded-md px-3 py-2 text-xs text-left transition border ${
                         s.id === activeSessionId
                           ? "bg-primary-subtle border-primary/30 text-primary"
-                          : "bg-white border-app-border text-slate-700 hover:bg-slate-50"
+                          : "bg-app-surface border-app-border text-app-text-secondary hover:bg-app-bg-subtle"
                       }`}
                     >
                       <div className="min-w-0">
-                        <div className="font-semibold truncate">{s.email}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
+                        <div className="font-semibold truncate text-app-text">{s.email}</div>
+                        <div className="text-[10px] text-app-text-muted mt-0.5">
                           {s.role} {s.id === activeSessionId && "· activa"}
                         </div>
                       </div>
@@ -120,7 +120,7 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (_res: AuthResponse) 
                     <button
                       type="button"
                       onClick={() => removeSession(s.id)}
-                      className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 text-base shrink-0"
+                      className="flex h-6 w-6 items-center justify-center rounded-md text-app-text-muted hover:text-danger-600 hover:bg-danger-50 text-base shrink-0"
                       title="Eliminar sesión"
                       aria-label="Eliminar sesión"
                     >
@@ -140,7 +140,7 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (_res: AuthResponse) 
               aria-label="Correo para login rápido"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full rounded-md bg-white border border-slate-200 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+              className="input-field text-xs py-1.5"
             />
             <input
               type="password"
@@ -148,9 +148,9 @@ function DebugSwitcher({ onAuthSuccess }: { onAuthSuccess: (_res: AuthResponse) 
               aria-label="Contraseña para login rápido"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full rounded-md bg-white border border-slate-200 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+              className="input-field text-xs py-1.5"
             />
-            {error && <div className="text-[10px] text-red-600">{error}</div>}
+            {error && <div className="text-[10px] text-danger-600">{error}</div>}
             <button
               type="submit"
               disabled={loading || !email || !password}
@@ -248,10 +248,10 @@ function App(): JSX.Element {
 
       <div className="px-4 py-5 sm:px-6 lg:px-8">
         {authWarning && (
-          <div className="mb-5 flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
-            <span className="text-sm font-medium text-amber-800">{authWarning}</span>
+          <div className="mb-5 flex items-center justify-between rounded-md border border-warning-200 bg-warning-50 px-4 py-3">
+            <span className="text-sm font-medium text-warning-800">{authWarning}</span>
             <button
-              className="text-xs font-semibold text-amber-700 hover:text-amber-900 px-2 py-1 rounded-md hover:bg-amber-100"
+              className="text-xs font-semibold text-warning-700 hover:text-warning-900 px-2 py-1 rounded-md hover:bg-warning-100"
               onClick={clearAuthWarning}
             >
               Cerrar
