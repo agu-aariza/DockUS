@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de gestión de usuarios y roles (useUserManagement).
+ *
+ * @module useUserManagement
+ */
+
 import { type FormEvent, useState } from 'react';
 import { usersApi } from '../../shared/api/services';
 import type { UserRole } from "../../shared/types";

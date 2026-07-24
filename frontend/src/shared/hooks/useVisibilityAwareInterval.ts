@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Hook reutilizable de lógica de interfaz (useVisibilityAwareInterval).
+ *
+ * @module useVisibilityAwareInterval
+ */
+
+/**
  * Intervalo que se suspende mientras la pestaña está oculta.
  *
  * Motivo (ESC-ALTO-10): los sondeos de fondo no distinguían una pestaña en uso

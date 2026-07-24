@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de estado del runtime y Docker daemon (TeacherRuntimePanel).
+ *
+ * @module TeacherRuntimePanel
+ */
+
 import {
   RiArrowRightUpLine,
   RiCodeSSlashLine,

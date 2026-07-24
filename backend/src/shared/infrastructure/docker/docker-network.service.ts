@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Orquestación de contenedores y sandbox Docker (docker-network.service).
+ *
+ * @module docker-network.service
+ */
+
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { runCommand } from './command-runner.util';
 import type {

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (AppShell).
+ *
+ * @module AppShell
+ */
+
 import React, { useEffect, useState } from 'react';
 import { RiMenuLine, RiCloseLine } from 'react-icons/ri';
 import { Sidebar } from '../Sidebar';

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de UI del espacio de trabajo del estudiante (StudentWorkspaceSurface).
+ *
+ * @module StudentWorkspaceSurface
+ */
+
 import type { ReactNode } from "react";
 
 interface StudentSurfaceProps {

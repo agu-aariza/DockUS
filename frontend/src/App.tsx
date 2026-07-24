@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Componente raíz de enrutamiento y disposición de la aplicación React (React Router 7).
+ *
+ * @description
+ * Enruta las vistas principales según el rol del usuario autenticado (`STUDENT`, `TEACHER`, `ADMIN`).
+ * Carga perezosamente (React `lazy` + `Suspense`) todos los paneles principales para optimizar el bundle inicial:
+ * - Alumnos: `StudentWorkspacePanel`, `StudentProfilePanel`.
+ * - Docentes: `TeacherHomePanel`, `TeacherDeliveriesPanel`, `TeacherProjectsPanel`, `TeacherGroupsPanel`.
+ * - Admin: `UsersPanel`, `StoragePanel`, `LlmConfigPanel`, `TeacherRuntimePanel`.
+ *
+ * @module MainAppContainer
+ */
+
 import {
   Navigate,
   Route,

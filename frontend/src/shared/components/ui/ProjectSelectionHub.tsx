@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (ProjectSelectionHub).
+ *
+ * @module ProjectSelectionHub
+ */
+
 import React from 'react';
 import { RiStackFill, RiUser3Fill, RiArrowRightLine, RiPlayLine, RiTeamFill } from 'react-icons/ri';
 import type { UserEntity } from "../../../features/auth/types";

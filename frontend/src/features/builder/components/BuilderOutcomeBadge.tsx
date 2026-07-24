@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y componentes del motor Builder de evaluación (BuilderOutcomeBadge).
+ *
+ * @module BuilderOutcomeBadge
+ */
+
 import { StatusBadge, type StatusTone } from '../../../shared/components/ui/StatusBadge';
 import type { BuilderOutcome } from '../types';
 

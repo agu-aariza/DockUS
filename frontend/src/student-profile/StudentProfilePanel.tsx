@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de perfil y expediente del alumno (StudentProfilePanel).
+ *
+ * @module StudentProfilePanel
+ */
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { RiArrowLeftLine, RiUser3Line } from "react-icons/ri";

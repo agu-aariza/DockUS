@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (ProgressDashboard).
+ *
+ * @module ProgressDashboard
+ */
+
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RiBarChartFill, RiDownload2Line, RiTeamLine } from "react-icons/ri";

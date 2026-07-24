@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de resumen y analíticas generales docentes (IntegrityAudit).
+ *
+ * @module IntegrityAudit
+ */
+
 import { useState } from "react";
 import {
   RiArrowDownSLine,

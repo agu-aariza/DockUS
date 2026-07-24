@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (MetricCard).
+ *
+ * @module MetricCard
+ */
+
 import type { ReactNode } from "react";
 import { Skeleton } from "./Skeleton";
 

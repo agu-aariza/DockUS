@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de informe de evaluación y desglose pedagógico (OutcomeBadge).
+ *
+ * @module OutcomeBadge
+ */
+
 import {
   RiAlertLine,
   RiCheckLine,

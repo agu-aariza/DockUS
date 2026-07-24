@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (storage-response.util).
+ *
+ * @module storage-response.util
+ */
+
 import { StorageObject } from './entities/storage-object.entity';
 import { StorageObjectResponse } from './storage.types';
 

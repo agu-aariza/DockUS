@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-fallback-assessment.util).
+ *
+ * @module builder-fallback-assessment.util
+ */
+
 import { Logger } from '@nestjs/common';
 import {
   BuilderEvaluationContractV2,

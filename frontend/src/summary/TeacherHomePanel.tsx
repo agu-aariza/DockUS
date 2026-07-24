@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de resumen y analíticas generales docentes (TeacherHomePanel).
+ *
+ * @module TeacherHomePanel
+ */
+
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {

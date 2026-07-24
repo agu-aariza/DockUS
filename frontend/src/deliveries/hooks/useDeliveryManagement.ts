@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (useDeliveryManagement).
+ *
+ * @module useDeliveryManagement
+ */
+
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {

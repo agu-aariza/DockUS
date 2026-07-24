@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (build-run.repository).
+ *
+ * @module build-run.repository
+ */
+
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

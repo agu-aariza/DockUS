@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Hook de lógica de negocio para el espacio del estudiante (useEvaluationNotifications).
+ *
+ * @module useEvaluationNotifications
+ */
+
+/**
  * Hook que hace polling de las entregas recientes del alumno y detecta
  * cuando aparece un informe técnico o una nota oficial nueva.
  */

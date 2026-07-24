@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de la interfaz de usuario (AuthPanel).
+ *
+ * @module AuthPanel
+ */
+
 import type { AuthResponse } from "../features/auth/types";
 import {
   RiLoader4Line,

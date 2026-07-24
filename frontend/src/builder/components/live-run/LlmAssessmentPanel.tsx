@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de monitorización de ejecuciones SSE en vivo (LlmAssessmentPanel).
+ *
+ * @module LlmAssessmentPanel
+ */
+
 import {
   cn,
   confidenceLabel,

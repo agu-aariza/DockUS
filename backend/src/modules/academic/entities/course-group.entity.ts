@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo académico de grupos y matrículas (course-group.entity).
+ *
+ * @module course-group.entity
+ */
+
 import {
   Entity,
   PrimaryGeneratedColumn,

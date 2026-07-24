@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (build-run-artifact.entity).
+ *
+ * @module build-run-artifact.entity
+ */
+
 import {
   Column,
   CreateDateColumn,

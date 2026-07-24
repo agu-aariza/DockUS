@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de estado del runtime y Docker daemon (useRuntimeManagement).
+ *
+ * @module useRuntimeManagement
+ */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {

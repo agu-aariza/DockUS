@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Hook de lógica de negocio para el espacio del estudiante (useStudentWorkspaceData).
+ *
+ * @module useStudentWorkspaceData
+ */
+
 import { useState, useEffect, useCallback } from "react";
 import { assignmentsApi, deliveriesApi } from "../../shared/api/services";
 import { builderApi } from "../../shared/api/builderApi";

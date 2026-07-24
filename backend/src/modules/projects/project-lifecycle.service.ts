@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (project-lifecycle.service).
+ *
+ * @module project-lifecycle.service
+ */
+
 import {
   BadRequestException,
   ConflictException,

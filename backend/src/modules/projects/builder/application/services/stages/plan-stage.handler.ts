@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (plan-stage.handler).
+ *
+ * @module plan-stage.handler
+ */
+
 import { Injectable } from '@nestjs/common';
 import { IBuilderStageHandler } from './builder-stage.interface';
 import { BuilderLlmEvaluatorService } from '../ai/builder-llm-evaluator.service';

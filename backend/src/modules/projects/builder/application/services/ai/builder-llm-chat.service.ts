@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-llm-chat.service).
+ *
+ * @module builder-llm-chat.service
+ */
+
 import {
   BadRequestException,
   Injectable,
@@ -310,9 +316,7 @@ ${newUserMessage}
 
 [RESPUESTA DEL TUTOR — Estructura obligatoria: **Reconocimiento** → **El concepto** → **Por dónde empezar** → **Para reflexionar**]`;
 
-    // Conmutación entre proveedores (ESC-ALTO-02). El consumo se atribuye al
-    // perfil que realmente atendió la llamada, no al asignado al rol: si hubo
-    // conmutación, la tarifa aplicable es la del proveedor suplente.
+    // Despacho de la petición de chat con conmutación entre proveedores y atribución de consumo.
     const { result, profile } = await this.llmDispatcher.dispatch(
       'chat',
       (candidateProfile, credentials) => ({

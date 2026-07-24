@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (project-assignments.service).
+ *
+ * @module project-assignments.service
+ */
+
 import {
   ConflictException,
   ForbiddenException,

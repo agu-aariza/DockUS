@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (Skeleton).
+ *
+ * @module Skeleton
+ */
+
 import React from "react";
 
 interface SkeletonProps {

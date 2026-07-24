@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Utilidad de apoyo de interfaz (errors).
+ *
+ * @module errors
+ */
+
 import type { ApiErrorPayload } from "../types";
 
 export function getErrorMessage(error: unknown): string {

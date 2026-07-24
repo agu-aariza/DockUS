@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (compile-stage.handler).
+ *
+ * @module compile-stage.handler
+ */
+
 import { Injectable } from '@nestjs/common';
 import { IBuilderStageHandler } from './builder-stage.interface';
 import {

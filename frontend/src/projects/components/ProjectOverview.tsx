@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (ProjectOverview).
+ *
+ * @module ProjectOverview
+ */
+
 import {
   RiBarChart2Line,
   RiCalendarScheduleLine,

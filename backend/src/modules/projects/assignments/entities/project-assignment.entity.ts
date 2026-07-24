@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (project-assignment.entity).
+ *
+ * @module project-assignment.entity
+ */
+
 import {
   Column,
   Entity,
@@ -12,8 +18,7 @@ import { Project } from '../../entities/project.entity';
 
 @Entity('project_assignments')
 @Index(['projectId', 'studentId'], { unique: true })
-// ESC-ALTO-07: el índice único anterior lleva `projectId` primero, de modo que
-// no sirve para las consultas que parten del alumno («mis proyectos»).
+// Índice secundario para optimizar la consulta de asignaciones por alumno.
 @Index('IDX_project_assignments_student', ['studentId'])
 export class ProjectAssignment {
   @PrimaryGeneratedColumn('uuid')

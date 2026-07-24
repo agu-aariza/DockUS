@@ -1,20 +1,13 @@
 /**
- * @fileoverview Cerrojo distribuido de exclusión mutua sobre Redis.
+ * @fileoverview Servicio de cerrojos distribuidos (Distributed Lock) sobre Redis.
  *
- * Contexto:
- * - Nace de ESC-ALTO-08: la construcción de imágenes de entorno sigue el patrón
- *   consultar-luego-construir (`imageExists` y, si no está, `buildImage`). Entre
- *   ambas operaciones no hay atomicidad ninguna, de modo que ante una entrega
- *   con fecha límite —donde muchos alumnos comparten el mismo fichero de
- *   dependencias y por tanto el mismo hash— todos los workers deciden a la vez
- *   que la imagen falta y la construyen en paralelo. Son hasta diez minutos de
- *   CPU y de red cada uno, repetidos, para producir exactamente el mismo
- *   artefacto.
+ * @description
+ * Proporciona exclusión mutua distribuida atómica (`SET resource_key my_random_value NX PX ttl`)
+ * para sincronizar tareas pesadas e intensivas en CPU/red ejecutadas en paralelo por múltiples workers.
  *
- * Modo de fallo elegido: **abrir**. Si Redis no responde, `withLock` ejecuta la
- * sección crítica igualmente. Degrada a la conducta actual —trabajo duplicado—
- * en lugar de dejar sin evaluar a todo el mundo por una dependencia que solo
- * sirve para optimizar.
+ * Ejemplos de uso:
+ * - Evitar la construcción duplicada simultánea de imágenes efímeras de Docker con el mismo hash de entorno.
+ * - Evitar condiciones de carrera en operaciones de mutación de estado global.
  *
  * @module DistributedLockService
  */

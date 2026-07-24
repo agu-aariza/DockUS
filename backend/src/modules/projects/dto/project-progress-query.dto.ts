@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (project-progress-query.dto).
+ *
+ * @module project-progress-query.dto
+ */
+
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { DeliveryStatus } from '../deliveries/entities/delivery.entity';

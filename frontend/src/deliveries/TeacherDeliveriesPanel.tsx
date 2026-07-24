@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (TeacherDeliveriesPanel).
+ *
+ * @module TeacherDeliveriesPanel
+ */
+
 import { useMemo } from "react";
 import {
   RiInboxArchiveLine,

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (Glossary).
+ *
+ * @module Glossary
+ */
+
 import type { PropsWithChildren } from "react";
 
 import { findGlossaryEntry } from "../data/glossary";

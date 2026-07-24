@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de progreso y métricas de proyectos (GradebookFilters).
+ *
+ * @module GradebookFilters
+ */
+
 import { RiFilter3Line, RiTeamLine } from "react-icons/ri";
 import { SearchInput } from "../../../shared/components/ui/SearchInput";
 import type { BuilderOutcome } from "../../../features/builder/types";

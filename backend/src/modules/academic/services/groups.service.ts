@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo académico de grupos y matrículas (groups.service).
+ *
+ * @module groups.service
+ */
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -29,11 +35,7 @@ export class GroupsService {
       return [];
     }
 
-    // ESC-MED-02. Antes esto era un `COUNT` por grupo dentro de un
-    // `Promise.all`: N+1 consultas por petición, y el `Promise.all` las lanzaba
-    // además en paralelo, de modo que un curso con muchos grupos podía ocupar
-    // varias conexiones del pool a la vez para responder a un solo usuario.
-    // Una única agregación devuelve lo mismo.
+    // Agregación única por grupo en lugar de consultas N+1 individuales.
     const counts = await this.enrollmentsRepository
       .createQueryBuilder('enrollment')
       .select('enrollment.groupId', 'groupId')
@@ -257,14 +259,7 @@ export class GroupsService {
       return !foundFullNames.includes(ln) && !foundSimpleNames.includes(ln);
     });
 
-    // ESC-MED-02. Antes esto era un `findOne` + `save` POR ALUMNO, sin
-    // transacción y con una carrera consultar-luego-insertar: dos peticiones
-    // simultáneas para el mismo alumno podían leer «no existe» a la vez y
-    // colisionar contra el índice único, abortando la matrícula entera a
-    // mitad y dejándola aplicada solo en parte.
-    //
-    // Ahora son tres consultas fijas, todas dentro de una transacción: leer lo
-    // existente, reactivar lo revocado e insertar lo nuevo.
+    // Matrícula masiva atómica bajo transacción para prevenir condiciones de carrera y duplicados.
     if (studentIds.length > 0) {
       await this.enrollmentsRepository.manager.transaction(async (manager) => {
         const existing = await manager.find(GroupEnrollment, {

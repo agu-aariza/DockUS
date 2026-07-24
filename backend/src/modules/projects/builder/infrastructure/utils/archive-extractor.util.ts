@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (archive-extractor.util).
+ *
+ * @module archive-extractor.util
+ */
+
 import { mkdir, writeFile } from 'fs/promises';
 import * as path from 'path';
 import { gunzipSync, inflateRawSync } from 'zlib';

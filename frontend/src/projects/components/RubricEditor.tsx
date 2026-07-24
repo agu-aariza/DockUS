@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (RubricEditor).
+ *
+ * @module RubricEditor
+ */
+
 import { RiAddLine, RiDeleteBin6Line, RiScales3Line } from "react-icons/ri";
 import type { RubricCriterion } from "../../shared/types";
 

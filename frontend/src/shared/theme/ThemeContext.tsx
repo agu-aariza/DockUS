@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de la interfaz de usuario (ThemeContext).
+ *
+ * @module ThemeContext
+ */
+
 import {
   createContext,
   useCallback,

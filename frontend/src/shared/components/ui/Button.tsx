@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (Button).
+ *
+ * @module Button
+ */
+
 import React, { type ReactNode, type ButtonHTMLAttributes } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "tertiary" | "ghost" | "danger" | "success";

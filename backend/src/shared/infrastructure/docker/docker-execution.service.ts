@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Orquestación de contenedores y sandbox Docker (docker-execution.service).
+ *
+ * @module docker-execution.service
+ */
+
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DockerContainerService } from './docker-container.service';

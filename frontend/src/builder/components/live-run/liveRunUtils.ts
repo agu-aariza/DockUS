@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de monitorización de ejecuciones SSE en vivo (liveRunUtils).
+ *
+ * @module liveRunUtils
+ */
+
 import type { BuildRunEntity } from "../../../features/builder/types";
 
 export type LlmAssessment = NonNullable<BuildRunEntity["llmAssessment"]>;

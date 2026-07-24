@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (build-run-evidence.dto).
+ *
+ * @module build-run-evidence.dto
+ */
+
 import { ApiProperty } from '@nestjs/swagger';
 
 export class EvidenceArtifactDto {

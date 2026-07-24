@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de la interfaz de usuario (PasswordStrengthMeter).
+ *
+ * @module PasswordStrengthMeter
+ */
+
 import { RiCheckLine, RiSubtractLine } from "react-icons/ri";
 import {
   PASSWORD_REQUIREMENTS,

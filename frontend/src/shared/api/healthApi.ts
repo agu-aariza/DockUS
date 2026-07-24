@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (healthApi).
+ *
+ * @module healthApi
+ */
+
 import axios from "axios";
 import { http } from "./http";
 import type { ReadinessReport } from "../../features/health/types";

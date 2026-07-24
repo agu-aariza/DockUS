@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (ProjectCreateForm).
+ *
+ * @module ProjectCreateForm
+ */
+
 import type { FormEvent } from "react";
 import { RiCheckFill, RiFolderAddLine, RiFolderUploadLine, RiGroupLine } from "react-icons/ri";
 import { Button } from "../../shared/components/ui/Button";

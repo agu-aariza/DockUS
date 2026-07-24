@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Orquestación de contenedores y sandbox Docker (command-runner.util).
+ *
+ * @module command-runner.util
+ */
+
 import { spawn } from 'child_process';
 
 interface CommandRunOptions {

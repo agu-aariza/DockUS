@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-execution-result.util).
+ *
+ * @module builder-execution-result.util
+ */
+
 import { BuilderExecutionResult } from '../builder.types';
 
 /**

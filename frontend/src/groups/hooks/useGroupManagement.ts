@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Gestión de grupos y matrículas de estudiantes (useGroupManagement).
+ *
+ * @module useGroupManagement
+ */
+
 import { useEffect, useState } from "react";
 import { groupsApi, usersApi } from "../../shared/api/services";
 import type { CourseGroupEntity, GroupEnrollmentEntity } from "../../features/groups/types";

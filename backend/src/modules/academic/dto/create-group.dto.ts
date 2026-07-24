@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo académico de grupos y matrículas (create-group.dto).
+ *
+ * @module create-group.dto
+ */
+
 import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
 
 export class CreateGroupDto {

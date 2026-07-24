@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (project-assignments.controller).
+ *
+ * @module project-assignments.controller
+ */
+
 import {
   Body,
   Controller,

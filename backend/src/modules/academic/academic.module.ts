@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo académico de grupos y matrículas (academic.module).
+ *
+ * @module academic.module
+ */
+
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CourseGroup } from './entities/course-group.entity';

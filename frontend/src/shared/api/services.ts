@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Módulo de integración con la API REST (services).
+ *
+ * @module services
+ */
+
+/**
  * Fachada de compatibilidad para consumir la API REST desde el frontend.
  *
  * La implementación real vive ahora en módulos por dominio para mantener los

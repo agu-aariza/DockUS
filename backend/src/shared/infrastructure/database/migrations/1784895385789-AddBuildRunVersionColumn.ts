@@ -1,5 +1,11 @@
 /**
- * Añade `version` (lock optimista) a `build_runs` (audit/04 ARQ-013).
+ * @fileoverview Componente de infraestructura compartida (1784895385789-AddBuildRunVersionColumn).
+ *
+ * @module 1784895385789-AddBuildRunVersionColumn
+ */
+
+/**
+ * Añade la columna `version` (lock optimista) a la tabla `build_runs`.
  *
  * Cierra la única ventana lectura-modificación-escritura que queda sobre
  * esta entidad: el save() del resultado final en `BuilderRunLifecycleService`,

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (studentWorkspaceInsights).
+ *
+ * @module studentWorkspaceInsights
+ */
+
 import type {
   BuilderOutcome,
   BuildRunEntity,

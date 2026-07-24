@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (code-quality-finding.entity).
+ *
+ * @module code-quality-finding.entity
+ */
+
 import {
   Column,
   CreateDateColumn,

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (StudentDeliveriesSection).
+ *
+ * @module StudentDeliveriesSection
+ */
+
 import { useMemo, useState } from "react";
 import type { DeliveryEntity } from "../shared/types";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";

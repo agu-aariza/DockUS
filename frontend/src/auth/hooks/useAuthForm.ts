@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de la interfaz de usuario (useAuthForm).
+ *
+ * @module useAuthForm
+ */
+
 import { type FormEvent, type KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { authApi } from "../../shared/api/services";
 import type { AuthResponse } from "../../features/auth/types";

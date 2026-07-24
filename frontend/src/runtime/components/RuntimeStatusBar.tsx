@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de estado del runtime y Docker daemon (RuntimeStatusBar).
+ *
+ * @module RuntimeStatusBar
+ */
+
 import { useEffect, useState } from "react";
 import { healthApi } from "../../shared/api/services";
 import {

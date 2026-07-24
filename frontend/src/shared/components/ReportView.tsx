@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (ReportView).
+ *
+ * @module ReportView
+ */
+
 import { useState, useEffect } from "react";
 import { builderApi } from "../api/builderApi";
 import type { BuilderReportEntity, BuilderRuntimeFamily, BuildRunEntity, TechnicalFeedbackItem } from "../../features/builder/types";

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de progreso y métricas de proyectos (GradebookTable).
+ *
+ * @module GradebookTable
+ */
+
 import {
   RiAwardLine,
   RiCodeSSlashLine,

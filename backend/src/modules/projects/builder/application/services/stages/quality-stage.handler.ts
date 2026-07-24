@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (quality-stage.handler).
+ *
+ * @module quality-stage.handler
+ */
+
 import { Injectable, Logger } from '@nestjs/common';
 import { IBuilderStageHandler } from './builder-stage.interface';
 import { BuilderCodeQualityService } from '../ai/builder-code-quality.service';

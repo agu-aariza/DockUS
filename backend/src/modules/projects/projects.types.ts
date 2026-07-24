@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (projects.types).
+ *
+ * @module projects.types
+ */
+
 import type {
   CodeQualityCategory,
   CodeQualityFinding,

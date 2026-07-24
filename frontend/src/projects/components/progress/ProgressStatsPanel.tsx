@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de progreso y métricas de proyectos (ProgressStatsPanel).
+ *
+ * @module ProgressStatsPanel
+ */
+
 import {
   RiAwardLine,
   RiCheckboxCircleLine,

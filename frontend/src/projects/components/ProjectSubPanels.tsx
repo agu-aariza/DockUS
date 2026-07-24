@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (ProjectSubPanels).
+ *
+ * @module ProjectSubPanels
+ */
+
 import { useState, useMemo } from "react";
 import {
   RiArrowRightSLine,

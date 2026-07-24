@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Gestión de estado de sesión y permisos (SessionContext).
+ *
+ * @module SessionContext
+ */
+
 import {
   createContext,
   useContext,

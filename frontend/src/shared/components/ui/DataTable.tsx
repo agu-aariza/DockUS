@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (DataTable).
+ *
+ * @module DataTable
+ */
+
 import React, { useMemo, useRef, useState } from 'react';
 import { RiArrowDownSLine, RiArrowUpSLine, RiExpandUpDownLine } from 'react-icons/ri';
 import { Skeleton } from '../Skeleton';

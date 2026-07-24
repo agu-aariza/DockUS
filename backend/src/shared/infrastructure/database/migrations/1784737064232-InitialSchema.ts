@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de infraestructura compartida (1784737064232-InitialSchema).
+ *
+ * @module 1784737064232-InitialSchema
+ */
+
 import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class InitialSchema1784737064232 implements MigrationInterface {

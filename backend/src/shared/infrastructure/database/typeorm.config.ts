@@ -23,11 +23,8 @@ function migrationExtension(): string {
 }
 
 /**
- * Sin `extra`, el driver `pg` aplica su valor por defecto de 10 conexiones por
- * proceso, sin tiempo de espera de adquisición ni tope de duración de consulta.
- * Es el primer cuello de botella del sistema (ESC-C01): la API que atiende a
- * todos los usuarios y el worker con sus evaluaciones concurrentes compiten
- * cada uno por esas 10 conexiones, y una consulta lenta las retiene sin límite.
+ * Configuración por defecto del pool de conexiones PostgreSQL para evitar el agotamiento
+ * de recursos entre la API HTTP y los workers concurrentes.
  */
 const POOL_DEFAULTS = {
   /** Conexiones por proceso. Con réplicas, `n × max` no debe superar el
@@ -37,8 +34,7 @@ const POOL_DEFAULTS = {
   idleTimeoutMillis: 30_000,
   /** Falla rápido si el pool está agotado, en vez de encolar sin límite. */
   connectionTimeoutMillis: 5_000,
-  /** Aborta la consulta en el servidor. Sin esto, una consulta sin acotar
-   *  (ESC-C05) retiene su conexión hasta terminar y arrastra al resto. */
+  /** Aborta la consulta en el servidor si supera el límite de tiempo. */
   statementTimeoutMillis: 15_000,
 } as const;
 
@@ -58,11 +54,8 @@ export function buildTypeOrmConfig(
     synchronize: nodeEnv === 'development' || nodeEnv === 'test',
     migrationsTableName: 'dockus_migrations',
     migrations: [join(__dirname, 'migrations', `*.${migrationExtension()}`)],
-    // Desactivado por defecto y opt-in explícito (ESC-CRIT-03). Con varias
-    // réplicas de API arrancando a la vez, que todas intenten migrar abre una
-    // carrera sobre el mismo esquema: en ese escenario las migraciones deben
-    // ejecutarse como paso previo del despliegue (`npm run migration:run`) y
-    // esta variable debe permanecer en `false`.
+    // Desactivado por defecto y opt-in explícito (`DB_RUN_MIGRATIONS=true`).
+    // En producciones multinodo las migraciones deben ejecutarse como paso previo (`npm run migration:run`).
     // El esquema Joi declara la clave como booleano y `ConfigService` la
     // devuelve ya convertida; compararla con la cadena `'true'` daba siempre
     // `false` y las migraciones no se aplicaban. Se acepta cualquiera de las

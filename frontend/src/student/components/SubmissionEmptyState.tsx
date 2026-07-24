@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de UI del espacio de trabajo del estudiante (SubmissionEmptyState).
+ *
+ * @module SubmissionEmptyState
+ */
+
 import { RiFolderOpenLine } from "react-icons/ri";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { Button } from "../../shared/components/ui/Button";

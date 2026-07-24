@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (deliveriesApi).
+ *
+ * @module deliveriesApi
+ */
+
 import { http } from "./http";
 import { toParams } from "./query-params";
 import type { DeliveryEntity, DeliveryStatus } from "../../features/deliveries/types";

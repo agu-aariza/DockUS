@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (EmptyState).
+ *
+ * @module EmptyState
+ */
+
 import React, { type ReactNode } from "react";
 import { RiFolderUnknowLine, RiAddLine } from "react-icons/ri";
 import { Button } from "./ui/Button";

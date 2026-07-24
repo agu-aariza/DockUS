@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-run-commands.service).
+ *
+ * @module builder-run-commands.service
+ */
+
 import { InjectQueue } from '@nestjs/bullmq';
 import {
   ConflictException,

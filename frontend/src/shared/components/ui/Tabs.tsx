@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (Tabs).
+ *
+ * @module Tabs
+ */
+
 import React from 'react';
 
 interface TabItem {

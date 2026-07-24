@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (CodeSnippet).
+ *
+ * @module CodeSnippet
+ */
+
 import { Highlight, themes } from "prism-react-renderer";
 
 import type { BuilderRuntimeFamily } from "../../features/builder/types";

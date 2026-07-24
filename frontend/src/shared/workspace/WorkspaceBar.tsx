@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Contexto y componentes de navegación del espacio de trabajo (WorkspaceBar).
+ *
+ * @module WorkspaceBar
+ */
+
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {

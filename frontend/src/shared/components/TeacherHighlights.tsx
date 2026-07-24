@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (TeacherHighlights).
+ *
+ * @module TeacherHighlights
+ */
+
 import {
   RiAlarmWarningLine,
   RiCheckLine,

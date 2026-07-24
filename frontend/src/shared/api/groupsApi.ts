@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (groupsApi).
+ *
+ * @module groupsApi
+ */
+
 import { http } from "./http";
 import { normalizeStringArray } from "./query-params";
 import type { BulkGroupEnrollResponse, CourseGroupEntity, GroupEnrollmentEntity } from "../../features/groups/types";

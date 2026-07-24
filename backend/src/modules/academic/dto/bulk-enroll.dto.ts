@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo académico de grupos y matrículas (bulk-enroll.dto).
+ *
+ * @module bulk-enroll.dto
+ */
+
 import { IsArray, IsString, IsOptional, IsEmail } from 'class-validator';
 
 export class BulkEnrollDto {

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (PageHeader).
+ *
+ * @module PageHeader
+ */
+
 import React from 'react';
 
 interface PageHeaderProps {

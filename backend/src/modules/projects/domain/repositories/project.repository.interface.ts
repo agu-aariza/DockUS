@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (project.repository.interface).
+ *
+ * @module project.repository.interface
+ */
+
 import type { AuthenticatedUser } from '../../../auth/interfaces/authenticated-user.interface';
 import { Project, ProjectStatus } from '../../entities/project.entity';
 import type { ProjectSortField } from '../../dto/list-projects-query.dto';

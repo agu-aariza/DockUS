@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de monitorización de ejecuciones SSE en vivo (TimelinePanel).
+ *
+ * @module TimelinePanel
+ */
+
 import type { BuildRunEvent } from "../../../features/builder/types";
 import { pretty } from "../../../shared/utils/errors";
 import { cn } from "./liveRunUtils";

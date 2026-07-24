@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (DeliveryGrading).
+ *
+ * @module DeliveryGrading
+ */
+
 import { RiAlertLine } from "react-icons/ri";
 import { BuildRunEntity, DeliveryEntity } from "../../shared/types";
 import { Button } from "../../shared/components/ui/Button";

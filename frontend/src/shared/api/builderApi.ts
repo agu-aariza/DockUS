@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (builderApi).
+ *
+ * @module builderApi
+ */
+
 import { http } from "./http";
 import type { BuildRunEntity, BuildRunEventsPage, EvidenceArtifactDto, EnqueueBuildRunResponse, BuildRunChatMessage } from "../../features/builder/types";
 import type { DownloadUrlResponse } from "../../features/storage/types";
@@ -42,8 +48,7 @@ export const builderApi = {
     return data;
   },
 
-  // Sustituye el fan-out N+1 (una GET por entrega) por una unica llamada
-  // batch. Ver HIGH-09 en audit/01/audit_remediated.md.
+  // Consulta en lote de las últimas ejecuciones para múltiples entregas.
   async listLatestRunsByDeliveries(
     deliveryIds: string[],
   ): Promise<Record<string, BuildRunEntity | null>> {

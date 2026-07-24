@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de configuración de modelos de IA y proveedores (useLlmConfigManagement).
+ *
+ * @module useLlmConfigManagement
+ */
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { llmApi } from "../../shared/api/services";
 import { useToast } from "../../shared/toast/ToastContext";

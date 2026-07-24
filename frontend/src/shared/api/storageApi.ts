@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (storageApi).
+ *
+ * @module storageApi
+ */
+
 import { http } from "./http";
 import { toParams } from "./query-params";
 import type { DownloadUrlResponse, StorageAssetRole, StorageObjectEntity } from "../../features/storage/types";

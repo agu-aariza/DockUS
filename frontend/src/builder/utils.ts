@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y componentes del motor Builder de evaluación (utils).
+ *
+ * @module utils
+ */
+
 import type { BuildRunEvent } from "../features/builder/types";
 
 export function mergeEvents(

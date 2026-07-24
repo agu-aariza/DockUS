@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Hook de lógica de negocio para el espacio del estudiante (useSubmissionFlow).
+ *
+ * @module useSubmissionFlow
+ */
+
 import { useEffect, useMemo, useState } from "react";
 
 import { builderApi } from "../../shared/api/builderApi";

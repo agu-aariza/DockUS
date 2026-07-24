@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Utilidad de apoyo de interfaz (permissions).
+ *
+ * @module permissions
+ */
+
 import type { SessionRecord } from "../../features/auth/types";
 import type { UserRole } from "../types";
 

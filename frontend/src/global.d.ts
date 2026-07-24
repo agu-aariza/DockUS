@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de la interfaz de usuario (global.d).
+ *
+ * @module global.d
+ */
+
 import React from 'react';
 
 declare global {

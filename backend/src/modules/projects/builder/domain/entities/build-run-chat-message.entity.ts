@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (build-run-chat-message.entity).
+ *
+ * @module build-run-chat-message.entity
+ */
+
 import {
   Column,
   CreateDateColumn,

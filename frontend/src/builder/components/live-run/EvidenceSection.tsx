@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de monitorización de ejecuciones SSE en vivo (EvidenceSection).
+ *
+ * @module EvidenceSection
+ */
+
 import {
   RiDownloadLine,
   RiEyeLine,

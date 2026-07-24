@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (deadlineUtils).
+ *
+ * @module deadlineUtils
+ */
+
 import type { ProjectAssignmentEntity } from "../shared/types";
 
 type AssignmentTimelineState =

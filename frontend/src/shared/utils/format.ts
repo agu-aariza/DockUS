@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Utilidad de apoyo de interfaz (format).
+ *
+ * @module format
+ */
+
+/**
  * Utilidades de formateo para el frontend.
  */
 

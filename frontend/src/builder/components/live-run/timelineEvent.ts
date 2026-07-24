@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de monitorización de ejecuciones SSE en vivo (timelineEvent).
+ *
+ * @module timelineEvent
+ */
+
 import type { BuildRunEvent } from "../../../features/builder/types";
 
 const EVIDENCE_MARKER = "--- HEALTHCHECK EVIDENCE ---";

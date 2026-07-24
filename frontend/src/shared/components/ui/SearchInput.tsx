@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (SearchInput).
+ *
+ * @module SearchInput
+ */
+
 import React, { type InputHTMLAttributes } from 'react';
 import { RiSearchLine, RiCloseLine } from 'react-icons/ri';
 

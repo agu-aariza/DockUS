@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (project-access.service).
+ *
+ * @module project-access.service
+ */
+
 import {
   ForbiddenException,
   Injectable,

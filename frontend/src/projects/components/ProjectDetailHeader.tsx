@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (ProjectDetailHeader).
+ *
+ * @module ProjectDetailHeader
+ */
+
 import {
   RiBarChart2Line,
   RiLayoutGridFill,

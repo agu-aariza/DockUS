@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Infraestructura de clientes y despacho de LLMs (prompt.types).
+ *
+ * @module prompt.types
+ */
+
 export interface PromptBundle {
   role: string;
   task: string;

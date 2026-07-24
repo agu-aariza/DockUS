@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (StudentHomeSection).
+ *
+ * @module StudentHomeSection
+ */
+
 import { useState } from "react";
 import {
   RiAlertLine,

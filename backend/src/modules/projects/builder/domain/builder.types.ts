@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder.types).
+ *
+ * @module builder.types
+ */
+
 import { BuildRunArtifactType } from './entities/build-run-artifact.entity';
 import type {
   BuilderLlmPromptStage,

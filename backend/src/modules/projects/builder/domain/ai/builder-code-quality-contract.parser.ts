@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-code-quality-contract.parser).
+ *
+ * @module builder-code-quality-contract.parser
+ */
+
 import { BuilderCodeQualityContractV2 } from '../builder.types';
 import {
   parseRawContract,

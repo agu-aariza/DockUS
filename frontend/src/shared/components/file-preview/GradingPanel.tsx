@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de previsualización de archivos y código fuente (GradingPanel).
+ *
+ * @module GradingPanel
+ */
+
 import { useState } from "react";
 import { RiLoader4Line, RiSave2Line } from "react-icons/ri";
 import type { BuildRunEntity } from "../../../features/builder/types";

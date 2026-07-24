@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (DeliveriesSidebar).
+ *
+ * @module DeliveriesSidebar
+ */
+
 import { RiRefreshLine, RiInboxArchiveLine, RiPulseLine, RiCheckFill } from "react-icons/ri";
 import { DeliveryEntity, ProjectAssignmentEntity } from "../../shared/types";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";

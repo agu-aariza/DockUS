@@ -21,7 +21,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 @Module({
   imports: [
     UsersModule, // Dependencia de capa de datos
-    CacheModule, // Caché de identidad consumida por JwtStrategy (ESC-ALTO-04)
+    CacheModule, // Caché de identidad consumida por JwtStrategy
     PassportModule,
     // Factoría asíncrona para blindar secretos inyectados por .env dockerizado
     JwtModule.registerAsync({
@@ -30,12 +30,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          // El valor por defecto lo fija Joi (`15m`), que además es el único
-          // que llega a aplicarse porque `ConfigModule` valida con ese esquema.
-          // Antes había aquí un respaldo de `1d` que nunca se usaba y que sí
-          // engañaba a quien leyera el código: la auditoría de escalabilidad
-          // dio por hecho que los tokens vivían un día (ESC-BAJO-04) cuando la
-          // vida real, medida sobre un token emitido, son 15 minutos.
           expiresIn: configService.getOrThrow<string>(
             'JWT_EXPIRES_IN',
           ) as string & number,

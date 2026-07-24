@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de la interfaz de usuario (types).
+ *
+ * @module types
+ */
+
 export type UserRole = "ADMIN" | "TEACHER" | "STUDENT";
 
 export interface ApiErrorPayload {

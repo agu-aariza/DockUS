@@ -140,13 +140,8 @@ export class HealthService {
   }
 
   /**
-   * Comprueba el estado del daemon Docker leyendo lo que publica el worker en
-   * Redis (audit/04 ARQ-016), en vez de hablar con el daemon directamente:
-   * la API ya no monta `docker.sock`. `DockerDaemonStatusPublisherService`
-   * (que sí corre en el proceso del worker, el único que aún tiene acceso al
-   * socket) es quien exige runsc en producción y publica el resultado con
-   * TTL de 60s; si la clave falta o expiró, se trata como caído en vez de
-   * asumir "arriba" sin dato reciente.
+   * Comprueba el estado del daemon Docker leyendo lo que publica el worker en Redis
+   * en vez de hablar con el daemon directamente desde la API HTTP.
    */
   private async checkDocker(): Promise<DependencyHealth> {
     const startedAt = Date.now();

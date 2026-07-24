@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (chat-message.dto).
+ *
+ * @module chat-message.dto
+ */
+
 import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { BuildRunChatMessage } from '../../domain/entities/build-run-chat-message.entity';

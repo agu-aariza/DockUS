@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (DeliveryListItem).
+ *
+ * @module DeliveryListItem
+ */
+
 import { useState } from "react";
 import { RiTimeLine, RiFileChartLine, RiStackLine, RiFileTextLine } from "react-icons/ri";
 import { DeliveryEntity } from "../../shared/types";

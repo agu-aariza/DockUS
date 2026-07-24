@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Gestión de grupos y matrículas de estudiantes (types).
+ *
+ * @module types
+ */
+
 export interface CourseGroupEntity {
   id: string;
   name: string;

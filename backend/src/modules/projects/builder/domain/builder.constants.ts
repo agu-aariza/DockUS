@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder.constants).
+ *
+ * @module builder.constants
+ */
+
 export const BUILDER_RUNS_QUEUE_NAME = 'builder-runs';
 export const BUILDER_RUN_JOB_NAME = 'execute-build-run';
 

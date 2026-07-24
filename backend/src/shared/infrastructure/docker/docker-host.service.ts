@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Servicio de inspección y disponibilidad del host Docker.
+ *
+ * @description
+ * Sonda la salud del daemon de Docker ejecutando `docker info --format {{json .}}`
+ * e inspeccionando los runtimes disponibles (ej. `runsc` para gVisor en producción vs `runc`).
+ *
+ * @module DockerHostService
+ */
+
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { runCommand } from './command-runner.util';
 import type {

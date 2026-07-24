@@ -5,8 +5,7 @@ import { visualizer } from 'rollup-plugin-visualizer';
 export default defineConfig({
   plugins: [
     react(),
-    // Solo se activa con `npm run build:analyze` (FE-BAJO-01): generar el
-    // informe en cada build normal costaría tiempo de CI sin beneficio.
+    // Generación del informe de análisis de bundle bajo opt-in explícito (`ANALYZE=true`).
     process.env.ANALYZE === 'true' &&
       visualizer({
         filename: 'build/bundle-analysis.html',
@@ -43,10 +42,7 @@ export default defineConfig({
             id.includes('node_modules/hast-') ||
             id.includes('node_modules/prism-react-renderer')
           ) {
-            // Aisla markdown+prism en su propio chunk para que dejen de
-            // duplicarse entre los distintos paneles perezosos que los usan
-            // (FE-MED-02); jszip no necesita entrada aquí porque el import()
-            // dinámico en useSubmissionFlow.ts ya le da chunk propio.
+            // Aisla las librerías de renderizado de markdown y resaltado de sintaxis en su propio chunk.
             return 'markdown-vendor';
           }
         },

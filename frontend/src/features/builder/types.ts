@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Vista y componentes del motor Builder de evaluación (types).
+ *
+ * @module types
+ */
+
+/**
  * Shapes compartidas con el backend: fuente única en `@dockus/contracts`
  * (audit/04 ARQ-008). `BuildRunChatMessage` es el nombre local de
  * `ChatMessageResponse` del contrato.

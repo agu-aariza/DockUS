@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (llmApi).
+ *
+ * @module llmApi
+ */
+
 import { http } from "./http";
 import type {
   LlmConfigsResponse,

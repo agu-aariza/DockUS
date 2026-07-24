@@ -1,13 +1,15 @@
 /**
- * @fileoverview Grafo de módulos de dominio e infraestructura compartido por
- * ambos procesos (ARQ-006).
+ * @fileoverview Grafo de módulos de dominio e infraestructura compartido por ambos procesos.
  *
- * Contexto:
- * - Antes era `AppModule`, y el worker lo importaba entero (incluido
- *   `HealthModule`, que ninguno de sus jobs necesita) a través de
- *   `AppWorkerModule`. Extraerlo permite que `ApiModule` y `WorkerModule`
- *   compongan explícitamente qué arranca cada entrypoint, en vez de compartir
- *   un único módulo raíz y diferenciar comportamiento con un env-flag.
+ * @description
+ * Agrupa y orquesta todos los módulos de dominio de negocio de DockUS:
+ * 1. `InfrastructureModule` (Persistencia PostgreSQL, Redis, S3/MinIO, AI Router).
+ * 2. `UsersModule` (Gestión de identidades y usuarios).
+ * 3. `AuthModule` (Autenticación JWT y estrategias de acceso).
+ * 4. `AcademicModule` (Grupos académicos y matrículas).
+ * 5. `ProjectsModule` (Proyectos, entregas y submodulo Builder).
+ *
+ * Sirve como núcleo compartido tanto para `ApiModule` como para `WorkerModule`.
  *
  * @module CoreModule
  */
@@ -19,6 +21,9 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { UsersModule } from './modules/users/users.module';
 import { InfrastructureModule } from './shared/infrastructure/infrastructure.module';
 
+/**
+ * Módulo central de dominio e infraestructura compartida del sistema.
+ */
 @Module({
   imports: [
     InfrastructureModule,

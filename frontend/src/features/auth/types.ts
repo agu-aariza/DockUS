@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Definiciones de tipos y componentes de características (types).
+ *
+ * @module types
+ */
+
 import { UserRole } from "../../shared/types";
 
 export type UserStatus =

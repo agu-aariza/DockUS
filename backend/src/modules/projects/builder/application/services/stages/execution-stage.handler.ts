@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (execution-stage.handler).
+ *
+ * @module execution-stage.handler
+ */
+
 import { Injectable } from '@nestjs/common';
 import { IBuilderStageHandler } from './builder-stage.interface';
 import { DockerExecutionService } from '../../../../../../shared/infrastructure/docker/docker-execution.service';

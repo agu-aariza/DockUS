@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (studentBuildRunStages).
+ *
+ * @module studentBuildRunStages
+ */
+
 import type { BuildRunEntity, BuildRunEvent } from "../shared/types";
 
 export type StudentRunStage =

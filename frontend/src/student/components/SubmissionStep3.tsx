@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de UI del espacio de trabajo del estudiante (SubmissionStep3).
+ *
+ * @module SubmissionStep3
+ */
+
 import { RiArrowLeftLine, RiLoader4Line, RiUploadCloud2Line } from "react-icons/ri";
 import { Button } from "../../shared/components/ui/Button";
 import { formatBytes } from "../../shared/utils/format";

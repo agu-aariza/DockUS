@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Infraestructura de clientes y despacho de LLMs (ai.module).
+ *
+ * @module ai.module
+ */
+
 import { Module, Global } from '@nestjs/common';
 import { CacheModule } from '../cache/cache.module';
 import { SecretCipherService } from '../security/secret-cipher.service';

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (StatsOverview).
+ *
+ * @module StatsOverview
+ */
+
 import React from 'react';
 import { MetricCard } from '../MetricCard';
 

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y componentes del motor Builder de evaluación (useBuilderRunStream).
+ *
+ * @module useBuilderRunStream
+ */
+
 import { useEffect, useRef, useState } from "react";
 import { apiBaseUrl } from "../../shared/api/http";
 import { builderApi } from "../../shared/api/services";

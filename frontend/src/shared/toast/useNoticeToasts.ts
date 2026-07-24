@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Gestión de notificaciones toast del sistema (useNoticeToasts).
+ *
+ * @module useNoticeToasts
+ */
+
 import { useEffect, useRef } from "react";
 import { useToast, type ToastTone } from "./ToastContext";
 

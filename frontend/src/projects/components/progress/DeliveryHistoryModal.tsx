@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de progreso y métricas de proyectos (DeliveryHistoryModal).
+ *
+ * @module DeliveryHistoryModal
+ */
+
 import {
   RiCloseLine,
   RiCodeSSlashLine,

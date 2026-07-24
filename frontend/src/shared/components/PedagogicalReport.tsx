@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (PedagogicalReport).
+ *
+ * @module PedagogicalReport
+ */
+
 import type {
   BuilderPedagogicalNarrativeItem,
   PedagogicalNarrativeKind,

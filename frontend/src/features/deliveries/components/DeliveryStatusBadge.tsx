@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (DeliveryStatusBadge).
+ *
+ * @module DeliveryStatusBadge
+ */
+
 import { StatusBadge, type StatusTone } from '../../../shared/components/ui/StatusBadge';
 import type { DeliveryStatus } from '../types';
 

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de informe de evaluación y desglose pedagógico (ReportCard).
+ *
+ * @module ReportCard
+ */
+
 import type { ReactNode } from "react";
 import type { IconType } from "react-icons";
 

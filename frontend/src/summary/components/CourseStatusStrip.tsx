@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de resumen y analíticas generales docentes (CourseStatusStrip).
+ *
+ * @module CourseStatusStrip
+ */
+
 import type { ReactNode } from "react";
 
 export interface CourseStatusReading {

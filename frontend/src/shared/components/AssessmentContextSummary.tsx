@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (AssessmentContextSummary).
+ *
+ * @module AssessmentContextSummary
+ */
+
 import type { BuildRunEntity } from "../../features/builder/types";
 import { GlossaryTerm } from "./Glossary";
 import { MarkdownContent } from "./MarkdownContent";

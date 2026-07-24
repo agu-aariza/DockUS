@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Componente de infraestructura compartida (1784738476041-HotPathIndexes).
+ *
+ * @module 1784738476041-HotPathIndexes
+ */
+
+/**
  * Índices de las rutas calientes (ESC-ALTO-07).
  *
  * ⚠️ AVISO SOBRE `IDX_users_search_trgm`

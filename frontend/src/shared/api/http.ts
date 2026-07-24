@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Cliente HTTP global basado en Axios.
+ *
+ * @description
+ * Única instancia de cliente HTTP para toda la SPA Frontend.
+ * Gestiona interceptores para:
+ * 1. Inyección de token de acceso JWT (`Authorization: Bearer <token>`).
+ * 2. Renovación automática de tokens caducados vía endpoint `/auth/refresh` en cola única de peticiones.
+ * 3. Notificación de avisos de sesión y caducidad de credenciales.
+ *
+ * @module HttpApiClient
+ */
+
 import axios from "axios";
 import type { ApiErrorPayload } from "../types";
 

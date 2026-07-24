@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de configuración de modelos de IA y proveedores (types).
+ *
+ * @module types
+ */
+
 export const LLM_PROVIDER_IDS = [
   "bedrock",
   "azure",

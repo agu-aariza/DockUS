@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (ProjectTeachersSection).
+ *
+ * @module ProjectTeachersSection
+ */
+
 import { RiCloseLine, RiInformationFill } from "react-icons/ri";
 import { VisualPicker } from "../../shared/components/ui/VisualPicker";
 import { SectionCard } from "../../shared/components/ui/Layout";

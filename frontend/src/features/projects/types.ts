@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (types).
+ *
+ * @module types
+ */
+
 import { UserEntity } from "../auth/types";
 import {
   QualityInsightCategory,

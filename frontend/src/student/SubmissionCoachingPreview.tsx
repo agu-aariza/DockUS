@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (SubmissionCoachingPreview).
+ *
+ * @module SubmissionCoachingPreview
+ */
+
 import type { BuildRunEntity } from "../shared/types";
 import { CoachingSummary } from "../shared/components/CoachingSummary";
 

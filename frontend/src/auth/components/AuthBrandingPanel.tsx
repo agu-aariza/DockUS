@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de la interfaz de usuario (AuthBrandingPanel).
+ *
+ * @module AuthBrandingPanel
+ */
+
 import { RiCommandLine, RiDashboardLine, RiUploadCloud2Line } from "react-icons/ri";
 
 /* ─── Particles Data ─── */

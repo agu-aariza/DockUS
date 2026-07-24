@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de previsualización de archivos y código fuente (filePreviewTheme).
+ *
+ * @module filePreviewTheme
+ */
+
 export type FilePreviewTheme = "dark" | "light";
 
 export interface ExplorerThemeTokens {

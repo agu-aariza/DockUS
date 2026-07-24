@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (build-run-event.entity).
+ *
+ * @module build-run-event.entity
+ */
+
 import {
   Column,
   CreateDateColumn,

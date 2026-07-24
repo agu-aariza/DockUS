@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de resumen y analíticas generales docentes (CohortAnalyticsDashboard).
+ *
+ * @module CohortAnalyticsDashboard
+ */
+
 import { useEffect, useState } from "react";
 import {
   RiPercentLine,

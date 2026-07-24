@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de monitorización de ejecuciones SSE en vivo (LiveConsolePanel).
+ *
+ * @module LiveConsolePanel
+ */
+
 import { RiLoader4Line } from "react-icons/ri";
 import type { StreamState } from "../../hooks/useBuilderRunStream";
 

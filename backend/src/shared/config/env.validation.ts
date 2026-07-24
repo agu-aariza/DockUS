@@ -1,57 +1,22 @@
 /**
- * @fileoverview Esquema de validación de variables de entorno.
+ * @fileoverview Esquema de validación estricta de variables de entorno (Joi).
  *
- * Contexto:
- * - Define contratos de configuración para arranque seguro del backend.
- * - Garantiza fail-fast ante valores ausentes o inválidos.
+ * @description
+ * Garantiza el principio fail-fast al arrancar el backend validando tipos,
+ * valores por defecto, claves secretas obligatorias y orígenes autorizados.
  *
  * @module EnvValidation
  */
 
 import * as Joi from 'joi';
 
+/** Marcadores de posición inseguros para secretos JWT que deben ser rechazados en producción. */
 const insecureJwtPlaceholders = [
   'tu_secreto_jwt_seguro_de_al_menos_32_chars',
   'tu_secreto_refresh_seguro_de_al_menos_32_chars',
   'CHANGE_ME_JWT_SECRET',
   'CHANGE_ME_REFRESH_SECRET',
 ] as const;
-
-/**
- * Historial de variables sin consumidor (auditoría LOW-03, cerrada en
- * audit/04 ARQ-014).
- *
- * Entre el cierre de la fase 4 (2026-07-23) y esta entrada había 17 claves
- * declaradas aquí y en `.env.example` que ningún servicio leía — una
- * capacidad configurable aparente que no existía en tiempo de ejecución.
- * `BUILDER_SELF_HEAL_MAX_ATTEMPTS` y `BUILDER_LLM_REPAIR_MAX_INPUT_CHARS` ya
- * habían salido de la lista al borrarse el andamiaje de auto-reparación que
- * acompañaban. Las 17 restantes se decidieron por eliminación, no por
- * implementación: ningún punto de la UI ni del pipeline dependía de que
- * existieran, así que no había nada que completar. Eliminadas:
- * `BUILDER_LLM_ASSIST_ENABLED`, `BUILDER_STATIC_REVIEW_ENABLED`,
- * `BUILDER_STATIC_REVIEW_TIMEOUT_MS`, `BUILDER_LLM_ASSIST_MAX_INPUT_CHARS`,
- * `BUILDER_LLM_FEEDBACK_MAX_INPUT_CHARS`, `BUILDER_DEFAULT_PYTHON_VERSION`,
- * `BUILDER_BASE_PYTHON_IMAGE`, `BUILDER_WORKSPACE_NETWORK_PREFIX`,
- * `BUILDER_EXECUTION_NETWORK_PREFIX`, `BUILDER_BATCH_TIMEOUT_SECONDS`,
- * `BUILDER_SERVICE_READY_TIMEOUT_SECONDS`, `BUILDER_STABILITY_WINDOW_SECONDS`,
- * `BUILDER_PROMPT_MAX_CHARS`, `BUILDER_SERVICE_CPU_LIMIT`,
- * `BUILDER_SERVICE_MEMORY_LIMIT`, `BUILDER_TEST_CPU_LIMIT`,
- * `BUILDER_TEST_MEMORY_LIMIT`.
- *
- * Si una clave nueva empieza a aparecer aquí sin lector, es la misma señal
- * que aquellas 17 daban: o se cablea con dueño, o se borra — no se deja
- * pendiente dos auditorías como ocurrió esta vez.
- *
- * `AWS_*` y `DOCKER_HOST` NO cuentan como "sin consumidor" pese a no leerse
- * desde el código: los consume el SDK de AWS y el CLI de Docker directamente
- * desde el entorno, y su validación aquí sí tiene efecto (`DOCKER_HOST` solo
- * lo necesita ya el proceso worker — audit/04 ARQ-016 retiró el acceso
- * directo al daemon desde la API, pero la clave sigue siendo obligatoria en
- * producción porque el esquema es compartido entre ambos procesos).
- * `BUILDER_BEDROCK_*_MODEL_ID` tampoco: se leen con clave construida
- * dinámicamente en `builder-llm-model-profile.ts`.
- */
 
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()

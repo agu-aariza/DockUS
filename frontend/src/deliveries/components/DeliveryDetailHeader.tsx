@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (DeliveryDetailHeader).
+ *
+ * @module DeliveryDetailHeader
+ */
+
 import { RiCodeSSlashLine, RiArrowRightUpLine, RiStackLine, RiFolderChartLine, RiFileTextLine } from "react-icons/ri";
 import { DeliveryEntity } from "../../shared/types";
 import { Tabs } from "../../shared/components/ui/Tabs";

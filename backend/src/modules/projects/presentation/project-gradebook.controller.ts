@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (project-gradebook.controller).
+ *
+ * @module project-gradebook.controller
+ */
+
 import {
   Controller,
   Get,

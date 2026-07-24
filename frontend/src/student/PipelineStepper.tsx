@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (PipelineStepper).
+ *
+ * @module PipelineStepper
+ */
+
 import {
   RiUploadCloud2Line,
   RiTimeLine,

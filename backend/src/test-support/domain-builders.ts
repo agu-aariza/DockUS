@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo del sistema DockUS (domain-builders).
+ *
+ * @module domain-builders
+ */
+
 import type { AuthenticatedUser } from '../modules/auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../modules/users/entities/user.entity';
 import {

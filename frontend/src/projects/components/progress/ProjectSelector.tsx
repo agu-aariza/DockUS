@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de progreso y métricas de proyectos (ProjectSelector).
+ *
+ * @module ProjectSelector
+ */
+
 import { RiLoader4Line } from "react-icons/ri";
 import type { ProjectEntity } from "../../../features/projects/types";
 

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-llm-evaluator.service).
+ *
+ * @module builder-llm-evaluator.service
+ */
+
 import { Injectable, Logger } from '@nestjs/common';
 import {
   AssignmentContext,

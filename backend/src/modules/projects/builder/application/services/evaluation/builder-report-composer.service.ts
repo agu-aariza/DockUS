@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-report-composer.service).
+ *
+ * @module builder-report-composer.service
+ */
+
 import { Injectable } from '@nestjs/common';
 import {
   BuilderEvaluationContractV2,

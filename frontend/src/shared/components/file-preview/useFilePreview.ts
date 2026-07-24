@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de previsualización de archivos y código fuente (useFilePreview).
+ *
+ * @module useFilePreview
+ */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export interface PreviewFile {

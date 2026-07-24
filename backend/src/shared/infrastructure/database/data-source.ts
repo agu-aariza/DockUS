@@ -7,8 +7,8 @@
  *   el punto de entrada equivalente para `migration:generate|run|revert`.
  * - Las entidades se resuelven por glob y no con `autoLoadEntities`, que es un
  *   mecanismo de `@nestjs/typeorm` y depende del registro por módulo.
- * - `synchronize` está deliberadamente ausente: el CLI nunca debe sincronizar,
- *   solo aplicar migraciones (ESC-CRIT-03).
+ * - `synchronize` está deliberadamente ausente: el CLI no debe sincronizar,
+ *   solo aplicar migraciones.
  *
  * @module DatabaseDataSource
  */

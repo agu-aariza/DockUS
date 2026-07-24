@@ -1,14 +1,9 @@
 /**
- * @fileoverview Poda periódica de imágenes de entorno.
+ * @fileoverview Servicio de poda y retención periódica de imágenes de contenedor efímeras.
  *
- * Contexto:
- * - Cada configuración de dependencias distinta genera una imagen
- *   `dockus-env-<hash>`. Nada las eliminaba: el disco del anfitrión crecía de
- *   forma monótona y, al llenarse, **mueren todos los workers de esa máquina**,
- *   no solo el que provocó el llenado (ESC-CRIT-06).
- * - `BUILDER_CLEANUP_IMAGES` y `BUILDER_IMAGE_TTL_MS` ya estaban validadas y sin
- *   consumidor, de modo que la limpieza aparentaba estar activada por defecto
- *   cuando no existía.
+ * @description
+ * Realiza la poda programada (cron cada 30 min) de las imágenes de Docker generadas
+ * para las evaluaciones (`dockus-env-<hash>`) según el TTL configurado, evitando el agotamiento del disco host.
  *
  * @module BuilderImageRetentionService
  */

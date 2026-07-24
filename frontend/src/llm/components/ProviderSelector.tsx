@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de configuración de modelos de IA y proveedores (ProviderSelector).
+ *
+ * @module ProviderSelector
+ */
+
 import { LLM_PROVIDER_IDS, type LlmProviderId, type LlmRole, type LlmRoleMappings } from "../../features/llm/types";
 import { PROVIDER_METADATA, ROLE_METADATA } from "../llmConfigConstants";
 

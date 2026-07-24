@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-facts-contract.parser).
+ *
+ * @module builder-facts-contract.parser
+ */
+
 import { BuilderFactsContractV2 } from '../builder.types';
 import {
   normalizeOptionalString,

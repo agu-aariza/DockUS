@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de configuración de modelos de IA y proveedores (Banner).
+ *
+ * @module Banner
+ */
+
 import type { ReactNode } from "react";
 import { RiAlertLine } from "react-icons/ri";
 

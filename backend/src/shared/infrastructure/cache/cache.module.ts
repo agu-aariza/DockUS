@@ -1,17 +1,13 @@
 /**
- * @fileoverview Módulo de caché compartida.
+ * @fileoverview Módulo de caché y cerrojos distribuidos basados en Redis.
  *
- * Contexto:
- * - Agrupa el cliente Redis transversal y las cachés construidas sobre él.
- * - Existe para que `UsersModule` y `AuthModule` puedan inyectar la caché de
- *   identidad sin arrastrar `InfrastructureModule` entero (TypeORM, BullMQ,
- *   Docker, Bedrock) por una única dependencia.
+ * @description
+ * Proporciona los servicios centrales de Redis para:
+ * 1. `RedisClientService`: Conexión cliente ioredis singleton.
+ * 2. `AuthIdentityCacheService`: Caché de corta duración para credenciales/roles JWT.
+ * 3. `DistributedLockService`: Bloqueos distribuidos basados en Redis con renovación automática (Redlock/atomic TTL).
  *
- * `RedisClientService` se declara **aquí y solo aquí**:
- * `InfrastructureModule` lo reexporta desde este módulo en vez de proveerlo por
- * su cuenta. Si ambos lo declarasen, Nest crearía dos instancias y con ellas
- * dos conexiones a Redis, y las invalidaciones de un lado no se verían desde el
- * otro.
+ * Permite a los módulos de dominio inyectar utilidades de caché sin importar el módulo completo de infraestructura.
  *
  * @module CacheModule
  */
@@ -21,6 +17,9 @@ import { AuthIdentityCacheService } from './auth-identity-cache.service';
 import { DistributedLockService } from './distributed-lock.service';
 import { RedisClientService } from './redis-client.service';
 
+/**
+ * Módulo de servicios de caché e infraestructura Redis.
+ */
 @Module({
   providers: [
     RedisClientService,

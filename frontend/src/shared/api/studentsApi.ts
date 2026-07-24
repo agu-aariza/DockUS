@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (studentsApi).
+ *
+ * @module studentsApi
+ */
+
 import { http } from "./http";
 import type { StudentProfileResponse } from "../../features/students/types";
 

@@ -1,25 +1,10 @@
 /**
- * @fileoverview Cortacircuitos por proveedor de LLM.
+ * @fileoverview Servicio de disyuntor/cortacircuitos (Circuit Breaker) para proveedores de LLM.
  *
- * Contexto (ESC-ALTO-02):
- * - Cuando un proveedor empieza a rechazar por tasa o a devolver 5xx, seguir
- *   enviándole peticiones no solo falla: **empeora el rechazo**, porque cada
- *   intento cuenta contra la misma cuota que ya está agotada. El cortacircuitos
- *   corta la racha y deja que el despachador pruebe otro proveedor configurado.
- *
- * Por qué el estado vive en Redis y no en memoria del proceso:
- * - Con varios workers, un cortacircuitos local obliga a **cada** proceso a
- *   descubrir por su cuenta que el proveedor está caído. Con la concurrencia por
- *   defecto son decenas de llamadas desperdiciadas antes de que todos abran, y
- *   precisamente cuando el problema es un límite de tasa esas llamadas son las
- *   que lo agravan. Compartir el estado hace que el primero que lo detecta
- *   proteja a los demás.
- * - El sobrecoste es despreciable: una o dos operaciones de Redis frente a una
- *   llamada de inferencia que dura segundos.
- *
- * Modo de fallo: **abrir el paso** (nunca el circuito). Si Redis no responde se
- * considera el proveedor disponible y se intenta la llamada. Un fallo de la
- * caché no puede dejar sin evaluar a nadie; como mucho se pierde la protección.
+ * @description
+ * Evita la saturación de proveedores de IA ante errores 429 (Rate Limit), 5xx o fallos de red.
+ * Almacena el contador de fallos y el estado de cuarentena en Redis para sincronizar todos los workers de evaluación.
+ * Cae a modo Fail-Open (permite la llamada) si Redis no está disponible.
  *
  * @module LlmCircuitBreakerService
  */

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (ProfessionalVerdict).
+ *
+ * @module ProfessionalVerdict
+ */
+
 import { RiBriefcaseLine } from "react-icons/ri";
 import { MarkdownContent } from "./MarkdownContent";
 import type { BuilderOutcome } from "../../features/builder/types";

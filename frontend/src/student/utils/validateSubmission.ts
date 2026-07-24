@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (validateSubmission).
+ *
+ * @module validateSubmission
+ */
+
 export interface SubmissionPreviewFile {
   path: string;
   sizeBytes: number;

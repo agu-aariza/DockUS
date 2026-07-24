@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Utilidad de apoyo de interfaz (backoff).
+ *
+ * @module backoff
+ */
+
+/**
  * Retroceso exponencial con dispersión aleatoria para reconexiones y sondeos.
  *
  * El motivo no es la amabilidad con el servidor sino evitar una sincronización

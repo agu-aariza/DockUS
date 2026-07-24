@@ -1,17 +1,16 @@
 /**
- * @dockus/contracts — Contratos de tipos compartidos entre backend y frontend.
+ * @fileoverview Paquete de contratos y DTOs compartidos entre el backend y frontend (@dockus/contracts).
+ *
+ * @description
+ * Define interfaces y tipos puramente estáticos para garantizar el Type-Safety
+ * a lo largo de las peticiones REST HTTP, eventos SSE y tipos de dominio.
  *
  * Reglas:
  * - SOLO tipos e interfaces puras. Nada de runtime (sin enums, sin const, sin
- *   funciones), de modo que todo importado desde aquí se borra en compilación y
- *   nunca genera un import en tiempo de ejecución.
- * - Los valores de las uniones coinciden con los enums de runtime del backend
- *   (p. ej. `DeliveryStatus`), que se conservan allí porque TypeORM los necesita.
- *   Un miembro de enum string es asignable a su literal, de modo que las shapes
- *   producidas por el backend satisfacen estos contratos.
- * - Solo se comparten las shapes verificadas como estructuralmente idénticas en
- *   ambos lados. Las que divergen (p. ej. findings con `file: string | null` en
- *   frontend frente a `file?: string` en backend) permanecen en cada lado.
+ *   funciones), de modo que todo importado desde aquí se borra en compilación.
+ * - Los valores de las uniones coinciden con los enums de runtime del backend.
+ *
+ * @module Contracts
  */
 
 // ---------------------------------------------------------------------------
@@ -340,26 +339,9 @@ export interface StudentProfileResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Builder — eventos de run y chat del Tutor IA (audit/04 ARQ-008)
-//
-// `BuildRunEntity` en frontend/src/features/builder/types.ts NO se movió
-// aquí: al verificarla contra `BuildRunResponseDto` (la respuesta real del
-// backend) resultó tener drift severo — campos que el frontend leía
-// activamente (`activeStage`, `runtimeTarget`, `preflightSummary`, `runKind`,
-// más `stackResult`/`dockerfileContent`/`buildLogs`/`timingsMs`/
-// `staticFindings`/`stageResults`/`executionContext`/`evidenceArtifacts`/
-// `imageTag`/`imageExpiresAt`) no existían en absoluto en la respuesta real,
-// así que esos paneles siempre mostraban su placeholder ("n/d", "pendiente").
-// La parte mecánica (borrar los campos fantasma y los bloques de UI que
-// nunca renderizaban nada real: `PreflightSummaryPanel`, el bloque de
-// preflight de `ReportView`, las columnas Preflight/Etapa/Entorno de
-// `BuilderRunsTable`) se limpió sin tocar `@dockus/contracts`, porque no
-// había una shape real que canonizar — no existía backing data en absoluto,
-// solo UI construida por delante de un backend que nunca se escribió.
-// Añadir esos campos de verdad (planificación de tests, healthcheck,
-// contenedor/red activos) sigue siendo una decisión de producto, no un
-// movimiento mecánico de tipos — documentado en el registro de remediación.
+// Builder — Eventos de ejecuciones y chat del Tutor IA
 // ---------------------------------------------------------------------------
+
 
 export type BuildRunEventType =
   | 'RUN_ENQUEUED'

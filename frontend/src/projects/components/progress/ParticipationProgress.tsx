@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de progreso y métricas de proyectos (ParticipationProgress).
+ *
+ * @module ParticipationProgress
+ */
+
 interface ParticipationProgressProps {
   rate: number;
 }

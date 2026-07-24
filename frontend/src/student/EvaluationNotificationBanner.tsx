@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (EvaluationNotificationBanner).
+ *
+ * @module EvaluationNotificationBanner
+ */
+
 import {
   RiAlertLine,
   RiCheckboxCircleLine,

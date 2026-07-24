@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-hallucination-guard.service).
+ *
+ * @module builder-hallucination-guard.service
+ */
+
 import { Injectable } from '@nestjs/common';
 import {
   BuilderEvaluationContractV2,

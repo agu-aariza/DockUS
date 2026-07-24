@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de UI del espacio de trabajo del estudiante (SubmissionSidebar).
+ *
+ * @module SubmissionSidebar
+ */
+
 import { formatAssignmentDate } from "../deadlineUtils";
 import { StudentKeyValueList, StudentSurface, StudentSurfaceHeader } from "./StudentWorkspaceSurface";
 import { SubmissionCoachingPreview } from "../SubmissionCoachingPreview";

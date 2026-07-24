@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Orquestación de contenedores y sandbox Docker (docker-infrastructure.module).
+ *
+ * @module docker-infrastructure.module
+ */
+
 import { Module } from '@nestjs/common';
 import { DockerContainerService } from './docker-container.service';
 import { DockerHostService } from './docker-host.service';

@@ -1,21 +1,9 @@
 /**
- * @fileoverview Cuota de gasto en inferencia por proyecto.
+ * @fileoverview Servicio de comprobación y control de cuotas de gasto en inferencia por proyecto.
  *
- * Contexto (ESC-ALTO-02):
- * - `BuildRun.executionCostUsd` se venía midiendo con precisión —etapa a etapa,
- *   con la tarifa de cada proveedor— pero **nunca se capaba**. Un bucle de
- *   reevaluación, un proyecto mal configurado o simplemente un curso numeroso
- *   podían facturar sin límite, y el sistema no tenía forma de enterarse hasta
- *   ver la factura del proveedor.
- *
- * Dónde se comprueba y por qué:
- * - **Antes de encolar**, no durante el pipeline. Una vez lanzado el run, sus
- *   tres o cuatro llamadas ya están comprometidas; abortar a mitad gasta el
- *   dinero igual y además deja al alumno sin evaluación. Rechazar en el
- *   encolado es el único punto donde negarse ahorra dinero de verdad.
- * - La consecuencia asumida es que la cuota puede **rebasarse dentro de un
- *   run**: se comprueba con el gasto acumulado hasta ese momento y el run en
- *   curso añade el suyo. El desbordamiento está acotado al coste de un run.
+ * @description
+ * Evalúa el coste acumulado en USD de las evaluaciones de un proyecto frente al límite configurado.
+ * Se ejecuta preventivamente en el encolamiento de nuevas entregas para denegar el consumo si se agota la cuota.
  *
  * @module BuilderSpendQuotaService
  */

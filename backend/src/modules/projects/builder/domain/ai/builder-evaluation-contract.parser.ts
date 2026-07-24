@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-evaluation-contract.parser).
+ *
+ * @module builder-evaluation-contract.parser
+ */
+
 import {
   BuilderEvaluationContractV2,
   BuilderRecipeV2,

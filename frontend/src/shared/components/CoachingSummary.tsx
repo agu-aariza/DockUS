@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (CoachingSummary).
+ *
+ * @module CoachingSummary
+ */
+
 import type { BuilderRuntimeFamily, BuilderReportCoaching, TechnicalFeedbackItem } from "../../features/builder/types";
 import {
   RiAlertLine,

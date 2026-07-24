@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de UI del espacio de trabajo del estudiante (SubmissionStep1).
+ *
+ * @module SubmissionStep1
+ */
+
 import { RiArrowRightLine, RiBookOpenLine, RiFolderOpenLine } from "react-icons/ri";
 import { Button } from "../../shared/components/ui/Button";
 import { formatAssignmentDate, describeAssignmentTimeline } from "../deadlineUtils";

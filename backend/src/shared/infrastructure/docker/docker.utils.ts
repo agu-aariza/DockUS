@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Orquestación de contenedores y sandbox Docker (docker.utils).
+ *
+ * @module docker.utils
+ */
+
 import type { CommandRunResult } from './command-runner.util';
 
 export function buildDockerLabelArgs(

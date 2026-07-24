@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-pedagogical.service).
+ *
+ * @module builder-pedagogical.service
+ */
+
 import { Injectable, Logger } from '@nestjs/common';
 import type { CodeQualityFinding } from '../../../domain/builder.types';
 

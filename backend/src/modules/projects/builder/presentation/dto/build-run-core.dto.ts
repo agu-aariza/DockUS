@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (build-run-core.dto).
+ *
+ * @module build-run-core.dto
+ */
+
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BuildRunStatus } from '../../domain/entities/build-run.entity';
 

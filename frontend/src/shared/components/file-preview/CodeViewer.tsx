@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de previsualización de archivos y código fuente (CodeViewer).
+ *
+ * @module CodeViewer
+ */
+
 import type { ReactNode } from "react";
 import {
   RiCheckLine,

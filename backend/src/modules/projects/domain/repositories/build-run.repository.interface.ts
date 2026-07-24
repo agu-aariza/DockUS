@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (build-run.repository.interface).
+ *
+ * @module build-run.repository.interface
+ */
+
 import { BuildRun } from '../../builder/domain/entities/build-run.entity';
 
 /**

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de monitorización de ejecuciones SSE en vivo (RunMetaBar).
+ *
+ * @module RunMetaBar
+ */
+
 import type { BuildRunEntity } from "../../../features/builder/types";
 
 interface RunMetaBarProps {

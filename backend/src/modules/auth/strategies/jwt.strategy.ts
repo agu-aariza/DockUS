@@ -41,12 +41,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   /**
    * Resuelve la identidad autenticada a partir del JWT validado.
    *
-   * La consulta a `users` se sirve desde una caché de vida corta (ESC-ALTO-04):
-   * corría en cada petición autenticada, y los sondeos de 3 s del frontend la
-   * convertían en el consumidor dominante del pool de conexiones. La
-   * invalidación al mutar la cuenta la hace `UsersService`; aquí solo se guarda
-   * la identidad **después** de que `assertAccountIsActive` la haya aceptado,
-   * de modo que un acierto de caché nunca puede saltarse esa comprobación.
+   * La consulta a `users` se sirve desde una caché de vida corta en Redis
+   * para reducir la carga sobre la base de datos PostgreSQL.
    */
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     const cached = await this.authIdentityCache.get(payload.sub);

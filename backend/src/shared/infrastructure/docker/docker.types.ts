@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Orquestación de contenedores y sandbox Docker (docker.types).
+ *
+ * @module docker.types
+ */
+
 interface DockerLabelledTimeoutOptions {
   timeoutMs: number;
   maxBufferedChars?: number;

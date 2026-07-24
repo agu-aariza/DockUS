@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de perfil y expediente del alumno (StudentProjectTimeline).
+ *
+ * @module StudentProjectTimeline
+ */
+
 import { useState } from "react";
 import {
   RiArrowDownSLine,

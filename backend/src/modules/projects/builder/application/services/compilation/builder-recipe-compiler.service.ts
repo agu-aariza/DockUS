@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-recipe-compiler.service).
+ *
+ * @module builder-recipe-compiler.service
+ */
+
 import { Injectable } from '@nestjs/common';
 import { BuilderPlanContractV2 } from '../../../domain/builder.types';
 import {

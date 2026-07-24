@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (useProjectTestSuiteManagement).
+ *
+ * @module useProjectTestSuiteManagement
+ */
+
 import { type FormEvent, useEffect, useState } from "react";
 import { projectsApi } from "../../shared/api/services";
 import type { StorageObjectEntity } from "../../shared/types";

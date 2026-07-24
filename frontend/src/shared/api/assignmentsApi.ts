@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (assignmentsApi).
+ *
+ * @module assignmentsApi
+ */
+
 import { http } from "./http";
 import { normalizeStringArray } from "./query-params";
 import type { BulkAssignResponse, ProjectAssignmentEntity } from "../../features/projects/types";

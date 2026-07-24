@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (TerminalViewer).
+ *
+ * @module TerminalViewer
+ */
+
 import React, { useRef, useState } from "react";
 import { RiFileCopyLine, RiCheckLine, RiTerminalBoxLine } from "react-icons/ri";
 

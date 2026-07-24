@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Contexto y componentes de navegación del espacio de trabajo (WorkspaceSelectionContext).
+ *
+ * @module WorkspaceSelectionContext
+ */
+
 import {
   createContext,
   useContext,

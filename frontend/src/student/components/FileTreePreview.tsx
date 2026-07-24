@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de UI del espacio de trabajo del estudiante (FileTreePreview).
+ *
+ * @module FileTreePreview
+ */
+
 import { RiFile3Line, RiFolder3Line, RiGitCommitLine, RiHistoryLine } from "react-icons/ri";
 
 import { StatusBadge } from "../../shared/components/ui/StatusBadge";

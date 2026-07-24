@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-plan-contract.parser).
+ *
+ * @module builder-plan-contract.parser
+ */
+
 import { BuilderPlanContractV2 } from '../builder.types';
 import {
   normalizeConfidence,

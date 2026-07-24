@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (studentWorkflowState).
+ *
+ * @module studentWorkflowState
+ */
+
 import type {
   BuildRunEntity,
   BuildRunStatus,

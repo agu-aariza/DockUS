@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Infraestructura de clientes y despacho de LLMs (bedrock-generation.service).
+ *
+ * @module bedrock-generation.service
+ */
+
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (useProjectManagement).
+ *
+ * @module useProjectManagement
+ */
+
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import {
   assignmentsApi,

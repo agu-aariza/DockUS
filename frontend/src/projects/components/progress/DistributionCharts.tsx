@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de progreso y métricas de proyectos (DistributionCharts).
+ *
+ * @module DistributionCharts
+ */
+
 import type { BuilderOutcome } from "../../../features/builder/types";
 import type { ProjectProgressSummary } from "../../../features/projects/types";
 

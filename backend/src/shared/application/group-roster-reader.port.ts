@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Servicio de aplicación compartido (group-roster-reader.port).
+ *
+ * @module group-roster-reader.port
+ */
+
 export interface GroupEnrollmentRosterEntry {
   studentId: string;
   studentEmail: string;

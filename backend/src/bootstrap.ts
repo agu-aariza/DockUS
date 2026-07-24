@@ -1,9 +1,14 @@
 /**
- * @fileoverview Inicialización global compartida de la aplicación.
+ * @fileoverview Inicialización y configuración global compartida de la API NestJS.
  *
- * Contexto:
- * - Aplica middleware, validación, CORS y logger de forma centralizada.
- * - Permite reutilizar la misma configuración en main y e2e.
+ * @description
+ * Modulo centralizador de middleware y seguridad HTTP. Se encarga de:
+ * 1. Definir el prefijo global `/api` para todas las rutas REST.
+ * 2. Configurar el registrador de logs Pino (`nestjs-pino`).
+ * 3. Enforzar `ValidationPipe` global con sanitización estricta (`whitelist` y `forbidNonWhitelisted`).
+ * 4. Registrar `DockusThrottlerGuard` para la protección contra abusos/rate-limiting.
+ * 5. Configurar encabezados de seguridad HTTP vía `helmet` y políticas CORS restrictivas.
+ * 6. Generar la especificación y UI de Swagger/OpenAPI en `/api/docs`.
  *
  * @module AppBootstrap
  */
@@ -16,21 +21,30 @@ import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 
 /**
- * Opciones para adaptar la inicialización al contexto de ejecución.
+ * Opciones para adaptar la inicialización al contexto de ejecución (ej. entorno de tests E2E vs producción).
  */
 interface BootstrapOptions {
+  /** Indica si se debe generar y publicar la especificación Swagger/OpenAPI. */
   enableSwagger?: boolean;
+  /** Indica si se deben habilitar los ganchos de cierre ordenado (`enableShutdownHooks`). */
   enableShutdownHooks?: boolean;
 }
 
 /**
- * Valores por defecto para la API en ejecución normal.
+ * Valores por defecto de configuración de arranque.
  */
 const DEFAULT_BOOTSTRAP_OPTIONS: Required<BootstrapOptions> = {
   enableSwagger: process.env.NODE_ENV !== 'production',
   enableShutdownHooks: true,
 };
 
+/**
+ * Resuelve los orígenes permitidos por la política CORS a partir de las variables de entorno.
+ *
+ * @param frontendUrl - Cadena delimitada por comas con las URLs del cliente web.
+ * @param nodeEnv - Entorno de ejecución (`development`, `test`, `production`).
+ * @returns Lista de orígenes de red autorizados.
+ */
 function resolveFrontendOrigins(
   frontendUrl: string | undefined,
   nodeEnv: string | undefined,
@@ -50,7 +64,11 @@ function resolveFrontendOrigins(
 }
 
 /**
- * Aplica la configuración HTTP compartida por la aplicación.
+ * Aplica la configuración de seguridad, validación y CORS a la aplicación NestJS.
+ *
+ * @param app - Instancia de la aplicación NestJS HTTP.
+ * @param options - Opciones opcionales de personalización del proceso de bootstrap.
+ * @throws Error Si el entorno es `production` y no se ha definido `FRONTEND_URL`.
  */
 export function applyAppBootstrap(
   app: INestApplication,

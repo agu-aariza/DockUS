@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de UI del espacio de trabajo del estudiante (SubmissionStep2).
+ *
+ * @module SubmissionStep2
+ */
+
 import { useRef } from "react";
 import {
   RiAlertLine,

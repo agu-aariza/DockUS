@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Gestión de notificaciones toast del sistema (ToastContext).
+ *
+ * @module ToastContext
+ */
+
 import {
   createContext,
   useCallback,

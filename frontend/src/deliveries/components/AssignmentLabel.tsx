@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (AssignmentLabel).
+ *
+ * @module AssignmentLabel
+ */
+
 import { ProjectAssignmentEntity } from "../../shared/types";
 
 export function AssignmentLabel({ assignment }: { assignment: ProjectAssignmentEntity | undefined }) {

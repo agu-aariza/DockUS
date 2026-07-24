@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (types).
+ *
+ * @module types
+ */
+
+/**
  * Shapes compartidas con el backend: fuente única en `@dockus/contracts`.
  * `DeliveryEntity` es el nombre local del `DeliveryResponse` del contrato.
  */

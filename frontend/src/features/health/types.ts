@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Definiciones de tipos y componentes de características (types).
+ *
+ * @module types
+ */
+
+/**
  * Espejo del `ReadinessReport` del backend (`modules/health/health.service.ts`).
  */
 

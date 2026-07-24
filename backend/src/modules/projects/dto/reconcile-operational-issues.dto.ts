@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (reconcile-operational-issues.dto).
+ *
+ * @module reconcile-operational-issues.dto
+ */
+
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsArray, IsEnum, IsOptional } from 'class-validator';

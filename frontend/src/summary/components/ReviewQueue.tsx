@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de resumen y analíticas generales docentes (ReviewQueue).
+ *
+ * @module ReviewQueue
+ */
+
 import { RiArrowRightLine, RiCheckboxCircleLine, RiShieldCheckLine } from "react-icons/ri";
 import type { DeliveryEntity } from "../../features/deliveries/types";
 import { Button } from "../../shared/components/ui/Button";

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo académico de grupos y matrículas (groups.controller).
+ *
+ * @module groups.controller
+ */
+
 import {
   Controller,
   Get,

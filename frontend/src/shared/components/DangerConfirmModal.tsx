@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Componente compartido de la interfaz DockUS (DangerConfirmModal).
+ *
+ * @module DangerConfirmModal
+ */
+
+/**
  * Modal reutilizable para operaciones destructivas.
  *
  * Muestra una tarjeta con confirmación visual clara para reducir borrados

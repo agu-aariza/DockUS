@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (studentRetryActions).
+ *
+ * @module studentRetryActions
+ */
+
 import type { BuildRunEntity, DeliveryEntity } from "../shared/types";
 
 interface StudentRetryAction {

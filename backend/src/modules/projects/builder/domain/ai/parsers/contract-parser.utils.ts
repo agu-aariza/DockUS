@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (contract-parser.utils).
+ *
+ * @module contract-parser.utils
+ */
+
 import {
   BUILDER_LLM_SCHEMA_VERSION,
   EVALUATIVE_STATES,

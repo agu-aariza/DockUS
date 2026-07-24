@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (CodePreviewModal).
+ *
+ * @module CodePreviewModal
+ */
+
 import { RiCloseLine, RiFileCodeLine } from "react-icons/ri";
 import { CodeViewer } from "./file-preview/CodeViewer";
 import { FileExplorer } from "./file-preview/FileExplorer";

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-prompt-composer).
+ *
+ * @module builder-prompt-composer
+ */
+
 import type {
   AssignmentContext,
   BuilderEvaluationContractV2,

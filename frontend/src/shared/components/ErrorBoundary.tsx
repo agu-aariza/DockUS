@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (ErrorBoundary).
+ *
+ * @module ErrorBoundary
+ */
+
 import { Component, type ErrorInfo, type PropsWithChildren } from 'react';
 
 interface ErrorBoundaryState {

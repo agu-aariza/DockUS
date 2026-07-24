@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de configuración de modelos de IA y proveedores (ConnectionTestPanel).
+ *
+ * @module ConnectionTestPanel
+ */
+
 import { RiTimeLine } from "react-icons/ri";
 import { Card } from "../../shared/components/ui/Layout";
 import type { ConnectionEvent } from "../llmConfigConstants";

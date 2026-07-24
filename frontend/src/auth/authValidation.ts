@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de la interfaz de usuario (authValidation).
+ *
+ * @module authValidation
+ */
+
 /* ─── Password Strength ─── */
 export type StrengthLevel = 0 | 1 | 2 | 3 | 4;
 

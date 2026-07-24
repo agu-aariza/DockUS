@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de previsualización de archivos y código fuente (fileIcon).
+ *
+ * @module fileIcon
+ */
+
 import {
   RiBracesLine,
   RiFileCodeLine,

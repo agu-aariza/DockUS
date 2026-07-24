@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (TeacherProjectsPanel).
+ *
+ * @module TeacherProjectsPanel
+ */
+
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { DangerConfirmModal } from "../shared/components/DangerConfirmModal";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";

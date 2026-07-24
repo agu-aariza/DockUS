@@ -36,9 +36,8 @@ interface PutObjectParams {
   bucket: string;
   key: string;
   /**
-   * Acepta un flujo además de un `Buffer` (ESC-ALTO-05): las subidas grandes
-   * llegan como fichero en disco y transmitirlas por trozos evita volver a
-   * cargarlas enteras en el montículo justo antes de enviarlas.
+   * Acepta un flujo además de un `Buffer`: las subidas grandes
+   * llegan como fichero en disco y transmitirlas por trozos evita cargarlas enteras en memoria.
    */
   body: Buffer | Readable;
   contentType: string;

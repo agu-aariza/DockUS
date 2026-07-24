@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (project-assignment-group-enrollment.listener).
+ *
+ * @module project-assignment-group-enrollment.listener
+ */
+
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { GroupEnrollmentEventsService } from '../../../shared/application/group-enrollment-events.service';
 import { ProjectAssignmentsService } from './project-assignments.service';

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y componentes del motor Builder de evaluación (BuilderRunsTable).
+ *
+ * @module BuilderRunsTable
+ */
+
 import type { BuildRunEntity } from "../../features/builder/types";
 import { DataTable, type Column } from "../../shared/components/ui/DataTable";
 import { StatusBadge, type StatusTone } from "../../shared/components/ui/StatusBadge";

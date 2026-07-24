@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (DeliveryOutcomeBadge).
+ *
+ * @module DeliveryOutcomeBadge
+ */
+
 import { StatusBadge } from '../../../shared/components/ui/StatusBadge';
 import type { BuildRunEntity, DeliveryEntity } from '../../../shared/types';
 import { resolveStudentRunOutcome } from '../../../student/studentWorkspaceInsights';

@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Componente de infraestructura compartida (1784818513497-RemoveSelfHealingArtifactType).
+ *
+ * @module 1784818513497-RemoveSelfHealingArtifactType
+ */
+
+/**
  * Retira `SELF_HEALING_TRACE` de `BuildRunArtifactType` (ARQ-014 / auto-reparación).
  *
  * El bundle de prompt `repair` que este tipo de artefacto acompañaba nunca

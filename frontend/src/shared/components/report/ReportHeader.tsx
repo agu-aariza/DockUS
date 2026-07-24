@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de informe de evaluación y desglose pedagógico (ReportHeader).
+ *
+ * @module ReportHeader
+ */
+
 import {
   RiCalendarLine,
   RiErrorWarningLine,

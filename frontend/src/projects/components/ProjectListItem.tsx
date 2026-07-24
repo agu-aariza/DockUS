@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (ProjectListItem).
+ *
+ * @module ProjectListItem
+ */
+
 import { RiArrowRightSLine, RiFoldersLine, RiTeamFill } from "react-icons/ri";
 import type { ProjectEntity } from "../../features/projects/types";
 import { ProjectStatusBadge } from "../../features/projects/components/ProjectStatusBadge";

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de UI del espacio de trabajo del estudiante (SubmissionStepIndicator).
+ *
+ * @module SubmissionStepIndicator
+ */
+
 import { RiCheckLine } from "react-icons/ri";
 import type { SubmissionFlowState } from "../hooks/useSubmissionFlow";
 

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (TeacherReviewSummary).
+ *
+ * @module TeacherReviewSummary
+ */
+
 import type { BuildRunEntity, DeliveryEntity } from "../../shared/types";
 
 interface TeacherReviewSummaryProps {

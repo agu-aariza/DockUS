@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (projectManagement.utils).
+ *
+ * @module projectManagement.utils
+ */
+
 export function toDateTimeLocalValue(value?: string | null): string {
   if (!value) return "";
   const date = new Date(value);

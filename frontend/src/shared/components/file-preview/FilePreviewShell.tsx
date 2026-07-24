@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de previsualización de archivos y código fuente (FilePreviewShell).
+ *
+ * @module FilePreviewShell
+ */
+
 import type { ReactNode } from "react";
 import { SHELL_THEME, type FilePreviewTheme } from "./filePreviewTheme";
 

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de perfil y expediente del alumno (StudentProfileView).
+ *
+ * @module StudentProfileView
+ */
+
 import {
   RiFileList3Line,
   RiFolderChartLine,

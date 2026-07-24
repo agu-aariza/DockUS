@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de administración de almacenamiento de objetos S3/MinIO (useStorageManagement).
+ *
+ * @module useStorageManagement
+ */
+
 import { type FormEvent, useState, useEffect } from 'react';
 import { 
   storageApi, 

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (storage-query.service).
+ *
+ * @module storage-query.service
+ */
+
 import {
   BadRequestException,
   Injectable,

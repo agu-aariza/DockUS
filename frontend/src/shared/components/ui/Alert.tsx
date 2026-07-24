@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (Alert).
+ *
+ * @module Alert
+ */
+
 import type { ReactNode } from "react";
 import {
   RiCheckboxCircleLine,

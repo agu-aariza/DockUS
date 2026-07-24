@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (ProjectSuiteSection).
+ *
+ * @module ProjectSuiteSection
+ */
+
 import type { ChangeEvent } from "react";
 import {
   RiCheckFill,

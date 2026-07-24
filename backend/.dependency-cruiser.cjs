@@ -1,11 +1,9 @@
 /**
- * Enforcement for the layer boundaries declared in CLAUDE.md / ARCHITECTURE.md.
- * Installed as part of audit/04 (ARQ-009): those boundaries were previously
- * "enforced by convention" only — a paragraph of markdown nobody's compiler
- * checked. This turns the four boundaries the architecture audit could
- * actually verify by grep into a script that fails on drift.
+ * @fileoverview Reglas de validación y enforzamiento de fronteras arquitectónicas (dependency-cruiser).
  *
- * Run: npm run boundaries
+ * @description
+ * Automatiza la verificación de las fronteras de capas declaradas en la arquitectura.
+ * Ejecución: `npm run boundaries`
  *
  * @type {import('dependency-cruiser').IConfiguration}
  */
@@ -14,10 +12,8 @@ module.exports = {
     {
       name: 'no-shared-to-modules',
       comment:
-        'shared/ is a one-way dependency: domain modules depend on it, never the reverse. ' +
-        'The only documented exception is the seeding subsystem, which inherently needs the ' +
-        'User/Project/ProjectAssignment/Delivery entities to populate demo/admin data ' +
-        '(CLAUDE.md, "known standing exception, do not extend").',
+        'shared/ es una dependencia unidireccional: los módulos de dominio dependen de shared, nunca al revés. ' +
+        'La única excepción documentada es el subsistema de seeding para poblar datos iniciales.',
       severity: 'error',
       from: {
         path: '^src/shared',
@@ -31,13 +27,7 @@ module.exports = {
     {
       name: 'no-domain-infra',
       comment:
-        'domain/ must stay free of TypeORM/ioredis imports. Entities are the one pragmatic, documented ' +
-        'exception (they need TypeORM decorators to exist at all). repositories/ used to be a second, ' +
-        'undocumented exception (audit/04 ARQ-007: the two repository interfaces imported ' +
-        'SelectQueryBuilder/FindOneOptions directly) — both were rewritten as real ports with zero TypeORM ' +
-        'types, so this rule now covers them too; do not let a third repository interface reopen that gap. ' +
-        'The module-local-infrastructure/ half of this same boundary is enforced separately by ' +
-        'no-domain-infra-module, so it can carry its own narrow exception.',
+        'domain/ no puede depender de TypeORM o ioredis directamente. Las entidades son la única excepción.',
       severity: 'error',
       from: {
         path: '/domain/(?!entities/)',

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (Sidebar).
+ *
+ * @module Sidebar
+ */
+
 import React from 'react';
 import {
   RiLayoutGridLine,

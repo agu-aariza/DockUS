@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Orquestación de contenedores y sandbox Docker (docker-container.service).
+ *
+ * @module docker-container.service
+ */
+
 import {
   Injectable,
   Logger,

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-analysis.util).
+ *
+ * @module builder-analysis.util
+ */
+
 import { createHash } from 'crypto';
 import * as path from 'path';
 

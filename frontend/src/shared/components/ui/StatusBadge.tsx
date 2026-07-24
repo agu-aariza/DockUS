@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (StatusBadge).
+ *
+ * @module StatusBadge
+ */
+
 import React, { type ReactNode } from 'react';
 
 export type StatusTone =

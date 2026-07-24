@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (StudentReportsSection).
+ *
+ * @module StudentReportsSection
+ */
+
 import { useEffect, useMemo, useState } from "react";
 import {
   RiArrowDownSLine,

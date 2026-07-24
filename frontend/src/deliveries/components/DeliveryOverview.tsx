@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (DeliveryOverview).
+ *
+ * @module DeliveryOverview
+ */
+
 import { RiTimeLine, RiStackLine, RiSparkling2Line, RiFileChartLine, RiRefreshLine, RiFileTextLine, RiFolderChartLine, RiPulseLine } from "react-icons/ri";
 import { DeliveryEntity, ProjectEntity, ProjectAssignmentEntity } from "../../shared/types";
 import { MetricCard } from "../../shared/components/MetricCard";

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Contexto y componentes de navegación del espacio de trabajo (WorkspaceContext).
+ *
+ * @module WorkspaceContext
+ */
+
 import { type PropsWithChildren } from 'react';
 import {
   WorkspaceSelectionProvider,

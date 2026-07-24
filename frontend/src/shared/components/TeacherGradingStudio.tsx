@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (TeacherGradingStudio).
+ *
+ * @module TeacherGradingStudio
+ */
+
 import { RiAwardFill, RiCloseLine } from "react-icons/ri";
 import type { BuildRunEntity } from "../../features/builder/types";
 import type { DeliveryEntity } from "../../features/deliveries/types";

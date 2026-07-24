@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Utilidad de apoyo de interfaz (technicalFeedback).
+ *
+ * @module technicalFeedback
+ */
+
 import type { TechnicalFeedbackItem, TechnicalFeedbackLevel, TechnicalFeedbackSeverity } from "../../features/builder/types";
 
 const VALID_SEVERITIES = new Set<TechnicalFeedbackSeverity>([

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Gestión de grupos y matrículas de estudiantes (TeacherGroupsPanel).
+ *
+ * @module TeacherGroupsPanel
+ */
+
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (query-params).
+ *
+ * @module query-params
+ */
+
 export function toParams(
   input: Record<string, string | number | undefined>,
 ): URLSearchParams {

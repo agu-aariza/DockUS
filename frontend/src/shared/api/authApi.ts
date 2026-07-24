@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (authApi).
+ *
+ * @module authApi
+ */
+
 import { http } from "./http";
 import type { AuthResponse } from "../../features/auth/types";
 import type { UserRole } from "../types";

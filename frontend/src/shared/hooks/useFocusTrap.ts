@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Hook reutilizable de lógica de interfaz (useFocusTrap).
+ *
+ * @module useFocusTrap
+ */
+
+/**
  * Atrapa el foco dentro de un diálogo modal mientras está abierto (UX-MED-01).
  *
  * Sin esto, Tab podía sacar el foco de teclado del modal hacia el fondo de la

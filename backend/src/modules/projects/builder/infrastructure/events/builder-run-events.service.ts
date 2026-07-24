@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-run-events.service).
+ *
+ * @module builder-run-events.service
+ */
+
 import { EventEmitter } from 'events';
 import {
   Inject,

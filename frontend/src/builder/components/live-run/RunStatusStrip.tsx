@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de monitorización de ejecuciones SSE en vivo (RunStatusStrip).
+ *
+ * @module RunStatusStrip
+ */
+
 import type { BuildRunEntity } from "../../../features/builder/types";
 import { cn, confidenceLabel, gradeTone, GRADE_TEXT_CLASS } from "./liveRunUtils";
 

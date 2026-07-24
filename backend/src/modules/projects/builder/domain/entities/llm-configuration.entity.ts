@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (llm-configuration.entity).
+ *
+ * @module llm-configuration.entity
+ */
+
 import {
   Entity,
   Column,

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (CommandPalette).
+ *
+ * @module CommandPalette
+ */
+
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { 
   RiSearch2Line, 

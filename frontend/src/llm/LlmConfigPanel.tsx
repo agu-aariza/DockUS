@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de configuración de modelos de IA y proveedores (LlmConfigPanel).
+ *
+ * @module LlmConfigPanel
+ */
+
 import { RiCpuLine } from "react-icons/ri";
 import { PageHeader } from "../shared/components/ui/PageHeader";
 import { Banner } from "./components/Banner";

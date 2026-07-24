@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente compartido de la interfaz DockUS (TutorChatBlock).
+ *
+ * @module TutorChatBlock
+ */
+
 import { useState, useEffect, useRef } from "react";
 import {
   RiSparklingLine,

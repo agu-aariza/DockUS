@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (DeliveryReport).
+ *
+ * @module DeliveryReport
+ */
+
 import { RiFileTextLine, RiLoader4Line } from "react-icons/ri";
 import { BuildRunEntity, DeliveryEntity } from "../../shared/types";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";

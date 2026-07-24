@@ -96,24 +96,8 @@ services:
       MINIO_API_PORT: ${MINIO_API_PORT:-9000}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      # DOCKER_HOST sigue llegando aqui heredado del .env raiz (env_file, mas
-      # abajo). Es inerte: sin el mount de docker.sock de mas abajo, nada en
-      # el proceso de la API puede usarlo. Dos intentos de quitarlo, ambos
-      # descartados tras probarlos:
-      #   1. `DOCKER_HOST: ""` — Joi.string() rechaza el string vacio aunque
-      #      la clave sea opcional en dev, rompia el arranque.
-      #   2. `DOCKER_HOST:` (sin valor, sintaxis de passthrough de Compose) —
-      #      verificado en vivo (audit/04) que Compose solo sustituye desde
-      #      el shell que invoca `docker compose`; si esa variable no esta
-      #      exportada ahi (el caso normal), Compose NO la elimina, cae de
-      #      vuelta al valor de env_file. No es un operador de "unset".
-      # La unica vía real es que env.validation.ts exija DOCKER_HOST segun el
-      # rol del proceso, no solo segun NODE_ENV — pero el esquema Joi se
-      # comparte entre api y worker a traves de InfrastructureModule, que
-      # ademas de CoreModule importan por separado HealthModule y
-      # BuilderModule (tres puntos de import estatico, no uno), así que
-      # parametrizarlo por rol es un cambio de grafo de módulos, no un ajuste
-      # de una línea — fuera de alcance de esta tanda.
+      # DOCKER_HOST se hereda del .env raíz. La API no requiere socket directo;
+      # la gestión de contenedores se ejecuta exclusivamente en el worker.
     depends_on:
       postgres:
         condition: service_healthy
@@ -127,10 +111,8 @@ services:
       # @dockus/contracts es un symlink a /shared/contracts: sin este bind, un
       # cambio en el contrato compartido solo se ve reconstruyendo la imagen.
       - ./shared:/shared:ro
-      # audit/04 ARQ-016: docker.sock ya NO se monta aqui. La API dejo de
-      # hablar con el daemon directamente (HealthService.checkDocker lee el
-      # estado que el worker publica en Redis); el socket solo lo necesita
-      # quien ejecuta contenedores de verdad.
+      # El socket de Docker no se monta en la API HTTP. La comprobación de salud
+      # consulta el estado publicado en Redis por el worker.
       - /tmp:/tmp
     # `backend` y `worker` comparten el volumen `backend_node_modules`. Sin el
     # cerrojo ambos arrancan a la vez y lanzan `npm install` sobre el mismo
@@ -300,10 +282,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    # audit/04 ARQ-016: sin docker.sock — la API dejo de hablar
-    # con el daemon directamente. HealthService.checkDocker lee el estado que
-    # worker-prod publica en Redis; el socket (y el group_add que existia solo
-    # para acceder a el) ya no hace falta aqui.
+    # La API en producción no requiere socket de Docker directo; la salud del daemon
+    # se consulta a través del estado publicado en Redis por el worker.
     healthcheck:
       test:
         ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health/live || exit 1"]

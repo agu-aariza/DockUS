@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de gestión de usuarios y roles (UsersPanel).
+ *
+ * @module UsersPanel
+ */
+
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {

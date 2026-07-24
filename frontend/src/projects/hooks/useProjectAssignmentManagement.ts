@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (useProjectAssignmentManagement).
+ *
+ * @module useProjectAssignmentManagement
+ */
+
 import { useEffect, useState } from "react";
 import {
   assignmentsApi,

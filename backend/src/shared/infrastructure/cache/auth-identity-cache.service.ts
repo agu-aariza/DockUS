@@ -1,24 +1,13 @@
 /**
- * @fileoverview Caché de vida corta para la identidad que valida cada JWT.
+ * @fileoverview Servicio de caché de identidad de usuario para validación de tokens JWT.
  *
- * Contexto:
- * - `JwtStrategy.validate()` cargaba la identidad desde PostgreSQL en **cada**
- *   petición autenticada, incluidos los sondeos de 3 s y cada reconexión SSE.
- *   Con 10.000 usuarios eso son miles de consultas por segundo contra `users`
- *   compitiendo por el mismo pool que el resto de la aplicación (ESC-ALTO-04).
+ * @description
+ * Almacena en caché de Redis de corta duración (por defecto 30s) las identidades de usuario
+ * validadas en cada petición HTTP con encabezado `Authorization: Bearer <token>`.
+ * Evita la saturación del pool de conexiones PostgreSQL en escenarios de alta concurrencia.
  *
- * Lo que esta caché NO cambia:
- * - La recarga por petición existe para que desactivar o degradar una cuenta
- *   surta efecto de inmediato, sin esperar a que caduque el token. Esa
- *   propiedad se conserva invalidando la entrada en cada mutación de usuario
- *   (véase `UsersService`), no confiando en el vencimiento del TTL. El TTL es
- *   solo la red de seguridad para el caso en que se olvide una invalidación o
- *   se escriba en la base de datos por fuera de la aplicación.
- *
- * Modo de fallo elegido: **abrir**. Si Redis no responde, se devuelve un fallo
- * de caché y quien llama consulta la base de datos. Un corte de Redis degrada
- * el rendimiento al estado anterior a esta caché; nunca deja a nadie sin
- * autenticar ni, al revés, mantiene viva una sesión que debería haber caído.
+ * Modo de fallo (Fail-Open): Si Redis no responde dentro del presupuesto de tiempo (150ms),
+ * cae de forma transparente a la consulta directa a PostgreSQL.
  *
  * @module AuthIdentityCacheService
  */

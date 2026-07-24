@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-llm-model-profile).
+ *
+ * @module builder-llm-model-profile
+ */
+
 import { ConfigService } from '@nestjs/config';
 import type {
   BuilderLlmPromptStage,

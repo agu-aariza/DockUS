@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de UI del espacio de trabajo del estudiante (SubmissionSuccess).
+ *
+ * @module SubmissionSuccess
+ */
+
 import {
   RiCheckboxCircleLine,
   RiFolderOpenLine,

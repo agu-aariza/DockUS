@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Infraestructura de clientes y despacho de LLMs (prompt-registry.service).
+ *
+ * @module prompt-registry.service
+ */
+
 import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync, existsSync } from 'fs';
 import * as path from 'path';

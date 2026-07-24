@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (StudentSubmissionFlow).
+ *
+ * @module StudentSubmissionFlow
+ */
+
 import { StudentSurface } from "./components/StudentWorkspaceSurface";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { useSubmissionFlow } from "./hooks/useSubmissionFlow";

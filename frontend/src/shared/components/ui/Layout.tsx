@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (Layout).
+ *
+ * @module Layout
+ */
+
 import type { ReactNode } from "react";
 
 interface CardProps {

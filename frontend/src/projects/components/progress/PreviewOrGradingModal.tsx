@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de progreso y métricas de proyectos (PreviewOrGradingModal).
+ *
+ * @module PreviewOrGradingModal
+ */
+
 import { CodePreviewModal } from "../../../shared/components/CodePreviewModal";
 import { TeacherGradingStudio } from "../../../shared/components/TeacherGradingStudio";
 import { extractLegacyAiEvidence } from "../../../deliveries/teacherReviewNavigation";

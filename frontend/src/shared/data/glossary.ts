@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de la interfaz de usuario (glossary).
+ *
+ * @module glossary
+ */
+
 interface GlossaryEntry {
   term: string;
   title: string;

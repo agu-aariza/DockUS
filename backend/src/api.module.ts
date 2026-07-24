@@ -1,11 +1,12 @@
 /**
- * @fileoverview Módulo raíz del proceso HTTP (ARQ-006).
+ * @fileoverview Módulo raíz del servidor HTTP REST (API Entrypoint).
  *
- * Contexto:
- * - `CoreModule` + lo que solo la API necesita: `HealthModule` (sondas de
- *   liveness/readiness) y la señal `PROCESS_ROLE = 'api'` que consumen los
- *   servicios que antes miraban `process.env.DOCKUS_ROLE` (el suscriptor SSE
- *   de `BuilderRunEventsService`, entre otros).
+ * @description
+ * Define la composición de módulos necesaria para atender peticiones web REST.
+ * Importa:
+ * 1. `ProcessRoleModule.forRoot('api')` para señalar el rol del proceso.
+ * 2. `CoreModule` con los dominios del negocio (Auth, Users, Academic, Projects).
+ * 3. `HealthModule` para exponer las sondas de liveness y readiness (`/health/*`).
  *
  * @module ApiModule
  */
@@ -15,6 +16,9 @@ import { CoreModule } from './core.module';
 import { HealthModule } from './modules/health/health.module';
 import { ProcessRoleModule } from './process-role.module';
 
+/**
+ * Módulo raíz para el servidor HTTP API REST.
+ */
 @Module({
   imports: [ProcessRoleModule.forRoot('api'), CoreModule, HealthModule],
 })

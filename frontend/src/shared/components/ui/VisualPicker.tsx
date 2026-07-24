@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente UI base del sistema de diseño DockUS (VisualPicker).
+ *
+ * @module VisualPicker
+ */
+
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { RiSearch2Line, RiCheckLine, RiCloseLine } from 'react-icons/ri';
 

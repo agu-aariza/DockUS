@@ -1,3 +1,18 @@
+/**
+ * @fileoverview Panel principal de trabajo para el rol de Estudiante (`STUDENT`).
+ *
+ * @description
+ * Orquesta la experiencia del alumno dividida en pestañas navegables por URL (`?tab=`):
+ * - `summary`: Vista de inicio con métricas de entregas y tareas pendientes (`StudentHomeSection`).
+ * - `assignments`: Lista de tareas académicas publicadas (`StudentAssignmentsSection`).
+ * - `deliveries`: Historial de ZIPs entregados e intentos (`StudentDeliveriesSection`).
+ * - `record`: Expediente académico del alumno (`StudentRecordSection`).
+ * - `reports`: Informe pedagógico estructurado y detallado de las evaluaciones (`StudentReportsSection`).
+ * - Contiene el flujo modal de subida de código ZIP (`StudentSubmissionFlow`).
+ *
+ * @module StudentWorkspacePanel
+ */
+
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 

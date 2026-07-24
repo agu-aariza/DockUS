@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de administración de almacenamiento de objetos S3/MinIO (StoragePanel).
+ *
+ * @module StoragePanel
+ */
+
 import { useEffect, useState, useMemo } from 'react';
 import { 
   RiCloudFill, RiUploadCloud2Fill, RiFileSearchFill, RiDatabase2Fill, 

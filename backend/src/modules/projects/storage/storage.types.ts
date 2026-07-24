@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (storage.types).
+ *
+ * @module storage.types
+ */
+
 import type { PaginationMeta } from '../../../shared/utils/pagination.util';
 import type { StorageObjectResponse } from '@dockus/contracts';
 

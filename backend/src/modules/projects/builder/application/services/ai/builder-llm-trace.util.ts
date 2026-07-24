@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-llm-trace.util).
+ *
+ * @module builder-llm-trace.util
+ */
+
 import { Logger } from '@nestjs/common';
 import {
   BuilderLlmStagePromptSnapshot,

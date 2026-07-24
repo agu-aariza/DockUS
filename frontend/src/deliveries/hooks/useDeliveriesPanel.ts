@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (useDeliveriesPanel).
+ *
+ * @module useDeliveriesPanel
+ */
+
 import { useState, useDeferredValue, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";

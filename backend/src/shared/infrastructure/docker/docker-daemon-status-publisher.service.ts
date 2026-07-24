@@ -1,19 +1,11 @@
 /**
- * @fileoverview Publica en Redis el estado del daemon Docker (audit/04 ARQ-016).
+ * @fileoverview Servicio publicador del estado del daemon Docker en Redis.
  *
- * Contexto:
- * - La API ya no monta `docker.sock` ni puede hablar con el daemon
- *   directamente: `HealthService.checkDocker` antes llamaba a
- *   `DockerHostService.assertDockerAvailable` en el propio proceso de la API,
- *   lo que obligaba a exponerle el socket solo para esta sonda.
- * - El worker sí sigue montándolo (es quien ejecuta contenedores de verdad) y
- *   ya tenía un patrón de "avisar de que sigo vivo" sin HTTP: el heartbeat de
- *   fichero en `worker.ts`. Esto es lo mismo pero para el daemon en vez de
- *   para el proceso, y en Redis en vez de en un fichero porque la API sí
- *   necesita leerlo desde otro contenedor.
- * - TTL corto (60s, el doble del intervalo de publicación): si el worker cae
- *   o pierde acceso al daemon, la clave expira sola y `checkDocker` lo lee
- *   como "sin dato reciente" en vez de arrastrar un "up" obsoleto.
+ * @description
+ * Permite al proceso worker (que posee acceso al socket de Docker) sondear periódicamente
+ * la disponibilidad del motor Docker y publicar su estado (`up` / `down`) en Redis.
+ * La API HTTP consume este valor en la sonda `/health/readiness` sin necesidad de montar
+ * el socket `/var/run/docker.sock` en el proceso API.
  *
  * @module DockerDaemonStatusPublisherService
  */

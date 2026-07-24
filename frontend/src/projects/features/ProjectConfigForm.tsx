@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (ProjectConfigForm).
+ *
+ * @module ProjectConfigForm
+ */
+
 import type { FormEvent } from "react";
 import { RiCheckFill, RiDeleteBin6Line } from "react-icons/ri";
 import { Button } from "../../shared/components/ui/Button";

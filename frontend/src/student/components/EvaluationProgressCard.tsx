@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de UI del espacio de trabajo del estudiante (EvaluationProgressCard).
+ *
+ * @module EvaluationProgressCard
+ */
+
 import {
   RiLoader4Line,
   RiSignalWifiErrorLine,

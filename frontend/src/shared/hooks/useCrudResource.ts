@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Hook reutilizable de lógica de interfaz (useCrudResource).
+ *
+ * @module useCrudResource
+ */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PaginatedResponse } from '../types';
 import { getErrorMessage } from '../utils/errors';

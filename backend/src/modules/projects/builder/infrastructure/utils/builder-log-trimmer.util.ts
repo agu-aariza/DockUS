@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (builder-log-trimmer.util).
+ *
+ * @module builder-log-trimmer.util
+ */
+
 import { Injectable } from '@nestjs/common';
 
 @Injectable()

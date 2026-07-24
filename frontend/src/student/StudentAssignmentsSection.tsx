@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (StudentAssignmentsSection).
+ *
+ * @module StudentAssignmentsSection
+ */
+
 import { useMemo } from "react";
 import {
   RiArrowRightLine,

@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Panel de visualización de ejecuciones del motor Builder en tiempo real.
+ *
+ * @description
+ * Renderiza la consola en vivo, la línea de tiempo de eventos SSE, la evaluación del modelo de IA,
+ * los hallazgos de código estático y los artefactos de evidencia técnica adjuntos a una ejecución `BuildRun`.
+ *
+ * @module BuilderLiveRunPane
+ */
+
 import { useEffect, useState } from "react";
 import type {
   BuildRunEntity,

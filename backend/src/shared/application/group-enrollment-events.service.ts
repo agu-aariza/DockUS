@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Servicio de aplicación compartido (group-enrollment-events.service).
+ *
+ * @module group-enrollment-events.service
+ */
+
 import { Injectable } from '@nestjs/common';
 
 interface GroupStudentsEnrolled {

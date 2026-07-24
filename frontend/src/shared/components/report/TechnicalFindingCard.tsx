@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de informe de evaluación y desglose pedagógico (TechnicalFindingCard).
+ *
+ * @module TechnicalFindingCard
+ */
+
 import type { BuilderRuntimeFamily } from "../../../features/builder/types";
 import { CodeSnippet } from "../CodeSnippet";
 import { MarkdownContent } from "../MarkdownContent";

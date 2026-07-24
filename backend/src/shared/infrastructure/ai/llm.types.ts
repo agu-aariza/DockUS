@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Infraestructura de clientes y despacho de LLMs (llm.types).
+ *
+ * @module llm.types
+ */
+
 export type BuilderLlmPromptStage =
   'plan' | 'facts' | 'evaluation' | 'quality' | 'chat';
 

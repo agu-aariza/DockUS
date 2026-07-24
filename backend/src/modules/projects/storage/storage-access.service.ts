@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de proyectos académicos y entregas (storage-access.service).
+ *
+ * @module storage-access.service
+ */
+
 import {
   ConflictException,
   ForbiddenException,

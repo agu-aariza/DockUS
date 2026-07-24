@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de infraestructura compartida (demo-seed.service).
+ *
+ * @module demo-seed.service
+ */
+
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (evaluationNotifications).
+ *
+ * @module evaluationNotifications
+ */
+
 import type { BuildRunEntity, DeliveryEntity } from "../shared/types";
 
 export type EvaluationNotificationKind = "report_ready" | "grade_published";

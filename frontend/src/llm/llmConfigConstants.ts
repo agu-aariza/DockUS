@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de configuración de modelos de IA y proveedores (llmConfigConstants).
+ *
+ * @module llmConfigConstants
+ */
+
 import type {
   LlmProviderConfigView,
   LlmProviderId,

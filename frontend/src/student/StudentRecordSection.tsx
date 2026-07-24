@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel y vista del espacio del alumno (StudentRecordSection).
+ *
+ * @module StudentRecordSection
+ */
+
 import { useEffect, useState } from "react";
 import { PageHeader } from "../shared/components/ui/PageHeader";
 import { SkeletonCard } from "../shared/components/Skeleton";

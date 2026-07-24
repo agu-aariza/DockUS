@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Componente de previsualización de archivos y código fuente (FileExplorer).
+ *
+ * @module FileExplorer
+ */
+
 import { RiLoader4Line, RiSearchLine } from "react-icons/ri";
 import { getFileIcon } from "./fileIcon";
 import { EXPLORER_THEME, type FilePreviewTheme } from "./filePreviewTheme";

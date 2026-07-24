@@ -1,17 +1,9 @@
 /**
- * @fileoverview Guard de rate limiting que cuenta por identidad autenticada.
+ * @fileoverview Guard de limitación de tasa de peticiones (Rate Limiting / Throttling) por usuario autenticado.
  *
- * Contexto:
- * - `ThrottlerGuard` se registra como guard GLOBAL en `bootstrap.ts`, y en
- *   NestJS los guards globales se ejecutan antes que los de controlador. Cuando
- *   el throttler decide la clave de conteo, `JwtAuthGuard` todavía no se ha
- *   ejecutado y `req.user` no existe: contar por `req.user.userId` degradaba
- *   silenciosamente a IP en TODAS las peticiones, que es justo lo que ESC-C02
- *   pretendía corregir.
- * - Este guard resuelve la identidad por su cuenta, verificando la firma del
- *   token. Verificarla es imprescindible: aceptar el `sub` de un token sin
- *   comprobar equivaldría a dejar que cualquiera eligiera su propio cubo y
- *   sortease el límite generando identificadores al azar.
+ * @description
+ * Extiende `ThrottlerGuard` de NestJS para agrupar y contar peticiones por la identidad del usuario (`userId`)
+ * en lugar de por la dirección IP cuando la petición incluye un token JWT válido. Cae a IP para peticiones anónimas.
  *
  * @module DockusThrottlerGuard
  */

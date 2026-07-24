@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de entregas de código de alumnos (teacherReviewNavigation).
+ *
+ * @module teacherReviewNavigation
+ */
+
 import type { ProjectGradebookRow } from "../shared/types";
 
 export type TeacherDeliveryDetailTab = "overview" | "grading" | "report";

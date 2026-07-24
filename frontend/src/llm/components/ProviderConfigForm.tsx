@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Panel de configuración de modelos de IA y proveedores (ProviderConfigForm).
+ *
+ * @module ProviderConfigForm
+ */
+
 import type { FormEvent } from "react";
 import {
   RiDeleteBin6Line,

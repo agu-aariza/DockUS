@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Módulo de integración con la API REST (usersApi).
+ *
+ * @module usersApi
+ */
+
 import { http } from "./http";
 import { toParams } from "./query-params";
 import type { PaginatedResponse, UserRole } from "../types";

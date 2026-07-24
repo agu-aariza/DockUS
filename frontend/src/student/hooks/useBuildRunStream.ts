@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Hook de lógica de negocio para el espacio del estudiante (useBuildRunStream).
+ *
+ * @module useBuildRunStream
+ */
+
 import { useMemo } from "react";
 
 import { useBuilderRunStream } from "../../builder/hooks/useBuilderRunStream";

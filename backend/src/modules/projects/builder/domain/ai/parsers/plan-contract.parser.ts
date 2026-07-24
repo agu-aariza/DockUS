@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Motor Builder de evaluación asíncrona (plan-contract.parser).
+ *
+ * @module plan-contract.parser
+ */
+
 const BUILD_SYSTEM_EXECUTABLES = new Set(['make', 'cmake', 'gcc', 'g++', 'cc']);
 import 'reflect-metadata';
 import {

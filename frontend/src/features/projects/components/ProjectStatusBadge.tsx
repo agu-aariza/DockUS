@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y gestión de proyectos académicos (ProjectStatusBadge).
+ *
+ * @module ProjectStatusBadge
+ */
+
 import { StatusBadge, type StatusTone } from '../../../shared/components/ui/StatusBadge';
 import type { ProjectStatus } from '../types';
 

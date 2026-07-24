@@ -1,10 +1,14 @@
 /**
- * @fileoverview Punto de entrada del worker de procesamiento en segundo plano.
+ * @fileoverview Punto de entrada del proceso Worker de segundo plano (BullMQ Consumer Engine).
  *
- * Contexto:
- * - No abre puerto HTTP; consume trabajos de BullMQ (builder-runs) y ejecuta
- *   el pipeline de evaluación de entregas.
- * - Comparte base de datos, Redis y MinIO con la API HTTP.
+ * @description
+ * Inicializa la aplicación NestJS sin puerto HTTP (usando `createApplicationContext`)
+ * para el procesamiento de colas asíncronas de evaluación de código.
+ * Se encarga de:
+ * 1. Instanciar el contexto de inyección de dependencias de `WorkerModule`.
+ * 2. Iniciar el refresco periódico del archivo de Heartbeat local para healthcheck de Docker.
+ * 3. Escuchar trabajos de colas BullMQ en Redis para el motor Builder.
+ * 4. Gestionar la parada ordenada del proceso ante señales SIGTERM/SIGINT (Graceful Shutdown).
  *
  * @module WorkerBootstrap
  */
@@ -14,13 +18,18 @@ import { NestFactory } from '@nestjs/core';
 import { writeFile } from 'fs/promises';
 import { WorkerModule } from './worker.module';
 
-// El worker no abre puerto HTTP, así que su healthcheck no puede sondear un
-// endpoint. En su lugar refresca un fichero: si el proceso se cuelga o entra en
-// un crash-loop, el fichero deja de actualizarse y el healthcheck lo detecta.
+/** Ruta por defecto del archivo de pulso (heartbeat) para la sonda de salud del contenedor worker. */
 const HEARTBEAT_PATH =
   process.env.WORKER_HEARTBEAT_PATH ?? '/tmp/dockus-worker.heartbeat';
+
+/** Intervalo de refresco del pulso de salud en milisegundos. */
 const HEARTBEAT_INTERVAL_MS = 10_000;
 
+/**
+ * Arranca el proceso Worker asíncrono y registra los escuchadores de paradas ordenadas.
+ *
+ * @returns Promesa que se resuelve tras iniciar el contexto de inyección.
+ */
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(WorkerModule, {
     bufferLogs: true,

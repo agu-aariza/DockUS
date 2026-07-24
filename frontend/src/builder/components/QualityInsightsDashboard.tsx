@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Vista y componentes del motor Builder de evaluación (QualityInsightsDashboard).
+ *
+ * @module QualityInsightsDashboard
+ */
+
 import { useEffect, useMemo, useState } from "react";
 import {
   RiArrowRightUpLine,
