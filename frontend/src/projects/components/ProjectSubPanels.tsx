@@ -63,6 +63,8 @@ type GroupFormState = {
 interface ProjectAssignmentManagerProps {
   project: ProjectEntity;
   students: UserEntity[];
+  /** Total real en la plataforma (meta.total); students puede venir truncado a 100. */
+  totalStudentsCount?: number;
   groups: CourseGroupEntity[];
   assignments: ProjectAssignmentEntity[];
   selectedStudentIds: string[];
@@ -86,6 +88,7 @@ interface ProjectAssignmentManagerProps {
 export function ProjectAssignmentManager({
   project,
   students,
+  totalStudentsCount,
   groups,
   assignments,
   selectedStudentIds,
@@ -120,8 +123,12 @@ export function ProjectAssignmentManager({
   // Nota: Esto es aproximado si no tenemos los IDs de los alumnos por grupo aquí.
   // Pero visualmente usaremos los badges de 'Asignado' de los alumnos que ya tenemos.
   const activeAssignmentsCount = assignments.filter(a => !a.revokedAt).length;
-  const pendingCount = students.length - activeAssignmentsCount;
-  const coveragePercent = students.length > 0 ? Math.round((activeAssignmentsCount / students.length) * 100) : 0;
+  // meta.total real, no students.length: ese array se queda truncado a la
+  // página de 100 alumnos que carga useProjectManagement (FE-MED-01) — con
+  // más de 100 en la plataforma, la métrica y el % de cobertura mentían.
+  const totalStudents = totalStudentsCount ?? students.length;
+  const pendingCount = totalStudents - activeAssignmentsCount;
+  const coveragePercent = totalStudents > 0 ? Math.round((activeAssignmentsCount / totalStudents) * 100) : 0;
 
   return (
     <div className="space-y-8">
@@ -129,7 +136,7 @@ export function ProjectAssignmentManager({
       {/* 1. Metrics Header */}
       <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Total Alumnos", value: students.length, helper: "En la plataforma", icon: <RiUser3Fill />, variant: "dark" as const },
+          { label: "Total Alumnos", value: totalStudents, helper: "En la plataforma", icon: <RiUser3Fill />, variant: "dark" as const },
           { label: "Matriculados", value: activeAssignmentsCount, helper: `${coveragePercent}% completado`, icon: <RiCheckFill />, variant: "success" as const },
           { label: "Sin Proyecto", value: pendingCount, helper: "Esperando asignación", icon: <RiSparkling2Line />, variant: "warning" as const },
           { label: "Grupos", value: groups.length, helper: "Disponibles para asignar", icon: <RiTeamFill />, variant: "info" as const },
@@ -224,12 +231,21 @@ export function ProjectAssignmentManager({
                 const isGroupAssigned = groupAssignments.length > 0;
                 
                 return (
-                  <article
+                  <div
                     key={group.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isFocused}
                     onClick={() => onFocusedGroupChange(group.id)}
-                    className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border bg-white p-5 ${
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onFocusedGroupChange(group.id);
+                      }
+                    }}
+                    className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border bg-white p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
                       isGroupAssigned
-                        ? 'border-emerald-200'
+                        ? 'border-success-200'
                         : isFocused
                           ? 'border-primary ring-1 ring-primary/10'
                           : 'card-interactive border-app-border'
@@ -239,7 +255,7 @@ export function ProjectAssignmentManager({
                     <div className="flex items-start justify-between mb-5">
                       <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md border text-xl transition-colors motion-reduce:transition-none ${
                         isGroupAssigned
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                          ? 'border-success-200 bg-success-50 text-success-600'
                           : isFocused
                             ? 'border-primary bg-primary text-white'
                             : 'border-app-border bg-slate-50 text-slate-400 group-hover:text-primary'
@@ -258,20 +274,20 @@ export function ProjectAssignmentManager({
                         }}
                         disabled={!!assignmentBusy}
                         className={`relative flex h-7 w-12 items-center rounded-full transition-colors motion-reduce:transition-none ${
-                          isGroupAssigned ? 'bg-emerald-500' : 'bg-slate-200 hover:bg-slate-300'
+                          isGroupAssigned ? 'bg-success-500' : 'bg-slate-200 hover:bg-slate-300'
                         }`}
                       >
                         <div className={`absolute left-1 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-200 motion-reduce:transition-none ${
                           isGroupAssigned ? 'translate-x-5' : 'translate-x-0'
                         }`}>
-                          {isGroupAssigned && <RiCheckFill className="text-[10px] text-emerald-600 font-bold" />}
+                          {isGroupAssigned && <RiCheckFill className="text-[10px] text-success-600 font-bold" />}
                         </div>
                       </button>
                     </div>
 
                     {/* Group Info */}
                     <div className="min-w-0">
-                      <span className={`ui-label ${isGroupAssigned ? 'text-emerald-600' : ''}`}>
+                      <span className={`ui-label ${isGroupAssigned ? 'text-success-600' : ''}`}>
                         {group.code || "SC"}
                       </span>
                       <h4 className="mt-0.5 truncate text-sm font-semibold text-slate-900">
@@ -308,7 +324,7 @@ export function ProjectAssignmentManager({
                         <RiRefreshLine className="text-2xl text-primary animate-spin motion-reduce:animate-none" />
                       </div>
                     )}
-                  </article>
+                  </div>
                 );
               })}
             </div>

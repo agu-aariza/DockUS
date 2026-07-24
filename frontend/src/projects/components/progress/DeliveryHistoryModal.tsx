@@ -1,10 +1,10 @@
 import {
   RiCloseLine,
   RiCodeSSlashLine,
-  RiLoader4Line,
   RiStackLine,
 } from "react-icons/ri";
 import { DeliveryStatusBadge } from "../../../features/deliveries/components/DeliveryStatusBadge";
+import { Skeleton } from "../../../shared/components/Skeleton";
 import type { DeliveryEntity } from "../../../features/deliveries/types";
 
 interface DeliveryHistoryModalProps {
@@ -51,11 +51,25 @@ export function DeliveryHistoryModal({
 
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-12">
-              <RiLoader4Line className="animate-spin text-4xl text-primary motion-reduce:animate-none" />
-              <span className="text-sm font-medium text-slate-500">
-                Cargando versiones...
-              </span>
+            // Mismo contorno que la fila real (icono + 2 líneas + botón) en
+            // vez de un spinner centrado, para que la lista no cambie de
+            // forma entre el estado de carga y el cargado (FE-MED-03).
+            <div className="space-y-3" aria-busy="true" aria-label="Cargando versiones">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-md border border-app-border bg-slate-50/60 p-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <Skeleton type="rounded" className="h-9 w-9" />
+                    <div className="space-y-2">
+                      <Skeleton type="text" className="h-4 w-32" />
+                      <Skeleton type="text" className="h-3 w-24" />
+                    </div>
+                  </div>
+                  <Skeleton type="rounded" className="h-10 w-28" />
+                </div>
+              ))}
             </div>
           ) : deliveries.length === 0 ? (
             <div className="py-10 text-center">
@@ -79,7 +93,7 @@ export function DeliveryHistoryModal({
                       <div className="flex items-center gap-2">
                         <DeliveryStatusBadge status={delivery.status} />
                         {delivery.isLate ? (
-                          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                          <span className="rounded-full border border-warning-200 bg-warning-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-warning-700">
                             Fuera de plazo
                           </span>
                         ) : null}

@@ -7,6 +7,7 @@ export interface ProjectTeachersSectionProps {
   projectId: string;
   teachers: UserEntity[];
   allTeachers: UserEntity[];
+  onSearchTeachers?: (query?: string) => void;
   onAddTeacher: (projectId: string, teacherId: string) => void;
   onRemoveTeacher: (projectId: string, teacherId: string) => void;
   isLoading?: boolean;
@@ -16,6 +17,7 @@ export function ProjectTeachersSection({
   projectId,
   teachers,
   allTeachers,
+  onSearchTeachers,
   onAddTeacher,
   onRemoveTeacher,
 }: ProjectTeachersSectionProps): JSX.Element {
@@ -31,10 +33,11 @@ export function ProjectTeachersSection({
       <div className="space-y-5">
         <div className="flex flex-col md:flex-row gap-3 items-end">
           <div className="flex-1 w-full">
-            <label className="label-text">
+            <label htmlFor="project-teachers-picker" className="label-text">
               Añadir Colaborador
             </label>
             <VisualPicker
+              id="project-teachers-picker"
               options={availableTeachers.map(teacher => ({
                 id: teacher.id,
                 label: `${teacher.firstName} ${teacher.lastName}`,
@@ -45,6 +48,7 @@ export function ProjectTeachersSection({
               }))}
               value={null}
               onSelect={(id) => onAddTeacher(projectId, id)}
+              onSearchChange={onSearchTeachers}
               placeholder="Buscar profesor por nombre o email..."
             />
           </div>
@@ -74,7 +78,7 @@ export function ProjectTeachersSection({
                 <button
                   type="button"
                   onClick={() => onRemoveTeacher(projectId, teacher.id)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all focus-visible:ring-2 focus-visible:ring-red-400/50 focus-visible:outline-none"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50 opacity-0 group-hover:opacity-100 transition-all focus-visible:ring-2 focus-visible:ring-danger-400/50 focus-visible:outline-none"
                   title="Eliminar del equipo"
                   aria-label="Eliminar del equipo"
                 >

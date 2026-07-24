@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import {
   assignmentsApi,
   projectsApi,
@@ -65,6 +65,10 @@ function useAutoDismissNotice(
 export function useProjectManagement() {
   const { activeSession: session } = useSession();
   const [students, setStudents] = useState<UserEntity[]>([]);
+  // Total real de alumnos en la plataforma (meta.total), no el tamaño de la
+  // página cargada (limit: 100) — la métrica "Total Alumnos" usaba
+  // students.length, que se quedaba fija en 100 pasado ese umbral (FE-MED-01).
+  const [totalStudentsCount, setTotalStudentsCount] = useState(0);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [createForm, setCreateForm] = useState({
     title: "",
@@ -318,7 +322,10 @@ export function useProjectManagement() {
     setLoadingStudents(true);
     usersApi
       .list({ page: 1, limit: 100, role: "STUDENT" })
-      .then((response) => setStudents(response.data))
+      .then((response) => {
+        setStudents(response.data);
+        setTotalStudentsCount(response.meta.total);
+      })
       .catch((error) =>
         assignmentManagement.setAssignmentNotice({
           text: getErrorMessage(error),
@@ -328,15 +335,25 @@ export function useProjectManagement() {
       .finally(() => setLoadingStudents(false));
   }, [canWrite]);
 
+  // Búsqueda server-side de profesores (FE-MED-01): con más de 100 docentes,
+  // el fetch fijo de la primera página los dejaba invisibles para el picker
+  // de colaboradores de ProjectTeachersSection sin importar qué se tecleara.
+  const searchTeachers = useCallback(
+    (query?: string) => {
+      if (!canWrite) return;
+      setLoadingTeachers(true);
+      usersApi
+        .list({ page: 1, limit: 100, role: "TEACHER", search: query?.trim() || undefined })
+        .then((response) => setAllTeachers(response.data))
+        .catch((error) => console.error("Error al cargar profesores:", error))
+        .finally(() => setLoadingTeachers(false));
+    },
+    [canWrite],
+  );
+
   useEffect(() => {
-    if (!canWrite) return;
-    setLoadingTeachers(true);
-    usersApi
-      .list({ page: 1, limit: 100, role: "TEACHER" })
-      .then((response) => setAllTeachers(response.data))
-      .catch((error) => console.error("Error al cargar profesores:", error))
-      .finally(() => setLoadingTeachers(false));
-  }, [canWrite]);
+    searchTeachers();
+  }, [searchTeachers]);
 
   useEffect(() => {
     if (!canWrite || !selectedProject) return;
@@ -364,6 +381,8 @@ export function useProjectManagement() {
     setProjects: () => {}, // preserved for API compatibility; list is managed by CRUD hook
     students,
     setStudents,
+    totalStudentsCount,
+    searchTeachers,
     groups: assignmentManagement.groups,
     setGroups: assignmentManagement.setGroups,
     selectedProjectId,

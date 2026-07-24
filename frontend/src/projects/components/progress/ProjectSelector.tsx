@@ -20,10 +20,11 @@ export function ProjectSelector({
     <div className="rounded-lg border border-app-border bg-slate-50 p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
         <div className="flex-1">
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
+          <label htmlFor="progress-project-select" className="mb-2 block text-sm font-semibold text-slate-700">
             Proyecto a monitorizar
           </label>
           <select
+            id="progress-project-select"
             className="input-field bg-white"
             value={projectId}
             onChange={(event) => onProjectChange(event.target.value)}

@@ -55,7 +55,7 @@ export function ProgressStatsPanel({
         label="Con PASS"
         value={summary.passedAllTests}
         icon={<RiAwardLine />}
-        color="text-emerald-500"
+        color="text-success-500"
       />
       <StatCard
         label="Pendientes"

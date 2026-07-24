@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   assignmentsApi,
@@ -12,6 +12,7 @@ import type { PaginatedResponse } from "../../shared/types";
 import type { ProjectAssignmentEntity, ProjectEntity } from "../../features/projects/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useSession } from "../../shared/session/SessionContext";
+import { useVisibilityAwareInterval } from "../../shared/hooks/useVisibilityAwareInterval";
 import { useBuilderRunStream } from "../../builder/hooks/useBuilderRunStream";
 
 type NoticeTone = "info" | "warning";
@@ -57,21 +58,29 @@ export function useRuntimeManagement() {
   const reqAssignmentId = searchParams.get("assignmentId");
   const reqDeliveryId = searchParams.get("deliveryId");
 
-  const loadProjects = async () => {
+  const loadProjects = async (signal?: AbortSignal) => {
     try {
-      const response = await projectsApi.list({ page: 1, limit: 50, sortBy: "updatedAt", sortOrder: "DESC" });
+      const response = await projectsApi.list({ page: 1, limit: 50, sortBy: "updatedAt", sortOrder: "DESC" }, signal);
+      if (signal?.aborted) return;
       setProjectOptions(response.data);
       setSelectedProjectId(curr => (curr && response.data.some(p => p.id === curr)) ? curr : (reqProjectId && response.data.some(p => p.id === reqProjectId) ? reqProjectId : (response.data[0]?.id ?? "")));
-    } catch (e) { setMessage({ text: getErrorMessage(e), tone: "warning" }); }
+    } catch (e) {
+      if (signal?.aborted) return;
+      setMessage({ text: getErrorMessage(e), tone: "warning" });
+    }
   };
 
-  const loadRuns = async (deliveryId = selectedDeliveryId) => {
+  const loadRuns = async (deliveryId = selectedDeliveryId, signal?: AbortSignal) => {
     if (!deliveryId) return;
     try {
-      const response = await builderApi.listByDelivery({ deliveryId, page: 1, limit: 20, sortOrder: "DESC" });
+      const response = await builderApi.listByDelivery({ deliveryId, page: 1, limit: 20, sortOrder: "DESC", signal });
+      if (signal?.aborted) return;
       setRunsResponse(response);
       setSelectedRunId(curr => (curr && response.data.some(r => r.id === curr)) ? curr : (response.data[0]?.id ?? ""));
-    } catch (e) { setMessage({ text: getErrorMessage(e), tone: "warning" }); }
+    } catch (e) {
+      if (signal?.aborted) return;
+      setMessage({ text: getErrorMessage(e), tone: "warning" });
+    }
   };
 
   const handleStartRun = async () => {
@@ -103,41 +112,87 @@ export function useRuntimeManagement() {
   };
 
   // Sync effects
-  useEffect(() => { void loadProjects(); }, []);
+  // Cada etapa de la cascada proyecto→asignación→entrega→runs aborta su
+  // petición al desmontar o al re-disparar el efecto (cambio rápido de
+  // selección), para que una respuesta tardía de la selección anterior no
+  // sobreescriba el estado de la actual (FE-BAJO-03).
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadProjects(controller.signal);
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     if (!selectedProjectId) {
       setAssignmentOptions([]);
       return;
     }
+    const controller = new AbortController();
     const sync = async () => {
       try {
-        const as = await assignmentsApi.listByProject(selectedProjectId);
+        const as = await assignmentsApi.listByProject(selectedProjectId, controller.signal);
+        if (controller.signal.aborted) return;
         setAssignmentOptions(as);
         setSelectedAssignmentId(curr => (curr && as.some(a => a.id === curr)) ? curr : (reqAssignmentId && as.some(a => a.id === reqAssignmentId) ? reqAssignmentId : (as[0]?.id ?? "")));
-      } catch (e) { setMessage({ text: getErrorMessage(e), tone: "warning" }); }
+      } catch (e) {
+        if (controller.signal.aborted) return;
+        setMessage({ text: getErrorMessage(e), tone: "warning" });
+      }
     };
     void sync();
+    return () => controller.abort();
   }, [reqAssignmentId, selectedProjectId]);
 
   useEffect(() => {
     if (!selectedAssignmentId) { setDeliveryOptions([]); return; }
-    deliveriesApi.list({ assignmentId: selectedAssignmentId, page: 1, limit: 50, sortBy: "createdAt", sortOrder: "DESC" })
+    const controller = new AbortController();
+    deliveriesApi.list({ assignmentId: selectedAssignmentId, page: 1, limit: 50, sortBy: "createdAt", sortOrder: "DESC" }, controller.signal)
       .then(r => {
+        if (controller.signal.aborted) return;
         setDeliveryOptions(r.data);
         setSelectedDeliveryId(curr => (curr && r.data.some(d => d.id === curr)) ? curr : (reqDeliveryId && r.data.some(d => d.id === reqDeliveryId) ? reqDeliveryId : (r.data[0]?.id ?? "")));
+      })
+      .catch((e) => {
+        if (controller.signal.aborted) return;
+        setMessage({ text: getErrorMessage(e), tone: "warning" });
       });
+    return () => controller.abort();
   }, [reqDeliveryId, selectedAssignmentId]);
 
-  useEffect(() => { if (selectedDeliveryId) void loadRuns(selectedDeliveryId); }, [selectedDeliveryId]);
+  useEffect(() => {
+    if (!selectedDeliveryId) return;
+    const controller = new AbortController();
+    void loadRuns(selectedDeliveryId, controller.signal);
+    return () => controller.abort();
+  }, [selectedDeliveryId]);
+
+  /**
+   * Puente entre el efecto que construye el sincronizador de evidencia —con su
+   * estado local de cancelación y de "primera carga"— y el intervalo consciente
+   * de visibilidad, que vive fuera del efecto. Se limpia al desmontar para que
+   * el intervalo no invoque a un cierre de un run que ya no se observa.
+   */
+  const evidenceSyncRef = useRef<(() => void) | null>(null);
+
+  const syncSelectedRun = useCallback(() => {
+    if (!selectedRunId) { return; }
+    void builderApi.detail(selectedRunId).then(setSelectedRun).catch(() => {});
+  }, [selectedRunId]);
 
   useEffect(() => {
     if (!selectedRunId) { setSelectedRun(null); return; }
-    const sync = () => builderApi.detail(selectedRunId).then(setSelectedRun).catch(() => {});
-    void sync();
-    const inv = setInterval(sync, 3000);
-    return () => clearInterval(inv);
-  }, [selectedRunId]);
+    syncSelectedRun();
+  }, [selectedRunId, syncSelectedRun]);
+
+  // Sondeo de detalle del run: suspendido con la pestaña oculta (ESC-ALTO-10)
+  // y, además, en estado terminal (FE-ALTO-02) — un run ya terminado no cambia
+  // más, así que seguir repescándolo cada 3s es tráfico puro. El polling de
+  // evidencias de abajo ya aplicaba este mismo corte; aquí faltaba.
+  useVisibilityAwareInterval(
+    syncSelectedRun,
+    3000,
+    Boolean(selectedRunId) && !selectedRun?.isTerminal,
+  );
 
   useEffect(() => {
     if (!selectedRunId) {
@@ -174,23 +229,25 @@ export function useRuntimeManagement() {
     };
 
     void sync();
-
-    if (selectedRun?.isTerminal) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const inv = setInterval(() => {
+    evidenceSyncRef.current = () => {
       firstFetch = false;
       void sync();
-    }, 4000);
+    };
 
     return () => {
       cancelled = true;
-      clearInterval(inv);
+      evidenceSyncRef.current = null;
     };
   }, [selectedRun?.isTerminal, selectedRunId]);
+
+  // Artefactos de evidencia: solo mientras el run siga vivo y la pestaña esté
+  // visible. Un run terminal ya no genera artefactos nuevos, de modo que seguir
+  // sondeándolo era tráfico puro (ESC-ALTO-10).
+  useVisibilityAwareInterval(
+    () => evidenceSyncRef.current?.(),
+    4000,
+    Boolean(selectedRunId) && !selectedRun?.isTerminal,
+  );
 
   const handleDownloadArtifact = async (artifactId: string) => {
     if (!selectedRunId) return;

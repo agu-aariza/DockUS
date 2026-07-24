@@ -43,16 +43,17 @@ export function RubricEditor({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="label-text flex items-center gap-1.5">
+        {/* Encabezado de la sección, no de un control único: span, no label. */}
+        <span className="label-text flex items-center gap-1.5">
           <RiScales3Line className="text-sm" />
           Rúbrica ponderada
-        </label>
+        </span>
         {hasCriteria && (
           <span
             className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
               isBalanced
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-amber-50 text-amber-700"
+                ? "bg-success-50 text-success-700"
+                : "bg-warning-50 text-warning-700"
             }`}
           >
             Total: {total}%{isBalanced ? " ✓" : " / 100"}

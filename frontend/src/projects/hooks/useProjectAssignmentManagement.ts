@@ -121,7 +121,7 @@ export function useProjectAssignmentManagement({
   const handleAssignStudents = async () => {
     if (!canWrite || !selectedProjectId) return;
     
-    const payload: any = {
+    const payload: { studentIds?: string[]; rawInput?: string } = {
       studentIds: selectedStudentIds.length > 0 ? selectedStudentIds : undefined,
     };
 
@@ -242,7 +242,7 @@ export function useProjectAssignmentManagement({
   const handleEnrollGroupStudents = async () => {
     if (!canWrite || !focusedGroupId) return;
     
-    const payload: any = {
+    const payload: { studentIds?: string[]; rawInput?: string } = {
       studentIds: selectedGroupStudentIds.length > 0 ? selectedGroupStudentIds : undefined,
     };
 

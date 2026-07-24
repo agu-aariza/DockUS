@@ -48,10 +48,16 @@ export function useGroupManagement(canWrite: boolean) {
     }
   };
 
-  const refreshStudents = async () => {
+  const refreshStudents = async (search?: string) => {
     try {
       setLoading(true);
-      const response = await usersApi.list({ role: "STUDENT", limit: 50 });
+      // Búsqueda server-side (FE-MED-01): con >50 alumnos, filtrar solo sobre
+      // esta página local dejaba invisibles a los que no entraban en ella.
+      const response = await usersApi.list({
+        role: "STUDENT",
+        limit: 50,
+        search: search?.trim() || undefined,
+      });
       setAllStudents(response.data || []);
     } catch (error) {
       setNotice({ text: getErrorMessage(error), tone: "warning" });

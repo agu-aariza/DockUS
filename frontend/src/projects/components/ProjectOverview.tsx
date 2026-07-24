@@ -117,7 +117,7 @@ export function ProjectOverview({
 
           <div className="flex items-end xl:w-56 xl:shrink-0 xl:border-l xl:border-app-border xl:pl-6">
             <Button variant="danger" className="w-full justify-start shadow-sm" onClick={onDelete}>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100/60 border border-red-200/40 text-red-600">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger-100/60 border border-danger-200/40 text-danger-600">
                 <RiDeleteBin6Line />
               </span>
               Eliminar proyecto

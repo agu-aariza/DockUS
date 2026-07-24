@@ -290,6 +290,7 @@ export function TeacherProjectsPanel(): JSX.Element {
                 <ProjectAssignmentManager
                   project={selectedCanvasProject}
                   students={pc.students}
+                  totalStudentsCount={pc.totalStudentsCount}
                   groups={pc.groups}
                   assignments={pc.assignmentsResult ?? []}
                   selectedStudentIds={pc.selectedStudentIds}
@@ -335,6 +336,7 @@ export function TeacherProjectsPanel(): JSX.Element {
                   onDownloadSuite={handleDownloadSuite}
                   onPreviewSuite={handleOpenPreview}
                   allTeachers={pc.allTeachers}
+                  onSearchTeachers={pc.searchTeachers}
                   onAddTeacher={pc.handleAddTeacher}
                   onRemoveTeacher={pc.handleRemoveTeacher}
                   onDelete={() => handleDeleteProject(selectedCanvasProject.id)}

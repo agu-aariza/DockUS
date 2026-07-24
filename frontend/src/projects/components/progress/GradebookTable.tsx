@@ -115,7 +115,7 @@ export function GradebookTable({
         <>
           <DeliveryStatusBadge status={row.latestStatus ?? "DRAFT"} />
           {row.isLate ? (
-            <div className="mt-2 text-xs font-medium text-amber-700">
+            <div className="mt-2 text-xs font-medium text-warning-700">
               Fuera de plazo
             </div>
           ) : null}

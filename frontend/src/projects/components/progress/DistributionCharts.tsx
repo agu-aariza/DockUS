@@ -2,8 +2,8 @@ import type { BuilderOutcome } from "../../../features/builder/types";
 import type { ProjectProgressSummary } from "../../../features/projects/types";
 
 const OUTCOME_BAR_CLASS: Record<BuilderOutcome, string> = {
-  PASS: "bg-emerald-500",
-  PARTIAL: "bg-amber-500",
+  PASS: "bg-success-500",
+  PARTIAL: "bg-warning-500",
   FAIL: "bg-rose-500",
   UNKNOWN: "bg-slate-400",
 };
@@ -26,8 +26,8 @@ export function DistributionCharts({
   const statusSegments = [
     { key: "pending", value: summary.statusTotals.pending, color: "bg-slate-400" },
     { key: "submitted", value: summary.statusTotals.submitted, color: "bg-primary" },
-    { key: "inReview", value: summary.statusTotals.inReview, color: "bg-amber-500" },
-    { key: "evaluated", value: summary.statusTotals.evaluated, color: "bg-emerald-500" },
+    { key: "inReview", value: summary.statusTotals.inReview, color: "bg-warning-500" },
+    { key: "evaluated", value: summary.statusTotals.evaluated, color: "bg-success-500" },
   ];
 
   return (

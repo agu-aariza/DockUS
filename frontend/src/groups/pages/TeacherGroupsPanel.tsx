@@ -62,10 +62,10 @@ export function TeacherGroupsPanel() {
     }
   }, [location.search, focusedGroupId, setFocusedGroupId]);
 
-  // Ensure groups and students are loaded
+  // Ensure groups are loaded; los alumnos los carga el efecto de búsqueda de
+  // más abajo (se dispara también en el montaje, con studentSearch = "").
   useEffect(() => {
     void refreshGroups();
-    void refreshStudents();
   }, []);
 
   useNoticeToasts([notice], "Gestión de Grupos");
@@ -77,6 +77,16 @@ export function TeacherGroupsPanel() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", code: "", description: "" });
 
+  // Búsqueda server-side, no un filtro sobre los primeros 50 alumnos cargados
+  // al montar (FE-MED-01): con más de 50 alumnos, el filtro local dejaba
+  // invisibles resultados reales por no estar en esa primera página.
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      void refreshStudents(studentSearch);
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [studentSearch]);
+
   const focusedGroup = groups.find((g) => g.id === focusedGroupId);
 
   const filteredGroups = groups.filter(
@@ -87,24 +97,17 @@ export function TeacherGroupsPanel() {
   );
 
   const filteredStudents = allStudents.filter((student: UserEntity) => {
-    const searchLower = studentSearch.toLowerCase().trim();
-    const matchesSearch =
-      !searchLower ||
-      student.firstName.toLowerCase().includes(searchLower) ||
-      student.lastName.toLowerCase().includes(searchLower) ||
-      student.email.toLowerCase().includes(searchLower);
-
-    if (!focusedGroup) return matchesSearch;
+    if (!focusedGroup) return true;
 
     const isEnrolled = groupEnrollments?.some(
       (e) => e.studentId === student.id && !e.revokedAt
     );
-    const matchesFilter =
+
+    return (
       enrollmentFilter === "all" ||
       (enrollmentFilter === "enrolled" && isEnrolled) ||
-      (enrollmentFilter === "not_enrolled" && !isEnrolled);
-
-    return matchesSearch && matchesFilter;
+      (enrollmentFilter === "not_enrolled" && !isEnrolled)
+    );
   });
 
   const openEditModal = () => {
@@ -430,7 +433,7 @@ export function TeacherGroupsPanel() {
                             key={student.id}
                             className={`flex items-center justify-between rounded-md border p-4 transition-colors ${
                               isEnrolled
-                                ? "border-emerald-200 bg-emerald-50/40"
+                                ? "border-success-200 bg-success-50/40"
                                 : "border-app-border bg-white hover:border-slate-300"
                             }`}
                           >
@@ -438,7 +441,7 @@ export function TeacherGroupsPanel() {
                               <div
                                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-base transition-colors ${
                                   isEnrolled
-                                    ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                                    ? "bg-success-50 text-success-600 border border-success-200"
                                     : "bg-slate-100 text-slate-500"
                                 }`}
                               >
@@ -462,8 +465,8 @@ export function TeacherGroupsPanel() {
                                 onClick={() =>
                                   handleToggleEnrollment(student.id, isEnrolled)
                                 }
-                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${
-                                  isEnrolled ? "bg-emerald-500" : "bg-slate-200 hover:bg-slate-300"
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-success-300 ${
+                                  isEnrolled ? "bg-success-500" : "bg-slate-200 hover:bg-slate-300"
                                 }`}
                               >
                                 <span
@@ -579,8 +582,9 @@ export function TeacherGroupsPanel() {
 
             <div className="space-y-4 p-5">
               <div>
-                <label className="label-text">Nombre del grupo</label>
+                <label htmlFor="group-edit-name" className="label-text">Nombre del grupo</label>
                 <input
+                  id="group-edit-name"
                   className="input-field"
                   value={editForm.name}
                   onChange={(e) =>
@@ -589,8 +593,9 @@ export function TeacherGroupsPanel() {
                 />
               </div>
               <div>
-                <label className="label-text">Código identificador</label>
+                <label htmlFor="group-edit-code" className="label-text">Código identificador</label>
                 <input
+                  id="group-edit-code"
                   className="input-field"
                   value={editForm.code}
                   onChange={(e) =>
@@ -599,8 +604,9 @@ export function TeacherGroupsPanel() {
                 />
               </div>
               <div>
-                <label className="label-text">Descripción (opcional)</label>
+                <label htmlFor="group-edit-description" className="label-text">Descripción (opcional)</label>
                 <textarea
+                  id="group-edit-description"
                   className="input-field min-h-[100px]"
                   value={editForm.description}
                   onChange={(e) =>

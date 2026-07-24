@@ -54,8 +54,9 @@ export function ProjectCreateForm({
       <form className="space-y-6" onSubmit={handleCreate}>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <label className="label-text">Título del proyecto</label>
+            <label htmlFor="new-project-title" className="label-text">Título del proyecto</label>
             <input
+              id="new-project-title"
               className="input-field"
               required
               value={createForm.title}
@@ -63,8 +64,9 @@ export function ProjectCreateForm({
             />
           </div>
           <div>
-            <label className="label-text">Estado</label>
+            <label htmlFor="new-project-status" className="label-text">Estado</label>
             <select
+              id="new-project-status"
               className="input-field"
               value={createForm.status}
               onChange={(e) => setCreateForm(prev => ({ ...prev, status: e.target.value as ProjectStatus }))}
@@ -76,8 +78,9 @@ export function ProjectCreateForm({
           </div>
         </div>
         <div>
-          <label className="label-text">Contexto académico</label>
+          <label htmlFor="new-project-context" className="label-text">Contexto académico</label>
           <textarea
+            id="new-project-context"
             className="input-field min-h-[140px]"
             placeholder="Describe objetivos, entregables, criterios y notas operativas."
             value={createForm.contextAcademico}
@@ -86,8 +89,9 @@ export function ProjectCreateForm({
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <label className="label-text">Intentos máximos por alumno</label>
+            <label htmlFor="new-project-max-deliveries" className="label-text">Intentos máximos por alumno</label>
             <input
+              id="new-project-max-deliveries"
               type="number"
               min="1"
               className="input-field"
@@ -96,8 +100,9 @@ export function ProjectCreateForm({
             />
           </div>
           <div>
-            <label className="label-text">Tipo esperado</label>
+            <label htmlFor="new-project-expected-type" className="label-text">Tipo esperado</label>
             <input
+              id="new-project-expected-type"
               className="input-field"
               placeholder="CLI, Flask, FastAPI, Django simple..."
               value={createForm.expectedType}
@@ -107,8 +112,9 @@ export function ProjectCreateForm({
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <label className="label-text">Abre entregas en</label>
+            <label htmlFor="new-project-opens-at" className="label-text">Abre entregas en</label>
             <input
+              id="new-project-opens-at"
               type="datetime-local"
               className="input-field"
               value={createForm.opensAt}
@@ -116,8 +122,9 @@ export function ProjectCreateForm({
             />
           </div>
           <div>
-            <label className="label-text">Cierra entregas en</label>
+            <label htmlFor="new-project-closes-at" className="label-text">Cierra entregas en</label>
             <input
+              id="new-project-closes-at"
               type="datetime-local"
               className="input-field"
               value={createForm.closesAt}
@@ -126,8 +133,9 @@ export function ProjectCreateForm({
           </div>
         </div>
         <div>
-          <label className="label-text">Salida esperada (Oracle)</label>
+          <label htmlFor="new-project-expected-output" className="label-text">Salida esperada (Oracle)</label>
           <textarea
+            id="new-project-expected-output"
             className="input-field min-h-[120px] font-mono text-xs"
             placeholder="Pega aquí la salida esperada para que el evaluador compare stdout/stderr."
             value={createForm.expectedOutput}
@@ -135,8 +143,9 @@ export function ProjectCreateForm({
           />
         </div>
         <div>
-          <label className="label-text">Instrucciones de rúbrica</label>
+          <label htmlFor="new-project-rubric-instructions" className="label-text">Instrucciones de rúbrica</label>
           <textarea
+            id="new-project-rubric-instructions"
             className="input-field min-h-[160px]"
             placeholder="Indica los criterios docentes y el comportamiento esperado de la nota final."
             value={createForm.rubricInstructions}
@@ -153,7 +162,8 @@ export function ProjectCreateForm({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 pt-6 border-t border-app-border">
           <div className="space-y-3">
             <div>
-              <label className="label-text">Asignar Grupos Académicos</label>
+              {/* Encabezado del grupo de botones de abajo, no de un control único. */}
+              <span className="label-text">Asignar Grupos Académicos</span>
               <p className="text-[11px] text-slate-400 mt-1">Los alumnos de los grupos seleccionados serán matriculados automáticamente.</p>
             </div>
             <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1">
@@ -199,13 +209,13 @@ export function ProjectCreateForm({
 
           <div className="space-y-3">
             <div>
-              <label className="label-text">Suite de Evaluación Inicial</label>
+              <label htmlFor="new-project-suite" className="label-text">Suite de Evaluación Inicial</label>
               <p className="text-xs text-slate-500">Sube el archivo .zip con los tests docentes para este proyecto.</p>
             </div>
 
             <div
               className={`relative flex h-[300px] flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center transition-colors ${createForm.suiteFile
-                  ? "border-emerald-300 bg-emerald-50/40"
+                  ? "border-success-300 bg-success-50/40"
                   : "border-app-border bg-slate-50/60 hover:border-slate-300"
                 }`}
             >
@@ -220,18 +230,18 @@ export function ProjectCreateForm({
                 }}
               />
 
-              <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-md transition-colors ${createForm.suiteFile ? "border border-emerald-200 bg-emerald-50 text-emerald-600" : "border border-app-border bg-white text-slate-400"
+              <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-md transition-colors ${createForm.suiteFile ? "border border-success-200 bg-success-50 text-success-600" : "border border-app-border bg-white text-slate-400"
                 }`}>
                 {createForm.suiteFile ? <RiCheckFill className="text-2xl" /> : <RiFolderUploadLine className="text-2xl" />}
               </div>
 
               {createForm.suiteFile ? (
                 <>
-                  <h5 className="text-sm font-semibold text-emerald-900">{createForm.suiteFile.name}</h5>
-                   <p className="mt-1 text-xs text-emerald-700">{(createForm.suiteFile.size / 1024).toFixed(1)} KB listo para subir</p>
+                  <h5 className="text-sm font-semibold text-success-900">{createForm.suiteFile.name}</h5>
+                   <p className="mt-1 text-xs text-success-700">{(createForm.suiteFile.size / 1024).toFixed(1)} KB listo para subir</p>
                   <button
                     type="button"
-                    className="mt-4 text-xs font-semibold text-red-600 hover:underline"
+                    className="mt-4 text-xs font-semibold text-danger-600 hover:underline"
                     onClick={() => setCreateForm(prev => ({ ...prev, suiteFile: null }))}
                   >
                     Quitar archivo

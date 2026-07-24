@@ -164,7 +164,7 @@ export function TeacherRuntimePanel(): JSX.Element {
       id: p.id,
       title: p.title,
       description: p.contextAcademico || "Sin descripción operativa disponible.",
-      studentCount: (p as any).assignmentCount || 0,
+      studentCount: p.assignmentCount ?? 0,
       activeRuns: 0,
       status: "READY" as const,
       teachers: p.teachers,
@@ -235,8 +235,9 @@ export function TeacherRuntimePanel(): JSX.Element {
           <div className="p-6 space-y-8">
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="space-y-1.5">
-                <label className="label-text">Proyecto de Referencia</label>
+                <label htmlFor="runtime-project-picker" className="label-text">Proyecto de Referencia</label>
                 <VisualPicker
+                  id="runtime-project-picker"
                   options={projectOptions}
                   value={rc.selectedProjectId}
                   onSelect={(id) => rc.setSelectedProjectId(id)}
@@ -245,8 +246,9 @@ export function TeacherRuntimePanel(): JSX.Element {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="label-text">Alumno Asignado</label>
+                <label htmlFor="runtime-assignment-picker" className="label-text">Alumno Asignado</label>
                 <VisualPicker
+                  id="runtime-assignment-picker"
                   options={assignmentOptions}
                   value={rc.selectedAssignmentId}
                   onSelect={(id) => rc.setSelectedAssignmentId(id)}
@@ -256,8 +258,9 @@ export function TeacherRuntimePanel(): JSX.Element {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="label-text">Versión de Entrega</label>
+                <label htmlFor="runtime-delivery-picker" className="label-text">Versión de Entrega</label>
                 <VisualPicker
+                  id="runtime-delivery-picker"
                   options={deliveryOptions}
                   value={rc.selectedDeliveryId}
                   onSelect={(id) => rc.setSelectedDeliveryId(id)}
@@ -285,7 +288,7 @@ export function TeacherRuntimePanel(): JSX.Element {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-slate-500">Modo Ejecución:</span>
-                    <span className="font-semibold text-emerald-600">Efímero / Aislado</span>
+                    <span className="font-semibold text-success-600">Efímero / Aislado</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-slate-500">Alumno:</span>
@@ -341,7 +344,7 @@ export function TeacherRuntimePanel(): JSX.Element {
             </div>
 
             {rc.streamError ? (
-              <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              <div className="rounded-md border border-danger-200 bg-danger-50 p-4 text-sm text-danger-800">
                 Error en stream SSE: {rc.streamError}. El sistema ha conmutado a modo de actualización manual (polling).
               </div>
             ) : null}

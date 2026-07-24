@@ -33,6 +33,7 @@ export interface ProjectConfigFormProps {
   onDownloadSuite: () => void;
   onPreviewSuite: () => void;
   allTeachers: UserEntity[];
+  onSearchTeachers?: (query?: string) => void;
   onAddTeacher: (projectId: string, teacherId: string) => void;
   onRemoveTeacher: (projectId: string, teacherId: string) => void;
   loadingTeachers?: boolean;
@@ -50,6 +51,7 @@ export function ProjectConfigForm({
   onDownloadSuite,
   onPreviewSuite,
   allTeachers,
+  onSearchTeachers,
   onAddTeacher,
   onRemoveTeacher,
   onDelete,
@@ -83,8 +85,9 @@ export function ProjectConfigForm({
           >
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="label-text">Título del proyecto</label>
+                <label htmlFor="project-config-title" className="label-text">Título del proyecto</label>
                 <input
+                  id="project-config-title"
                   className="input-field"
                   required
                   value={editForm.title}
@@ -92,8 +95,9 @@ export function ProjectConfigForm({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="label-text">Estado operativo</label>
+                <label htmlFor="project-config-status" className="label-text">Estado operativo</label>
                 <select
+                  id="project-config-status"
                   className="input-field"
                   value={editForm.status}
                   onChange={e => setEditForm(prev => ({ ...prev, status: e.target.value as ProjectStatus }))}
@@ -104,8 +108,9 @@ export function ProjectConfigForm({
                 </select>
               </div>
               <div className="space-y-1.5 lg:col-span-2">
-                <label className="label-text">Contexto académico y objetivos</label>
+                <label htmlFor="project-config-context" className="label-text">Contexto académico y objetivos</label>
                 <textarea
+                  id="project-config-context"
                   className="input-field min-h-[120px]"
                   placeholder="Describe qué deben aprender y entregar los alumnos..."
                   value={editForm.contextAcademico}
@@ -113,8 +118,9 @@ export function ProjectConfigForm({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="label-text">Tipo de stack esperado</label>
+                <label htmlFor="project-config-expected-type" className="label-text">Tipo de stack esperado</label>
                 <input
+                  id="project-config-expected-type"
                   className="input-field"
                   placeholder="Ej. FastAPI + PostgreSQL"
                   value={editForm.expectedType}
@@ -122,8 +128,9 @@ export function ProjectConfigForm({
                 />
               </div>
               <div className="space-y-1.5 lg:col-span-2">
-                <label className="label-text">Salida esperada (Oracle)</label>
+                <label htmlFor="project-config-expected-output" className="label-text">Salida esperada (Oracle)</label>
                 <textarea
+                  id="project-config-expected-output"
                   className="input-field min-h-[100px] font-mono text-xs"
                   placeholder="Pega aquí la salida exacta que esperas que el programa imprima..."
                   value={editForm.expectedOutput}
@@ -132,8 +139,9 @@ export function ProjectConfigForm({
                 <p className="text-xs text-slate-400 mt-1">El LLM comparará la salida real con este texto para verificar la corrección.</p>
               </div>
               <div className="space-y-1.5">
-                <label className="label-text">Intentos por alumno</label>
+                <label htmlFor="project-config-max-deliveries" className="label-text">Intentos por alumno</label>
                 <input
+                  id="project-config-max-deliveries"
                   type="number"
                   min="1"
                   className="input-field"
@@ -152,8 +160,9 @@ export function ProjectConfigForm({
           >
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="label-text">Apertura de entregas</label>
+                <label htmlFor="project-config-opens-at" className="label-text">Apertura de entregas</label>
                 <input
+                  id="project-config-opens-at"
                   type="datetime-local"
                   className="input-field"
                   value={editForm.opensAt}
@@ -161,8 +170,9 @@ export function ProjectConfigForm({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="label-text">Cierre de entregas</label>
+                <label htmlFor="project-config-closes-at" className="label-text">Cierre de entregas</label>
                 <input
+                  id="project-config-closes-at"
                   type="datetime-local"
                   className="input-field"
                   value={editForm.closesAt}
@@ -170,8 +180,9 @@ export function ProjectConfigForm({
                 />
               </div>
               <div className="space-y-1.5 lg:col-span-2">
-                <label className="label-text">Instrucciones de la rúbrica</label>
+                <label htmlFor="project-config-rubric-instructions" className="label-text">Instrucciones de la rúbrica</label>
                 <textarea
+                  id="project-config-rubric-instructions"
                   className="input-field min-h-[140px]"
                   placeholder="Criterios de evaluación, penalizaciones, etc."
                   value={editForm.rubricInstructions}
@@ -193,6 +204,7 @@ export function ProjectConfigForm({
             projectId={project.id}
             teachers={project.teachers ?? []}
             allTeachers={allTeachers}
+            onSearchTeachers={onSearchTeachers}
             onAddTeacher={onAddTeacher}
             onRemoveTeacher={onRemoveTeacher}
           />

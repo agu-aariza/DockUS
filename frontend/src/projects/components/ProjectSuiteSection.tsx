@@ -43,7 +43,7 @@ export function ProjectSuiteSection({
       {testSuite && 'id' in testSuite ? (
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 border border-emerald-400">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-success-500 text-white shadow-sm shadow-emerald-500/20 border border-success-400">
               <RiCheckFill className="text-2xl" />
             </div>
             <div className="space-y-0.5">
