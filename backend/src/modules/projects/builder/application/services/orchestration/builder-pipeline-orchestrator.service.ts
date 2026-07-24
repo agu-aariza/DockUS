@@ -11,7 +11,6 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import * as fs from 'fs/promises';
 
 import { Delivery } from '../../../../deliveries/entities/delivery.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
@@ -19,81 +18,43 @@ import {
   AssignmentContext,
   BuilderCodeQualityContractV2,
   BuilderEvaluationContractV2,
+  BuilderExecutionResult,
   BuilderPlanContractV2,
   BuilderReportEntity,
-  RubricCriterion,
+  BuilderStudentStage,
 } from '../../../domain/builder.types';
 import { BuilderRunSupportService } from './builder-run-support.service';
 import {
   BuilderWorkspaceService,
   StageWorkspaceResult,
 } from '../workspace/builder-workspace.service';
+import { SourceCodePayloadBuilder } from '../workspace/source-code-payload-builder.service';
 import { BuilderPlanStageHandler } from '../stages/plan-stage.handler';
 import { BuilderCompileStageHandler } from '../stages/compile-stage.handler';
 import { BuilderExecutionStageHandler } from '../stages/execution-stage.handler';
 import { BuilderEvaluationStageHandler } from '../stages/evaluation-stage.handler';
 import { BuilderQualityStageHandler } from '../stages/quality-stage.handler';
 import { BuilderReportStageHandler } from '../stages/report-stage.handler';
+import { BuilderReportComposer } from '../evaluation/builder-report-composer.service';
 import { CompiledRecipe } from '../compilation/builder-recipe-compiler.service';
 import { BuilderPipelineResult } from '../builder-application.types';
 import { BuilderStageTokenUsage } from '../../../domain/builder.types';
-
-/** Extensiones cuyo contenido se incluye como código fuente en el prompt. */
-const SOURCE_CODE_EXTENSIONS = [
-  '.py',
-  '.c',
-  '.h',
-  '.cpp',
-  '.hpp',
-  '.cc',
-  '.js',
-  '.ts',
-  '.jsx',
-  '.tsx',
-  '.java',
-  '.go',
-  '.rs',
-  '.rb',
-  '.sh',
-  '.md',
-  '.txt',
-  '.json',
-  '.toml',
-  '.yml',
-  '.yaml',
-  '.cfg',
-  '.ini',
-];
-
-/** Ficheros sin extensión reconocibles que sí son código/configuración. */
-const SOURCE_CODE_BASENAMES = new Set(['makefile', 'dockerfile', '.env']);
-
-/** Directorios cuyo contenido se excluye del prompt aunque tenga extensión válida. */
-const EXCLUDED_DIR_SEGMENTS = new Set([
-  'node_modules',
-  '__pycache__',
-  '.git',
-  'venv',
-  '.venv',
-  'dist',
-  'build',
-  'target',
-]);
-
-/** Los ficheros de código mayores que esto se omiten del prompt. */
-const MAX_SOURCE_FILE_BYTES = 256 * 1024;
+import { BuilderRunCancellationService } from './builder-run-cancellation.service';
 
 @Injectable()
 export class BuilderPipelineOrchestrator {
   constructor(
     private readonly builderWorkspaceService: BuilderWorkspaceService,
+    private readonly sourceCodePayloadBuilder: SourceCodePayloadBuilder,
     private readonly builderPlanStageHandler: BuilderPlanStageHandler,
     private readonly builderCompileStageHandler: BuilderCompileStageHandler,
     private readonly builderExecutionStageHandler: BuilderExecutionStageHandler,
     private readonly builderEvaluationStageHandler: BuilderEvaluationStageHandler,
     private readonly builderQualityStageHandler: BuilderQualityStageHandler,
     private readonly builderReportStageHandler: BuilderReportStageHandler,
+    private readonly builderReportComposer: BuilderReportComposer,
     private readonly builderRunSupportService: BuilderRunSupportService,
+    private readonly builderRunCancellationService: BuilderRunCancellationService,
   ) {}
 
   async runPipeline(
@@ -106,8 +67,16 @@ export class BuilderPipelineOrchestrator {
     const workspace = await this.prepareWorkspace(run, delivery);
 
     try {
+      // Chequeo cooperativo entre etapas (ARQ-004): cada punto de aqui abajo
+      // es una oportunidad barata de no seguir facturando llamadas LLM tras
+      // una cancelacion. El tramo largo (la ejecucion Docker) no puede
+      // esperar a su propio final: runExecutionStage abre ademas un sondeo
+      // en segundo plano que mata el contenedor en curso.
+      await this.builderRunCancellationService.assertNotCancelled(run.id);
+
       const assignmentContext = this.buildAssignmentContext(delivery);
-      const sourceCodePayload = await this.buildSourceCodePayload(workspace);
+      const sourceCodePayload =
+        await this.sourceCodePayloadBuilder.build(workspace);
 
       const { planAssessment, usages: planUsages } = await this.runPlanStage(
         run.id,
@@ -115,48 +84,58 @@ export class BuilderPipelineOrchestrator {
         assignmentContext,
       );
 
-      const { compiled, executionLogs: compileLogs } =
+      await this.builderRunCancellationService.assertNotCancelled(run.id);
+
+      const { compiled, execution: compileExecution } =
         await this.runCompileStage(run.id, planAssessment, workspace);
 
-      const executionLogs = compiled.executable
-        ? await this.runExecutionStage(
-            run.id,
-            workspace,
-            compiled,
-            delivery.assignment.project.expectedType ?? 'PYTHON_FASTAPI',
-          )
-        : (compileLogs ?? '');
+      await this.builderRunCancellationService.assertNotCancelled(run.id);
+
+      const execution: BuilderExecutionResult = compiled.executable
+        ? await this.runExecutionStage(run.id, workspace, compiled)
+        : (compileExecution ?? {
+            ran: false,
+            stdout: '',
+            stderr: '',
+            exitCode: null,
+          });
+
+      await this.builderRunCancellationService.assertNotCancelled(run.id);
 
       const { assessment, usages: evaluationUsages } =
         await this.runEvaluationStage(
           run.id,
           workspace,
           sourceCodePayload,
-          executionLogs,
+          execution,
           assignmentContext,
           planAssessment,
         );
 
-      this.enrichGradeBreakdownWithRubric(
+      this.builderReportComposer.enrichGradeBreakdownWithRubric(
         assessment,
         assignmentContext.rubricCriteria,
       );
+
+      await this.builderRunCancellationService.assertNotCancelled(run.id);
 
       const { qualityFindings, usages: qualityUsages } =
         await this.runQualityStage(
           run.id,
           sourceCodePayload,
-          executionLogs,
+          execution,
           assignmentContext,
           assessment,
           delivery,
         );
 
+      await this.builderRunCancellationService.assertNotCancelled(run.id);
+
       const report = await this.runReportStage(
         run.id,
         assessment,
         qualityFindings,
-        executionLogs,
+        execution,
       );
 
       return {
@@ -164,7 +143,7 @@ export class BuilderPipelineOrchestrator {
         assessment,
         qualityFindings,
         report,
-        executionLogs,
+        execution,
         warnings: workspace.warnings,
         // El coste no se puede derivar de la suma de tokens: cada etapa puede
         // haber corrido en un proveedor distinto, así que se propaga el detalle.
@@ -188,41 +167,6 @@ export class BuilderPipelineOrchestrator {
     return this.builderWorkspaceService.prepareWorkspace(delivery.id);
   }
 
-  /**
-   * Empareja cada entrada del gradeBreakdown devuelto por el LLM con el criterio
-   * ponderado configurado en el proyecto (por nombre, normalizado) y le adjunta
-   * su peso (%) y descripción, para que el informe del alumno muestre la rúbrica
-   * tal como la definió el profesor. No altera puntuaciones ni justificaciones.
-   */
-  private enrichGradeBreakdownWithRubric(
-    assessment: BuilderEvaluationContractV2,
-    rubricCriteria: RubricCriterion[] | null,
-  ): void {
-    if (!rubricCriteria || rubricCriteria.length === 0) {
-      return;
-    }
-    if (!Array.isArray(assessment.gradeBreakdown)) {
-      return;
-    }
-
-    const normalize = (value: string): string => value.trim().toLowerCase();
-    const criterionByName = new Map(
-      rubricCriteria.map((criterion) => [normalize(criterion.name), criterion]),
-    );
-
-    assessment.gradeBreakdown = assessment.gradeBreakdown.map((item) => {
-      const match = criterionByName.get(normalize(item.criterion));
-      if (!match) {
-        return item;
-      }
-      return {
-        ...item,
-        weight: match.weight,
-        description: match.description,
-      };
-    });
-  }
-
   private buildAssignmentContext(delivery: Delivery): AssignmentContext {
     return {
       expectedType: delivery.assignment.project.expectedType,
@@ -230,54 +174,6 @@ export class BuilderPipelineOrchestrator {
       expectedOutput: delivery.assignment.project.expectedOutput ?? null,
       rubricCriteria: delivery.assignment.project.rubricCriteria ?? null,
     };
-  }
-
-  private async buildSourceCodePayload(
-    workspace: StageWorkspaceResult,
-  ): Promise<string> {
-    const sourceCodePayloadParts: string[] = [];
-
-    for (const file of workspace.runtimeFiles) {
-      // Lista blanca por extensión, no lista negra de directorios: un binario,
-      // un `.o` recién compilado o una imagen no aportan nada al prompt y, leídos
-      // como utf-8, meterían ruido y bytes al heap del worker. También se saltan
-      // los ficheros grandes antes de leerlos.
-      if (!this.isSourceCodeFile(file.relativePath)) {
-        continue;
-      }
-      if (file.sizeBytes > MAX_SOURCE_FILE_BYTES) {
-        continue;
-      }
-
-      try {
-        const content = await fs.readFile(String(file.absolutePath), 'utf8');
-        sourceCodePayloadParts.push(
-          `\n--- Archivo: ${file.relativePath} ---\n${content}\n`,
-        );
-      } catch {
-        // Ignorar silenciosamente archivos que no se puedan leer.
-      }
-    }
-
-    return sourceCodePayloadParts.join('');
-  }
-
-  private isSourceCodeFile(relativePath: string): boolean {
-    const normalized = relativePath.toLowerCase();
-    const segments = normalized.split('/');
-
-    // Aun con extensión válida, nada dentro de un directorio de dependencias o
-    // artefactos de compilación aporta al prompt (un `.js` en node_modules es
-    // ruido, no código del alumno).
-    if (segments.some((segment) => EXCLUDED_DIR_SEGMENTS.has(segment))) {
-      return false;
-    }
-
-    const basename = segments.at(-1) ?? '';
-    if (SOURCE_CODE_BASENAMES.has(basename)) {
-      return true;
-    }
-    return SOURCE_CODE_EXTENSIONS.some((ext) => normalized.endsWith(ext));
   }
 
   private async runPlanStage(
@@ -292,7 +188,7 @@ export class BuilderPipelineOrchestrator {
       buildRunId: runId,
       eventType: 'RUN_STATUS_CHANGED',
       message: 'Analizando arquitectura del proyecto con IA...',
-      payload: { studentStage: 'building' },
+      payload: { studentStage: 'building' satisfies BuilderStudentStage },
     });
 
     const result = await this.builderPlanStageHandler.handle({
@@ -310,7 +206,7 @@ export class BuilderPipelineOrchestrator {
     workspace: StageWorkspaceResult,
   ): Promise<{
     compiled: CompiledRecipe;
-    executionLogs?: string;
+    execution?: BuilderExecutionResult;
   }> {
     return this.builderCompileStageHandler.handle({
       runId,
@@ -323,23 +219,32 @@ export class BuilderPipelineOrchestrator {
     runId: string,
     workspace: StageWorkspaceResult,
     compiled: CompiledRecipe,
-    expectedType: string,
-  ): Promise<string> {
-    const execOutput = await this.builderExecutionStageHandler.handle({
-      runId,
-      workspace,
-      compiled,
-      expectedType,
-    });
+  ): Promise<BuilderExecutionResult> {
+    // El sondeo cubre justo el tramo que los chequeos puntuales entre etapas
+    // no alcanzan: un contenedor puede correr varios minutos sin que el
+    // orquestador vuelva a preguntar. `watcher.signal` llega hasta
+    // `runCommand` (child_process.spawn) y mata el proceso si se cancela.
+    const watcher =
+      this.builderRunCancellationService.createCancellationWatcher(runId);
+    try {
+      const execOutput = await this.builderExecutionStageHandler.handle({
+        runId,
+        workspace,
+        compiled,
+        signal: watcher.signal,
+      });
 
-    return execOutput.executionLogs;
+      return execOutput.execution;
+    } finally {
+      watcher.stop();
+    }
   }
 
   private async runEvaluationStage(
     runId: string,
     workspace: StageWorkspaceResult,
     sourceCodePayload: string,
-    executionLogs: string,
+    execution: BuilderExecutionResult,
     assignmentContext: AssignmentContext,
     planAssessment: BuilderPlanContractV2,
   ): Promise<{
@@ -350,7 +255,7 @@ export class BuilderPipelineOrchestrator {
       runId,
       workspace,
       sourceCodePayload,
-      executionLogs,
+      execution,
       assignmentContext,
       planAssessment,
     });
@@ -361,7 +266,7 @@ export class BuilderPipelineOrchestrator {
   private async runQualityStage(
     runId: string,
     sourceCodePayload: string,
-    executionLogs: string,
+    execution: BuilderExecutionResult,
     assignmentContext: AssignmentContext,
     assessment: BuilderEvaluationContractV2,
     delivery: Delivery,
@@ -372,7 +277,7 @@ export class BuilderPipelineOrchestrator {
     const result = await this.builderQualityStageHandler.handle({
       runId,
       sourceCodePayload,
-      executionLogs,
+      execution,
       assignmentContext,
       assessment,
       delivery,
@@ -385,13 +290,13 @@ export class BuilderPipelineOrchestrator {
     runId: string,
     assessment: BuilderEvaluationContractV2,
     qualityFindings: BuilderCodeQualityContractV2,
-    executionLogs: string,
+    execution: BuilderExecutionResult,
   ): Promise<BuilderReportEntity> {
     const { report } = await this.builderReportStageHandler.handle({
       runId,
       assessment,
       qualityFindings,
-      executionLogs,
+      execution,
     });
 
     return report;

@@ -17,7 +17,10 @@ import {
   ListFoundationModelsCommand,
 } from '@aws-sdk/client-bedrock';
 import { RedisClientService } from '../../shared/infrastructure/cache/redis-client.service';
-import { DockerHostService } from '../../shared/infrastructure/docker/docker-host.service';
+import {
+  DOCKER_DAEMON_STATUS_REDIS_KEY,
+  DockerDaemonStatusPayload,
+} from '../../shared/infrastructure/docker/docker-daemon-status-publisher.service';
 
 type DependencyStatus = 'up' | 'down';
 type ReadinessStatus = 'ok' | 'error';
@@ -49,7 +52,6 @@ export class HealthService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly redisClient: RedisClientService,
-    private readonly dockerHost: DockerHostService,
     private readonly configService: ConfigService,
     private readonly logger: Logger,
   ) {}
@@ -138,20 +140,37 @@ export class HealthService {
   }
 
   /**
-   * Comprueba conectividad con el daemon de Docker.
+   * Comprueba el estado del daemon Docker leyendo lo que publica el worker en
+   * Redis (audit/04 ARQ-016), en vez de hablar con el daemon directamente:
+   * la API ya no monta `docker.sock`. `DockerDaemonStatusPublisherService`
+   * (que sí corre en el proceso del worker, el único que aún tiene acceso al
+   * socket) es quien exige runsc en producción y publica el resultado con
+   * TTL de 60s; si la clave falta o expiró, se trata como caído en vez de
+   * asumir "arriba" sin dato reciente.
    */
   private async checkDocker(): Promise<DependencyHealth> {
     const startedAt = Date.now();
 
     try {
-      const info = await this.dockerHost.inspectDockerHost({
-        timeoutMs: 5000,
-      });
+      const raw = await this.redisClient.get(DOCKER_DAEMON_STATUS_REDIS_KEY);
+      if (!raw) {
+        throw new Error(
+          'El worker no ha publicado el estado del daemon Docker recientemente ' +
+            '(clave ausente o expirada en Redis).',
+        );
+      }
+
+      const published = JSON.parse(raw) as DockerDaemonStatusPayload;
+      if (published.status !== 'up') {
+        throw new Error(
+          published.info ?? 'El worker reporta el daemon Docker como caido.',
+        );
+      }
 
       return {
         status: 'up',
         latencyMs: Date.now() - startedAt,
-        info: `Docker version ${info.ServerVersion ?? 'unknown'}`,
+        info: published.info,
       };
     } catch (error) {
       this.logDependencyError('Docker', error);

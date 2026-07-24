@@ -166,11 +166,19 @@ function normalizeSeverity(
   void field;
   void index;
 
-  if (
-    typeof value === 'string' &&
-    FINDING_SEVERITIES.includes(value as FindingSeverity)
-  ) {
-    return value as FindingSeverity;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (FINDING_SEVERITIES.includes(normalized as FindingSeverity)) {
+      return normalized as FindingSeverity;
+    }
+    // Algunos proveedores emiten niveles fuera del esquema pedido
+    // ("critical", "blocker"); degradarlos a 'medium' por defecto los
+    // excluye silenciosamente de `mustFix`/`passReadiness:'BLOCKED'` en
+    // `composeCoaching()`, anulando el gate de seguridad justo para los
+    // hallazgos más graves. Se mapean explícitamente a 'high'.
+    if (normalized === 'critical' || normalized === 'blocker') {
+      return 'high';
+    }
   }
 
   return 'medium';

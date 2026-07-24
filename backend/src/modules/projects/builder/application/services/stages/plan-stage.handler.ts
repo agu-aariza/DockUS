@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IBuilderStageHandler } from './builder-stage.interface';
-import { BuilderLlmEvaluatorService } from '../../../domain/ai/builder-llm-evaluator.service';
+import { BuilderLlmEvaluatorService } from '../ai/builder-llm-evaluator.service';
 import { BuilderArtifactPersister } from '../artifacts/builder-artifact-persister.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
@@ -10,7 +10,7 @@ import {
   BuilderStageTokenUsage,
 } from '../../../domain/builder.types';
 import { requireParsedContract } from '../support/builder-fallback-assessment.util';
-import { toStageTokenUsage } from '../../../domain/ai/builder-llm-trace.util';
+import { toStageTokenUsage } from '../ai/builder-llm-trace.util';
 
 interface PlanStageInput {
   runId: string;

@@ -1,5 +1,4 @@
-import { rm } from 'fs/promises';
-import { DataSource, Repository } from 'typeorm';
+import { ConflictException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 
 import { BuilderRunCommandsService } from './builder-run-commands.service';
@@ -7,24 +6,12 @@ import { BuilderRunQueriesService } from './builder-run-queries.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
 import { BuilderAccessService } from '../workspace/builder-access.service';
 import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
-import { BuilderPipelineOrchestrator } from './builder-pipeline-orchestrator.service';
-import { BuilderRunMetricsService } from './builder-run-metrics.service';
-import { BuilderStaleRunRecoveryService } from './builder-stale-run-recovery.service';
-import { BuilderRunCostService } from '../../../domain/ai/builder-run-cost.service';
+import { BuilderRunCancellationService } from './builder-run-cancellation.service';
+import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
 import {
   BuildRun,
   BuildRunStatus,
 } from '../../../domain/entities/build-run.entity';
-import {
-  Delivery,
-  DeliveryStatus,
-} from '../../../../deliveries/entities/delivery.entity';
-import { Project } from '../../../../entities/project.entity';
-import { ProjectAssignment } from '../../../../assignments/entities/project-assignment.entity';
-
-jest.mock('fs/promises', () => ({
-  rm: jest.fn().mockResolvedValue(undefined),
-}));
 
 describe('BuilderRunCommandsService', () => {
   let service: BuilderRunCommandsService;
@@ -33,25 +20,26 @@ describe('BuilderRunCommandsService', () => {
   const deliveryId = 'delivery-123';
 
   const buildRunRepository = {
-    findOne: jest.fn(),
-    create: jest.fn((dto) => dto as BuildRun),
+    findById: jest.fn(),
+    createQueuedRun: jest.fn((input) => Promise.resolve(input as BuildRun)),
     save: jest.fn((run) => Promise.resolve({ ...run, id: runId } as BuildRun)),
-  };
-
-  const deliveriesRepository = {
-    findOne: jest.fn(),
-    save: jest.fn((delivery) => Promise.resolve(delivery as Delivery)),
+    cancelIfActive: jest.fn(),
   };
 
   const builderRunsQueue = {
     add: jest.fn(),
+    remove: jest.fn().mockResolvedValue(undefined),
   } as unknown as Queue;
 
   const builderAccessService = {
     findDeliveryOrThrow: jest.fn(),
+    assertCanManageBuildRun: jest.fn().mockResolvedValue(undefined),
+    assertCanTriggerDelivery: jest.fn().mockResolvedValue(undefined),
   };
 
-  const builderRunQueriesService = {} as BuilderRunQueriesService;
+  const builderRunQueriesService = {
+    getRunById: jest.fn(),
+  } as unknown as BuilderRunQueriesService;
 
   const builderRunSupportService = {
     markRunAsFailed: jest.fn().mockResolvedValue(undefined),
@@ -61,83 +49,25 @@ describe('BuilderRunCommandsService', () => {
     emitEvent: jest.fn().mockResolvedValue(undefined),
   };
 
-  const builderPipelineOrchestrator = {
-    runPipeline: jest.fn(),
+  const builderRunCancellationService = {
+    markCancelled: jest.fn().mockResolvedValue(undefined),
   };
-
-  const builderRunMetricsService = {
-    logRunMetrics: jest.fn(),
-  };
-
-  const builderStaleRunRecoveryService = {
-    failStaleRunsOnStartup: jest.fn(),
-  };
-
-  const buildProject = (): Project =>
-    ({
-      id: 'project-123',
-      expectedType: 'PYTHON_FASTAPI',
-      rubricInstructions: null,
-      expectedOutput: null,
-    }) as Project;
-
-  const buildAssignment = (): ProjectAssignment =>
-    ({
-      id: 'assignment-123',
-      project: buildProject(),
-    }) as ProjectAssignment;
-
-  const buildDelivery = (): Delivery =>
-    ({
-      id: deliveryId,
-      assignment: buildAssignment(),
-      status: DeliveryStatus.SUBMITTED,
-    }) as Delivery;
 
   const buildRun = (): BuildRun =>
     ({
       id: runId,
       deliveryId,
-      status: BuildRunStatus.RUNNING,
+      status: BuildRunStatus.QUEUED,
     }) as BuildRun;
-
-  const buildPipelineResult = (
-    overrides: Partial<{
-      workspaceRoot: string;
-      planAssessment: any;
-      assessment: any;
-      qualityFindings: any;
-      report: any;
-    }> = {},
-  ) => ({
-    planAssessment: { thought: 'plan ok' },
-    assessment: { thought: 'eval ok', gradeBreakdown: [] },
-    qualityFindings: [],
-    report: { summary: 'ok' },
-    executionLogs: '',
-    warnings: [],
-    llmUsages: [],
-    ...overrides,
-  });
-
-  const builderRunCostService = {
-    summarize: jest.fn(async () => ({
-      inputTokens: 1200,
-      outputTokens: 300,
-      costUsd: 0.0042,
-    })),
-  };
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    buildRunRepository.findOne.mockResolvedValue(buildRun());
-    builderAccessService.findDeliveryOrThrow.mockResolvedValue(buildDelivery());
-    deliveriesRepository.findOne.mockResolvedValue(buildDelivery());
+    buildRunRepository.cancelIfActive.mockResolvedValue(true);
+    buildRunRepository.findById.mockResolvedValue(buildRun());
+    buildRunRepository.createQueuedRun.mockResolvedValue(buildRun());
 
     service = new BuilderRunCommandsService(
-      buildRunRepository as unknown as any,
-      deliveriesRepository as unknown as Repository<Delivery>,
+      buildRunRepository as unknown as IBuildRunRepository,
       builderRunsQueue,
       builderAccessService as unknown as BuilderAccessService,
       builderRunQueriesService,
@@ -151,80 +81,138 @@ describe('BuilderRunCommandsService', () => {
         staleRunThresholdMs: 600000,
         promptVersion: '2026.07-chain-of-verification',
       } as BuilderConfigProvider,
-      builderPipelineOrchestrator as unknown as BuilderPipelineOrchestrator,
-      builderRunMetricsService as unknown as BuilderRunMetricsService,
-      builderStaleRunRecoveryService as unknown as BuilderStaleRunRecoveryService,
-      {} as DataSource,
-      builderRunCostService as unknown as BuilderRunCostService,
+      builderRunCancellationService as unknown as BuilderRunCancellationService,
+      // ESC-MED-03: sin cuota configurada el encolado pasa siempre; la cuota
+      // tiene su propia suite.
+      { assertProjectWithinQuota: jest.fn() } as never,
     );
   });
 
-  describe('processBuildRunJob', () => {
-    it('marca el run como fallido y saca la entrega de revision cuando el pipeline falla', async () => {
-      builderPipelineOrchestrator.runPipeline.mockRejectedValue(
-        new Error('Pipeline fallido'),
+  /** ESC-BAJO-02: la cola era FIFO estricta y no distinguía quién esperaba. */
+  describe('prioridad en la cola', () => {
+    beforeEach(() => {
+      (builderAccessService.findDeliveryOrThrow as jest.Mock).mockResolvedValue(
+        {
+          id: 'delivery-1',
+          assignment: { projectId: 'project-1' },
+        },
       );
+      buildRunRepository.createQueuedRun.mockResolvedValue(buildRun());
+    });
 
-      await expect(
-        service.processBuildRunJob({ buildRunId: runId, deliveryId } as any),
-      ).rejects.toThrow('Pipeline fallido');
+    it.each([
+      ['TEACHER', 1],
+      ['ADMIN', 1],
+      ['STUDENT', 2],
+    ])('encola con prioridad %s -> %s', async (role, expected) => {
+      await service.enqueueDeliveryRun('delivery-1', {
+        userId: 'u1',
+        role,
+      } as never);
 
-      expect(builderRunSupportService.markRunAsFailed).toHaveBeenCalledWith(
+      expect(builderRunsQueue.add).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Object),
+        expect.objectContaining({ priority: expected }),
+      );
+    });
+  });
+
+  describe('enqueueDeliveryRun', () => {
+    it('ARQ-001: autoriza al alumno via assertCanTriggerDelivery, no assertCanManageDelivery', async () => {
+      (builderAccessService.findDeliveryOrThrow as jest.Mock).mockResolvedValue(
+        {
+          id: 'delivery-1',
+          assignment: { projectId: 'project-1' },
+        },
+      );
+      buildRunRepository.createQueuedRun.mockResolvedValue(buildRun());
+
+      await service.enqueueDeliveryRun('delivery-1', {
+        userId: 'student-1',
+        role: 'STUDENT',
+      } as never);
+
+      expect(builderAccessService.assertCanTriggerDelivery).toHaveBeenCalled();
+    });
+  });
+
+  describe('cancelRun', () => {
+    const actor = { userId: 'teacher-1', role: 'TEACHER' } as any;
+
+    it('HIGH-06: cancela mediante un UPDATE atomico condicionado a QUEUED/RUNNING, no lectura-modificacion-escritura', async () => {
+      (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
+        ...buildRun(),
+        status: BuildRunStatus.RUNNING,
+      });
+
+      const result = await service.cancelRun(runId, actor);
+
+      expect(result).toEqual({
+        buildRunId: runId,
+        status: BuildRunStatus.CANCELLED,
+      });
+      expect(buildRunRepository.save).not.toHaveBeenCalled();
+      expect(buildRunRepository.cancelIfActive).toHaveBeenCalledWith(runId);
+    });
+
+    it('HIGH-06: lanza ConflictException si el run finalizo entre la lectura y el UPDATE (0 filas afectadas)', async () => {
+      (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
+        ...buildRun(),
+        status: BuildRunStatus.RUNNING,
+      });
+      buildRunRepository.cancelIfActive.mockResolvedValue(false);
+
+      await expect(service.cancelRun(runId, actor)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('rechaza cancelar un run que ya finalizo (chequeo previo en memoria)', async () => {
+      (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
+        ...buildRun(),
+        status: BuildRunStatus.SUCCESS,
+      });
+
+      await expect(service.cancelRun(runId, actor)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(buildRunRepository.cancelIfActive).not.toHaveBeenCalled();
+    });
+
+    it('ARQ-004: publica la cancelacion en Redis para que el pipeline en curso deje de facturar', async () => {
+      (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
+        ...buildRun(),
+        status: BuildRunStatus.RUNNING,
+      });
+
+      await service.cancelRun(runId, actor);
+
+      expect(builderRunCancellationService.markCancelled).toHaveBeenCalledWith(
         runId,
-        'Pipeline fallido',
       );
-      const evaluatedCall = deliveriesRepository.save.mock.calls.find(
-        ([delivery]) =>
-          (delivery as Delivery).status === DeliveryStatus.EVALUATED,
-      );
-      expect(evaluatedCall).toBeTruthy();
     });
 
-    it('no limpia el workspace: ese ciclo de vida pertenece al orquestador', async () => {
-      builderPipelineOrchestrator.runPipeline.mockResolvedValue(
-        buildPipelineResult(),
-      );
+    it('ARQ-004: retira de la cola un job QUEUED que aun no tomo ningun worker', async () => {
+      (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
+        ...buildRun(),
+        status: BuildRunStatus.QUEUED,
+      });
 
-      await service.processBuildRunJob({
-        buildRunId: runId,
-        deliveryId,
-      } as any);
+      await service.cancelRun(runId, actor);
 
-      expect(rm).not.toHaveBeenCalled();
+      expect(builderRunsQueue.remove).toHaveBeenCalledWith(runId);
     });
 
-    it('persiste el resultado del pipeline en el run y actualiza la entrega', async () => {
-      builderPipelineOrchestrator.runPipeline.mockResolvedValue(
-        buildPipelineResult({
-          planAssessment: { thought: 'planner thought' },
-          assessment: {
-            thought: 'auditor thought',
-            gradeBreakdown: [{ awarded: 8 }],
-          },
-          qualityFindings: { security: [] },
-          report: { summary: 'final report' },
-        }),
-      );
+    it('ARQ-004: no intenta retirar de la cola un job que ya esta RUNNING', async () => {
+      (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
+        ...buildRun(),
+        status: BuildRunStatus.RUNNING,
+      });
 
-      await service.processBuildRunJob({
-        buildRunId: runId,
-        deliveryId,
-      } as any);
+      await service.cancelRun(runId, actor);
 
-      const savedRunCall = buildRunRepository.save.mock.calls.find(
-        ([run]) => (run as BuildRun).status === BuildRunStatus.SUCCESS,
-      );
-      expect(savedRunCall).toBeTruthy();
-      const savedRun = savedRunCall![0] as BuildRun;
-      expect(savedRun.llmReasoning).toContain('planner thought');
-      expect(savedRun.llmReasoning).toContain('auditor thought');
-      expect(savedRun.report).toEqual({ summary: 'final report' });
-
-      const evaluatedCall = deliveriesRepository.save.mock.calls.find(
-        ([delivery]) =>
-          (delivery as Delivery).status === DeliveryStatus.EVALUATED,
-      );
-      expect(evaluatedCall).toBeTruthy();
+      expect(builderRunsQueue.remove).not.toHaveBeenCalled();
     });
   });
 });

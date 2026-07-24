@@ -5,14 +5,14 @@ import {
   BuilderLlmStageTrace,
   BuilderStageTokenUsage,
   BUILDER_LLM_SCHEMA_VERSION,
-} from '../builder.types';
+} from '../../../domain/builder.types';
 import type {
   LlmModelProfile,
   LlmUsage,
-} from '../../../../../shared/infrastructure/ai/llm.types';
-import type { PromptId } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
-import type { ComposedPromptPayload } from './builder-prompt-composer';
-import { BedrockRequestError } from '../../../../../shared/infrastructure/ai/bedrock-request.util';
+} from '../../../../../../shared/infrastructure/ai/llm.types';
+import type { PromptId } from '../../../../../../shared/infrastructure/ai/prompt-registry.service';
+import type { ComposedPromptPayload } from '../../../domain/ai/builder-prompt-composer';
+import { BedrockRequestError } from '../../../../../../shared/infrastructure/ai/bedrock-request.util';
 
 export function createPromptSnapshot(
   stage: BuilderLlmStagePromptSnapshot['stage'],

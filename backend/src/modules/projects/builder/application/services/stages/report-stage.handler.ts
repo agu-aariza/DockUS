@@ -6,15 +6,17 @@ import { BuilderArtifactPersister } from '../artifacts/builder-artifact-persiste
 import {
   BuilderEvaluationContractV2,
   BuilderCodeQualityContractV2,
+  BuilderExecutionResult,
   BuilderReportEntity,
 } from '../../../domain/builder.types';
+import { serializeExecutionResult } from '../../../domain/ai/builder-execution-result.util';
 import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
 
 interface ReportStageInput {
   runId: string;
   assessment: BuilderEvaluationContractV2;
   qualityFindings: BuilderCodeQualityContractV2;
-  executionLogs: string;
+  execution: BuilderExecutionResult;
 }
 
 interface ReportStageOutput {
@@ -33,10 +35,11 @@ export class BuilderReportStageHandler implements IBuilderStageHandler<
   ) {}
 
   async handle(input: ReportStageInput): Promise<ReportStageOutput> {
-    const { runId, assessment, qualityFindings, executionLogs } = input;
+    const { runId, assessment, qualityFindings, execution } = input;
 
-    const pedagogicalFeedback =
-      this.builderPedagogicalService.generateFeedback(executionLogs);
+    const pedagogicalFeedback = this.builderPedagogicalService.generateFeedback(
+      serializeExecutionResult(execution),
+    );
     const pedagogicalItems =
       this.builderPedagogicalService.toTechnicalFeedbackItems(
         pedagogicalFeedback,

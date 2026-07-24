@@ -57,7 +57,12 @@ export class HealthController {
     status: 503,
     description: 'Una o más dependencias críticas no están disponibles.',
   })
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  // El override anterior nombraba un cubo `default` que no existe entre los
+  // configurados (`global`, `burst`, `auth-identity`), de modo que no surtía
+  // efecto alguno. Se nombra el cubo real. El límite es holgado a propósito:
+  // esta sonda la consultan el orquestador y el balanceador de forma continua,
+  // y estrangularla provocaría el retirado de instancias sanas.
+  @Throttle({ global: { limit: 120, ttl: 60_000 } })
   @Get('readiness')
   async getReadiness() {
     const readiness = await this.healthService.getReadiness();

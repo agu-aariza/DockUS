@@ -149,6 +149,45 @@ describe('parseBuilderEvaluationContractV2', () => {
     );
   });
 
+  it('HIGH-05: fails when evaluativeState=E3 (fail) is paired with a passing recommendedGrade', () => {
+    const raw = JSON.stringify(
+      buildEvaluationPayload({
+        evaluativeState: 'E3',
+        recommendedGrade: 7,
+      }),
+    );
+
+    expect(() => parseBuilderEvaluationContractV2(raw)).toThrow(
+      'evaluativeState=E3 es incompatible con recommendedGrade=7 (máximo 2).',
+    );
+  });
+
+  it('HIGH-05: fails when evaluativeState=E4 (fail) is paired with a passing recommendedGrade', () => {
+    const raw = JSON.stringify(
+      buildEvaluationPayload({
+        evaluativeState: 'E4',
+        recommendedGrade: 9,
+      }),
+    );
+
+    expect(() => parseBuilderEvaluationContractV2(raw)).toThrow(
+      'evaluativeState=E4 es incompatible con recommendedGrade=9 (máximo 2).',
+    );
+  });
+
+  it('HIGH-05: allows evaluativeState=E3/E4 when recommendedGrade stays within the failing range', () => {
+    const raw = JSON.stringify(
+      buildEvaluationPayload({
+        evaluativeState: 'E3',
+        recommendedGrade: 1.5,
+      }),
+    );
+
+    const contract = parseBuilderEvaluationContractV2(raw);
+    expect(contract.evaluativeState).toBe('E3');
+    expect(contract.recommendedGrade).toBe(1.5);
+  });
+
   it('preserves clear parser errors for malformed payloads', () => {
     expect(() => parseBuilderEvaluationContractV2('{"stage":')).toThrow(
       'La salida del evaluador LLM no es JSON válido.',

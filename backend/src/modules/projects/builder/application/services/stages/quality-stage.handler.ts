@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IBuilderStageHandler } from './builder-stage.interface';
-import { BuilderCodeQualityService } from '../../../domain/ai/builder-code-quality.service';
+import { BuilderCodeQualityService } from '../ai/builder-code-quality.service';
 import { BuilderArtifactPersister } from '../artifacts/builder-artifact-persister.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
@@ -8,13 +8,15 @@ import {
   AssignmentContext,
   BuilderEvaluationContractV2,
   BuilderCodeQualityContractV2,
+  BuilderExecutionResult,
+  BuilderStudentStage,
 } from '../../../domain/builder.types';
 import {
   buildEmptyCodeQualityContract,
   resolveCodeQualityFindings,
 } from '../support/builder-fallback-assessment.util';
 import { Delivery } from '../../../../deliveries/entities/delivery.entity';
-import { toStageTokenUsage } from '../../../domain/ai/builder-llm-trace.util';
+import { toStageTokenUsage } from '../ai/builder-llm-trace.util';
 import type {
   BuilderCodeQualityTrace,
   BuilderStageTokenUsage,
@@ -23,7 +25,7 @@ import type {
 interface QualityStageInput {
   runId: string;
   sourceCodePayload: string;
-  executionLogs: string;
+  execution: BuilderExecutionResult;
   assignmentContext: AssignmentContext;
   assessment: BuilderEvaluationContractV2;
   delivery: Delivery;
@@ -51,7 +53,7 @@ export class BuilderQualityStageHandler implements IBuilderStageHandler<
     const {
       runId,
       sourceCodePayload,
-      executionLogs,
+      execution,
       assignmentContext,
       assessment,
       delivery,
@@ -64,15 +66,18 @@ export class BuilderQualityStageHandler implements IBuilderStageHandler<
       await this.builderRunSupportService.emitEvent({
         buildRunId: runId,
         eventType: 'LOG_CHUNK',
-        runStatus: BuildRunStatus.SUCCESS,
+        // ARQ-012: la etapa de calidad corre con el run todavia RUNNING, no
+        // SUCCESS (ese estado lo asigna BuilderRunLifecycleService al final
+        // del pipeline completo, no una etapa individual).
+        runStatus: BuildRunStatus.RUNNING,
         message: 'Realizando analisis profundo de calidad y seguridad...',
-        payload: { studentStage: 'analyzing' },
+        payload: { studentStage: 'analyzing' satisfies BuilderStudentStage },
       });
 
       qualityTrace = await this.builderCodeQualityService.analyzeWithTrace(
         {
           sourceCodePayload,
-          executionLogs,
+          execution,
           assignmentContext,
           assessment,
         },
@@ -91,20 +96,63 @@ export class BuilderQualityStageHandler implements IBuilderStageHandler<
       );
 
       qualityFindings = resolveCodeQualityFindings(qualityTrace);
-      if (qualityTrace.parsedContract) {
+    } catch (qError) {
+      const message = qError instanceof Error ? qError.message : String(qError);
+      this.logger.error(`Error en analisis de calidad: ${message}`);
+      // Un contrato vacío es indistinguible de "código limpio, sin hallazgos".
+      // Sin este evento, un fallo de infraestructura (MinIO/Postgres) produce un
+      // informe de apariencia normal y nadie se entera: ni el docente que lo lee
+      // ni el operador. La etapa sigue degradando en vez de propagar —el resto
+      // de la evaluación es válido y perderla sería peor—, pero deja constancia.
+      await this.builderRunSupportService.emitEvent({
+        buildRunId: runId,
+        eventType: 'WARNING_ADDED',
+        runStatus: BuildRunStatus.RUNNING,
+        message:
+          'El analisis de calidad no pudo completarse; el informe se emite sin hallazgos de calidad.',
+        payload: { degraded: true, stage: 'quality', reason: message },
+      });
+      qualityFindings = buildEmptyCodeQualityContract(
+        `Analisis degradado por error interno: ${message}`,
+      );
+    }
+
+    // El jsonb resuelto arriba (`qualityFindings`, que acaba en
+    // `run.codeQualityFindings`) es la fuente canonica del run; esto es solo
+    // su proyeccion consultable en `code_quality_findings` (ARQ-005). Vive en
+    // un try/catch propio para que un fallo de Postgres al escribir la
+    // proyeccion no destruya un analisis que ya se calculo correctamente —
+    // antes, al compartir el catch de arriba, un error aqui sobreescribia
+    // tambien el jsonb con un contrato vacio.
+    if (qualityTrace?.parsedContract) {
+      try {
         await this.builderArtifactPersister.persistCodeQualityFindingRows(
           runId,
           delivery.assignment.projectId,
           delivery.assignment.studentId,
           qualityTrace.parsedContract,
         );
+      } catch (persistError) {
+        const message =
+          persistError instanceof Error
+            ? persistError.message
+            : String(persistError);
+        this.logger.error(
+          `No se pudo persistir la proyeccion de hallazgos de calidad: ${message}`,
+        );
+        await this.builderRunSupportService.emitEvent({
+          buildRunId: runId,
+          eventType: 'WARNING_ADDED',
+          runStatus: BuildRunStatus.RUNNING,
+          message:
+            'El analisis de calidad se completo, pero su proyeccion consultable no pudo guardarse; el informe del run conserva los hallazgos igualmente.',
+          payload: {
+            degraded: true,
+            stage: 'quality-projection',
+            reason: message,
+          },
+        });
       }
-    } catch (qError) {
-      const message = qError instanceof Error ? qError.message : String(qError);
-      this.logger.error(`Error en analisis de calidad: ${message}`);
-      qualityFindings = buildEmptyCodeQualityContract(
-        `Analisis degradado por error interno: ${message}`,
-      );
     }
 
     const usage = toStageTokenUsage(qualityTrace);

@@ -7,6 +7,10 @@ import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import { StageWorkspaceResult } from '../workspace/builder-workspace.service';
 import { CompiledRecipe } from '../compilation/builder-recipe-compiler.service';
 import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
+import {
+  BuilderExecutionResult,
+  BuilderStudentStage,
+} from '../../../domain/builder.types';
 import { randomUUID } from 'crypto';
 import { chown, readdir } from 'fs/promises';
 import * as path from 'path';
@@ -16,11 +20,12 @@ interface ExecutionStageInput {
   runId: string;
   workspace: StageWorkspaceResult;
   compiled: CompiledRecipe;
-  expectedType: string;
+  /** Cancelacion cooperativa (ARQ-004): mata el contenedor en curso. */
+  signal?: AbortSignal;
 }
 
 interface ExecutionStageOutput {
-  executionLogs: string;
+  execution: BuilderExecutionResult;
 }
 
 /** Ruta dentro del contenedor donde se monta la suite docente, en solo lectura. */
@@ -43,7 +48,7 @@ export class BuilderExecutionStageHandler implements IBuilderStageHandler<
   ) {}
 
   async handle(input: ExecutionStageInput): Promise<ExecutionStageOutput> {
-    const { runId, workspace, compiled } = input;
+    const { runId, workspace, compiled, signal } = input;
 
     const environmentImage =
       await this.builderEnvironmentImageService.ensureEnvironmentImage({
@@ -74,7 +79,7 @@ export class BuilderExecutionStageHandler implements IBuilderStageHandler<
       eventType: 'RUN_STATUS_CHANGED',
       runStatus: BuildRunStatus.RUNNING,
       message: `Iniciando ejecucion del servicio (Puerto: ${compiled.servicePort || 'N/A'})...`,
-      payload: { studentStage: 'executing' },
+      payload: { studentStage: 'executing' satisfies BuilderStudentStage },
     });
 
     // La suite docente se monta en un bind independiente y en solo lectura: el
@@ -127,6 +132,7 @@ export class BuilderExecutionStageHandler implements IBuilderStageHandler<
       user: containerUser,
       memory: this.builderConfigProvider.executionMemoryLimit,
       cpus: this.builderConfigProvider.executionCpuLimit,
+      signal,
       onStdoutChunk: (chunk) => {
         if (chunk.includes('--- HEALTHCHECK EVIDENCE ---')) {
           capturingEvidence = true;
@@ -149,7 +155,7 @@ export class BuilderExecutionStageHandler implements IBuilderStageHandler<
                 : 'Prueba de vida: servicio alcanzable.',
               payload: {
                 evidence: cleanEvidence.slice(0, 300),
-                studentStage: 'executing',
+                studentStage: 'executing' satisfies BuilderStudentStage,
               },
             });
           }
@@ -169,11 +175,16 @@ export class BuilderExecutionStageHandler implements IBuilderStageHandler<
     // Un fallo del programa del alumno (exit code != 0, timeout) es un
     // resultado legítimo y viaja en `execResult`. Un fallo de infraestructura
     // (daemon caído, imagen inexistente) se propaga como excepción: el
-    // orquestador marcará el run como FAILED. Degradarlo a texto haría que el
-    // LLM lo interpretase como la salida del programa y calificase código que
-    // nunca llegó a ejecutarse.
+    // orquestador marcará el run como FAILED. Degradarlo a un resultado
+    // "ran: true" haría que el LLM lo interpretase como la salida del
+    // programa y calificase código que nunca llegó a ejecutarse.
     return {
-      executionLogs: `STDOUT:\n${execResult.stdout}\nSTDERR:\n${execResult.stderr}\nEXIT CODE: ${execResult.exitCode}`,
+      execution: {
+        ran: true,
+        stdout: execResult.stdout,
+        stderr: execResult.stderr,
+        exitCode: execResult.exitCode,
+      },
     };
   }
 

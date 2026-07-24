@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../../../../users/entities/user.entity';
 import { Delivery } from '../../../../deliveries/entities/delivery.entity';
-import { Project } from '../../../../entities/project.entity';
+import { Project, ProjectStatus } from '../../../../entities/project.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
 import { isTeacherAssignedToProject } from '../../../../project-access.policy';
 import { findDeliveryWithAssignmentOrThrow } from '../../../../deliveries/delivery-lookup.util';
@@ -100,6 +100,50 @@ export class BuilderAccessService {
 
     throw new ForbiddenException(
       'No tiene permisos para operar ejecuciones sobre una entrega ajena.',
+    );
+  }
+
+  /**
+   * Autoriza quién puede lanzar una ejecución de builder (ARQ-001): el
+   * alumno dueño de la entrega, con la asignación viva y el proyecto activo,
+   * o profesorado/administración con la misma política de gestión que ya
+   * aplica a cancelar/consultar. Deliberadamente distinta de
+   * `assertCanManageDelivery`: gestionar (cancelar) sigue siendo solo de
+   * staff.
+   */
+  async assertCanTriggerDelivery(
+    delivery: Delivery,
+    actor: AuthenticatedUser,
+  ): Promise<void> {
+    if (actor.role === UserRole.ADMIN || actor.role === UserRole.TEACHER) {
+      await this.assertCanManageDelivery(delivery, actor);
+      return;
+    }
+
+    if (actor.role === UserRole.STUDENT) {
+      if (delivery.authorId !== actor.userId) {
+        throw new ForbiddenException(
+          'No tiene permisos para ejecutar builder sobre una entrega ajena.',
+        );
+      }
+
+      if (delivery.assignment.revokedAt) {
+        throw new ForbiddenException(
+          'La asignación está revocada; no se pueden lanzar ejecuciones.',
+        );
+      }
+
+      if (delivery.assignment.project.status !== ProjectStatus.ACTIVE) {
+        throw new ForbiddenException(
+          'El proyecto no está activo para ejecutar evaluaciones.',
+        );
+      }
+
+      return;
+    }
+
+    throw new ForbiddenException(
+      'No tiene permisos para ejecutar builder sobre esta entrega.',
     );
   }
 

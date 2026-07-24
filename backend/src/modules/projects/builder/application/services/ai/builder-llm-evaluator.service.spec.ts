@@ -1,13 +1,14 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PromptRegistryService } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
-import { BuilderConfigProvider } from '../builder-config.provider';
-import { ILlmGenerationService } from '../../../../../shared/infrastructure/ai/llm-generation.token';
-import { BedrockRequestError } from '../../../../../shared/infrastructure/ai/bedrock-request.util';
-import { BuilderLogTrimmer } from '../../infrastructure/utils/builder-log-trimmer.util';
-import { BuilderLlmConfigService } from '../../infrastructure/config/builder-llm-config.service';
-import { resolveBuilderModelProfile } from './builder-llm-model-profile';
-import type { BuilderLlmPromptStage } from '../../../../../shared/infrastructure/ai/llm.types';
+import { PromptRegistryService } from '../../../../../../shared/infrastructure/ai/prompt-registry.service';
+import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
+import { ILlmGenerationService } from '../../../../../../shared/infrastructure/ai/llm-generation.token';
+import { BedrockRequestError } from '../../../../../../shared/infrastructure/ai/bedrock-request.util';
+import { BuilderLlmDispatcherService } from './builder-llm-dispatcher.service';
+import { BuilderLogTrimmer } from '../../../infrastructure/utils/builder-log-trimmer.util';
+import { BuilderLlmConfigService } from '../../../infrastructure/config/builder-llm-config.service';
+import { resolveBuilderModelProfile } from '../../../domain/ai/builder-llm-model-profile';
+import type { BuilderLlmPromptStage } from '../../../../../../shared/infrastructure/ai/llm.types';
 import { BuilderLlmEvaluatorService } from './builder-llm-evaluator.service';
 
 const validPlanResponse = JSON.stringify({
@@ -131,6 +132,13 @@ describe('BuilderLlmEvaluatorService', () => {
       profile: resolveBuilderModelProfile(stage, configService),
       credentials: null,
     })),
+    resolveStageCandidates: jest.fn(async (stage: BuilderLlmPromptStage) => [
+      {
+        profile: resolveBuilderModelProfile(stage, configService),
+        credentials: null,
+        isPrimary: true,
+      },
+    ]),
   } as unknown as BuilderLlmConfigService;
 
   let service: BuilderLlmEvaluatorService;
@@ -146,7 +154,16 @@ describe('BuilderLlmEvaluatorService', () => {
       } as BuilderConfigProvider,
       promptRegistry,
       new BuilderLogTrimmer(),
-      llmService as any,
+      /**
+       * Despachador REAL sobre el doble de generación: las aserciones existentes
+       * sobre `llmService.generate` siguen siendo válidas y, de paso, cada prueba
+       * ejercita la ruta de conmutación en lugar de sortearla con otro doble.
+       */
+      new BuilderLlmDispatcherService(llmService as never, llmConfigService, {
+        isOpen: () => Promise.resolve(false),
+        recordFailure: jest.fn(),
+        recordSuccess: jest.fn(),
+      } as never),
       llmConfigService,
     );
   });
@@ -237,7 +254,7 @@ describe('BuilderLlmEvaluatorService', () => {
 
     await service.extractFacts({
       sourceCodePayload: 'B'.repeat(2000),
-      executionLogs: 'C'.repeat(2000),
+      execution: { ran: true, stdout: 'C'.repeat(2000), stderr: '', exitCode: 0 },
       assignmentContext: {
         expectedType: 'PYTHON_FASTAPI',
         rubricInstructions: 'Evalua el proyecto.',

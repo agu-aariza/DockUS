@@ -10,6 +10,7 @@ import { UserRole } from '../users/entities/user.entity';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import { Project, ProjectStatus } from './entities/project.entity';
 import { assertTeacherCanManageProject } from './project-access.policy';
+import { applyProjectActorScope } from './infrastructure/database/project-actor-scope.util';
 
 @Injectable()
 export class ProjectAccessService {
@@ -89,32 +90,12 @@ export class ProjectAccessService {
     queryBuilder: ReturnType<Repository<Project>['createQueryBuilder']>,
     actor: AuthenticatedUser,
   ): void {
-    if (actor.role === UserRole.ADMIN) {
-      return;
-    }
-
-    if (actor.role === UserRole.TEACHER) {
-      queryBuilder
-        .innerJoin('project.teachers', 'scopedTeacher')
-        .andWhere('scopedTeacher.id = :requestUserId', {
-          requestUserId: actor.userId,
-        });
-      return;
-    }
-
-    queryBuilder
-      .innerJoin(
-        ProjectAssignment,
-        'assignment',
-        'assignment.projectId = project.id AND assignment.studentId = :requestUserId AND assignment.revokedAt IS NULL',
-        {
-          requestUserId: actor.userId,
-        },
-      )
-      .andWhere('project.status != :draftStatus', {
-        draftStatus: ProjectStatus.DRAFT,
-      })
-      .distinct(true);
+    // ARQ-007: la lógica vive en infrastructure/database/ para que
+    // ProjectRepository (el nuevo puerto) pueda reutilizarla sin que
+    // infrastructure dependa de este servicio de aplicación. Este método
+    // sigue existiendo tal cual para storage-query/deliveries-query/
+    // storage-access, que no pasan por el puerto.
+    applyProjectActorScope(queryBuilder, actor);
   }
 
   assertCanInspectOperationalIssues(actor: AuthenticatedUser): void {

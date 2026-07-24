@@ -17,6 +17,7 @@ import {
 import {
   BuilderCodeQualityContractV2,
   BuilderEvaluationContractV2,
+  BuilderExecutionResult,
   BuilderPlanContractV2,
   BuilderReportEntity,
   BuilderStageTokenUsage,
@@ -31,7 +32,20 @@ export interface EnqueueBuildRunResponse {
 export interface ExecuteBuildRunJobData {
   buildRunId: string;
   deliveryId: string;
-  actor: AuthenticatedUser;
+  /**
+   * Se incluye al encolar desde una petición, pero `processBuildRunJob` no lo
+   * lee: la autorización ya se resolvió antes de encolar y el run guarda
+   * `triggeredById`. Es opcional porque el reencolado de un run huérfano
+   * (BuilderStaleRunRecoveryService) no dispone de la identidad original.
+   */
+  actor?: AuthenticatedUser;
+  /**
+   * Identificador de la petición HTTP que originó el run. Permite enlazar los
+   * registros de la API con los del worker, que son procesos distintos y hasta
+   * ahora no compartían ningún hilo común de diagnóstico. Ausente cuando el
+   * encolado no nace de una petición (reencolado de un run huérfano).
+   */
+  correlationId?: string;
 }
 
 export interface BuilderPipelineResult {
@@ -39,7 +53,7 @@ export interface BuilderPipelineResult {
   assessment: BuilderEvaluationContractV2;
   qualityFindings: BuilderCodeQualityContractV2;
   report: BuilderReportEntity;
-  executionLogs: string;
+  execution: BuilderExecutionResult;
   /** Avisos acumulados durante la preparación del workspace y las etapas. */
   warnings: string[];
   /** Consumo por llamada al LLM, con el proveedor y modelo que la sirvieron. */

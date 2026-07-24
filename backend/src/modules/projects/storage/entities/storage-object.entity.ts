@@ -34,6 +34,9 @@ export enum StorageAssetRole {
   ['projectId', 'deliveryId', 'assetRole', 'logicalPath'],
   { unique: true },
 )
+// ESC-ALTO-07: `UQ_storage_objects_scope` empieza por `projectId`; la búsqueda
+// de los objetos de una entrega concreta no puede aprovecharlo.
+@Index('IDX_storage_objects_delivery', ['deliveryId'])
 export class StorageObject {
   @PrimaryGeneratedColumn('uuid')
   id: string;

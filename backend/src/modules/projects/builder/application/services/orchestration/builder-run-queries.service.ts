@@ -15,7 +15,7 @@ import { buildPaginationMeta } from '../../../../../../shared/utils/pagination.u
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../../../../users/entities/user.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
-import { BuilderRunEventsService } from '../../../domain/events/builder-run-events.service';
+import { BuilderRunEventsService } from '../../../infrastructure/events/builder-run-events.service';
 import {
   BuilderRunEvent,
   EvidenceArtifactPublic,
@@ -25,6 +25,7 @@ import { EvidenceService } from '../../../infrastructure/evidence/evidence.servi
 import { ListBuildRunsDto } from '../../../presentation/dto/list-build-runs.dto';
 import { BuilderAccessService } from '../workspace/builder-access.service';
 import type { PaginatedBuildRunsResponse } from '../builder-application.types';
+import { BuilderQualityAggregationService } from '../evaluation/builder-quality-aggregation.service';
 
 @Injectable()
 export class BuilderRunQueriesService {
@@ -34,6 +35,7 @@ export class BuilderRunQueriesService {
     private readonly builderAccessService: BuilderAccessService,
     private readonly builderRunEventsService: BuilderRunEventsService,
     private readonly evidenceService: EvidenceService,
+    private readonly builderQualityAggregationService: BuilderQualityAggregationService,
   ) {}
 
   async getRunById(
@@ -81,6 +83,62 @@ export class BuilderRunQueriesService {
       data: rows,
       meta: buildPaginationMeta(page, limit, total),
     };
+  }
+
+  /**
+   * Ultimo BuildRun por entrega, en una unica consulta (DISTINCT ON), para
+   * las entregas indicadas. Sustituye el fan-out N+1 que hacia el frontend
+   * (una peticion GET por entrega) por una unica llamada batch (HIGH-09).
+   *
+   * El scoping de acceso se resuelve en la propia consulta SQL, no por
+   * entrega vía `assertCanAccessDelivery` en un bucle (eso solo trasladaria
+   * el N+1 al backend): STUDENT solo ve sus propias entregas, TEACHER solo
+   * las de proyectos a los que esta asignado, ADMIN todas. Las entregas
+   * fuera de alcance del actor simplemente no aparecen en el resultado (se
+   * devuelven como `null`), sin filtrar cuales de los IDs solicitados eran
+   * ajenos.
+   */
+  async listLatestRunsByDeliveryIds(
+    deliveryIds: string[],
+    actor: AuthenticatedUser,
+  ): Promise<Record<string, BuildRun | null>> {
+    const uniqueIds = Array.from(new Set(deliveryIds));
+    const result: Record<string, BuildRun | null> = {};
+    for (const id of uniqueIds) {
+      result[id] = null;
+    }
+    if (uniqueIds.length === 0) {
+      return result;
+    }
+
+    const queryBuilder = this.buildRunsRepository
+      .createQueryBuilder('run')
+      .distinctOn(['run.deliveryId'])
+      .innerJoin('run.delivery', 'delivery')
+      .where('run.deliveryId IN (:...uniqueIds)', { uniqueIds });
+
+    if (actor.role === UserRole.STUDENT) {
+      queryBuilder.andWhere('delivery.authorId = :userId', {
+        userId: actor.userId,
+      });
+    } else if (actor.role === UserRole.TEACHER) {
+      queryBuilder
+        .innerJoin('delivery.assignment', 'assignment')
+        .innerJoin('assignment.project', 'project')
+        .innerJoin('project.teachers', 'scopedTeacher')
+        .andWhere('scopedTeacher.id = :userId', { userId: actor.userId });
+    }
+    // ADMIN: sin filtro adicional, ve el batch completo.
+
+    queryBuilder
+      .orderBy('run.deliveryId', 'ASC')
+      .addOrderBy('run.createdAt', 'DESC');
+
+    const runs = await queryBuilder.getMany();
+    for (const run of runs) {
+      result[run.deliveryId] = run;
+    }
+    return result;
   }
 
   async listRunEvents(
@@ -146,64 +204,22 @@ export class BuilderRunQueriesService {
     );
   }
 
+  /**
+   * ARQ-005: delega en `BuilderQualityAggregationService`, que agrega con SQL
+   * sobre `code_quality_findings` (la proyeccion consultable) en vez de cargar
+   * en memoria todos los runs con findings y recorrer su jsonb con `as any`
+   * sin cota. El jsonb (`run.codeQualityFindings`) sigue siendo la fuente
+   * canonica del documento del run; esto es solo la vista agregada.
+   */
   async getAssignmentQualityInsights(
     assignmentId: string,
     actor: AuthenticatedUser,
   ) {
     this.builderAccessService.assertIsStaff(actor);
 
-    const runs = await this.buildRunsRepository
-      .createQueryBuilder('run')
-      .innerJoin('run.delivery', 'delivery')
-      .where('delivery.assignmentId = :assignmentId', { assignmentId })
-      .andWhere('run.codeQualityFindings IS NOT NULL')
-      .orderBy('run.createdAt', 'DESC')
-      .getMany();
-
-    // Filtramos para quedarnos con el último run de cada entrega (alumno)
-    const latestRunsByDelivery = new Map<string, BuildRun>();
-    for (const run of runs) {
-      if (!latestRunsByDelivery.has(run.deliveryId)) {
-        latestRunsByDelivery.set(run.deliveryId, run);
-      }
-    }
-
-    const uniqueRuns = Array.from(latestRunsByDelivery.values());
-    const counts = new Map<
-      string,
-      { title: string; count: number; category: string }
-    >();
-
-    for (const run of uniqueRuns) {
-      const findings = run.codeQualityFindings as any;
-      const categories = [
-        'quality',
-        'security',
-        'architecture',
-        'rubricCompliance',
-      ];
-
-      for (const cat of categories) {
-        const items = findings[cat] || [];
-        for (const item of items) {
-          const key = `${cat}:${item.title}`;
-          const existing = counts.get(key) || {
-            title: item.title,
-            count: 0,
-            category: cat,
-          };
-          existing.count++;
-          counts.set(key, existing);
-        }
-      }
-    }
-
-    return {
-      totalDeliveriesAnalyzed: uniqueRuns.length,
-      insights: Array.from(counts.values())
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10), // Top 10 patrones detectados
-    };
+    return this.builderQualityAggregationService.getInsightsForAssignment(
+      assignmentId,
+    );
   }
 
   private filterArtifactsForActor(

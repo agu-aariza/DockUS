@@ -7,8 +7,12 @@ import type {
 } from '../../../../shared/infrastructure/ai/llm.types';
 import type { PromptSectionTrace } from './ai/prompt-composer.types';
 import type { RubricCriterion } from '../../entities/project.entity';
+import type { BuilderRuntimeFamily } from './runtime-catalog';
 
 export type { RubricCriterion };
+// audit/04 ARQ-010: BuilderRuntimeFamily se deriva de las claves de
+// RUNTIME_CATALOG (más 'unknown') en runtime-catalog.ts — no se duplica aquí.
+export type { BuilderRuntimeFamily };
 
 export const BUILDER_LLM_SCHEMA_VERSION = 'builder-llm/v2' as const;
 export type BuilderLlmSchemaVersion = typeof BUILDER_LLM_SCHEMA_VERSION;
@@ -30,14 +34,6 @@ type Assessment = (typeof ASSESSMENTS)[number];
 export const CONFIDENCE_LEVELS = ['low', 'medium', 'high'] as const;
 export type Confidence = (typeof CONFIDENCE_LEVELS)[number];
 
-export const BUILDER_RUNTIME_FAMILIES = [
-  'python',
-  'node',
-  'c',
-  'unknown',
-] as const;
-export type BuilderRuntimeFamily = (typeof BUILDER_RUNTIME_FAMILIES)[number];
-
 export const BUILD_RUN_EVENT_TYPES = [
   'RUN_ENQUEUED',
   'RUN_STARTED',
@@ -51,6 +47,37 @@ export const BUILD_RUN_EVENT_TYPES = [
   'RUN_CANCELLED',
 ] as const;
 export type BuildRunEventType = (typeof BUILD_RUN_EVENT_TYPES)[number];
+
+// audit/04 ARQ-012: fase de cara al alumno, antes repetida como literal suelto
+// en cada emitEvent (y replicada a mano en el frontend). Un `payload.studentStage`
+// que no está en esta lista es un typo, no una fase nueva legítima.
+export const BUILDER_STUDENT_STAGES = [
+  'building',
+  'executing',
+  'evaluating',
+  'analyzing',
+  'completed',
+  'failed',
+] as const;
+export type BuilderStudentStage = (typeof BUILDER_STUDENT_STAGES)[number];
+
+/**
+ * Resultado de la etapa de ejecución (audit/04 ARQ-012), tipado en vez de
+ * viajar como el blob `STDOUT:\n...\nSTDERR:\n...\nEXIT CODE: n` que cada
+ * consumidor aguas abajo (guard de alucinaciones, fallback del evaluador)
+ * tenía que re-parsear con regex. `ran: false` cubre el caso "el planner no
+ * produjo un comando ejecutable" — no es un fallo de infraestructura (eso
+ * sigue propagándose como excepción), es un resultado legítimo sin proceso
+ * que ejecutar.
+ */
+export interface BuilderExecutionResult {
+  ran: boolean;
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  /** Solo tiene sentido cuando `ran` es `false`. */
+  skippedReason?: string;
+}
 
 export interface CapabilityAssessment {
   status: Assessment;
@@ -271,13 +298,6 @@ export interface BuilderCodeQualityContractV2 {
   rubricCompliance: CodeQualityFinding[];
 }
 
-export interface BuilderSelfHealingReport {
-  attempted: boolean;
-  recovered: boolean;
-  attemptsUsed: number;
-  summary: string;
-}
-
 export interface BuilderTechnicalFeedbackReport {
   security: CodeQualityFinding[];
   architecture: CodeQualityFinding[];
@@ -298,7 +318,6 @@ export interface BuilderReportEntity {
   llmRecommendations?: string[];
   overallOutcome?: BuilderOutcome;
   technicalFeedback?: BuilderTechnicalFeedbackReport;
-  selfHealing?: BuilderSelfHealingReport;
   coaching?: BuilderReportCoaching;
   learningObjective?: string;
   professionalVerdict?: string;

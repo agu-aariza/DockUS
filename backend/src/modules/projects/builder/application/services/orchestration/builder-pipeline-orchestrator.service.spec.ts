@@ -1,17 +1,17 @@
-import * as fs from 'fs/promises';
-
 import { BuilderPipelineOrchestrator } from './builder-pipeline-orchestrator.service';
 import { BuilderRunSupportService } from './builder-run-support.service';
 import {
   BuilderWorkspaceService,
   StageWorkspaceResult,
 } from '../workspace/builder-workspace.service';
+import { SourceCodePayloadBuilder } from '../workspace/source-code-payload-builder.service';
 import { BuilderPlanStageHandler } from '../stages/plan-stage.handler';
 import { BuilderCompileStageHandler } from '../stages/compile-stage.handler';
 import { BuilderExecutionStageHandler } from '../stages/execution-stage.handler';
 import { BuilderEvaluationStageHandler } from '../stages/evaluation-stage.handler';
 import { BuilderQualityStageHandler } from '../stages/quality-stage.handler';
 import { BuilderReportStageHandler } from '../stages/report-stage.handler';
+import { BuilderReportComposer } from '../evaluation/builder-report-composer.service';
 import {
   BuildRun,
   BuildRunStatus,
@@ -23,10 +23,8 @@ import {
 import { Project } from '../../../../entities/project.entity';
 import { ProjectAssignment } from '../../../../assignments/entities/project-assignment.entity';
 import { RuntimeFile } from '../../../domain/builder.types';
-
-jest.mock('fs/promises', () => ({
-  readFile: jest.fn(),
-}));
+import { BuilderRunCancellationService } from './builder-run-cancellation.service';
+import { RunCancelledError } from './run-cancelled.error';
 
 describe('BuilderPipelineOrchestrator', () => {
   let orchestrator: BuilderPipelineOrchestrator;
@@ -37,6 +35,14 @@ describe('BuilderPipelineOrchestrator', () => {
   const builderWorkspaceService = {
     prepareWorkspace: jest.fn(),
     cleanup: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const sourceCodePayloadBuilder = {
+    build: jest.fn(),
+  };
+
+  const builderReportComposer = {
+    enrichGradeBreakdownWithRubric: jest.fn(),
   };
 
   const planStageHandler = {
@@ -65,6 +71,15 @@ describe('BuilderPipelineOrchestrator', () => {
 
   const builderRunSupportService = {
     emitEvent: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const cancellationWatcherStop = jest.fn();
+  const builderRunCancellationService = {
+    assertNotCancelled: jest.fn().mockResolvedValue(undefined),
+    createCancellationWatcher: jest.fn(() => ({
+      signal: new AbortController().signal,
+      stop: cancellationWatcherStop,
+    })),
   };
 
   const buildProject = (): Project =>
@@ -112,16 +127,20 @@ describe('BuilderPipelineOrchestrator', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    sourceCodePayloadBuilder.build.mockResolvedValue('source code payload');
 
     orchestrator = new BuilderPipelineOrchestrator(
       builderWorkspaceService as unknown as BuilderWorkspaceService,
+      sourceCodePayloadBuilder as unknown as SourceCodePayloadBuilder,
       planStageHandler as unknown as BuilderPlanStageHandler,
       compileStageHandler as unknown as BuilderCompileStageHandler,
       executionStageHandler as unknown as BuilderExecutionStageHandler,
       evaluationStageHandler as unknown as BuilderEvaluationStageHandler,
       qualityStageHandler as unknown as BuilderQualityStageHandler,
       reportStageHandler as unknown as BuilderReportStageHandler,
+      builderReportComposer as unknown as BuilderReportComposer,
       builderRunSupportService as unknown as BuilderRunSupportService,
+      builderRunCancellationService as unknown as BuilderRunCancellationService,
     );
   });
 
@@ -137,7 +156,13 @@ describe('BuilderPipelineOrchestrator', () => {
       planStageHandler.handle.mockResolvedValue({ planAssessment, usages: [] });
       compileStageHandler.handle.mockResolvedValue({
         compiled: { executable: false },
-        executionLogs: 'compile logs',
+        execution: {
+          ran: false,
+          stdout: '',
+          stderr: '',
+          exitCode: null,
+          skippedReason: 'compile logs',
+        },
       });
       evaluationStageHandler.handle.mockResolvedValue({
         assessment,
@@ -167,7 +192,7 @@ describe('BuilderPipelineOrchestrator', () => {
       expect(result.assessment).toEqual(assessment);
       expect(result.qualityFindings).toEqual(qualityFindings);
       expect(result.report).toEqual(report);
-      expect(result.executionLogs).toBe('compile logs');
+      expect(result.execution.skippedReason).toBe('compile logs');
       expect(result.warnings).toEqual(workspace.warnings);
       // El orquestador posee el ciclo de vida: limpia el workspace al terminar.
       expect(builderWorkspaceService.cleanup).toHaveBeenCalledWith(workspace);
@@ -185,7 +210,7 @@ describe('BuilderPipelineOrchestrator', () => {
         compiled: { executable: true },
       });
       executionStageHandler.handle.mockResolvedValue({
-        executionLogs: 'exec logs',
+        execution: { ran: true, stdout: 'exec logs', stderr: '', exitCode: 0 },
       });
       evaluationStageHandler.handle.mockResolvedValue({
         assessment: {},
@@ -202,33 +227,22 @@ describe('BuilderPipelineOrchestrator', () => {
         buildDelivery(),
       );
 
+      // ARQ-014: expectedType ya no viaja hasta la etapa de ejecucion — el
+      // handler nunca lo leia (ver el destructuring de execution-stage.handler.ts).
       expect(executionStageHandler.handle).toHaveBeenCalledWith(
-        expect.objectContaining({
-          runId,
-          expectedType: 'PYTHON_FASTAPI',
-        }),
+        expect.objectContaining({ runId }),
       );
-      expect(result.executionLogs).toBe('exec logs');
+      expect(
+        (executionStageHandler.handle.mock.calls[0][0] as { expectedType?: unknown }).expectedType,
+      ).toBeUndefined();
+      expect(result.execution.stdout).toBe('exec logs');
     });
 
-    it('enriquece el gradeBreakdown con el peso y la descripción de la rúbrica configurada', async () => {
-      const assessment = {
-        thought: 'eval ok',
-        gradeBreakdown: [
-          {
-            criterion: 'Correctitud',
-            maxPoints: 6,
-            awarded: 5,
-            justification: 'ok',
-          },
-          {
-            criterion: 'Sin match',
-            maxPoints: 4,
-            awarded: 4,
-            justification: 'ok',
-          },
-        ],
-      };
+    it('ARQ-011: delega el enriquecimiento del gradeBreakdown en BuilderReportComposer con la rúbrica del proyecto', async () => {
+      const assessment = { thought: 'eval ok', gradeBreakdown: [] };
+      const rubricCriteria = [
+        { name: 'Correctitud', weight: 60, description: 'Salida correcta.' },
+      ];
 
       const delivery = {
         id: deliveryId,
@@ -240,13 +254,7 @@ describe('BuilderPipelineOrchestrator', () => {
             expectedType: 'PYTHON_FASTAPI',
             rubricInstructions: null,
             expectedOutput: null,
-            rubricCriteria: [
-              {
-                name: 'Correctitud',
-                weight: 60,
-                description: 'Salida correcta.',
-              },
-            ],
+            rubricCriteria,
           },
         },
       } as unknown as Delivery;
@@ -260,7 +268,13 @@ describe('BuilderPipelineOrchestrator', () => {
       });
       compileStageHandler.handle.mockResolvedValue({
         compiled: { executable: false },
-        executionLogs: 'logs',
+        execution: {
+          ran: false,
+          stdout: '',
+          stderr: '',
+          exitCode: null,
+          skippedReason: 'logs',
+        },
       });
       evaluationStageHandler.handle.mockResolvedValue({
         assessment,
@@ -272,17 +286,13 @@ describe('BuilderPipelineOrchestrator', () => {
       });
       reportStageHandler.handle.mockResolvedValue({ report: {} });
 
-      const result = await orchestrator.runPipeline(buildRun(), delivery);
+      await orchestrator.runPipeline(buildRun(), delivery);
 
-      expect(result.assessment.gradeBreakdown[0]).toEqual(
-        expect.objectContaining({
-          criterion: 'Correctitud',
-          weight: 60,
-          description: 'Salida correcta.',
-        }),
-      );
-      // El criterio sin correspondencia en la rúbrica queda intacto (sin peso).
-      expect(result.assessment.gradeBreakdown[1].weight).toBeUndefined();
+      // Movido a BuilderReportComposer (ARQ-011): el orquestador ya no
+      // conoce la lógica de emparejamiento por nombre, solo delega.
+      expect(
+        builderReportComposer.enrichGradeBreakdownWithRubric,
+      ).toHaveBeenCalledWith(assessment, rubricCriteria);
     });
 
     it('propaga el error cuando una stage falla', async () => {
@@ -296,33 +306,20 @@ describe('BuilderPipelineOrchestrator', () => {
       ).rejects.toThrow('plan failed');
     });
 
-    it('construye sourceCodePayload ignorando node_modules y __pycache__', async () => {
-      const workspace = buildWorkspace([
-        {
-          relativePath: 'app.py',
-          absolutePath: '/tmp/project/app.py',
-          sizeBytes: 100,
-        },
-        {
-          relativePath: 'node_modules/pkg/index.js',
-          absolutePath: '/tmp/project/node_modules/pkg/index.js',
-          sizeBytes: 100,
-        },
-        {
-          relativePath: '__pycache__/cache.pyc',
-          absolutePath: '/tmp/project/__pycache__/cache.pyc',
-          sizeBytes: 100,
-        },
-      ]);
+    it('ARQ-011: construye el payload de código fuente vía SourceCodePayloadBuilder y lo propaga a las etapas', async () => {
+      const workspace = buildWorkspace();
 
       builderWorkspaceService.prepareWorkspace.mockResolvedValue(workspace);
-      jest.mocked(fs.readFile).mockResolvedValue('content');
+      sourceCodePayloadBuilder.build.mockResolvedValue(
+        '--- Archivo: app.py ---\nprint(1)\n',
+      );
       planStageHandler.handle.mockResolvedValue({
         planAssessment: {},
         usages: [],
       });
       compileStageHandler.handle.mockResolvedValue({
         compiled: { executable: false },
+        execution: { ran: false, stdout: '', stderr: '', exitCode: null },
       });
       evaluationStageHandler.handle.mockResolvedValue({
         assessment: {},
@@ -336,19 +333,84 @@ describe('BuilderPipelineOrchestrator', () => {
 
       await orchestrator.runPipeline(buildRun(), buildDelivery());
 
-      expect(fs.readFile).toHaveBeenCalledTimes(1);
-      expect(fs.readFile).toHaveBeenCalledWith('/tmp/project/app.py', 'utf8');
+      // La política de qué cuenta como código fuente (extensiones, tamaño
+      // máximo, directorios excluidos) vive ahora en SourceCodePayloadBuilder
+      // (ARQ-011), no en el orquestador — este solo la invoca y propaga el
+      // resultado.
+      expect(sourceCodePayloadBuilder.build).toHaveBeenCalledWith(workspace);
+      expect(planStageHandler.handle).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sourceCodePayload: '--- Archivo: app.py ---\nprint(1)\n',
+        }),
+      );
+    });
 
-      expect(planStageHandler.handle).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sourceCodePayload: expect.stringContaining('--- Archivo: app.py ---'),
-        }),
+    it('ARQ-004: aborta entre etapas si detecta cancelacion, sin invocar las etapas restantes', async () => {
+      builderWorkspaceService.prepareWorkspace.mockResolvedValue(
+        buildWorkspace(),
       );
-      expect(planStageHandler.handle).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sourceCodePayload: expect.not.stringContaining('node_modules'),
-        }),
+      planStageHandler.handle.mockResolvedValue({
+        planAssessment: {},
+        usages: [],
+      });
+      compileStageHandler.handle.mockResolvedValue({
+        compiled: { executable: false },
+        execution: {
+          ran: false,
+          stdout: '',
+          stderr: '',
+          exitCode: null,
+          skippedReason: 'logs',
+        },
+      });
+      builderRunCancellationService.assertNotCancelled
+        .mockResolvedValueOnce(undefined) // antes del plan
+        .mockResolvedValueOnce(undefined) // antes del compile
+        .mockRejectedValueOnce(new RunCancelledError(runId)); // antes de ejecucion/evaluacion
+
+      await expect(
+        orchestrator.runPipeline(buildRun(), buildDelivery()),
+      ).rejects.toThrow(RunCancelledError);
+
+      expect(evaluationStageHandler.handle).not.toHaveBeenCalled();
+      expect(qualityStageHandler.handle).not.toHaveBeenCalled();
+      // El ciclo de vida del workspace no depende de por que termino el pipeline.
+      expect(builderWorkspaceService.cleanup).toHaveBeenCalled();
+    });
+
+    it('ARQ-004: abre un sondeo de cancelacion alrededor de la etapa de ejecucion y lo cierra siempre', async () => {
+      builderWorkspaceService.prepareWorkspace.mockResolvedValue(
+        buildWorkspace(),
       );
+      planStageHandler.handle.mockResolvedValue({
+        planAssessment: {},
+        usages: [],
+      });
+      compileStageHandler.handle.mockResolvedValue({
+        compiled: { executable: true },
+      });
+      executionStageHandler.handle.mockResolvedValue({
+        execution: { ran: true, stdout: 'exec logs', stderr: '', exitCode: 0 },
+      });
+      evaluationStageHandler.handle.mockResolvedValue({
+        assessment: {},
+        usages: [],
+      });
+      qualityStageHandler.handle.mockResolvedValue({
+        qualityFindings: {},
+        usages: [],
+      });
+      reportStageHandler.handle.mockResolvedValue({ report: {} });
+
+      await orchestrator.runPipeline(buildRun(), buildDelivery());
+
+      expect(
+        builderRunCancellationService.createCancellationWatcher,
+      ).toHaveBeenCalledWith(runId);
+      expect(executionStageHandler.handle).toHaveBeenCalledWith(
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+      expect(cancellationWatcherStop).toHaveBeenCalled();
     });
   });
 });

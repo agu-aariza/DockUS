@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IBuilderStageHandler } from './builder-stage.interface';
-import { BuilderLlmEvaluatorService } from '../../../domain/ai/builder-llm-evaluator.service';
+import { BuilderLlmEvaluatorService } from '../ai/builder-llm-evaluator.service';
 import { BuilderArtifactPersister } from '../artifacts/builder-artifact-persister.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
 import { BuilderHallucinationGuard } from '../evaluation/builder-hallucination-guard.service';
@@ -8,19 +8,22 @@ import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import {
   AssignmentContext,
   BuilderEvaluationContractV2,
+  BuilderExecutionResult,
   BuilderFactsContractV2,
   BuilderPlanContractV2,
+  BuilderStudentStage,
 } from '../../../domain/builder.types';
 import { resolveEvaluationAssessment } from '../support/builder-fallback-assessment.util';
 import { StageWorkspaceResult } from '../workspace/builder-workspace.service';
-import { toStageTokenUsage } from '../../../domain/ai/builder-llm-trace.util';
+import { toStageTokenUsage } from '../ai/builder-llm-trace.util';
+import { serializeExecutionResult } from '../../../domain/ai/builder-execution-result.util';
 import type { BuilderStageTokenUsage } from '../../../domain/builder.types';
 
 interface EvaluationStageInput {
   runId: string;
   workspace: StageWorkspaceResult;
   sourceCodePayload: string;
-  executionLogs: string;
+  execution: BuilderExecutionResult;
   assignmentContext: AssignmentContext;
   planAssessment: BuilderPlanContractV2;
 }
@@ -47,7 +50,7 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<
       runId,
       workspace,
       sourceCodePayload,
-      executionLogs,
+      execution,
       assignmentContext,
       planAssessment,
     } = input;
@@ -57,14 +60,14 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<
       eventType: 'LOG_CHUNK',
       runStatus: BuildRunStatus.RUNNING,
       message: 'Auditoria final del LLM...',
-      payload: { studentStage: 'evaluating' },
+      payload: { studentStage: 'evaluating' satisfies BuilderStudentStage },
     });
 
     const factsTrace =
       await this.builderLlmEvaluatorService.extractFactsWithTrace(
         {
           sourceCodePayload,
-          executionLogs,
+          execution,
           assignmentContext,
         },
         {
@@ -83,7 +86,7 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<
 
     const facts =
       factsTrace.parsedContract ??
-      this.createFallbackFacts(executionLogs, assignmentContext.expectedOutput);
+      this.createFallbackFacts(execution, assignmentContext.expectedOutput);
 
     const evaluationTrace =
       await this.builderLlmEvaluatorService.evaluateWithTrace(
@@ -110,7 +113,7 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<
     const assessment = resolveEvaluationAssessment(
       evaluationTrace,
       planAssessment,
-      executionLogs,
+      execution,
       assignmentContext.expectedOutput ?? null,
       this.builderHallucinationGuard,
     );
@@ -124,7 +127,7 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<
   }
 
   private createFallbackFacts(
-    executionLogs: string,
+    execution: BuilderExecutionResult,
     expectedOutput: string | null,
   ): BuilderFactsContractV2 {
     return {
@@ -134,14 +137,14 @@ export class BuilderEvaluationStageHandler implements IBuilderStageHandler<
         'Fallback: no se pudo extraer hechos estructurados. Se devuelve un resumen mínimo.',
       observedStdout: [],
       observedStderr: [],
-      exitCode: null,
+      exitCode: execution.exitCode,
       compilationStatus: 'not_applicable',
       matchesOracle: false,
       discrepancies: expectedOutput
         ? ['No se pudo verificar la salida contra el oráculo.']
         : [],
       filesPresent: [],
-      executionSummary: executionLogs.slice(0, 500),
+      executionSummary: serializeExecutionResult(execution).slice(0, 500),
       evidenceLimits: [
         'Fallback: el extractor de hechos falló. La evaluación continúa con logs en bruto truncados.',
       ],

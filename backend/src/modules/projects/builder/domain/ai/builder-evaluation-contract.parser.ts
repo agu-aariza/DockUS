@@ -150,6 +150,8 @@ export function parseBuilderEvaluationContractV2(
       contract.capabilities,
       contract.recipe,
       contract.observedEvidence,
+      contract.evaluativeState,
+      contract.recommendedGrade,
     );
   }
 

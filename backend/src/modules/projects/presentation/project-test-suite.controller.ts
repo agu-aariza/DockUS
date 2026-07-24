@@ -32,6 +32,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UPLOAD_MULTER_OPTIONS } from '../storage/upload-multer.config';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../../auth/guards/roles.guard';
 import type { AuthenticatedRequest } from '../../auth/interfaces/authenticated-user.interface';
@@ -66,7 +67,14 @@ export class ProjectTestSuiteController {
   })
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  // `storageUploadService.uploadProjectTestSuite` ya valida tamano/extension,
+  // pero lo hace sobre `file.buffer` — es decir, despues de que Multer haya
+  // bufferizado la parte multipart completa en RAM del proceso API. Sin
+  // `limits.fileSize` aqui, un TEACHER/ADMIN puede enviar varios GB en una
+  // sola peticion y agotar esa memoria antes de que la validacion tenga
+  // oportunidad de rechazarla (HIGH-11, misma clase de bug que en
+  // storage.controller.ts).
+  @UseInterceptors(FileInterceptor('file', UPLOAD_MULTER_OPTIONS))
   async uploadTestSuite(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file: UploadedStorageFile | undefined,

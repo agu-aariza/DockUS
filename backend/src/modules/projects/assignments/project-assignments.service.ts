@@ -10,7 +10,8 @@ import { In, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { User, UserRole } from '../../users/entities/user.entity';
 import { Delivery } from '../deliveries/entities/delivery.entity';
-import { ProjectStatus } from '../entities/project.entity';
+import { Project, ProjectStatus } from '../entities/project.entity';
+import { isTeacherAssignedToProject } from '../project-access.policy';
 import { ProjectAccessService } from '../project-access.service';
 import { ProjectAssignment } from './entities/project-assignment.entity';
 import { GROUP_ROSTER_READER } from '../../../shared/application/group-roster-reader.port';
@@ -36,6 +37,8 @@ export class ProjectAssignmentsService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(Delivery)
     private readonly deliveriesRepository: Repository<Delivery>,
+    @InjectRepository(Project)
+    private readonly projectsRepository: Repository<Project>,
     private readonly projectAccessService: ProjectAccessService,
     @Inject(GROUP_ROSTER_READER)
     private readonly groupRosterReader: GroupRosterReader,
@@ -123,6 +126,7 @@ export class ProjectAssignmentsService {
       studentIds?: string[];
       studentEmails?: string[];
       groupIds?: string[];
+      rawInput?: string;
     },
     actor: AuthenticatedUser,
   ): Promise<BulkAssignResponse> {
@@ -144,8 +148,8 @@ export class ProjectAssignmentsService {
     ];
 
     // Parse raw input if provided
-    if ((input as any).rawInput) {
-      const lines = (input as any).rawInput
+    if (input.rawInput) {
+      const lines = input.rawInput
         .split(/[\n,;]+/)
         .map((l: string) => l.trim())
         .filter(Boolean);
@@ -356,10 +360,17 @@ export class ProjectAssignmentsService {
     }
 
     if (actor.role !== UserRole.ADMIN) {
-      if (
-        actor.role !== UserRole.TEACHER ||
-        assignment.project.creatorId !== actor.userId
-      ) {
+      // Un co-docente asignado (no solo el creador original) debe poder
+      // revocar asignaciones del mismo proyecto (HIGH-10): misma politica
+      // que ProjectAccessService/BuilderAccessService.
+      const isAssignedTeacher =
+        actor.role === UserRole.TEACHER &&
+        (await isTeacherAssignedToProject(
+          this.projectsRepository,
+          assignment.project.id,
+          actor.userId,
+        ));
+      if (!isAssignedTeacher) {
         throw new ForbiddenException(
           'No tiene permisos para revocar esta asignación.',
         );
@@ -391,7 +402,13 @@ export class ProjectAssignmentsService {
     }
 
     if (actor.role === UserRole.TEACHER) {
-      if (assignment.project.creatorId !== actor.userId) {
+      // Idem: co-docente asignado, no solo creatorId (HIGH-10).
+      const isAssignedTeacher = await isTeacherAssignedToProject(
+        this.projectsRepository,
+        assignment.project.id,
+        actor.userId,
+      );
+      if (!isAssignedTeacher) {
         throw new ForbiddenException(
           'No tiene permisos sobre la asignación solicitada.',
         );

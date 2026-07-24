@@ -1,7 +1,17 @@
 import type {
   BuilderCapabilityMap,
   BuilderRecipeV2,
+  EvaluativeState,
 } from '../../builder.types';
+
+/**
+ * El propio prompt del evaluador exige esta correlación ("Logs solo de
+ * compilación: evaluativeState=E3, recommendedGrade≤2") pero solo como guía
+ * de prompt — nada la hacía cumplir. E3/E4 se traducen a `overallOutcome`
+ * FAIL para el alumno; sin esta comprobación el informe podía mostrar
+ * "APTO" (E1/E2) junto a una nota suspensa, o "NO APTO" junto a un 9/10.
+ */
+const MAX_GRADE_FOR_FAILING_STATE = 2;
 
 export function normalizeGrade(value: unknown): number | undefined {
   if (value === undefined || value === null) return undefined;
@@ -20,6 +30,8 @@ export function assertEvaluationSemanticConsistency(
   capabilities: BuilderCapabilityMap,
   recipe: BuilderRecipeV2,
   observedEvidence: string[],
+  evaluativeState: EvaluativeState,
+  recommendedGrade: number | undefined,
 ): void {
   if (observedEvidence.length < 1) {
     throw new Error(
@@ -36,5 +48,15 @@ export function assertEvaluationSemanticConsistency(
     recipe.service?.healthcheck === null
   ) {
     throw new Error('C5=yes requiere recipe.service.healthcheck.');
+  }
+
+  if (
+    recommendedGrade !== undefined &&
+    (evaluativeState === 'E3' || evaluativeState === 'E4') &&
+    recommendedGrade > MAX_GRADE_FOR_FAILING_STATE
+  ) {
+    throw new Error(
+      `evaluativeState=${evaluativeState} es incompatible con recommendedGrade=${recommendedGrade} (máximo ${MAX_GRADE_FOR_FAILING_STATE}).`,
+    );
   }
 }

@@ -54,6 +54,10 @@ describe('UsersService', () => {
     createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
   };
 
+  const authIdentityCache = {
+    invalidate: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     queryBuilder.addSelect.mockReturnThis();
@@ -63,7 +67,10 @@ describe('UsersService', () => {
     queryBuilder.orderBy.mockReturnThis();
     queryBuilder.skip.mockReturnThis();
     queryBuilder.take.mockReturnThis();
-    service = new UsersService(usersRepository as unknown as Repository<User>);
+    service = new UsersService(
+      usersRepository as unknown as Repository<User>,
+      authIdentityCache as never,
+    );
   });
 
   it('debe normalizar email en findByEmail antes de consultar', async () => {
@@ -308,5 +315,60 @@ describe('UsersService', () => {
     await expect(
       service.validatePassword('plain-password', 'hashed-password'),
     ).resolves.toBe(false);
+  });
+
+  /**
+   * ESC-ALTO-04. El riesgo de la caché de identidad no está en la caché sino en
+   * la invalidación: un solo punto de mutación que la olvide deja operando con
+   * el rol o el estado anteriores a una cuenta ya modificada, que es justo lo
+   * que la recarga por petición existía para impedir.
+   *
+   * Si se añade un método que mute rol, estado o borrado lógico, hay que
+   * añadirlo también a esta tabla.
+   */
+  describe('invalidación de la caché de identidad', () => {
+    const user = buildUser();
+
+    it.each([
+      [
+        'update',
+        () => {
+          usersRepository.findOne.mockResolvedValue(user);
+          usersRepository.save.mockResolvedValue(user);
+          return service.update(user.id, { firstName: 'Nombre' });
+        },
+      ],
+      [
+        'remove (baja lógica)',
+        () => {
+          usersRepository.findOne.mockResolvedValue(user);
+          usersRepository.softRemove.mockResolvedValue(user);
+          return service.remove(user.id);
+        },
+      ],
+      [
+        'restore',
+        () => {
+          const deleted = buildUser({ deletedAt: new Date() });
+          usersRepository.findOne
+            .mockResolvedValueOnce(deleted)
+            .mockResolvedValueOnce(user);
+          usersRepository.recover.mockResolvedValue(user);
+          return service.restore(user.id);
+        },
+      ],
+      [
+        'updateStatus',
+        () => {
+          usersRepository.findOne.mockResolvedValue(user);
+          usersRepository.save.mockResolvedValue(user);
+          return service.updateStatus(user.id, UserStatus.SUSPENDED);
+        },
+      ],
+    ])('%s invalida la entrada cacheada', async (_name, act) => {
+      await act();
+
+      expect(authIdentityCache.invalidate).toHaveBeenCalledWith(user.id);
+    });
   });
 });

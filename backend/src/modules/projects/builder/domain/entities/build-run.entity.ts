@@ -18,6 +18,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { Delivery } from '../../../deliveries/entities/delivery.entity';
 import { User } from '../../../../users/entities/user.entity';
@@ -114,4 +115,22 @@ export class BuildRun {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  // audit/04 ARQ-013: protege la única ventana lectura-modificación-escritura
+  // que queda sobre esta entidad (el save() del resultado final en
+  // BuilderRunLifecycleService, tras releer y comprobar cancelación). Los
+  // UPDATE condicionados (cancelRun, markRunAsFailed, el sweep de huérfanos)
+  // siguen siendo más baratos que un save() completo y no la necesitan para
+  // protegerse a sí mismos — pero si alguno de ellos escribe mientras un
+  // save() está en vuelo, este contador es lo que hace que TypeORM detecte
+  // el conflicto en vez de pisarlo en silencio; por eso esos UPDATE también
+  // incrementan "version" aunque no la lean.
+  // `default: 0` (además del DEFAULT ya presente en la migración) es lo que
+  // permite que `synchronize: true` (dev/test) altere la tabla sin fallar
+  // cuando ya existen filas: sin él, TypeORM genera `ADD "version" integer
+  // NOT NULL` sin DEFAULT, que Postgres rechaza en cuanto la tabla no está
+  // vacía (verificado en vivo: rompió el contenedor de dev tras esta misma
+  // migración).
+  @VersionColumn({ default: 0 })
+  version!: number;
 }

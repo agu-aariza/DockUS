@@ -6,8 +6,11 @@ import {
   BuildRun,
   BuildRunStatus,
 } from '../../../domain/entities/build-run.entity';
-import { BuildRunEventType } from '../../../domain/builder.types';
-import { BuilderRunEventsService } from '../../../domain/events/builder-run-events.service';
+import {
+  BuildRunEventType,
+  BuilderStudentStage,
+} from '../../../domain/builder.types';
+import { BuilderRunEventsService } from '../../../infrastructure/events/builder-run-events.service';
 import { toErrorMessage as extractErrorMessage } from '../../../../../../shared/utils/error-message.util';
 
 @Injectable()
@@ -22,21 +25,36 @@ export class BuilderRunSupportService {
     buildRunId: string,
     errorMessage: string,
   ): Promise<void> {
-    const run = await this.buildRunsRepository.findOne({
-      where: { id: buildRunId },
-    });
-    if (!run) return;
-    run.status = BuildRunStatus.FAILED;
-    run.finishedAt = new Date();
-    run.failureReason = errorMessage;
-    await this.buildRunsRepository.save(run);
+    // UPDATE condicionado al estado (no lectura-modificacion-escritura): si
+    // cancelRun cancelo este run de forma atomica mientras el pipeline
+    // fallaba en paralelo, este WHERE ya evita pisar esa cancelacion con
+    // FAILED. Incrementa "version" igual que el resto de los UPDATE
+    // condicionados (ARQ-013): sigue siendo mas barato que un save() de la
+    // entidad completa, pero cualquier save() en vuelo en otro sitio detecta
+    // el conflicto via lock optimista en vez de pisarlo.
+    const result = await this.buildRunsRepository
+      .createQueryBuilder()
+      .update(BuildRun)
+      .set({
+        status: BuildRunStatus.FAILED,
+        finishedAt: () => 'NOW()',
+        failureReason: errorMessage,
+        version: () => '"version" + 1',
+      })
+      .where('"id" = :id', { id: buildRunId })
+      .andWhere('"status" != :cancelled', {
+        cancelled: BuildRunStatus.CANCELLED,
+      })
+      .execute();
+
+    if (!result.affected) return;
 
     await this.emitEvent({
       buildRunId,
       eventType: 'RUN_FAILED',
       runStatus: BuildRunStatus.FAILED,
       message: `Ejecucion fallida: ${errorMessage}`,
-      payload: { studentStage: 'failed' },
+      payload: { studentStage: 'failed' satisfies BuilderStudentStage },
     });
   }
 

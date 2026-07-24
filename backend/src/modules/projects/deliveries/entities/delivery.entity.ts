@@ -35,6 +35,14 @@ export enum DeliveryStatus {
 
 @Entity('deliveries')
 @Index(['assignmentId', 'version'], { unique: true })
+// ESC-ALTO-07: el listado de entregas filtra por autor y estado y ordena por
+// fecha. Sin este índice compuesto, la ruta más transitada del panel docente
+// hace recorrido secuencial sobre toda la tabla.
+@Index('IDX_deliveries_author_status_created', [
+  'authorId',
+  'status',
+  'createdAt',
+])
 export class Delivery {
   /** Identificador unico de entrega. */
   @PrimaryGeneratedColumn('uuid')

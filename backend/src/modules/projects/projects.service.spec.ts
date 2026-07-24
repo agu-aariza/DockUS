@@ -21,30 +21,37 @@ import { ProjectGradebookService } from './project-gradebook.service';
 import { ProjectLifecycleService } from './project-lifecycle.service';
 import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectsService } from './projects.service';
+import type { IProjectRepository } from './domain/repositories/project.repository.interface';
 import { BuilderQualityAggregationService } from './builder/application/services/evaluation/builder-quality-aggregation.service';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
 
-  const queryBuilder = {
+  // Query builder mínimo para isTeacherAssignedToProject (project-access.policy.ts),
+  // el único camino que ProjectAccessService sigue resolviendo con
+  // createQueryBuilder tras ARQ-007.
+  const accessQueryBuilder = {
     innerJoin: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    take: jest.fn().mockReturnThis(),
-    leftJoinAndSelect: jest.fn().mockReturnThis(),
-    getManyAndCount: jest.fn(),
     getExists: jest.fn().mockResolvedValue(true),
   };
 
-  const projectsRepository = {
+  // Repositorio TypeORM crudo: alimenta la instancia REAL de
+  // ProjectAccessService (findOwnedProjectOrThrow, etc.), no el puerto.
+  const projectsTypeOrmRepository = {
     findOne: jest.fn(),
-    create: jest.fn(),
-    save: jest.fn(),
-    softRemove: jest.fn(),
-    recover: jest.fn(),
-    createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+    createQueryBuilder: jest.fn().mockReturnValue(accessQueryBuilder),
+  };
+
+  // Puerto real (ARQ-007): lo que ProjectsService inyecta como
+  // IProjectRepository. No comparte forma con el repositorio TypeORM de
+  // arriba — findAllForActor construye toda la query dentro del puerto, así
+  // que este mock no expone SelectQueryBuilder en absoluto.
+  const projectRepositoryPort = {
+    findById: jest.fn(),
+    findByIdForActor: jest.fn(),
+    findAllForActor: jest.fn(),
   };
 
   const assignmentsRepository = {
@@ -83,19 +90,12 @@ describe('ProjectsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    queryBuilder.andWhere.mockReturnThis();
-    queryBuilder.innerJoin.mockReturnThis();
-    queryBuilder.where.mockReturnThis();
-    queryBuilder.orderBy.mockReturnThis();
-    queryBuilder.skip.mockReturnThis();
-    queryBuilder.take.mockReturnThis();
-    queryBuilder.getExists.mockResolvedValue(true);
     const projectAccessService = new ProjectAccessService(
-      projectsRepository as unknown as Repository<Project>,
+      projectsTypeOrmRepository as unknown as Repository<Project>,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
     );
     service = new ProjectsService(
-      projectsRepository,
+      projectRepositoryPort as unknown as IProjectRepository,
       deliveriesRepository as unknown as Repository<Delivery>,
       projectLifecycleService as unknown as ProjectLifecycleService,
       projectAccessService,
@@ -126,9 +126,13 @@ describe('ProjectsService', () => {
     expect(result.creatorId).toBe(creatorId);
   });
 
-  it('debe devolver listado paginado con filtros y orden seguro', async () => {
+  it('debe traducir el DTO de listado al puerto (ARQ-007) y envolver el resultado en la meta de paginacion', async () => {
     const actor = buildActor(UserRole.ADMIN);
-    queryBuilder.getManyAndCount.mockResolvedValue([[buildProject()], 1]);
+    const project = buildProject();
+    projectRepositoryPort.findAllForActor.mockResolvedValue({
+      projects: [project],
+      total: 1,
+    });
 
     const result = await service.findAll(
       {
@@ -145,35 +149,24 @@ describe('ProjectsService', () => {
       actor,
     );
 
-    expect(projectsRepository.createQueryBuilder).toHaveBeenCalledWith(
-      'project',
+    // ProjectRepository.findAllForActor (infra) posee ahora toda la
+    // construcción de la query; este test cubre solo la traducción de
+    // ProjectsService: DTO -> ProjectListQuery (fechas string -> Date) y
+    // ProjectListPage -> PaginatedProjectsResponse.
+    expect(projectRepositoryPort.findAllForActor).toHaveBeenCalledWith(
+      {
+        page: 1,
+        limit: 20,
+        status: ProjectStatus.ACTIVE,
+        creatorId: '9d52e6d8-d7ca-4b4f-8cd3-d3539f9b8e5f',
+        search: 'python',
+        createdFrom: new Date('2026-03-01T00:00:00.000Z'),
+        createdTo: new Date('2026-03-31T23:59:59.999Z'),
+        sortBy: 'title',
+        sortOrder: 'ASC',
+      },
+      actor,
     );
-    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
-      1,
-      'project.status = :status',
-      { status: ProjectStatus.ACTIVE },
-    );
-    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
-      2,
-      'project.creatorId = :creatorId',
-      { creatorId: '9d52e6d8-d7ca-4b4f-8cd3-d3539f9b8e5f' },
-    );
-    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
-      3,
-      '(project.title ILIKE :search OR project.contextAcademico ILIKE :search)',
-      { search: '%python%' },
-    );
-    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
-      4,
-      'project.createdAt >= :createdFrom',
-      { createdFrom: '2026-03-01T00:00:00.000Z' },
-    );
-    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
-      5,
-      'project.createdAt <= :createdTo',
-      { createdTo: '2026-03-31T23:59:59.999Z' },
-    );
-    expect(queryBuilder.orderBy).toHaveBeenCalledWith('project.title', 'ASC');
     expect(result.meta).toEqual({
       page: 1,
       limit: 20,
@@ -182,6 +175,7 @@ describe('ProjectsService', () => {
       hasNextPage: false,
       hasPrevPage: false,
     });
+    expect(result.data).toEqual([project]);
   });
 
   it('debe actualizar estado de proyecto y persistir cambios', async () => {
@@ -273,7 +267,7 @@ describe('ProjectsService', () => {
   it('debe delegar los insights agregados de calidad tras validar acceso al proyecto', async () => {
     const actor = buildActor(UserRole.TEACHER, 'teacher-1');
     const project = buildProject({ id: 'project-1' });
-    projectsRepository.findOne.mockResolvedValue(project);
+    projectsTypeOrmRepository.findOne.mockResolvedValue(project);
     builderQualityAggregationService.getAggregatedFindings.mockResolvedValue({
       projectId: project.id,
       totalStudentsAnalyzed: 2,

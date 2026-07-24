@@ -5,16 +5,25 @@ export const DEFAULT_STALE_RUN_THRESHOLD_MS = 600000;
 export const DEFAULT_MAX_EXTRACTED_FILES = 1500;
 export const DEFAULT_MAX_EXTRACTED_BYTES = 100 * 1024 * 1024;
 
-export const DEFAULT_BASE_PYTHON_IMAGE = 'python:3.11-slim';
+// audit/04 ARQ-010: las versiones permitidas e imágenes base por defecto
+// vivían aquí duplicadas del catálogo de runtimes; ahora solo existen en
+// RUNTIME_CATALOG (./runtime-catalog.ts), fuente única de verdad.
 
-export const ALLOWED_PYTHON_VERSIONS = [
-  '3.8',
-  '3.9',
-  '3.10',
-  '3.11',
-  '3.12',
-] as const;
-export const ALLOWED_NODE_VERSIONS = ['16', '18', '20', '21', '22'] as const;
-export const ALLOWED_C_VERSIONS = ['c99', 'c11', 'c17'] as const;
-
-export const DEFAULT_BASE_C_IMAGE = 'gcc:13-bookworm';
+/**
+ * Prioridades de la cola `builder-runs` (ESC-BAJO-02).
+ *
+ * En BullMQ, **menor número = mayor prioridad**. La cola era FIFO estricta, de
+ * modo que una avalancha de entregas de alumnos cerca de la fecha límite
+ * retrasaba por igual las reejecuciones que lanza un docente para revisar una
+ * entrega concreta —que son pocas, interactivas y con alguien esperando delante
+ * de la pantalla—.
+ *
+ * No es un mecanismo de justicia entre alumnos: dentro de cada prioridad se
+ * mantiene el orden de llegada, así que ninguna entrega adelanta a otra.
+ */
+export const BUILDER_JOB_PRIORITY = {
+  /** Reejecución lanzada por un docente o administrador. */
+  INTERACTIVE: 1,
+  /** Entrega de alumno y reencolado de runs huérfanos. */
+  BATCH: 2,
+} as const;

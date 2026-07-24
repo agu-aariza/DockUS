@@ -46,7 +46,7 @@ import type { AuthenticatedRequest } from '../../../auth/interfaces/authenticate
 import { UserRole } from '../../../users/entities/user.entity';
 import { BuilderRunCommandsService } from '../application/services/orchestration/builder-run-commands.service';
 import { BuilderRunQueriesService } from '../application/services/orchestration/builder-run-queries.service';
-import { BuilderLlmChatService } from '../domain/ai/builder-llm-chat.service';
+import { BuilderLlmChatService } from '../application/services/ai/builder-llm-chat.service';
 import { BuilderLlmConfigService } from '../infrastructure/config/builder-llm-config.service';
 import { BuilderLlmProviderTester } from '../infrastructure/config/builder-llm-provider-tester.service';
 import {
@@ -69,8 +69,16 @@ import {
   toBuildRunResponseDto,
 } from './dto/build-run-response.dto';
 import { ListBuildRunsDto } from './dto/list-build-runs.dto';
-import { PostChatMessageDto } from './dto/chat-message.dto';
-import { BuildRunChatMessage } from '../domain/entities/build-run-chat-message.entity';
+import {
+  LatestRunsByDeliveriesQueryDto,
+  LatestRunsByDeliveriesResponseDto,
+} from './dto/latest-runs-by-deliveries.dto';
+import {
+  ChatMessageResponseDto,
+  PostChatMessageDto,
+  toChatMessageResponseDto,
+} from './dto/chat-message.dto';
+import { toCorrelationId } from '../../../../shared/config/logger.config';
 
 const DELIVERY_ID_PARAM = {
   name: 'deliveryId',
@@ -88,8 +96,20 @@ const BUILD_RUN_ID_PARAM = {
  * Tope de páginas al drenar el backlog inicial del SSE (200 eventos por página).
  * Cubre runs con historial extenso sin permitir que el bucle gire para siempre
  * sobre un run que aún está produciendo eventos.
+ *
+ * Reducido de 50 a 10 (ESC-ALTO-06). Con 50, **cada** conexión podía disparar
+ * hasta 50 consultas secuenciales a Postgres antes de llegar al `subscribe()`,
+ * de modo que una reconexión masiva —un redespliegue, la caída del balanceador—
+ * multiplicaba ese coste por el número de clientes y se convertía en una
+ * denegación de servicio provocada por el propio sistema.
+ *
+ * El recorte no pierde eventos: el cliente envía `afterSequence` y reanuda
+ * exactamente donde lo dejó, así que el drenaje largo solo ocurría en conexiones
+ * genuinamente frías. Para ese caso, 10 páginas son 2.000 eventos; quien
+ * necesite más historial que eso lo tiene en el endpoint REST paginado, que es
+ * el sitio adecuado para recorrerlo, y no reteniendo abierta una conexión SSE.
  */
-const MAX_BACKLOG_DRAIN_PAGES = 50;
+const MAX_BACKLOG_DRAIN_PAGES = 10;
 
 @ApiTags('Builder')
 @ApiBearerAuth()
@@ -136,7 +156,7 @@ export class BuilderController {
     description: INTERNAL_SERVER_ERROR_DESCRIPTION,
   })
   @HttpCode(HttpStatus.ACCEPTED)
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @Post('deliveries/:deliveryId/run')
   async runForDelivery(
     @Param('deliveryId', ParseUUIDPipe) deliveryId: string,
@@ -145,6 +165,7 @@ export class BuilderController {
     return this.builderRunCommandsService.enqueueDeliveryRun(
       deliveryId,
       request.user,
+      toCorrelationId(request.id),
     );
   }
 
@@ -188,7 +209,7 @@ export class BuilderController {
       buildRunId,
       request.user,
     );
-    return toBuildRunResponseDto(run);
+    return toBuildRunResponseDto(run, request.user.role);
   }
 
   @ApiOperation({
@@ -304,6 +325,49 @@ export class BuilderController {
   }
 
   @ApiOperation({
+    summary: 'Obtener el último run por entrega (batch)',
+    description:
+      'Devuelve, en una única consulta, el último BuildRun de cada entrega indicada. Sustituye el fan-out N+1 de una petición por entrega.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Mapa deliveryId -> último BuildRun recuperado correctamente.',
+    type: LatestRunsByDeliveriesResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'deliveryIds ausente, vacío, no-UUID o por encima del máximo permitido.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: UNAUTHORIZED_DESCRIPTION,
+  })
+  @ApiResponse({
+    status: 500,
+    description: INTERNAL_SERVER_ERROR_DESCRIPTION,
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Get('deliveries/latest-runs')
+  async getLatestRunsByDeliveries(
+    @Query() query: LatestRunsByDeliveriesQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<LatestRunsByDeliveriesResponseDto> {
+    const latestRuns =
+      await this.builderRunQueriesService.listLatestRunsByDeliveryIds(
+        query.deliveryIds,
+        request.user,
+      );
+    const data: Record<string, BuildRunResponseDto | null> = {};
+    for (const [deliveryId, run] of Object.entries(latestRuns)) {
+      data[deliveryId] = run
+        ? toBuildRunResponseDto(run, request.user.role)
+        : null;
+    }
+    return { data };
+  }
+
+  @ApiOperation({
     summary: 'Listar historial de ejecuciones por entrega',
     description: 'Devuelve runs paginados de una entrega.',
   })
@@ -346,7 +410,9 @@ export class BuilderController {
       request.user,
     );
     return {
-      data: response.data.map((run) => toBuildRunResponseDto(run)),
+      data: response.data.map((run) =>
+        toBuildRunResponseDto(run, request.user.role),
+      ),
       meta: response.meta,
     };
   }
@@ -485,9 +551,11 @@ export class BuilderController {
   async getChatMessages(
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
     @Req() request: AuthenticatedRequest,
-  ): Promise<BuildRunChatMessage[]> {
+  ): Promise<ChatMessageResponseDto[]> {
     await this.builderRunQueriesService.getRunById(buildRunId, request.user);
-    return this.builderLlmChatService.getChatMessages(buildRunId);
+    const messages =
+      await this.builderLlmChatService.getChatMessages(buildRunId);
+    return messages.map(toChatMessageResponseDto);
   }
 
   @ApiOperation({
@@ -502,9 +570,13 @@ export class BuilderController {
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
     @Body() body: PostChatMessageDto,
     @Req() request: AuthenticatedRequest,
-  ): Promise<BuildRunChatMessage> {
+  ): Promise<ChatMessageResponseDto> {
     await this.builderRunQueriesService.getRunById(buildRunId, request.user);
-    return this.builderLlmChatService.postChatMessage(buildRunId, body.message);
+    const message = await this.builderLlmChatService.postChatMessage(
+      buildRunId,
+      body.message,
+    );
+    return toChatMessageResponseDto(message);
   }
 
   @ApiOperation({

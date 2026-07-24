@@ -40,10 +40,28 @@ import {
   resolveModelPricing,
 } from '../../domain/ai/pricing.utility';
 
+/**
+ * Vencimiento de la caché de configuración (ESC-MED-06). Acota cuánto puede
+ * durar el desfase entre réplicas tras un cambio hecho desde otra instancia.
+ */
+const CACHE_TTL_MS = 30_000;
+
 /** Perfil resuelto para una etapa, listo para el router de generación. */
 export interface ResolvedStageProfile {
   profile: LlmModelProfile;
   credentials: LlmProviderCredentials | null;
+}
+
+/**
+ * Candidato dentro de la cadena de conmutación de una etapa.
+ *
+ * `isPrimary` distingue al proveedor que el docente asignó al rol del resto:
+ * los suplentes solo entran en juego si el titular está indisponible, y el
+ * hecho de haber recurrido a uno se registra, porque significa que la etapa se
+ * evaluó con un modelo distinto del configurado.
+ */
+export interface StageProviderCandidate extends ResolvedStageProfile {
+  isPrimary: boolean;
 }
 
 export interface LlmProviderConfigView {
@@ -93,9 +111,11 @@ export class BuilderLlmConfigService {
   private readonly logger = new Logger(BuilderLlmConfigService.name);
   /**
    * Caché en memoria de la tabla. Sin ella, cada etapa del pipeline haría un
-   * SELECT completo por llamada al LLM. Se invalida al guardar.
+   * SELECT completo por llamada al LLM. Se invalida al guardar y vence sola
+   * (véase `listConfigs`).
    */
   private cache: Promise<LlmConfiguration[]> | null = null;
+  private cacheExpiresAt = 0;
 
   constructor(
     @InjectRepository(LlmConfiguration)
@@ -133,6 +153,60 @@ export class BuilderLlmConfigService {
       },
       credentials: this.toCredentials(config),
     };
+  }
+
+  /**
+   * Cadena de proveedores para una etapa, en orden de preferencia.
+   *
+   * **El primero es siempre el que el docente asignó al rol**: la conmutación
+   * no reinterpreta esa decisión, solo añade suplentes por detrás para cuando
+   * el titular está indisponible (ESC-ALTO-02). El resto de proveedores
+   * configurados —con credenciales y modelo ya declarados en la pestaña
+   * "Modelos de IA"— entran como suplentes en orden estable.
+   *
+   * Es lo que convierte el multiproveedor ya soportado en redundancia real:
+   * hasta ahora podían configurarse seis proveedores y, si el asignado al rol
+   * empezaba a rechazar por tasa, nada probaba ninguno de los otros cinco.
+   *
+   * Un suplente conserva `maxTokens`, `temperature` y demás parámetros de *su*
+   * propia configuración, no los del titular: son ajustes por modelo y
+   * trasplantarlos produciría peticiones inválidas en cuanto los límites
+   * difieran.
+   */
+  async resolveStageCandidates(
+    stage: BuilderLlmPromptStage,
+  ): Promise<StageProviderCandidate[]> {
+    const primary = await this.resolveStageProfile(stage);
+    const candidates: StageProviderCandidate[] = [
+      { ...primary, isPrimary: true },
+    ];
+
+    const configs = await this.listConfigs();
+    for (const config of configs) {
+      if (config.providerId === primary.profile.providerId) {
+        continue;
+      }
+      // Sin `modelId` la configuración está a medias y una llamada fallaría de
+      // todos modos: no es un suplente utilizable.
+      if (!config.modelId) {
+        continue;
+      }
+
+      candidates.push({
+        isPrimary: false,
+        profile: {
+          ...primary.profile,
+          profileVersion: `db-${config.providerId}/v1`,
+          providerId: config.providerId,
+          modelId: config.modelId,
+          maxTokens: config.maxTokens || primary.profile.maxTokens,
+          temperature: config.temperature ?? primary.profile.temperature,
+        },
+        credentials: this.toCredentials(config),
+      });
+    }
+
+    return candidates;
   }
 
   /**
@@ -361,17 +435,45 @@ export class BuilderLlmConfigService {
     return apiKey;
   }
 
+  /**
+   * Caché de la tabla con vencimiento (ESC-MED-06).
+   *
+   * Antes no caducaba: se invalidaba solo en `saveConfigs`, es decir, **solo en
+   * la réplica que escribía**. Con varias instancias de API, cambiar el
+   * proveedor o rotar una credencial desde una dejaba a las demás sirviendo la
+   * configuración anterior de forma indefinida —hasta el siguiente reinicio—.
+   *
+   * Se resuelve con vencimiento y no con invalidación por Redis a propósito: un
+   * cambio de configuración de modelos es una acción administrativa
+   * infrecuente, y acotar el desfase a unos segundos es proporcionado. La
+   * alternativa —publicar la invalidación— exigiría una conexión de suscripción
+   * más y un camino de fallo nuevo para un problema que el vencimiento ya
+   * acota. La réplica que escribe sigue invalidando al instante, de modo que
+   * quien hace el cambio lo ve reflejado de inmediato.
+   *
+   * Consecuencia asumida y declarada: **rotar una credencial filtrada tarda
+   * hasta `CACHE_TTL_MS` en surtir efecto en el resto de réplicas.**
+   */
   private listConfigs(): Promise<LlmConfiguration[]> {
-    this.cache ??= this.configsRepository
-      .find({ order: { providerId: 'ASC' } })
-      .catch((error: unknown) => {
-        this.invalidateCache();
-        throw error;
-      });
+    if (this.cache && Date.now() >= this.cacheExpiresAt) {
+      this.invalidateCache();
+    }
+
+    if (!this.cache) {
+      this.cacheExpiresAt = Date.now() + CACHE_TTL_MS;
+      this.cache = this.configsRepository
+        .find({ order: { providerId: 'ASC' } })
+        .catch((error: unknown) => {
+          this.invalidateCache();
+          throw error;
+        });
+    }
+
     return this.cache;
   }
 
   private invalidateCache(): void {
     this.cache = null;
+    this.cacheExpiresAt = 0;
   }
 }

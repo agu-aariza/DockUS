@@ -35,6 +35,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UPLOAD_MULTER_OPTIONS } from './upload-multer.config';
 import {
   FORBIDDEN_DESCRIPTION,
   INTERNAL_SERVER_ERROR_DESCRIPTION,
@@ -115,7 +116,13 @@ export class StorageController {
   })
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  // Sin `limits.fileSize` aqui, Multer bufferiza la parte multipart completa
+  // en RAM del proceso API ANTES de que `MaxFileSizeValidator` (mas abajo)
+  // tenga oportunidad de rechazarla: un STUDENT/TEACHER puede enviar varios
+  // GB en una sola peticion y agotar la memoria del proceso que sirve a
+  // todos los usuarios (HIGH-11). El limite en el interceptor corta la
+  // subida en el momento, no despues de bufferizarla entera.
+  @UseInterceptors(FileInterceptor('file', UPLOAD_MULTER_OPTIONS))
   async upload(
     @Body() dto: CreateStorageObjectDto,
     @UploadedFile(

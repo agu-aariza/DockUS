@@ -17,6 +17,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -154,6 +155,9 @@ export class CreateProjectDto {
   })
   @IsString()
   @IsOptional()
+  @MaxLength(8000, {
+    message: 'Las instrucciones de rúbrica no pueden exceder 8000 caracteres.',
+  })
   rubricInstructions?: string;
 
   @ApiPropertyOptional({
@@ -185,6 +189,9 @@ export class CreateProjectDto {
   })
   @IsString()
   @IsOptional()
+  @MaxLength(4000, {
+    message: 'La salida esperada no puede exceder 4000 caracteres.',
+  })
   expectedOutput?: string;
 
   @ApiPropertyOptional({
@@ -210,7 +217,14 @@ export class CreateProjectDto {
       'IDs de grupos academicos a los que asignar el proyecto al crearlo.',
     type: [String],
   })
-  @IsString({ each: true })
+  @IsArray()
+  @ArrayMaxSize(200, {
+    message: 'No se pueden asignar más de 200 grupos a la vez.',
+  })
+  @IsUUID('4', {
+    each: true,
+    message: 'Cada grupo asignado debe identificarse con un UUID válido.',
+  })
   @IsOptional()
   assignedGroupIds?: string[];
 }

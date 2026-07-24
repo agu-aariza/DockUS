@@ -1,11 +1,12 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PromptRegistryService } from '../../../../../shared/infrastructure/ai/prompt-registry.service';
-import { ILlmGenerationService } from '../../../../../shared/infrastructure/ai/llm-generation.token';
-import { BedrockRequestError } from '../../../../../shared/infrastructure/ai/bedrock-request.util';
+import { PromptRegistryService } from '../../../../../../shared/infrastructure/ai/prompt-registry.service';
+import { ILlmGenerationService } from '../../../../../../shared/infrastructure/ai/llm-generation.token';
+import { BedrockRequestError } from '../../../../../../shared/infrastructure/ai/bedrock-request.util';
+import { BuilderLlmDispatcherService } from './builder-llm-dispatcher.service';
 import { BuilderCodeQualityService } from './builder-code-quality.service';
-import { BuilderLlmConfigService } from '../../infrastructure/config/builder-llm-config.service';
-import { resolveBuilderModelProfile } from './builder-llm-model-profile';
+import { BuilderLlmConfigService } from '../../../infrastructure/config/builder-llm-config.service';
+import { resolveBuilderModelProfile } from '../../../domain/ai/builder-llm-model-profile';
 
 const validQualityResponse = JSON.stringify({
   thought: 'Calidad consistente.',
@@ -51,6 +52,13 @@ describe('BuilderCodeQualityService', () => {
       profile: resolveBuilderModelProfile('quality', configService),
       credentials: null,
     })),
+    resolveStageCandidates: jest.fn(async () => [
+      {
+        profile: resolveBuilderModelProfile('quality', configService),
+        credentials: null,
+        isPrimary: true,
+      },
+    ]),
   } as unknown as BuilderLlmConfigService;
 
   let service: BuilderCodeQualityService;
@@ -61,7 +69,16 @@ describe('BuilderCodeQualityService', () => {
     service = new BuilderCodeQualityService(
       configService,
       promptRegistry,
-      llmService as any,
+      /**
+       * Despachador REAL sobre el doble de generación: las aserciones existentes
+       * sobre `llmService.generate` siguen siendo válidas y, de paso, cada prueba
+       * ejercita la ruta de conmutación en lugar de sortearla con otro doble.
+       */
+      new BuilderLlmDispatcherService(llmService as never, llmConfigService, {
+        isOpen: () => Promise.resolve(false),
+        recordFailure: jest.fn(),
+        recordSuccess: jest.fn(),
+      } as never),
       llmConfigService,
     );
   });
@@ -75,7 +92,12 @@ describe('BuilderCodeQualityService', () => {
     const trace = await service.analyzeWithTrace(
       {
         sourceCodePayload: 'A'.repeat(2000),
-        executionLogs: 'B'.repeat(2000),
+        execution: {
+          ran: true,
+          stdout: 'B'.repeat(2000),
+          stderr: '',
+          exitCode: 0,
+        },
         assignmentContext: {
           expectedType: 'C_CLI',
           rubricInstructions: 'Evalua mantenibilidad y seguridad.',
@@ -179,7 +201,7 @@ describe('BuilderCodeQualityService', () => {
 
     const trace = await service.analyzeWithTrace({
       sourceCodePayload: 'int main(void) { return 0; }',
-      executionLogs: 'ok',
+      execution: { ran: true, stdout: 'ok', stderr: '', exitCode: 0 },
       assignmentContext: {
         expectedType: 'C_CLI',
         rubricInstructions: 'Evalua mantenibilidad y seguridad.',

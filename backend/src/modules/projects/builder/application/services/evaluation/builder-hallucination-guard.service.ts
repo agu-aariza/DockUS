@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { BuilderEvaluationContractV2 } from '../../../domain/builder.types';
+import {
+  BuilderEvaluationContractV2,
+  BuilderExecutionResult,
+} from '../../../domain/builder.types';
 
 @Injectable()
 export class BuilderHallucinationGuard {
@@ -7,13 +10,19 @@ export class BuilderHallucinationGuard {
    * Detects when the eval LLM likely hallucinated program output.
    * Checks if execution logs only contain build artifacts (gcc, make)
    * with no actual program output, yet the assessment claims success.
+   *
+   * ARQ-012: opera sobre el `BuilderExecutionResult` estructurado, no sobre
+   * el blob de texto `STDOUT:/STDERR:/EXIT CODE`. Antes esta clase tenía que
+   * re-parsear ese formato con regex (incluida una extracción de stdout que
+   * dependía de que nadie cambiara el formato del blob); con el resultado
+   * tipado, `stdout`/`stderr` ya vienen separados.
    */
   detectOutputHallucination(
     assessment: BuilderEvaluationContractV2,
-    executionLogs: string,
+    execution: BuilderExecutionResult,
     expectedOutput: string | null,
   ): string | null {
-    if (!executionLogs) return null;
+    if (!execution.ran) return null;
 
     const BUILD_PATTERNS = [
       /^gcc\s/i,
@@ -22,16 +31,12 @@ export class BuilderHallucinationGuard {
       /^cc\s/i,
       /^ld\s/i,
       /nothing to be done/i,
-      /^STDOUT:\s*$/,
-      /^STDERR:\s*$/,
-      /^EXIT CODE:/i,
     ];
 
-    const logLines = executionLogs.split('\n').filter((l) => l.trim());
+    const combinedOutput = `${execution.stdout}\n${execution.stderr}`;
+    const logLines = combinedOutput.split('\n').filter((l) => l.trim());
     const nonBuildLines = logLines.filter((line) => {
-      const stripped = line
-        .replace(/^(STDOUT:|STDERR:|EXIT CODE:)\s*/i, '')
-        .trim();
+      const stripped = line.trim();
       if (!stripped) return false;
       return !BUILD_PATTERNS.some((p) => p.test(stripped));
     });
@@ -55,7 +60,7 @@ export class BuilderHallucinationGuard {
         .filter((l) => l.trim().length > 5);
       if (oracleLines.length > 0) {
         const anyMatch = oracleLines.some((ol) =>
-          executionLogs.includes(ol.trim()),
+          combinedOutput.includes(ol.trim()),
         );
         if (!anyMatch) {
           return (
@@ -72,10 +77,7 @@ export class BuilderHallucinationGuard {
       (assessment.evaluativeState === 'E1' ||
         assessment.evaluativeState === 'E2')
     ) {
-      const stdoutMatch = executionLogs.match(
-        /STDOUT:\n([\s\S]*?)(?:\nSTDERR:|\nEXIT CODE:)/,
-      );
-      const actualStdout = stdoutMatch?.[1]?.trim() ?? '';
+      const actualStdout = execution.stdout.trim();
 
       // Parse "Salida exacta esperada" section from expectedOutput
       const oracleSalidaMatch = expectedOutput.match(

@@ -81,6 +81,25 @@ export class BuilderConfigProvider {
     return this.configService.get<number>('BUILDER_EXEC_PIDS_LIMIT', 256);
   }
 
+  /**
+   * Poda de imágenes de entorno (ESC-CRIT-06). Ambas claves estaban validadas
+   * en `env.validation.ts` y sin consumidor: `BUILDER_CLEANUP_IMAGES` vale
+   * `true` por defecto, de modo que la limpieza aparentaba estar activada
+   * cuando no existía código alguno que la hiciera.
+   */
+  get cleanupImages(): boolean {
+    const value = this.configService.get<boolean | string>(
+      'BUILDER_CLEANUP_IMAGES',
+      true,
+    );
+    return value === true || value === 'true';
+  }
+
+  /** Antigüedad a partir de la cual una imagen de entorno es podable. */
+  get imageTtlMs(): number {
+    return this.configService.get<number>('BUILDER_IMAGE_TTL_MS', 1_800_000);
+  }
+
   get promptVersion(): string {
     return this.configService.get<string>(
       'BUILDER_PROMPT_VERSION',

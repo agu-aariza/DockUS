@@ -208,4 +208,108 @@ describe('BuilderReportComposer', () => {
       1,
     );
   });
+
+  describe('LOW-01: deduplicación de los hallazgos técnicos en bruto', () => {
+    it('elimina hallazgos repetidos dentro de una misma categoría', () => {
+      const report = composer.composeReport(
+        buildAssessment(),
+        {
+          ...emptyQualityFindings,
+          // El modelo repite con frecuencia el mismo hallazgo dentro de una
+          // categoría; antes se copiaba verbatim al informe técnico.
+          quality: [highQualityFinding, { ...highQualityFinding }],
+        },
+        [],
+      );
+
+      expect(report.technicalFeedback?.quality).toHaveLength(1);
+    });
+
+    it('conserva el mismo hallazgo cuando aparece en categorías distintas', () => {
+      const report = composer.composeReport(
+        buildAssessment(),
+        {
+          ...emptyQualityFindings,
+          quality: [highQualityFinding],
+          architecture: [{ ...highQualityFinding }],
+        },
+        [],
+      );
+
+      // La deduplicación es por categoría, no global: un hallazgo que aplique a
+      // dos dimensiones es legítimo en ambas.
+      expect(report.technicalFeedback?.quality).toHaveLength(1);
+      expect(report.technicalFeedback?.architecture).toHaveLength(1);
+    });
+
+    it('no altera un listado que ya no tiene duplicados', () => {
+      const other: CodeQualityFinding = {
+        ...highQualityFinding,
+        title: 'Nombres poco descriptivos',
+      };
+      const report = composer.composeReport(
+        buildAssessment(),
+        { ...emptyQualityFindings, quality: [highQualityFinding, other] },
+        [],
+      );
+
+      expect(report.technicalFeedback?.quality).toHaveLength(2);
+    });
+  });
+
+  describe('enrichGradeBreakdownWithRubric (ARQ-011)', () => {
+    it('adjunta peso y descripción al criterio que hace match por nombre normalizado', () => {
+      const assessment = buildAssessment({
+        gradeBreakdown: [
+          {
+            criterion: '  Correctitud  ',
+            maxPoints: 6,
+            awarded: 5,
+            justification: 'ok',
+          },
+          {
+            criterion: 'Sin match',
+            maxPoints: 4,
+            awarded: 4,
+            justification: 'ok',
+          },
+        ],
+      });
+
+      composer.enrichGradeBreakdownWithRubric(assessment, [
+        { name: 'correctitud', weight: 60, description: 'Salida correcta.' },
+      ]);
+
+      expect(assessment.gradeBreakdown[0]).toEqual(
+        expect.objectContaining({ weight: 60, description: 'Salida correcta.' }),
+      );
+      // El criterio sin correspondencia en la rúbrica queda intacto (sin peso).
+      expect(assessment.gradeBreakdown[1].weight).toBeUndefined();
+    });
+
+    it('no hace nada si no hay rúbrica configurada', () => {
+      const assessment = buildAssessment({
+        gradeBreakdown: [
+          { criterion: 'X', maxPoints: 1, awarded: 1, justification: 'ok' },
+        ],
+      });
+      const original = [...assessment.gradeBreakdown];
+
+      composer.enrichGradeBreakdownWithRubric(assessment, null);
+
+      expect(assessment.gradeBreakdown).toEqual(original);
+    });
+
+    it('no hace nada si gradeBreakdown no es un array', () => {
+      const assessment = buildAssessment({
+        gradeBreakdown: undefined as never,
+      });
+
+      expect(() =>
+        composer.enrichGradeBreakdownWithRubric(assessment, [
+          { name: 'x', weight: 1, description: 'd' },
+        ]),
+      ).not.toThrow();
+    });
+  });
 });

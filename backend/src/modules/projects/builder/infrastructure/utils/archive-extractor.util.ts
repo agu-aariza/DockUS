@@ -46,7 +46,10 @@ export async function extractArchiveToWorkspace(
 async function extractZipArchive(
   input: ArchiveExtractionInput,
 ): Promise<RuntimeFile[]> {
-  const entries = parseZipEntries(input.archiveBuffer);
+  const entries = parseZipEntries(input.archiveBuffer, {
+    maxTotalBytes: input.limits.maxBytes,
+    maxEntries: input.limits.maxFiles,
+  });
   const commonPrefix = getCommonRootPrefix(entries.map((e) => e.path));
   const extractedFiles: RuntimeFile[] = [];
 
@@ -85,7 +88,23 @@ async function extractZipArchive(
 async function extractTarGzArchive(
   input: ArchiveExtractionInput,
 ): Promise<RuntimeFile[]> {
-  const tarBuffer = gunzipSync(input.archiveBuffer);
+  const TAR_ENTRY_OVERHEAD_BYTES = 1536;
+  let tarBuffer: Buffer;
+  try {
+    tarBuffer = gunzipSync(input.archiveBuffer, {
+      maxOutputLength:
+        input.limits.maxBytes +
+        input.limits.maxFiles * TAR_ENTRY_OVERHEAD_BYTES,
+    });
+  } catch (error) {
+    if (isZlibOutputLimitError(error)) {
+      throw new Error(
+        `Archivo tar.gz invalido: contenido descomprimido supera el limite permitido (${input.limits.maxBytes} bytes).`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
   const extractedFiles: RuntimeFile[] = [];
   const entries: Array<{ path: string; content: Buffer }> = [];
   let offset = 0;
@@ -162,7 +181,20 @@ interface ParsedZipEntry {
   isDirectory: boolean;
 }
 
-export function parseZipEntries(zipBuffer: Buffer): ParsedZipEntry[] {
+const DEFAULT_ZIP_MAX_TOTAL_BYTES = 100 * 1024 * 1024;
+const DEFAULT_ZIP_MAX_ENTRIES = 1500;
+
+export interface ParseZipEntriesOptions {
+  maxTotalBytes?: number;
+  maxEntries?: number;
+}
+
+export function parseZipEntries(
+  zipBuffer: Buffer,
+  options: ParseZipEntriesOptions = {},
+): ParsedZipEntry[] {
+  const maxTotalBytes = options.maxTotalBytes ?? DEFAULT_ZIP_MAX_TOTAL_BYTES;
+  const maxEntries = options.maxEntries ?? DEFAULT_ZIP_MAX_ENTRIES;
   const eocdOffset = findZipEndOfCentralDirectoryOffset(zipBuffer);
   if (eocdOffset < 0) {
     throw new Error('Archivo ZIP invalido: no se encontro EOCD.');
@@ -178,7 +210,18 @@ export function parseZipEntries(zipBuffer: Buffer): ParsedZipEntry[] {
     );
   }
 
+  // Varias entradas del directorio central pueden apuntar al MISMO
+  // localHeaderOffset y reutilizar el mismo blob comprimido, multiplicando
+  // el tamaño descomprimido total por el número de entradas. Se corta por
+  // conteo de entradas ANTES de descomprimir nada.
+  if (totalEntries > maxEntries) {
+    throw new Error(
+      `Archivo ZIP invalido: numero de entradas (${totalEntries}) supera el limite permitido (${maxEntries}).`,
+    );
+  }
+
   const parsedEntries: ParsedZipEntry[] = [];
+  let totalDecompressedBytes = 0;
   let offset = centralDirectoryOffset;
 
   for (let index = 0; index < totalEntries; index += 1) {
@@ -229,12 +272,31 @@ export function parseZipEntries(zipBuffer: Buffer): ParsedZipEntry[] {
       throw new Error('Archivo ZIP invalido: datos de entrada truncados.');
     }
 
+    const remainingBudget = maxTotalBytes - totalDecompressedBytes;
+    if (uncompressedSize > remainingBudget) {
+      throw new Error(
+        `Archivo ZIP invalido: contenido descomprimido supera el limite permitido (${maxTotalBytes} bytes).`,
+      );
+    }
+
     const compressedData = zipBuffer.subarray(localDataStart, localDataEnd);
     let content: Buffer;
     if (compressionMethod === 0) {
       content = Buffer.from(compressedData);
     } else if (compressionMethod === 8) {
-      content = inflateRawSync(compressedData);
+      try {
+        content = inflateRawSync(compressedData, {
+          maxOutputLength: remainingBudget,
+        });
+      } catch (error) {
+        if (isZlibOutputLimitError(error)) {
+          throw new Error(
+            `Archivo ZIP invalido: contenido descomprimido supera el limite permitido (${maxTotalBytes} bytes).`,
+            { cause: error },
+          );
+        }
+        throw error;
+      }
     } else {
       throw new Error(
         `Archivo ZIP invalido: metodo de compresion no soportado (${compressionMethod}).`,
@@ -247,6 +309,7 @@ export function parseZipEntries(zipBuffer: Buffer): ParsedZipEntry[] {
       );
     }
 
+    totalDecompressedBytes += content.length;
     parsedEntries.push({
       path: normalizedPath,
       content,
@@ -255,6 +318,23 @@ export function parseZipEntries(zipBuffer: Buffer): ParsedZipEntry[] {
   }
 
   return parsedEntries;
+}
+
+// Detecta el error de zlib cuando se supera maxOutputLength. No basta con
+// `instanceof RangeError`: en algunos realms (p. ej. sandbox de Jest) el
+// error de zlib viene de otro realm y el instanceof falla, asi que se
+// comprueba tambien el codigo ERR_BUFFER_TOO_LARGE y el mensaje.
+function isZlibOutputLimitError(error: unknown): boolean {
+  if (error instanceof RangeError) {
+    return true;
+  }
+  const candidate = error as NodeJS.ErrnoException | null | undefined;
+  if (candidate?.code === 'ERR_BUFFER_TOO_LARGE') {
+    return true;
+  }
+  return /maxOutputLength|too large|Buffer larger than/iu.test(
+    candidate?.message ?? '',
+  );
 }
 
 function findZipEndOfCentralDirectoryOffset(buffer: Buffer): number {

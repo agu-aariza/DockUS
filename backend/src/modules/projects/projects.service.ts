@@ -14,10 +14,7 @@ import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import type { IProjectRepository } from './domain/repositories/project.repository.interface';
 import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
-import {
-  ListProjectsQueryDto,
-  ProjectSortField,
-} from './dto/list-projects-query.dto';
+import { ListProjectsQueryDto } from './dto/list-projects-query.dto';
 import { ProjectProgressQueryDto } from './dto/project-progress-query.dto';
 import { ReconcileOperationalIssuesDto } from './dto/reconcile-operational-issues.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
@@ -48,13 +45,6 @@ export type {
   ProjectStudentQualityInsights,
 } from './projects.types';
 
-const PROJECT_SORT_COLUMNS: Record<ProjectSortField, string> = {
-  createdAt: 'project.createdAt',
-  updatedAt: 'project.updatedAt',
-  title: 'project.title',
-  status: 'project.status',
-};
-
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -75,24 +65,12 @@ export class ProjectsService {
     includeDeleted = false,
   ): Promise<Project | null> {
     if (!actor) {
-      return this.projectsRepository.findOne({
-        where: { id },
-        withDeleted: includeDeleted,
-      });
+      return this.projectsRepository.findById(id, { includeDeleted });
     }
 
-    const queryBuilder = this.projectsRepository
-      .createQueryBuilder('project')
-      .leftJoinAndSelect('project.teachers', 'teacher')
-      .where('project.id = :id', { id });
-
-    this.projectAccessService.applyActorScope(queryBuilder, actor);
-
-    if (includeDeleted) {
-      queryBuilder.withDeleted();
-    }
-
-    return queryBuilder.getOne();
+    return this.projectsRepository.findByIdForActor(id, actor, {
+      includeDeleted,
+    });
   }
 
   async findAll(
@@ -104,10 +82,6 @@ export class ProjectsService {
     const search = query.search?.trim();
     const createdFrom = query.createdFrom ? new Date(query.createdFrom) : null;
     const createdTo = query.createdTo ? new Date(query.createdTo) : null;
-    const sortBy = query.sortBy;
-    const sortOrder = query.sortOrder;
-
-    const queryBuilder = this.projectsRepository.createQueryBuilder('project');
 
     if (createdFrom && createdTo && createdFrom > createdTo) {
       throw new BadRequestException(
@@ -115,47 +89,24 @@ export class ProjectsService {
       );
     }
 
-    this.projectAccessService.applyActorScope(queryBuilder, actor);
-
-    if (query.status) {
-      queryBuilder.andWhere('project.status = :status', {
+    // ARQ-007: toda la construcción de la query (scoping por actor, filtros,
+    // subquery de assignmentCount, orden, paginación) vive ahora en
+    // ProjectRepository.findAllForActor — este servicio ya no toca
+    // SelectQueryBuilder.
+    const { projects, total } = await this.projectsRepository.findAllForActor(
+      {
+        page,
+        limit,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
         status: query.status,
-      });
-    }
-
-    if (query.creatorId) {
-      queryBuilder.andWhere('project.creatorId = :creatorId', {
         creatorId: query.creatorId,
-      });
-    }
-
-    queryBuilder.leftJoinAndSelect('project.teachers', 'teachersList');
-
-    if (search) {
-      queryBuilder.andWhere(
-        '(project.title ILIKE :search OR project.contextAcademico ILIKE :search)',
-        { search: `%${search}%` },
-      );
-    }
-
-    if (createdFrom) {
-      queryBuilder.andWhere('project.createdAt >= :createdFrom', {
-        createdFrom: createdFrom.toISOString(),
-      });
-    }
-
-    if (createdTo) {
-      queryBuilder.andWhere('project.createdAt <= :createdTo', {
-        createdTo: createdTo.toISOString(),
-      });
-    }
-
-    queryBuilder
-      .orderBy(PROJECT_SORT_COLUMNS[sortBy], sortOrder)
-      .skip((page - 1) * limit)
-      .take(limit);
-
-    const [projects, total] = await queryBuilder.getManyAndCount();
+        search,
+        createdFrom: createdFrom ?? undefined,
+        createdTo: createdTo ?? undefined,
+      },
+      actor,
+    );
 
     return {
       data: projects,

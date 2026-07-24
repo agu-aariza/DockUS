@@ -227,9 +227,17 @@ export class DeliveriesQueryService {
     }
 
     if (actor.role === UserRole.TEACHER) {
-      queryBuilder.andWhere('project.creatorId = :requestUserId', {
-        requestUserId: actor.userId,
-      });
+      // Un co-docente asignado (no solo el creador original) debe poder ver
+      // las entregas del proyecto: es la misma politica que ya aplican
+      // ProjectAccessService/StorageAccessService/BuilderAccessService (ver
+      // isTeacherAssignedToProject). Filtrar por creatorId aqui los dejaba
+      // bloqueados de este listado aunque pudieran ejecutar el builder o ver
+      // el gradebook del mismo proyecto.
+      queryBuilder
+        .innerJoin('project.teachers', 'scopedTeacher')
+        .andWhere('scopedTeacher.id = :requestUserId', {
+          requestUserId: actor.userId,
+        });
       return;
     }
 

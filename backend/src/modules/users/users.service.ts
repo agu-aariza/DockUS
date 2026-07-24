@@ -25,6 +25,7 @@ import {
   PaginationMeta,
 } from '../../shared/utils/pagination.util';
 import { throwIfUniqueViolation } from '../../shared/database/unique-violation.util';
+import { AuthIdentityCacheService } from '../../shared/infrastructure/cache/auth-identity-cache.service';
 
 const BCRYPT_SALT_ROUNDS = 10;
 const USER_SORT_COLUMNS: Record<UserSortField, string> = {
@@ -47,6 +48,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly authIdentityCache: AuthIdentityCacheService,
   ) {}
 
   /**
@@ -234,6 +236,8 @@ export class UsersService {
       );
     }
 
+    await this.authIdentityCache.invalidate(id);
+
     return this.sanitizeUser(updatedUser);
   }
 
@@ -246,6 +250,7 @@ export class UsersService {
       throw new NotFoundException('Usuario no encontrado para borrado logico.');
     }
     await this.usersRepository.softRemove(user);
+    await this.authIdentityCache.invalidate(id);
     return { message: 'Identidad marcada como eliminada correctamente.' };
   }
 
@@ -265,6 +270,7 @@ export class UsersService {
     }
 
     await this.usersRepository.recover(user);
+    await this.authIdentityCache.invalidate(id);
 
     const restoredUser = await this.findById(id);
     if (!restoredUser) {
@@ -292,6 +298,7 @@ export class UsersService {
 
     user.status = status;
     const updatedUser = await this.usersRepository.save(user);
+    await this.authIdentityCache.invalidate(id);
     return this.sanitizeUser(updatedUser);
   }
 

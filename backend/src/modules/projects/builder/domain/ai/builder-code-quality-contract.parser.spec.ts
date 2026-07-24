@@ -48,7 +48,7 @@ describe('parseBuilderCodeQualityContractV2', () => {
     );
   });
 
-  it('normalizes alias fields and defaults invalid severity to medium', () => {
+  it('normalizes alias fields and defaults unrecognized severity to medium', () => {
     const contract = parseBuilderCodeQualityContractV2(
       JSON.stringify(
         buildQualityPayload({
@@ -60,7 +60,7 @@ describe('parseBuilderCodeQualityContractV2', () => {
                 'La ejecución batch falla si el pipeline no los suministra.',
               recomendacion:
                 'Declara y documenta una invocación completa en la receta de ejecución.',
-              severity: 'critical',
+              severity: 'unranked',
               file: 'main.c',
             },
           ],
@@ -79,6 +79,50 @@ describe('parseBuilderCodeQualityContractV2', () => {
       }),
     ]);
   });
+
+  it.each(['High', 'HIGH', ' high ', 'Low', 'MEDIUM'])(
+    'HIGH-07: normalizes severity case/whitespace variants (%s)',
+    (rawSeverity) => {
+      const contract = parseBuilderCodeQualityContractV2(
+        JSON.stringify(
+          buildQualityPayload({
+            security: [
+              {
+                title: 'Hallazgo con capitalización distinta',
+                detail: 'Observación: x. Impacto: y. Recomendación: z.',
+                severity: rawSeverity,
+              },
+            ],
+          }),
+        ),
+      );
+
+      expect(contract.security[0].severity).toBe(
+        rawSeverity.trim().toLowerCase(),
+      );
+    },
+  );
+
+  it.each(['critical', 'CRITICAL', 'blocker', 'Blocker'])(
+    'HIGH-07: maps unmodeled severity levels above the schema (%s) to high, not medium',
+    (rawSeverity) => {
+      const contract = parseBuilderCodeQualityContractV2(
+        JSON.stringify(
+          buildQualityPayload({
+            security: [
+              {
+                title: 'Hallazgo de severidad no modelada',
+                detail: 'Observación: x. Impacto: y. Recomendación: z.',
+                severity: rawSeverity,
+              },
+            ],
+          }),
+        ),
+      );
+
+      expect(contract.security[0].severity).toBe('high');
+    },
+  );
 
   it('drops irreparable findings while preserving the valid ones in the same axis', () => {
     const contract = parseBuilderCodeQualityContractV2(

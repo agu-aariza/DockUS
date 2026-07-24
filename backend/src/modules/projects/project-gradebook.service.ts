@@ -292,20 +292,36 @@ export class ProjectGradebookService {
       latestDeliveryByAssignmentId.set(delivery.assignmentId, delivery);
     }
 
-    const deliveryIds = [...new Set(deliveries.map((delivery) => delivery.id))];
-    const runs =
-      deliveryIds.length === 0
-        ? []
-        : await this.buildRunsRepository.find({
-            where: { deliveryId: In(deliveryIds) },
-            order: { createdAt: 'DESC' },
-          });
-    const latestRunByDeliveryId = new Map<string, BuildRun>();
-    for (const run of runs) {
-      if (!latestRunByDeliveryId.has(run.deliveryId)) {
-        latestRunByDeliveryId.set(run.deliveryId, run);
-      }
-    }
+    // El gradebook solo consume UN dato de cada ejecución: `overallOutcome`.
+    // Cargar la entidad completa traía además `report`, `llmAssessment` y
+    // `codeQualityFindings` —columnas jsonb de decenas de kB por fila— de
+    // TODAS las ejecuciones del proyecto, para descartarlas acto seguido en
+    // memoria: 170 MB medidos para producir una respuesta de 159 kB
+    // (ESC-CRIT-05). Se extrae el campo en SQL y `DISTINCT ON` deja que
+    // PostgreSQL elija la última ejecución por entrega, en lugar de traerlas
+    // todas y filtrarlas aquí.
+    const latestOutcomeRows = await this.buildRunsRepository
+      .createQueryBuilder('run')
+      .select('run.deliveryId', 'deliveryId')
+      .addSelect(`run.report ->> 'overallOutcome'`, 'overallOutcome')
+      .distinctOn(['run.deliveryId'])
+      // El filtro va por proyecto y no por una lista de identificadores: con
+      // 300 alumnos, un `IN` con 900 UUID crece con el tamaño del curso.
+      .innerJoin('deliveries', 'delivery', 'delivery.id = run."deliveryId"')
+      .innerJoin(
+        'project_assignments',
+        'assignment',
+        'assignment.id = delivery."assignmentId"',
+      )
+      .where('assignment."projectId" = :projectId', { projectId })
+      .andWhere('assignment."revokedAt" IS NULL')
+      .orderBy('run.deliveryId')
+      .addOrderBy('run.createdAt', 'DESC')
+      .getRawMany<{ deliveryId: string; overallOutcome: string | null }>();
+
+    const latestOutcomeByDeliveryId = new Map<string, string | null>(
+      latestOutcomeRows.map((row) => [row.deliveryId, row.overallOutcome]),
+    );
 
     return assignments.map((assignment) => {
       const studentDeliveries =
@@ -314,10 +330,11 @@ export class ProjectGradebookService {
       const latestDelivery =
         latestDeliveryByAssignmentId.get(assignment.id) ?? null;
       const latestStatus = latestDelivery?.status ?? null;
-      const latestRun = latestDelivery
-        ? (latestRunByDeliveryId.get(latestDelivery.id) ?? null)
+      const latestBuilderOutcome = latestDelivery
+        ? this.resolveBuilderOutcome(
+            latestOutcomeByDeliveryId.get(latestDelivery.id) ?? null,
+          )
         : null;
-      const latestBuilderOutcome = this.resolveBuilderOutcome(latestRun);
 
       return {
         studentId: assignment.studentId,
@@ -347,9 +364,13 @@ export class ProjectGradebookService {
     });
   }
 
-  private resolveBuilderOutcome(run: BuildRun | null): BuilderOutcome | null {
-    const rawOutcome = (run?.report as { overallOutcome?: string } | null)
-      ?.overallOutcome;
+  /**
+   * Recibe el valor ya extraído en SQL, no la entidad: cargar `BuildRun`
+   * completo solo para leer este campo era el origen de ESC-CRIT-05.
+   */
+  private resolveBuilderOutcome(
+    rawOutcome: string | null,
+  ): BuilderOutcome | null {
     if (
       rawOutcome === 'PASS' ||
       rawOutcome === 'FAIL' ||
@@ -363,7 +384,16 @@ export class ProjectGradebookService {
   }
 
   private escapeCsv(value: string | number): string {
-    const serialized = String(value);
+    let serialized = String(value);
+    // Entrecomillar no basta: una hoja de cálculo evalúa como fórmula todo
+    // valor que empiece por =, +, - o @ aunque venga entrecomillado, y
+    // `graderNotes` es texto libre. El apóstrofo inicial fuerza su
+    // interpretación como texto. Se incluyen el tabulador y el retorno de
+    // carro porque varias hojas los descartan antes de decidir si el valor
+    // es una fórmula.
+    if (/^[=+\-@\t\r]/u.test(serialized)) {
+      serialized = `'${serialized}`;
+    }
     return `"${serialized.replace(/"/gu, '""')}"`;
   }
 }

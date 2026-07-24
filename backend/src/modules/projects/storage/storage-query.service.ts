@@ -8,6 +8,10 @@ import { IsNull, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
 import { parseZipEntries } from '../builder/infrastructure/utils/archive-extractor.util';
+import {
+  DEFAULT_MAX_EXTRACTED_BYTES,
+  DEFAULT_MAX_EXTRACTED_FILES,
+} from '../builder/domain/builder.constants';
 import { StorageAccessService } from './storage-access.service';
 import {
   ListStorageObjectsQueryDto,
@@ -24,6 +28,11 @@ import {
 } from './storage.types';
 import { buildPaginationMeta } from '../../../shared/utils/pagination.util';
 import { toStorageObjectResponse } from './storage-response.util';
+
+const PREVIEW_ZIP_LIMITS = {
+  maxTotalBytes: DEFAULT_MAX_EXTRACTED_BYTES,
+  maxEntries: DEFAULT_MAX_EXTRACTED_FILES,
+};
 
 const STORAGE_SORT_COLUMNS: Record<StorageSortField, string> = {
   createdAt: 'storage.createdAt',
@@ -223,7 +232,7 @@ export class StorageQueryService {
     );
 
     if (storageObject.logicalName.endsWith('.zip')) {
-      const entries = parseZipEntries(buffer);
+      const entries = parseZipEntries(buffer, PREVIEW_ZIP_LIMITS);
       return entries
         .filter((e) => !e.isDirectory && !e.path.startsWith('__MACOSX/'))
         .map((e) => ({
@@ -252,7 +261,7 @@ export class StorageQueryService {
     );
 
     if (storageObject.logicalName.endsWith('.zip')) {
-      const entries = parseZipEntries(buffer);
+      const entries = parseZipEntries(buffer, PREVIEW_ZIP_LIMITS);
       return entries
         .filter((e) => !e.isDirectory && !e.path.startsWith('__MACOSX/'))
         .map((e) => ({

@@ -257,3 +257,51 @@ describe('BuilderLlmConfigService', () => {
     });
   });
 });
+
+/**
+ * ESC-MED-06. La caché se invalidaba solo en `saveConfigs`, es decir solo en la
+ * réplica que escribía: con varias instancias, las demás servían configuración
+ * obsoleta de forma indefinida.
+ */
+describe('BuilderLlmConfigService — vencimiento de la caché (ESC-MED-06)', () => {
+  const CACHE_TTL_MS = 30_000;
+
+  function build() {
+    const configsRepository = {
+      find: jest.fn().mockResolvedValue([]),
+    };
+    const service = new (jest.requireActual<{
+      BuilderLlmConfigService: new (...args: unknown[]) => {
+        resolvePricing: (p: string, m: string) => Promise<unknown>;
+      };
+    }>('./builder-llm-config.service').BuilderLlmConfigService)(
+      configsRepository,
+      { get: jest.fn((_k: string, d: unknown) => d) },
+      { encrypt: jest.fn(), decrypt: jest.fn(), isEnabled: true },
+    );
+    return { service, configsRepository };
+  }
+
+  afterEach(() => jest.useRealTimers());
+
+  it('reutiliza la caché dentro de la ventana', async () => {
+    const { service, configsRepository } = build();
+
+    await service.resolvePricing('bedrock', 'm');
+    await service.resolvePricing('bedrock', 'm');
+
+    expect(configsRepository.find).toHaveBeenCalledTimes(1);
+  });
+
+  it('vuelve a consultar cuando la ventana vence', async () => {
+    jest.useFakeTimers();
+    const { service, configsRepository } = build();
+
+    await service.resolvePricing('bedrock', 'm');
+    jest.setSystemTime(Date.now() + CACHE_TTL_MS + 1);
+    await service.resolvePricing('bedrock', 'm');
+
+    // Sin esto, una réplica que no escribe nunca veía un cambio hecho en otra.
+    expect(configsRepository.find).toHaveBeenCalledTimes(2);
+  });
+});

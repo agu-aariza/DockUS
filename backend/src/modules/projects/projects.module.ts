@@ -24,6 +24,7 @@ import { BuildRun } from './builder/domain/entities/build-run.entity';
 import { DeliveriesController } from './presentation/deliveries.controller';
 import { DeliveriesQueryService } from './deliveries/deliveries-query.service';
 import { DeliveriesCommandService } from './deliveries/deliveries-command.service';
+import { DeliveryStatusModule } from './deliveries/delivery-status.module';
 import { Delivery } from './deliveries/entities/delivery.entity';
 import { User } from '../users/entities/user.entity';
 import { Project } from './entities/project.entity';
@@ -56,6 +57,7 @@ import { StorageInfrastructureModule } from '../../shared/infrastructure/storage
     BuilderModule,
     AcademicModule,
     SharedApplicationModule,
+    DeliveryStatusModule,
   ],
   controllers: [
     ProjectsController,

@@ -79,4 +79,65 @@ describe('BuilderController', () => {
     expect(unsubscribe).toHaveBeenCalled();
     expect(response.end).toHaveBeenCalled();
   });
+
+  describe('getLatestRunsByDeliveries', () => {
+    it('HIGH-09: maps the batch service result into role-redacted response DTOs, keyed by deliveryId', async () => {
+      const runForA = {
+        id: 'run-a',
+        deliveryId: 'delivery-a',
+        triggeredById: 'teacher-1',
+        status: 'SUCCESS',
+        latestEventSequence: null,
+        llmAssessment: { thought: 'internal reasoning' },
+        report: { teacherHighlights: 'staff only', overallOutcome: 'PASS' },
+        failureReason: null,
+        warnings: [],
+        startedAt: null,
+        finishedAt: null,
+        createdAt: new Date('2026-05-11T10:00:00.000Z'),
+        updatedAt: new Date('2026-05-11T10:00:00.000Z'),
+        inputTokens: 10,
+        outputTokens: 5,
+        executionCostUsd: 0.01,
+      } as any;
+
+      const builderRunCommandsService = {} as any;
+      const builderRunQueriesService = {
+        listLatestRunsByDeliveryIds: jest.fn().mockResolvedValue({
+          'delivery-a': runForA,
+          'delivery-b': null,
+        }),
+      } as any;
+      const builderLlmChatService = {} as any;
+
+      const controller = new BuilderController(
+        builderRunCommandsService,
+        builderRunQueriesService,
+        builderLlmChatService,
+      );
+
+      const request = {
+        user: { userId: 'student-1', role: 'STUDENT' },
+      } as any;
+
+      const response = await controller.getLatestRunsByDeliveries(
+        { deliveryIds: ['delivery-a', 'delivery-b'] },
+        request,
+      );
+
+      expect(
+        builderRunQueriesService.listLatestRunsByDeliveryIds,
+      ).toHaveBeenCalledWith(['delivery-a', 'delivery-b'], request.user);
+      expect(response.data['delivery-b']).toBeNull();
+      // El actor STUDENT nunca debe recibir llmAssessment/report.teacherHighlights
+      // (misma redaccion por rol que el resto de endpoints de BuildRun, CRIT-04).
+      expect(response.data['delivery-a']?.llmAssessment).toBeUndefined();
+      expect(
+        (response.data['delivery-a']?.report as any)?.teacherHighlights,
+      ).toBeUndefined();
+      expect((response.data['delivery-a']?.report as any)?.overallOutcome).toBe(
+        'PASS',
+      );
+    });
+  });
 });

@@ -4,21 +4,20 @@ import {
   AssignmentContext,
   BuilderCodeQualityContractV2,
   BuilderEvaluationContractV2,
+  BuilderExecutionResult,
   BuilderLlmStagePromptSnapshot,
   BuilderLlmStageTrace,
-} from '../builder.types';
+} from '../../../domain/builder.types';
+import { serializeExecutionResult } from '../../../domain/ai/builder-execution-result.util';
 import {
   PromptId,
   PromptRegistryService,
-} from '../../../../../shared/infrastructure/ai/prompt-registry.service';
-import { LlmGenerationRouter } from '../../../../../shared/infrastructure/ai/llm-generation.router';
-import type {
-  LlmGenerateRequest,
-  LlmGenerateResult,
-} from '../../../../../shared/infrastructure/ai/llm.types';
-import { parseBuilderCodeQualityContractV2 } from './builder-code-quality-contract.parser';
-import { BuilderLlmConfigService } from '../../infrastructure/config/builder-llm-config.service';
-import { composeQualityPrompt } from './builder-prompt-composer';
+} from '../../../../../../shared/infrastructure/ai/prompt-registry.service';
+import { BuilderLlmDispatcherService } from './builder-llm-dispatcher.service';
+import type { LlmGenerateResult } from '../../../../../../shared/infrastructure/ai/llm.types';
+import { parseBuilderCodeQualityContractV2 } from '../../../domain/ai/builder-code-quality-contract.parser';
+import { BuilderLlmConfigService } from '../../../infrastructure/config/builder-llm-config.service';
+import { composeQualityPrompt } from '../../../domain/ai/builder-prompt-composer';
 import {
   createPromptSnapshot,
   logStageError,
@@ -28,7 +27,7 @@ import {
 
 interface CodeQualityInput {
   sourceCodePayload: string;
-  executionLogs: string;
+  execution: BuilderExecutionResult;
   assignmentContext: AssignmentContext;
   assessment: BuilderEvaluationContractV2;
 }
@@ -52,7 +51,7 @@ export class BuilderCodeQualityService {
   constructor(
     private readonly configService: ConfigService,
     private readonly promptRegistry: PromptRegistryService,
-    private readonly llmService: LlmGenerationRouter,
+    private readonly llmDispatcher: BuilderLlmDispatcherService,
     private readonly llmConfigService: BuilderLlmConfigService,
   ) {
     this.maxInputChars = this.configService.get<number>(
@@ -87,36 +86,53 @@ export class BuilderCodeQualityService {
   ): Promise<BuilderCodeQualityTrace> {
     const composedPrompt = composeQualityPrompt(
       input.sourceCodePayload,
-      input.executionLogs || 'No execution logs were captured.',
+      serializeExecutionResult(input.execution) ||
+        'No execution logs were captured.',
       input.assignmentContext,
       input.assessment,
       this.maxInputChars,
     );
 
-    const { profile, credentials } =
-      await this.llmConfigService.resolveStageProfile('quality');
-
-    const snapshot = createPromptSnapshot(
+    // Perfil asignado al rol. Sirve de valor inicial para que la instantánea y
+    // el registro de error existan aunque la conmutación falle antes del primer
+    // intento; en cuanto hay intento, ambos pasan a reflejar el proveedor real.
+    const primary = await this.llmConfigService.resolveStageProfile('quality');
+    let profile = primary.profile;
+    let snapshot = createPromptSnapshot(
       'quality',
       PromptId.TECHNICAL_FEEDBACK,
       profile,
       composedPrompt,
       this.systemPrompt,
     );
-    await hooks?.onBeforeCall?.(snapshot);
 
     let response: LlmGenerateResult;
 
     try {
-      response = await this.generateText({
-        stage: 'quality',
-        promptId: PromptId.TECHNICAL_FEEDBACK,
-        prompt: composedPrompt.prompt,
-        systemPrompt: this.systemPrompt,
-        profile,
-        credentials,
-        format: 'json',
-      });
+      const outcome = await this.llmDispatcher.dispatch(
+        'quality',
+        (candidateProfile, credentials) => ({
+          stage: 'quality' as const,
+          promptId: PromptId.TECHNICAL_FEEDBACK,
+          prompt: composedPrompt.prompt,
+          systemPrompt: this.systemPrompt,
+          profile: candidateProfile,
+          credentials,
+          format: 'json' as const,
+        }),
+        async (candidateProfile) => {
+          profile = candidateProfile;
+          snapshot = createPromptSnapshot(
+            'quality',
+            PromptId.TECHNICAL_FEEDBACK,
+            candidateProfile,
+            composedPrompt,
+            this.systemPrompt,
+          );
+          await hooks?.onBeforeCall?.(snapshot);
+        },
+      );
+      response = outcome.result;
     } catch (error: unknown) {
       const serializedError = serializeError(error);
       logStageError(
@@ -164,11 +180,5 @@ export class BuilderCodeQualityService {
         response.usage,
       );
     }
-  }
-
-  private async generateText(
-    request: LlmGenerateRequest,
-  ): Promise<LlmGenerateResult> {
-    return this.llmService.generate(request);
   }
 }

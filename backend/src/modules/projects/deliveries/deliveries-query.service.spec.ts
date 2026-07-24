@@ -30,6 +30,7 @@ const createQueryBuilder = (
   const builder = {
     leftJoinAndSelect: () => builder,
     innerJoinAndSelect: () => builder,
+    innerJoin: jest.fn(() => builder),
     where: () => builder,
     withDeleted: () => builder,
     andWhere: jest.fn(() => builder),
@@ -97,6 +98,34 @@ describe('DeliveriesQueryService', () => {
 
     expect(builder.andWhere).toHaveBeenCalledWith(
       'delivery.authorId = :requestUserId',
+      { requestUserId: actor.userId },
+    );
+  });
+
+  it('HIGH-10: debe aplicar scope de docente via project.teachers, no solo el creador (co-docentes)', async () => {
+    const actor = buildActor(
+      UserRole.TEACHER,
+      '55555555-5555-5555-5555-555555555555',
+    );
+    const builder = createQueryBuilder({ many: [], count: 0 });
+    deliveriesRepository.createQueryBuilder.mockReturnValue(builder);
+
+    await service.findAll(
+      {
+        page: 1,
+        limit: 20,
+        sortBy: 'createdAt',
+        sortOrder: 'DESC',
+      } as any,
+      actor,
+    );
+
+    expect(builder.innerJoin).toHaveBeenCalledWith(
+      'project.teachers',
+      'scopedTeacher',
+    );
+    expect(builder.andWhere).toHaveBeenCalledWith(
+      'scopedTeacher.id = :requestUserId',
       { requestUserId: actor.userId },
     );
   });

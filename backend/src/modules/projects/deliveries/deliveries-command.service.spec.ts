@@ -8,7 +8,7 @@
  * @module DeliveriesCommandServiceSpec
  */
 
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import {
   buildActor,
@@ -18,6 +18,7 @@ import {
 } from '../../../test-support/domain-builders';
 import { UserRole } from '../../users/entities/user.entity';
 import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
+import { Project } from '../entities/project.entity';
 import { Delivery, DeliveryStatus } from './entities/delivery.entity';
 import { DeliveriesCommandService } from './deliveries-command.service';
 import { DeliveriesQueryService } from './deliveries-query.service';
@@ -36,19 +37,41 @@ describe('DeliveriesCommandService', () => {
     findOne: jest.fn(),
   };
 
+  const isTeacherAssignedQueryBuilder = {
+    innerJoin: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getExists: jest.fn(),
+  };
+
+  const projectsRepository = {
+    createQueryBuilder: jest.fn(() => isTeacherAssignedQueryBuilder),
+  };
+
   const deliveriesQueryService = {
     findEntityById: jest.fn(),
     toResponse: jest.fn(),
     resolveCurrentMaxVersion: jest.fn(),
   } as unknown as jest.Mocked<DeliveriesQueryService>;
 
+  const deliveryStatusService = {
+    updateStatusInternal: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    isTeacherAssignedQueryBuilder.innerJoin.mockReturnThis();
+    isTeacherAssignedQueryBuilder.where.mockReturnThis();
+    isTeacherAssignedQueryBuilder.andWhere.mockReturnThis();
+    isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(false);
+
     service = new DeliveriesCommandService(
       deliveriesRepository as unknown as Repository<Delivery>,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
+      projectsRepository as unknown as Repository<Project>,
       {} as any, // storageService mock
       deliveriesQueryService,
+      deliveryStatusService as any,
     );
   });
 
@@ -148,5 +171,49 @@ describe('DeliveriesCommandService', () => {
 
     expect(deliveriesRepository.recover).toHaveBeenCalledWith(deleted);
     expect(result.id).toBe(restored.id);
+  });
+
+  describe('updateGrading (HIGH-10: co-docentes, no solo el creador del proyecto)', () => {
+    it('permite calificar a un docente asignado al proyecto aunque no sea el creador', async () => {
+      const teacher = buildActor(UserRole.TEACHER, 'teacher-2');
+      const project = buildProject({ creatorId: 'teacher-1' });
+      const assignment = buildAssignment({ project });
+      const delivery = buildDelivery({ assignment });
+
+      deliveriesQueryService.findEntityById.mockResolvedValue(delivery);
+      isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(true);
+      deliveriesRepository.save.mockResolvedValue(delivery);
+      deliveriesQueryService.toResponse.mockResolvedValue({
+        id: delivery.id,
+      } as any);
+
+      const result = await service.updateGrading(
+        delivery.id,
+        { grade: 8 },
+        teacher,
+      );
+
+      expect(isTeacherAssignedQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'teacher.id = :teacherId',
+        { teacherId: 'teacher-2' },
+      );
+      expect(deliveriesRepository.save).toHaveBeenCalled();
+      expect(result.id).toBe(delivery.id);
+    });
+
+    it('rechaza calificar a un docente no asignado al proyecto', async () => {
+      const teacher = buildActor(UserRole.TEACHER, 'teacher-3');
+      const project = buildProject({ creatorId: 'teacher-1' });
+      const assignment = buildAssignment({ project });
+      const delivery = buildDelivery({ assignment });
+
+      deliveriesQueryService.findEntityById.mockResolvedValue(delivery);
+      isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(false);
+
+      await expect(
+        service.updateGrading(delivery.id, { grade: 8 }, teacher),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(deliveriesRepository.save).not.toHaveBeenCalled();
+    });
   });
 });

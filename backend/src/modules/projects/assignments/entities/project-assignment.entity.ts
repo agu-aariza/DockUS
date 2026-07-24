@@ -12,6 +12,9 @@ import { Project } from '../../entities/project.entity';
 
 @Entity('project_assignments')
 @Index(['projectId', 'studentId'], { unique: true })
+// ESC-ALTO-07: el índice único anterior lleva `projectId` primero, de modo que
+// no sirve para las consultas que parten del alumno («mis proyectos»).
+@Index('IDX_project_assignments_student', ['studentId'])
 export class ProjectAssignment {
   @PrimaryGeneratedColumn('uuid')
   id: string;

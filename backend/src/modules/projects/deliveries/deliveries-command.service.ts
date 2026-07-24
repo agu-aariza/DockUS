@@ -21,7 +21,8 @@ import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
 import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
-import { ProjectStatus } from '../entities/project.entity';
+import { Project, ProjectStatus } from '../entities/project.entity';
+import { isTeacherAssignedToProject } from '../project-access.policy';
 import { StorageService } from '../storage/storage.service';
 import { throwIfUniqueViolation } from '../../../shared/database/unique-violation.util';
 import {
@@ -34,6 +35,7 @@ import {
   DeliveriesQueryService,
   DeliveryResponse,
 } from './deliveries-query.service';
+import { DeliveryStatusService } from './delivery-status.service';
 
 @Injectable()
 export class DeliveriesCommandService {
@@ -42,8 +44,11 @@ export class DeliveriesCommandService {
     private readonly deliveriesRepository: Repository<Delivery>,
     @InjectRepository(ProjectAssignment)
     private readonly assignmentsRepository: Repository<ProjectAssignment>,
+    @InjectRepository(Project)
+    private readonly projectsRepository: Repository<Project>,
     private readonly storageService: StorageService,
     private readonly deliveriesQueryService: DeliveriesQueryService,
+    private readonly deliveryStatusService: DeliveryStatusService,
   ) {}
 
   async create(
@@ -254,13 +259,7 @@ export class DeliveriesCommandService {
     id: string,
     status: DeliveryStatus,
   ): Promise<void> {
-    const delivery = await this.deliveriesRepository.findOne({ where: { id } });
-    if (!delivery) {
-      throw new NotFoundException('Entrega no encontrada.');
-    }
-
-    delivery.status = status;
-    await this.deliveriesRepository.save(delivery);
+    return this.deliveryStatusService.updateStatusInternal(id, status);
   }
 
   private async findEntityForManagement(
@@ -281,9 +280,18 @@ export class DeliveriesCommandService {
       return delivery;
     }
 
+    // Un co-docente asignado (no solo el creador original del proyecto)
+    // debe poder gestionar la entrega: misma politica que el resto del
+    // sistema (ver isTeacherAssignedToProject). Comparar solo contra
+    // creatorId dejaba a los co-docentes con 403 al calificar/borrar
+    // entregas de un proyecto que ya podian ejecutar y ver en el gradebook.
     if (
       actor.role === UserRole.TEACHER &&
-      delivery.assignment.project.creatorId === actor.userId
+      (await isTeacherAssignedToProject(
+        this.projectsRepository,
+        delivery.assignment.project.id,
+        actor.userId,
+      ))
     ) {
       return delivery;
     }

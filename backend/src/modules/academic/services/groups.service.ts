@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, IsNull } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CourseGroup } from '../entities/course-group.entity';
 import { GroupEnrollment } from '../entities/group-enrollment.entity';
 import { User, UserRole } from '../../users/entities/user.entity';
@@ -25,15 +25,37 @@ export class GroupsService {
       order: { createdAt: 'DESC' },
     });
 
-    // Count students per group
-    return Promise.all(
-      groups.map(async (group) => {
-        const studentCount = await this.enrollmentsRepository.count({
-          where: { groupId: group.id, revokedAt: IsNull() },
-        });
-        return { ...group, studentCount };
-      }),
+    if (groups.length === 0) {
+      return [];
+    }
+
+    // ESC-MED-02. Antes esto era un `COUNT` por grupo dentro de un
+    // `Promise.all`: N+1 consultas por petición, y el `Promise.all` las lanzaba
+    // además en paralelo, de modo que un curso con muchos grupos podía ocupar
+    // varias conexiones del pool a la vez para responder a un solo usuario.
+    // Una única agregación devuelve lo mismo.
+    const counts = await this.enrollmentsRepository
+      .createQueryBuilder('enrollment')
+      .select('enrollment.groupId', 'groupId')
+      .addSelect('COUNT(*)', 'studentCount')
+      .where('enrollment.groupId IN (:...groupIds)', {
+        groupIds: groups.map((group) => group.id),
+      })
+      .andWhere('enrollment.revokedAt IS NULL')
+      .groupBy('enrollment.groupId')
+      .getRawMany<{ groupId: string; studentCount: string }>();
+
+    // Los grupos sin matriculados no aparecen en un `GROUP BY`, así que el
+    // valor por defecto es 0 y no `undefined`: la vista muestra la cifra tal
+    // cual y un hueco ahí se leería como un error de carga.
+    const countByGroupId = new Map(
+      counts.map((row) => [row.groupId, Number(row.studentCount)]),
     );
+
+    return groups.map((group) => ({
+      ...group,
+      studentCount: countByGroupId.get(group.id) ?? 0,
+    }));
   }
 
   async listGroups(): Promise<
@@ -235,31 +257,65 @@ export class GroupsService {
       return !foundFullNames.includes(ln) && !foundSimpleNames.includes(ln);
     });
 
-    for (const studentId of studentIds) {
-      const existing = await this.enrollmentsRepository.findOne({
-        where: { groupId, studentId },
-      });
+    // ESC-MED-02. Antes esto era un `findOne` + `save` POR ALUMNO, sin
+    // transacción y con una carrera consultar-luego-insertar: dos peticiones
+    // simultáneas para el mismo alumno podían leer «no existe» a la vez y
+    // colisionar contra el índice único, abortando la matrícula entera a
+    // mitad y dejándola aplicada solo en parte.
+    //
+    // Ahora son tres consultas fijas, todas dentro de una transacción: leer lo
+    // existente, reactivar lo revocado e insertar lo nuevo.
+    if (studentIds.length > 0) {
+      await this.enrollmentsRepository.manager.transaction(async (manager) => {
+        const existing = await manager.find(GroupEnrollment, {
+          where: { groupId, studentId: In(studentIds) },
+        });
 
-      if (existing) {
-        if (existing.revokedAt) {
-          existing.revokedAt = null;
-          existing.enrolledById = enrolledById;
-          existing.enrolledAt = new Date();
-          await this.enrollmentsRepository.save(existing);
-          results.summary.reactivatedCount++;
-        } else {
-          results.summary.alreadyActiveCount++;
+        const existingByStudentId = new Map(
+          existing.map((enrollment) => [enrollment.studentId, enrollment]),
+        );
+
+        const toReactivate = existing.filter(
+          (enrollment) => enrollment.revokedAt !== null,
+        );
+        const toInsert = studentIds.filter(
+          (studentId) => !existingByStudentId.has(studentId),
+        );
+
+        results.summary.alreadyActiveCount =
+          existing.length - toReactivate.length;
+
+        if (toReactivate.length > 0) {
+          await manager.update(
+            GroupEnrollment,
+            { id: In(toReactivate.map((enrollment) => enrollment.id)) },
+            { revokedAt: null, enrolledById, enrolledAt: new Date() },
+          );
+          results.summary.reactivatedCount = toReactivate.length;
         }
-        continue;
-      }
 
-      const enrollment = this.enrollmentsRepository.create({
-        groupId,
-        studentId,
-        enrolledById,
+        if (toInsert.length > 0) {
+          // `orIgnore` cierra la carrera que quedaba: si otra petición
+          // concurrente insertó la misma matrícula entre la lectura y este
+          // punto, la fila duplicada se descarta en lugar de abortar el lote.
+          const inserted = await manager
+            .createQueryBuilder()
+            .insert()
+            .into(GroupEnrollment)
+            .values(
+              toInsert.map((studentId) => ({
+                groupId,
+                studentId,
+                enrolledById,
+              })),
+            )
+            .orIgnore()
+            .execute();
+
+          results.summary.enrolledCount =
+            inserted.identifiers.filter(Boolean).length;
+        }
       });
-      await this.enrollmentsRepository.save(enrollment);
-      results.summary.enrolledCount++;
     }
 
     // Sync project assignments for the newly enrolled students

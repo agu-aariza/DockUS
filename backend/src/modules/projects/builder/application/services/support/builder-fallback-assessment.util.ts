@@ -2,11 +2,13 @@ import { Logger } from '@nestjs/common';
 import {
   BuilderEvaluationContractV2,
   BuilderCodeQualityContractV2,
+  BuilderExecutionResult,
   BuilderPlanContractV2,
   BuilderLlmStageTrace,
   BUILDER_LLM_SCHEMA_VERSION,
 } from '../../../domain/builder.types';
-import { BuilderCodeQualityTrace } from '../../../domain/ai/builder-code-quality.service';
+import { serializeExecutionResult } from '../../../domain/ai/builder-execution-result.util';
+import { BuilderCodeQualityTrace } from '../ai/builder-code-quality.service';
 import { BuilderHallucinationGuard } from '../evaluation/builder-hallucination-guard.service';
 
 const logger = new Logger('BuilderFallbackAssessment');
@@ -25,19 +27,16 @@ export function requireParsedContract<
 }
 
 function buildFallbackObservedEvidence(
-  executionLogs: string,
+  execution: BuilderExecutionResult,
   errorMessage: string,
 ): string[] {
-  const lines = executionLogs
+  // ARQ-012: opera sobre stdout/stderr estructurados en vez de re-parsear el
+  // blob de texto — ya no hace falta filtrar las lineas "STDOUT:"/"STDERR:"/
+  // "EXIT CODE: 0" porque, sin el blob, esas lineas nunca existieron.
+  const lines = `${execution.stdout}\n${execution.stderr}`
     .split(/\r?\n/u)
     .map((line) => line.trim())
-    .filter(Boolean)
-    .filter(
-      (line) =>
-        line !== 'STDOUT:' &&
-        line !== 'STDERR:' &&
-        !line.startsWith('EXIT CODE: 0'),
-    );
+    .filter(Boolean);
 
   const interestingLines: string[] = [];
   for (const line of lines) {
@@ -60,22 +59,20 @@ function buildFallbackObservedEvidence(
     `El evaluador LLM devolvió un contrato inválido: ${errorMessage}`,
     interestingLines[0] ?? fallbackLine,
     interestingLines[1] ??
-      `Longitud de logs capturados: ${executionLogs.length} caracteres.`,
+      `Longitud de logs capturados: ${serializeExecutionResult(execution).length} caracteres.`,
   ];
 }
 
 function buildFallbackEvaluationLimits(
-  executionLogs: string,
+  execution: BuilderExecutionResult,
   errorMessage: string,
 ): string[] {
   const limits = [`Contrato inválido del evaluador LLM: ${errorMessage}`];
 
-  const exitCodeLine = executionLogs
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .find((line) => /^EXIT CODE:/u.test(line) && !line.endsWith('0'));
-  if (exitCodeLine) {
-    limits.push(`La ejecución terminó con fallo: ${exitCodeLine}`);
+  if (execution.exitCode !== null && execution.exitCode !== 0) {
+    limits.push(
+      `La ejecución terminó con fallo: EXIT CODE: ${execution.exitCode}`,
+    );
   }
 
   return limits;
@@ -84,14 +81,14 @@ function buildFallbackEvaluationLimits(
 export function resolveEvaluationAssessment(
   trace: BuilderLlmStageTrace<BuilderEvaluationContractV2>,
   planAssessment: BuilderPlanContractV2,
-  executionLogs: string,
+  execution: BuilderExecutionResult,
   expectedOutput: string | null,
   guard: BuilderHallucinationGuard,
 ): BuilderEvaluationContractV2 {
   if (trace.parsedContract) {
     const hallucinationWarning = guard.detectOutputHallucination(
       trace.parsedContract,
-      executionLogs,
+      execution,
       expectedOutput,
     );
     if (hallucinationWarning) {
@@ -129,11 +126,11 @@ export function resolveEvaluationAssessment(
     }),
   );
   const observedEvidence = buildFallbackObservedEvidence(
-    executionLogs,
+    execution,
     errorMessage,
   );
   const evaluationLimits = buildFallbackEvaluationLimits(
-    executionLogs,
+    execution,
     errorMessage,
   );
 

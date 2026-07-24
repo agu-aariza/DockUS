@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import * as crypto from 'crypto';
 import * as path from 'path';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
@@ -20,6 +19,11 @@ import {
   StorageObject,
 } from './entities/storage-object.entity';
 import { UploadedStorageFile } from './interfaces/uploaded-storage-file.interface';
+import {
+  computeUploadHash,
+  discardUploadTempFile,
+  openUploadBody,
+} from './upload-payload.util';
 import { StorageObjectResponse } from './storage.types';
 import { toStorageObjectResponse } from './storage-response.util';
 import {
@@ -39,7 +43,26 @@ export class StorageUploadService {
     private readonly storageAccessService: StorageAccessService,
   ) {}
 
+  /**
+   * Multer deja el fichero en disco antes de que este método se ejecute
+   * (ESC-ALTO-05), de modo que el temporal hay que borrarlo pase lo que pase:
+   * por eso el cuerpo real vive en `uploadInternal` y aquí solo se envuelve en
+   * un `finally`. Sin esta limpieza, cada subida rechazada por validación o por
+   * permisos dejaría hasta 50 MB en el disco del contenedor de la API.
+   */
   async upload(
+    dto: CreateStorageObjectDto,
+    file: UploadedStorageFile | undefined,
+    actor: AuthenticatedUser,
+  ): Promise<StorageObjectResponse> {
+    try {
+      return await this.uploadInternal(dto, file, actor);
+    } finally {
+      await discardUploadTempFile(file);
+    }
+  }
+
+  private async uploadInternal(
     dto: CreateStorageObjectDto,
     file: UploadedStorageFile | undefined,
     actor: AuthenticatedUser,
@@ -74,18 +97,21 @@ export class StorageUploadService {
 
     const bucket = this.minioStorageService.getBucketName();
     const objectKey = this.buildDeliveryObjectKey(delivery.id, dto.logicalName);
-    // El hash se calcula sobre el buffer recibido, no se toma del cliente: es la
+    // El hash lo sigue calculando el servidor, no se toma del cliente: es la
     // huella de integridad del objeto almacenado y no puede depender de un valor
-    // que el remitente controla. La ruta docente ya lo hace así.
-    const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
+    // que el remitente controla. Lo que cambia con ESC-ALTO-05 es *cómo* se lee
+    // el contenido —por trozos desde disco en vez de entero en memoria—, no
+    // quién lo resume ni sobre qué bytes.
+    const hash = await computeUploadHash(file);
 
     let uploadedObject = false;
     try {
       await this.minioStorageService.putObject({
         bucket,
         key: objectKey,
-        body: file.buffer,
+        body: openUploadBody(file),
         contentType: dto.contentType,
+        contentLength: file.size,
       });
       uploadedObject = true;
 
@@ -120,7 +146,20 @@ export class StorageUploadService {
     }
   }
 
+  /** Misma envoltura de limpieza que `upload`; véase el comentario de allí. */
   async uploadProjectTestSuite(
+    projectId: string,
+    file: UploadedStorageFile | undefined,
+    actor: AuthenticatedUser,
+  ): Promise<StorageObjectResponse> {
+    try {
+      return await this.uploadProjectTestSuiteInternal(projectId, file, actor);
+    } finally {
+      await discardUploadTempFile(file);
+    }
+  }
+
+  private async uploadProjectTestSuiteInternal(
     projectId: string,
     file: UploadedStorageFile | undefined,
     actor: AuthenticatedUser,
@@ -155,13 +194,14 @@ export class StorageUploadService {
       projectId,
       logicalName,
     );
-    const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
+    const hash = await computeUploadHash(file);
 
     await this.minioStorageService.putObject({
       bucket,
       key: objectKey,
-      body: file.buffer,
+      body: openUploadBody(file),
       contentType: file.mimetype || 'application/octet-stream',
+      contentLength: file.size,
     });
 
     let saved: StorageObject;

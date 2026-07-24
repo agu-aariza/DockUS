@@ -130,10 +130,26 @@ export class StudentProfileService {
           });
 
     const deliveryIds = deliveries.map((delivery) => delivery.id);
+    // Mismo patrón que en el gradebook (ESC-CRIT-05): de cada ejecución solo se
+    // usan siete columnas escalares, pero `find` traía además `report`,
+    // `llmAssessment` y `codeQualityFindings` —jsonb de decenas de kB por
+    // fila— para descartarlas al construir el DTO. Aquí el volumen es menor
+    // (las entregas de un alumno, no las de un curso), pero el desperdicio es
+    // proporcionalmente idéntico.
     const runs =
       deliveryIds.length === 0
         ? []
         : await this.buildRunsRepository.find({
+            select: {
+              id: true,
+              deliveryId: true,
+              status: true,
+              createdAt: true,
+              finishedAt: true,
+              inputTokens: true,
+              outputTokens: true,
+              executionCostUsd: true,
+            },
             where: { deliveryId: In(deliveryIds) },
             order: { createdAt: 'DESC' },
           });

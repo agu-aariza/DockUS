@@ -12,6 +12,7 @@ import {
   BuildRun,
   BuildRunStatus,
 } from '../../domain/entities/build-run.entity';
+import { UserRole } from '../../../../users/entities/user.entity';
 import { BuildRunResponseDto } from './build-run-core.dto';
 
 export {
@@ -26,7 +27,12 @@ export {
   EvidenceDownloadUrlDto,
 } from './build-run-evidence.dto';
 
-export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
+export function toBuildRunResponseDto(
+  run: BuildRun,
+  actorRole?: UserRole,
+): BuildRunResponseDto {
+  const isStaff =
+    actorRole === UserRole.ADMIN || actorRole === UserRole.TEACHER;
   return {
     id: run.id,
     deliveryId: run.deliveryId,
@@ -40,8 +46,11 @@ export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
       BuildRunStatus.FAILED,
       BuildRunStatus.CANCELLED,
     ].includes(run.status),
-    llmAssessment: run.llmAssessment,
-    report: run.report,
+    // El contrato LLM completo (thought/rationale/teacherSummary) y
+    // report.teacherHighlights son material interno/docente: nunca deben
+    // cruzar al rol STUDENT (ver CLAUDE.md).
+    llmAssessment: isStaff ? run.llmAssessment : undefined,
+    report: redactReportForRole(run.report, isStaff),
     failureReason: run.failureReason,
     warnings: run.warnings,
     startedAt: run.startedAt?.toISOString() ?? null,
@@ -52,4 +61,13 @@ export function toBuildRunResponseDto(run: BuildRun): BuildRunResponseDto {
     outputTokens: run.outputTokens,
     executionCostUsd: Number(run.executionCostUsd) || 0,
   };
+}
+
+function redactReportForRole(report: unknown, isStaff: boolean): unknown {
+  if (isStaff || !report || typeof report !== 'object') {
+    return report;
+  }
+  const { teacherHighlights: _teacherHighlights, ...studentSafeReport } =
+    report as Record<string, unknown>;
+  return studentSafeReport;
 }

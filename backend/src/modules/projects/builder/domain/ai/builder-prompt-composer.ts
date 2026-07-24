@@ -4,7 +4,7 @@ import type {
   BuilderFactsContractV2,
   BuilderPlanContractV2,
 } from '../builder.types';
-import { runtimeCatalogToText } from '../../application/services/compilation/builder-plan-runtime-adapter';
+import { runtimeCatalogToText, selectFewShotExample } from '../runtime-catalog';
 import type {
   ComposedPromptPayload,
   PromptSectionBudget,
@@ -143,7 +143,7 @@ export function composePlanPrompt(
       },
       {
         label: 'FEW-SHOT EXAMPLES',
-        content: selectFewShotExamples(assignmentContext.expectedType),
+        content: selectFewShotExample(assignmentContext.expectedType),
         priority: 'low',
         budget: PLAN_PROMPT_MAX_SECTION_CHARS.fewShots,
       },
@@ -247,24 +247,6 @@ export function composeEvaluationPrompt(
     ],
     maxChars,
   );
-}
-
-function selectFewShotExamples(expectedType: string | null): string {
-  const type = (expectedType ?? '').toLowerCase();
-
-  if (
-    type.includes('fastapi') ||
-    type.includes('flask') ||
-    type.includes('service')
-  ) {
-    return `Python service example:\n{\n  "recipe": {\n    "install": [["pip", "install", "-r", "requirements.txt"]],\n    "run": ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"],\n    "test": [],\n    "systemPackages": [],\n    "service": { "port": 8000, "healthcheck": ["curl", "-f", "http://localhost:8000/health"] }\n  },\n  "runtime": { "family": "python", "version": "3.11" }\n}`;
-  }
-
-  if (type.includes('c')) {
-    return `C CLI example with Makefile:\n{\n  "recipe": {\n    "install": [["make"]],\n    "run": ["./main"],\n    "test": [],\n    "systemPackages": ["build-essential"],\n    "service": null\n  },\n  "runtime": { "family": "c", "version": "c11" }\n}\n\nC CLI example without Makefile:\n{\n  "recipe": {\n    "install": [["gcc", "-Wall", "-Wextra", "-std=c11", "main.c", "-o", "main"]],\n    "run": ["./main"],\n    "test": [],\n    "systemPackages": ["build-essential"],\n    "service": null\n  },\n  "runtime": { "family": "c", "version": "c11" }\n}`;
-  }
-
-  return `Python CLI example:\n{\n  "recipe": {\n    "install": [["pip", "install", "-r", "requirements.txt"]],\n    "run": ["python", "main.py"],\n    "test": [],\n    "systemPackages": [],\n    "service": null\n  },\n  "runtime": { "family": "python", "version": "3.11" }\n}`;
 }
 
 export function composeQualityPrompt(

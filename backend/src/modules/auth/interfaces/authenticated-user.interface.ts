@@ -17,6 +17,11 @@ export interface AuthenticatedUser {
   role: UserRole;
 }
 
+/**
+ * `id` no se declara aquí: `pino-http` ya lo añade al `Request` de Express con
+ * el tipo `ReqId` (`string | number | object`). Para propagarlo a la carga útil
+ * de un trabajo se normaliza a texto con `toCorrelationId`.
+ */
 export interface AuthenticatedRequest extends Request {
   user: AuthenticatedUser;
 }

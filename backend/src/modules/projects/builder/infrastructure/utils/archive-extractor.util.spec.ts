@@ -101,6 +101,71 @@ describe('archive-extractor.util', () => {
     const appPyContent = await readFile(path.join(outputDir, 'app.py'));
     expect(appPyContent.toString('utf8')).toContain('print("tar")');
   });
+
+  it('rechaza zip cuyo contenido descomprimido supera el limite (zip bomb)', async () => {
+    const zipBuffer = createZipBuffer([
+      {
+        path: 'bomb.txt',
+        content: 'a'.repeat(1024 * 1024),
+      },
+    ]);
+
+    await expect(
+      extractArchiveToWorkspace({
+        archiveName: 'submission.zip',
+        archiveBuffer: zipBuffer,
+        outputRootDir: outputDir,
+        counters: { files: 0, bytes: 0 },
+        limits: {
+          maxFiles: 10,
+          maxBytes: 1024,
+        },
+      }),
+    ).rejects.toThrow('supera el limite permitido');
+  });
+
+  it('rechaza zip con mas entradas que el limite permitido', async () => {
+    const zipBuffer = createZipBuffer([
+      { path: 'a.txt', content: 'a' },
+      { path: 'b.txt', content: 'b' },
+      { path: 'c.txt', content: 'c' },
+    ]);
+
+    await expect(
+      extractArchiveToWorkspace({
+        archiveName: 'submission.zip',
+        archiveBuffer: zipBuffer,
+        outputRootDir: outputDir,
+        counters: { files: 0, bytes: 0 },
+        limits: {
+          maxFiles: 2,
+          maxBytes: 1024 * 1024,
+        },
+      }),
+    ).rejects.toThrow('numero de entradas');
+  });
+
+  it('rechaza tar.gz cuyo contenido descomprimido supera el limite', async () => {
+    const tarGzBuffer = createTarGzBuffer([
+      {
+        path: 'bomb.txt',
+        content: 'a'.repeat(1024 * 1024),
+      },
+    ]);
+
+    await expect(
+      extractArchiveToWorkspace({
+        archiveName: 'submission.tar.gz',
+        archiveBuffer: tarGzBuffer,
+        outputRootDir: outputDir,
+        counters: { files: 0, bytes: 0 },
+        limits: {
+          maxFiles: 10,
+          maxBytes: 1024,
+        },
+      }),
+    ).rejects.toThrow('supera el limite permitido');
+  });
 });
 
 function createZipBuffer(entries: ZipEntryInput[]): Buffer {

@@ -25,6 +25,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { DockerExecutionService } from '../../../../../../shared/infrastructure/docker/docker-execution.service';
+import { DistributedLockService } from '../../../../../../shared/infrastructure/cache/distributed-lock.service';
 
 /** Ficheros de dependencias que se copian al contexto de construcción. */
 const DEPENDENCY_FILES = [
@@ -43,6 +44,26 @@ const DEPENDENCY_FILES = [
  * horneado ahí. `NODE_PATH` permite que la resolución de módulos las encuentre.
  */
 const NODE_DEPS_DIR = '/deps';
+
+/** Fichero de dependencias copiado al contexto de construcción. */
+interface DependencyFile {
+  name: string;
+  content: string;
+}
+
+/**
+ * Vida del cerrojo de construcción (ESC-ALTO-08). Holgada a propósito: una
+ * imagen con dependencias pesadas puede tardar cerca de diez minutos, y un
+ * cerrojo que venza a mitad de construcción deja entrar a un segundo worker,
+ * que es exactamente lo que se pretende impedir.
+ */
+const IMAGE_BUILD_LOCK_TTL_MS = 15 * 60_000;
+
+/**
+ * Espera máxima de un aspirante. Superada, construye por su cuenta en vez de
+ * fallar: se prefiere trabajo duplicado a una entrega sin evaluar.
+ */
+const IMAGE_BUILD_LOCK_WAIT_MS = 10 * 60_000;
 
 export interface EnvironmentImageInput {
   projectRootDir: string;
@@ -65,6 +86,7 @@ export class BuilderEnvironmentImageService {
 
   constructor(
     private readonly dockerExecutionService: DockerExecutionService,
+    private readonly distributedLockService: DistributedLockService,
   ) {}
 
   /**
@@ -96,6 +118,77 @@ export class BuilderEnvironmentImageService {
     if (await this.dockerExecutionService.imageExists(imageTag)) {
       return { imageTag, environment, built: false };
     }
+
+    // A partir de aquí empieza la sección crítica de ESC-ALTO-08. La
+    // comprobación de arriba y la construcción no eran atómicas: en una entrega
+    // con fecha límite, donde muchos alumnos comparten el mismo fichero de
+    // dependencias y por tanto el mismo `imageTag`, todos los workers concluían
+    // a la vez que la imagen faltaba y la construían en paralelo.
+    //
+    // El cerrojo se toma sobre el `imageTag`, no sobre el run: construcciones
+    // de imágenes distintas siguen pudiendo ir en paralelo, que es lo deseable.
+    const outcome = await this.distributedLockService.withLock(
+      `builder:image-build:${imageTag}`,
+      {
+        ttlMs: IMAGE_BUILD_LOCK_TTL_MS,
+        waitTimeoutMs: IMAGE_BUILD_LOCK_WAIT_MS,
+      },
+      async () => {
+        // Segunda comprobación, ya dentro del cerrojo: es la que rentabiliza la
+        // espera. Quien aguardó a que otro terminara encuentra aquí la imagen
+        // recién construida y se ahorra rehacerla.
+        if (await this.dockerExecutionService.imageExists(imageTag)) {
+          return false;
+        }
+        await this.buildEnvironmentImage({
+          imageTag,
+          dependencyFiles,
+          baseImage,
+          aptCmd,
+          dependencyInstallCmd,
+          isNode,
+        });
+        return true;
+      },
+    );
+
+    if (!outcome.acquired) {
+      // No se llegó a garantizar la exclusión: o Redis no respondía o el titular
+      // tardó más que la espera. Queda registrado porque es la señal de que el
+      // trabajo pudo duplicarse pese al cerrojo.
+      this.logger.warn(
+        JSON.stringify({
+          event: 'builder_environment_image_build_unguarded',
+          imageTag,
+        }),
+      );
+    }
+
+    if (!outcome.result) {
+      // La construyó otro proceso mientras se esperaba.
+      return { imageTag, environment, built: false };
+    }
+
+    return { imageTag, environment, built: true };
+  }
+
+  /** Construye la imagen a partir de un contexto de build efímero. */
+  private async buildEnvironmentImage(input: {
+    imageTag: string;
+    dependencyFiles: DependencyFile[];
+    baseImage: string;
+    aptCmd: string;
+    dependencyInstallCmd: string;
+    isNode: boolean;
+  }): Promise<void> {
+    const {
+      imageTag,
+      dependencyFiles,
+      baseImage,
+      aptCmd,
+      dependencyInstallCmd,
+      isNode,
+    } = input;
 
     const contextDir = await fs.mkdtemp(
       path.join(os.tmpdir(), 'dockus-envctx-'),
@@ -131,8 +224,6 @@ export class BuilderEnvironmentImageService {
         baseImage,
       }),
     );
-
-    return { imageTag, environment, built: true };
   }
 
   private renderDockerfile(input: {

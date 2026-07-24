@@ -6,9 +6,13 @@ import {
 } from '../compilation/builder-recipe-compiler.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
-import { BuilderPlanContractV2 } from '../../../domain/builder.types';
+import {
+  BuilderExecutionResult,
+  BuilderPlanContractV2,
+  BuilderStudentStage,
+} from '../../../domain/builder.types';
 import { StageWorkspaceResult } from '../workspace/builder-workspace.service';
-import { DEFAULT_BASE_PYTHON_IMAGE } from '../../../domain/builder.constants';
+import { RUNTIME_CATALOG } from '../../../domain/runtime-catalog';
 
 interface CompileStageInput {
   runId: string;
@@ -18,7 +22,7 @@ interface CompileStageInput {
 
 interface CompileStageOutput {
   compiled: CompiledRecipe;
-  executionLogs?: string;
+  execution?: BuilderExecutionResult;
 }
 
 @Injectable()
@@ -40,7 +44,13 @@ export class BuilderCompileStageHandler implements IBuilderStageHandler<
     );
 
     if (!compiled.executable) {
-      const executionLogs = `EL LLM DETERMINO QUE EL PROYECTO NO ES EJECUTABLE (${compiled.unsupportedReason ?? 'RECETA VACIA'}).`;
+      const execution: BuilderExecutionResult = {
+        ran: false,
+        stdout: '',
+        stderr: '',
+        exitCode: null,
+        skippedReason: compiled.unsupportedReason ?? 'RECETA VACIA',
+      };
       await this.builderRunSupportService.emitEvent({
         buildRunId: runId,
         eventType: 'WARNING_ADDED',
@@ -49,10 +59,10 @@ export class BuilderCompileStageHandler implements IBuilderStageHandler<
           ? `Runtime declarado pero no ejecutable todavia: ${compiled.unsupportedReason}`
           : 'El planner no devolvio un comando run ejecutable.',
       });
-      return { compiled, executionLogs };
+      return { compiled, execution };
     }
 
-    if (compiled.image !== DEFAULT_BASE_PYTHON_IMAGE) {
+    if (compiled.image !== RUNTIME_CATALOG.python.defaultImage) {
       await this.builderRunSupportService.emitEvent({
         buildRunId: runId,
         eventType: 'RUN_STATUS_CHANGED',
@@ -103,7 +113,7 @@ export class BuilderCompileStageHandler implements IBuilderStageHandler<
       eventType: 'RUN_STATUS_CHANGED',
       runStatus: BuildRunStatus.RUNNING,
       message: `Ejecutando orquestacion: ${compiled.servicePort ? 'Servicio + Healthcheck + Tests' : 'Batch Run + Tests'}`,
-      payload: { studentStage: 'executing' },
+      payload: { studentStage: 'executing' satisfies BuilderStudentStage },
     });
 
     return { compiled };

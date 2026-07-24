@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -8,13 +8,79 @@ import {
   CodeQualityFinding,
 } from '../../../domain/builder.types';
 import { CodeQualityFindingEntity } from '../../../domain/entities/code-quality-finding.entity';
+import { ProjectAssignment } from '../../../../assignments/entities/project-assignment.entity';
 
 @Injectable()
 export class BuilderQualityAggregationService {
   constructor(
     @InjectRepository(CodeQualityFindingEntity)
     private readonly codeQualityFindingsRepository: Repository<CodeQualityFindingEntity>,
+    @InjectRepository(ProjectAssignment)
+    private readonly assignmentsRepository: Repository<ProjectAssignment>,
   ) {}
+
+  /**
+   * ARQ-005: reemplaza al agregador en memoria de `getAssignmentQualityInsights`
+   * (`run.codeQualityFindings` recorrido con `as any`, sin cota). `assignmentId`
+   * identifica de forma unica un `(projectId, studentId)` — el indice unico de
+   * `ProjectAssignment` no permite otra cosa — asi que esto son en realidad los
+   * patrones de calidad de un unico alumno para este proyecto, tal y como
+   * `code_quality_findings` los dejo tras el ultimo run (la tabla es una
+   * proyeccion del run mas reciente, no un historial).
+   */
+  async getInsightsForAssignment(assignmentId: string): Promise<{
+    totalDeliveriesAnalyzed: number;
+    insights: Array<{
+      title: string;
+      count: number;
+      category: CodeQualityCategory;
+    }>;
+  }> {
+    const assignment = await this.assignmentsRepository.findOne({
+      where: { id: assignmentId },
+    });
+    if (!assignment) {
+      throw new NotFoundException('Asignación no encontrada.');
+    }
+
+    const rows = await this.codeQualityFindingsRepository
+      .createQueryBuilder('finding')
+      .select('finding.title', 'title')
+      .addSelect('finding.category', 'category')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('finding.projectId = :projectId', {
+        projectId: assignment.projectId,
+      })
+      .andWhere('finding.studentId = :studentId', {
+        studentId: assignment.studentId,
+      })
+      .groupBy('finding.title')
+      .addGroupBy('finding.category')
+      .orderBy('COUNT(*)', 'DESC')
+      .addOrderBy('finding.title', 'ASC')
+      .limit(10)
+      .getRawMany<{ title: string; category: string; count: number }>();
+
+    const countRow = await this.codeQualityFindingsRepository
+      .createQueryBuilder('finding')
+      .select('COUNT(DISTINCT finding.buildRunId)::int', 'count')
+      .where('finding.projectId = :projectId', {
+        projectId: assignment.projectId,
+      })
+      .andWhere('finding.studentId = :studentId', {
+        studentId: assignment.studentId,
+      })
+      .getRawOne<{ count: number }>();
+
+    return {
+      totalDeliveriesAnalyzed: countRow?.count ?? 0,
+      insights: rows.map((row) => ({
+        title: row.title,
+        category: row.category as CodeQualityCategory,
+        count: Number(row.count),
+      })),
+    };
+  }
 
   async getAggregatedFindings(projectId: string) {
     const totalStudentsAnalyzed = await this.countStudents(projectId);

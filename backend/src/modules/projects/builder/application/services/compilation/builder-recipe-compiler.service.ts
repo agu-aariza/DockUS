@@ -1,26 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import {
-  DEFAULT_BASE_C_IMAGE,
-  DEFAULT_BASE_PYTHON_IMAGE,
-} from '../../../domain/builder.constants';
 import { BuilderPlanContractV2 } from '../../../domain/builder.types';
-import { adaptPlanToRuntimeRecipe } from './builder-plan-runtime-adapter';
+import {
+  adaptPlanToRuntimeRecipe,
+  RUNTIME_CATALOG,
+} from '../../../domain/runtime-catalog';
 
 /**
  * Gestores de dependencias cuya instalación se materializa en la imagen de
  * entorno (necesita red y un sistema de ficheros escribible) en lugar de
  * ejecutarse junto al código del alumno. El resto de comandos de `install`
  * —típicamente `gcc`, `make` o `cmake`— son pasos de compilación: necesitan el
- * código fuente y se quedan en el contenedor de ejecución.
+ * código fuente y se quedan en el contenedor de ejecución. Derivado del
+ * catálogo (ARQ-010) en vez de mantenerse como lista aparte.
  */
-const DEPENDENCY_MANAGERS = new Set([
-  'pip',
-  'pip3',
-  'npm',
-  'yarn',
-  'pnpm',
-  'poetry',
-]);
+const DEPENDENCY_MANAGERS = new Set<string>(
+  Object.values(RUNTIME_CATALOG).flatMap((entry) => entry.dependencyManagers),
+);
 
 export interface CompiledRecipe {
   executable: boolean;
@@ -57,7 +52,7 @@ export class BuilderRecipeCompiler {
       return {
         executable: false,
         unsupportedReason: recipe.unsupportedReason ?? 'RECETA VACIA',
-        image: DEFAULT_BASE_PYTHON_IMAGE,
+        image: RUNTIME_CATALOG.python.defaultImage,
         systemPackages: [],
         aptCmd: '',
         dependencyInstallCmd: '',
@@ -77,11 +72,11 @@ export class BuilderRecipeCompiler {
 
     let image: string;
     if (recipe.runtimeFamily === 'c') {
-      image = DEFAULT_BASE_C_IMAGE;
+      image = RUNTIME_CATALOG.c.defaultImage;
     } else if (recipe.runtimeVersion) {
       image = `python:${recipe.runtimeVersion}-slim`;
     } else {
-      image = DEFAULT_BASE_PYTHON_IMAGE;
+      image = RUNTIME_CATALOG.python.defaultImage;
     }
 
     const builtInPackages =

@@ -1,8 +1,8 @@
 import {
-  BadRequestException,
   Controller,
   Get,
   Param,
+  ParseEnumPipe,
   ParseUUIDPipe,
   Query,
   Req,
@@ -33,7 +33,19 @@ import {
   ProjectStudentQualityInsights,
   ProjectsService,
 } from '../projects.service';
-import { CODE_QUALITY_CATEGORIES } from '../builder/domain/builder.types';
+import {
+  CODE_QUALITY_CATEGORIES,
+  type CodeQualityCategory,
+} from '../builder/domain/builder.types';
+
+/**
+ * `ParseEnumPipe` espera un objeto de valores admitidos; `CODE_QUALITY_CATEGORIES`
+ * es una tupla `as const`. Se deriva de ella para que añadir una categoría al
+ * dominio actualice a la vez la validación y la documentación de Swagger.
+ */
+const QUALITY_CATEGORY_ENUM = Object.fromEntries(
+  CODE_QUALITY_CATEGORIES.map((category) => [category, category]),
+) as Record<CodeQualityCategory, CodeQualityCategory>;
 
 const PROJECT_ID_PARAM = {
   name: 'id',
@@ -76,10 +88,13 @@ export class ProjectGradebookController {
   @Get(':id/quality-insights/categories/:category')
   async getQualityInsightsByCategory(
     @Param('id', ParseUUIDPipe) id: string,
-    @Param('category') categoryParam: string,
+    // `ParseEnumPipe` acepta el objeto de valores admitidos; se construye desde
+    // la misma constante que documenta el parámetro en Swagger, de modo que
+    // ambos no puedan divergir.
+    @Param('category', new ParseEnumPipe(QUALITY_CATEGORY_ENUM))
+    category: CodeQualityCategory,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProjectQualityInsightsSummary> {
-    const category = this.parseQualityCategory(categoryParam);
     return this.projectsService.getQualityInsightsByCategory(
       id,
       category,
@@ -213,21 +228,5 @@ export class ProjectGradebookController {
       `attachment; filename="project-${id}-progress.csv"`,
     );
     response.send(csv);
-  }
-
-  private parseQualityCategory(
-    value: string,
-  ): (typeof CODE_QUALITY_CATEGORIES)[number] {
-    if (
-      !CODE_QUALITY_CATEGORIES.includes(
-        value as (typeof CODE_QUALITY_CATEGORIES)[number],
-      )
-    ) {
-      throw new BadRequestException(
-        `Categoria de quality insights invalida: ${value}.`,
-      );
-    }
-
-    return value as (typeof CODE_QUALITY_CATEGORIES)[number];
   }
 }

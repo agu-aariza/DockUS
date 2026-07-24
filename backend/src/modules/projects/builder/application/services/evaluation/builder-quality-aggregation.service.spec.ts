@@ -1,12 +1,18 @@
+import { NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 
 import { BuilderQualityAggregationService } from './builder-quality-aggregation.service';
 import { CodeQualityFindingEntity } from '../../../domain/entities/code-quality-finding.entity';
+import { ProjectAssignment } from '../../../../assignments/entities/project-assignment.entity';
 
 describe('BuilderQualityAggregationService', () => {
   let repository: {
     query: jest.MockedFunction<Repository<CodeQualityFindingEntity>['query']>;
     find: jest.MockedFunction<Repository<CodeQualityFindingEntity>['find']>;
+    createQueryBuilder: jest.Mock;
+  };
+  let assignmentsRepository: {
+    findOne: jest.MockedFunction<Repository<ProjectAssignment>['findOne']>;
   };
   let service: BuilderQualityAggregationService;
 
@@ -14,10 +20,15 @@ describe('BuilderQualityAggregationService', () => {
     repository = {
       query: jest.fn(),
       find: jest.fn(),
+      createQueryBuilder: jest.fn(),
+    };
+    assignmentsRepository = {
+      findOne: jest.fn(),
     };
 
     service = new BuilderQualityAggregationService(
       repository as unknown as Repository<CodeQualityFindingEntity>,
+      assignmentsRepository as unknown as Repository<ProjectAssignment>,
     );
   });
 
@@ -141,6 +152,62 @@ describe('BuilderQualityAggregationService', () => {
         ],
         rubricCompliance: [],
       },
+    });
+  });
+
+  /** ARQ-005: reemplaza el agregador JS de getAssignmentQualityInsights. */
+  describe('getInsightsForAssignment', () => {
+    const buildQueryBuilder = (rawMany: unknown[], rawOne: unknown) => ({
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue(rawMany),
+      getRawOne: jest.fn().mockResolvedValue(rawOne),
+    });
+
+    it('lanza NotFoundException si la asignacion no existe', async () => {
+      assignmentsRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getInsightsForAssignment('missing-assignment'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('agrega con SQL sobre code_quality_findings filtrando por projectId+studentId de la asignacion', async () => {
+      assignmentsRepository.findOne.mockResolvedValue({
+        id: 'assignment-1',
+        projectId: 'project-1',
+        studentId: 'student-1',
+      });
+
+      const queryBuilder = buildQueryBuilder(
+        [
+          { title: 'sprintf inseguro', category: 'security', count: 2 },
+          { title: 'Falta manejo de errores', category: 'quality', count: 1 },
+        ],
+        { count: 1 },
+      );
+      repository.createQueryBuilder.mockReturnValue(queryBuilder);
+
+      const result = await service.getInsightsForAssignment('assignment-1');
+
+      expect(result).toEqual({
+        totalDeliveriesAnalyzed: 1,
+        insights: [
+          { title: 'sprintf inseguro', category: 'security', count: 2 },
+          { title: 'Falta manejo de errores', category: 'quality', count: 1 },
+        ],
+      });
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('studentId'),
+        { studentId: 'student-1' },
+      );
     });
   });
 });

@@ -15,11 +15,7 @@ import {
 } from 'class-validator';
 import { plainToInstance, Type } from 'class-transformer';
 
-import {
-  ASSESSMENTS,
-  BUILDER_RUNTIME_FAMILIES,
-  CAPABILITY_IDS,
-} from '../../builder.types';
+import { ASSESSMENTS, CAPABILITY_IDS } from '../../builder.types';
 import type {
   BuilderCapabilityMap,
   BuilderRecipeV2,
@@ -27,10 +23,11 @@ import type {
   BuilderRuntimeFamily,
 } from '../../builder.types';
 import {
-  ALLOWED_C_VERSIONS,
-  ALLOWED_NODE_VERSIONS,
-  ALLOWED_PYTHON_VERSIONS,
-} from '../../builder.constants';
+  BUILDER_RUNTIME_FAMILIES,
+  isSupportedRuntimeFamily,
+  normalizeRuntimeVersion,
+  RUNTIME_CATALOG,
+} from '../../runtime-catalog';
 import { toPosixPath } from '../../../infrastructure/utils/builder-analysis.util';
 
 import { normalizeString } from './contract-parser.utils';
@@ -172,7 +169,11 @@ const SERVICE_EXECUTABLE_DEFAULTS: Record<string, number> = {
   gunicorn: 8000,
 };
 
-const SHELL_WRAPPER_TOKENS = new Set(['|', '||', '&&', ';', '>', '>>', '<']);
+// Cualquiera de estos caracteres, en cualquier posición del token (no solo
+// como token aislado), permite a un shell reinterpretar el resto de la
+// cadena como un comando distinto cuando dependencyInstallCmd/buildCmd se
+// incrustan sin escapar en `RUN <cmd>` (Dockerfile).
+const SHELL_METACHARACTER_PATTERN = /[;&|`$<>(){}\n\r'"]/u;
 
 export function normalizeCapabilities(value: unknown): BuilderCapabilityMap {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -246,26 +247,14 @@ export function normalizeRuntimeDescriptor(
   const family = dto.family;
   let version = dto.version ? String(dto.version).trim() : null;
 
+  // ARQ-010: la normalización de versión (incluidos los alias de C, p.ej.
+  // gcc-13 -> c17) vive en el catálogo, no como un if/else por familia aquí.
   if (version !== null) {
-    if (family === 'python') {
-      if (!ALLOWED_PYTHON_VERSIONS.includes(version as any)) {
-        version = '3.11';
-      }
-    } else if (family === 'node') {
-      if (!ALLOWED_NODE_VERSIONS.includes(version as any)) {
-        version = '20';
-      }
-    } else if (family === 'c') {
-      const aliased = C_VERSION_ALIASES[version.toLowerCase()];
-      if (aliased) {
-        version = aliased;
-      } else if (!ALLOWED_C_VERSIONS.includes(version as any)) {
-        version = 'c11';
-      }
-    }
+    version = normalizeRuntimeVersion(family, version);
   }
 
-  const supported = family === 'python' || family === 'c';
+  const supported =
+    isSupportedRuntimeFamily(family) && RUNTIME_CATALOG[family].executable;
   const reason = supported
     ? null
     : `Solo python y c son ejecutables en esta iteración. Runtime declarado: ${family}.`;
@@ -393,18 +382,6 @@ export function alignCapabilitiesWithRecipe(
 
   return aligned;
 }
-
-const C_VERSION_ALIASES: Record<string, string> = {
-  'gcc-11': 'c11',
-  'gcc-13': 'c17',
-  'gcc-14': 'c17',
-  gnu11: 'c11',
-  gnu17: 'c17',
-  gnu99: 'c99',
-  'std=c11': 'c11',
-  'std=c99': 'c99',
-  'std=c17': 'c17',
-};
 
 function normalizeService(
   value: unknown,
@@ -582,11 +559,7 @@ function normalizeCommand(value: unknown, field: string): string[] {
   }
 
   for (const [index, token] of tokens.entries()) {
-    if (/[\n\r`]/.test(token)) {
-      throw new Error(`Token inseguro en ${field}: ${token}`);
-    }
-
-    if (SHELL_WRAPPER_TOKENS.has(token) || /\$\(.+\)/u.test(token)) {
+    if (SHELL_METACHARACTER_PATTERN.test(token)) {
       throw new Error(`Token de shell no permitido en ${field}: ${token}`);
     }
 

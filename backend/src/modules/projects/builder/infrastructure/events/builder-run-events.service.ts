@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import {
+  Inject,
   Injectable,
   OnApplicationShutdown,
   OnModuleInit,
@@ -12,9 +13,11 @@ import {
   BuilderRunEvent,
   BuilderRunEventsPage,
   BuildRunEventType,
-} from '../builder.types';
-import { BuildRunEventEntity } from '../entities/build-run-event.entity';
-import { BuildRun } from '../entities/build-run.entity';
+} from '../../domain/builder.types';
+import { BuildRunEventEntity } from '../../domain/entities/build-run-event.entity';
+import { BuildRun } from '../../domain/entities/build-run.entity';
+import { PROCESS_ROLE } from '../../../../../process-role.module';
+import type { ProcessRole } from '../../../../../process-role.module';
 
 interface EmitBuilderRunEventInput {
   buildRunId: string;
@@ -42,9 +45,18 @@ export class BuilderRunEventsService
     @InjectRepository(BuildRun)
     private readonly buildRunsRepository: Repository<BuildRun>,
     private readonly redisClientService: RedisClientService,
+    @Inject(PROCESS_ROLE)
+    private readonly processRole: ProcessRole,
   ) {}
 
   async onModuleInit(): Promise<void> {
+    // La suscripcion Redis solo alimenta el fan-out SSE (`subscribe()`, usado
+    // por el controller de streaming); el worker publica eventos via `emit()`
+    // sin necesitarla. Antes se abria en ambos procesos sin ningun cliente
+    // que la usara del lado del worker (ARQ-006).
+    if (this.processRole !== 'api') {
+      return;
+    }
     await this.ensureSubscriber();
   }
 

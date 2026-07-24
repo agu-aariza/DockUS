@@ -10,10 +10,49 @@ import {
   BuilderPedagogicalNarrativeItem,
   BuilderTeacherHighlights,
   PedagogicalNarrativeKind,
+  RubricCriterion,
 } from '../../../domain/builder.types';
 
 @Injectable()
 export class BuilderReportComposer {
+  /**
+   * Empareja cada entrada del gradeBreakdown devuelto por el LLM con el criterio
+   * ponderado configurado en el proyecto (por nombre, normalizado) y le adjunta
+   * su peso (%) y descripción, para que el informe del alumno muestre la rúbrica
+   * tal como la definió el profesor. No altera puntuaciones ni justificaciones.
+   *
+   * Movido desde `BuilderPipelineOrchestrator` (audit/04 ARQ-011): es lógica de
+   * dominio de evaluación, no de composición del pipeline.
+   */
+  enrichGradeBreakdownWithRubric(
+    assessment: BuilderEvaluationContractV2,
+    rubricCriteria: RubricCriterion[] | null,
+  ): void {
+    if (!rubricCriteria || rubricCriteria.length === 0) {
+      return;
+    }
+    if (!Array.isArray(assessment.gradeBreakdown)) {
+      return;
+    }
+
+    const normalize = (value: string): string => value.trim().toLowerCase();
+    const criterionByName = new Map(
+      rubricCriteria.map((criterion) => [normalize(criterion.name), criterion]),
+    );
+
+    assessment.gradeBreakdown = assessment.gradeBreakdown.map((item) => {
+      const match = criterionByName.get(normalize(item.criterion));
+      if (!match) {
+        return item;
+      }
+      return {
+        ...item,
+        weight: match.weight,
+        description: match.description,
+      };
+    });
+  }
+
   composeReport(
     assessment: BuilderEvaluationContractV2,
     qualityFindings: BuilderCodeQualityContractV2,
@@ -55,11 +94,17 @@ export class BuilderReportComposer {
   private toTechnicalFeedbackReport(
     findings: BuilderCodeQualityContractV2,
   ): BuilderTechnicalFeedbackReport {
+    // Las listas de coaching (mustFix/shouldImprove/strengths) sí se deduplican,
+    // pero estas se copiaban verbatim: el modelo repite con frecuencia el mismo
+    // hallazgo en dos categorías, y el docente lo veía duplicado en el informe
+    // técnico mientras el resumen pedagógico lo mostraba una sola vez.
+    // La deduplicación es por categoría, no global: un hallazgo que aplique
+    // a seguridad y a arquitectura es legítimo en ambas.
     return {
-      security: findings.security,
-      architecture: findings.architecture,
-      quality: findings.quality,
-      rubricCompliance: findings.rubricCompliance,
+      security: this.dedupeFindings(findings.security),
+      architecture: this.dedupeFindings(findings.architecture),
+      quality: this.dedupeFindings(findings.quality),
+      rubricCompliance: this.dedupeFindings(findings.rubricCompliance),
     };
   }
 
