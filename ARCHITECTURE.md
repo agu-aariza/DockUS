@@ -8,7 +8,7 @@ reviews before it becomes an official mark.
 
 This document is the map of the system for people working on it. For the deeper
 "why" behind each decision, see the per-directory `README.md` files and the
-academic write-up under `claude_tfg_fable_v2/`. For an authoritative behavioural
+academic write-up under `memoria_tfg/`. For an authoritative behavioural
 contract and coding rules, see [`CLAUDE.md`](./CLAUDE.md).
 
 ## The one thing to understand first
@@ -87,8 +87,12 @@ sequenceDiagram
 
     S->>API: POST /deliveries (zip)
     API->>S3: store archive
-    API->>DB: insert Delivery + BuildRun (QUEUED)
-    API->>Q: enqueue job (transactional)
+    API->>DB: insert Delivery
+    API-->>S: 201 Created (Delivery id)
+
+    S->>API: POST /builder/deliveries/:id/run
+    API->>DB: insert BuildRun (QUEUED)
+    API->>Q: enqueue job (post-commit)
     API-->>S: 202 Accepted (BuildRun id)
 
     Q->>W: deliver job
@@ -118,7 +122,7 @@ shared/contracts/ @dockus/contracts — types-only package shared by both sides
 docker-compose.yml  dev + prod profiles for the whole stack
 ai_context/       flattened mirror of every README.md (grep the doc set at once)
 graphify-out/     generated code knowledge graph (GRAPH_REPORT.md)
-claude_tfg_fable_v2/  academic write-up (design rationale, chapter 4)
+memoria_tfg/      academic write-up (design rationale, chapters 4-6)
 ```
 
 ### Backend (`backend/src/`)
@@ -141,17 +145,37 @@ one `[Name]Module`:
 
 - `presentation/` — REST controllers + `class-validator` DTOs. No business logic.
 - `application/` — use-case services that orchestrate the work.
-- `domain/` — repository **interfaces**, types, contracts. **Never imports TypeORM.**
+- `domain/` — repository **interfaces**, types, contracts.
 - `infrastructure/` — TypeORM repositories that *implement* the domain interfaces.
 - `entities/` — TypeORM entities (a deliberate pragmatic exception to keep the
   dependency rule from doubling every entity with a mapper).
 
-Dependencies always point **toward** the domain; the domain knows nothing about
-infrastructure, which is what lets use-case unit tests run with no DB, Docker, or
-network.
+Dependencies point **toward** the domain: use-case services depend on interfaces,
+not on the concrete adapters that talk to the DB, Docker, or the LLM. That is what
+lets their unit tests run with no DB, Docker, or network.
+
+> **Scope of the inversion — read before claiming this codebase is hexagonal.**
+> Repository interfaces exist for **two aggregates only** (`IProjectRepository`,
+> `IBuildRunRepository`, injected via the string tokens `'IProjectRepository'` /
+> `'IBuildRunRepository'`); the other eleven entities are reached with
+> `@InjectRepository` directly, in ~28 files. Those two interfaces also **import
+> TypeORM types** (`FindOneOptions`, `SelectQueryBuilder`, `DeepPartial`) and
+> expose `createQueryBuilder`, so they do **not** decouple the domain from the ORM
+> — they are a seam for test substitution, which is their actual value. Note also
+> that `projects/application/use-cases/` is empty: those use-case services live at
+> the module root, while the Builder's live under `application/services/`.
 
 **Shared kernel** (`shared/`) — cross-cutting infrastructure that domain modules
-depend on. Hard rule: **`shared/` never imports from `modules/`** (one-way).
+depend on. Hard rule: **`shared/` must not import from `modules/`** (one-way).
+
+> **One standing exception, do not extend it.** The seeding subsystem breaks the
+> rule: `shared/infrastructure/seed/admin-seed.service.ts`,
+> `seed/demo-seed.service.ts` and `shared/infrastructure/infrastructure.module.ts`
+> import the `User`, `Project`, `ProjectAssignment` and `Delivery` entities (the
+> module registers them with `forFeature` purely so the seeders can use them).
+> Seeding demo data inherently needs domain entities. Every *other* file under
+> `shared/` complies, and new violations should not be added — if a shared service
+> needs to know what a `BuildRun` is, it belongs in a domain module instead.
 
 - `config/` — Joi env validation (fail-fast on boot), Redis connection builders.
 - `infrastructure/ai/` — LLM generation **router** + provider adapters + prompt registry.
@@ -214,14 +238,19 @@ flowchart LR
 ```
 
 - Six **stage handlers** (`application/services/stages/`) implement a common
-  interface; a `BuilderPipelineOrchestrator` composes them. Stages never call each
-  other and never swallow errors — the orchestrator owns all state transitions and
-  is the only one that flips a run to `FAILED`.
+  interface; a `BuilderPipelineOrchestrator` composes them and propagates
+  failures without swallowing them. The run's lifecycle — `QUEUED` →
+  `RUNNING` → `SUCCESS`/`FAILED` — belongs to `BuilderRunLifecycleService`,
+  invoked only by `BuilderProcessor` (the BullMQ worker entrypoint); it is the
+  only place that flips a run to `FAILED`, catching `RunCancelledError`
+  separately so a cooperative cancellation is never reported as a failure.
 - **Evaluation separates facts from judgement** (chain-of-verification): one LLM
   call extracts verifiable facts from the real logs (forbidden to grade), a second
   grades *from those facts*. A deterministic `BuilderHallucinationGuard` (no LLM)
   then cross-checks the verdict against the logs.
-- **Prompts live in `domain/ai/` (`prompts.json`), never inline in TS.** Contract
+- **Prompts live in `shared/infrastructure/ai/prompts.json`, never inline in TS**
+  (bundles: `plan`, `facts`, `eval`, `technical-feedback`, `chat`, `repair`);
+  `builder/domain/ai/` composes them and holds the parsers. Contract
   **parsers** must be defensive: extract JSON from noisy responses, apply defaults,
   and **degrade rather than abort** on unrecoverable output.
 - **LLM router** (`shared/infrastructure/ai/`): stages map to roles
@@ -239,8 +268,16 @@ flowchart LR
   `User → GroupEnrollment → CourseGroup`, and
   `Project → ProjectAssignment → Delivery → BuildRun`. A student submits to an
   **assignment**, not a project directly.
-- **Soft delete everywhere** (`@DeleteDateColumn`) + `onDelete: 'RESTRICT'` FKs to
-  preserve evaluation evidence.
+- **Three distinct removal mechanisms, by design.** Soft delete
+  (`@DeleteDateColumn`) on **5 of 13 entities** — `users`, `course_groups`,
+  `projects`, `deliveries`, `storage_objects`; **revocation** (`revokedAt`) on
+  `group_enrollments` and `project_assignments`, which keeps the access history;
+  and `CASCADE` on the children of a `BuildRun` (events, artifacts, chat, findings),
+  which have no meaning without it. Evaluation evidence is *not* soft-deleted: it
+  is immutable, kept whole or dropped with its run.
+- `onDelete: 'RESTRICT'` down the academic chain
+  (`Project → ProjectAssignment → Delivery → BuildRun`), so evidence protects its
+  own antecedents: nothing upstream can be deleted while a run exists.
 - **`jsonb`** for what the LLM returns (`BuildRun.report`, `codeQualityFindings`,
   `llmAssessment`) — flexible against evolving contracts. Nothing reaches a `jsonb`
   column without passing a contract parser first.
@@ -291,10 +328,25 @@ Stateful services declare healthchecks; app services `depends_on` them with
 The worker has no HTTP port, so its healthcheck is a **file heartbeat**.
 
 **Not handled yet (declared, not implied):** TLS termination (expects a reverse
-proxy in front), the Docker socket is mounted by both API and worker (the API only
-uses it for the daemon probe — confining it to the worker is pending hardening),
-gVisor defaults to `runc` in dev and must be `runsc` in prod, and there are no
-spend quotas per user/project.
+proxy in front), gVisor defaults to `runc` in dev and must be `runsc` in prod, and
+there is a spend quota per project (`BUILDER_PROJECT_SPEND_QUOTA_USD`) but none
+per user yet. The Docker socket used to be mounted by both API and worker for the
+API's own daemon probe — as of audit/04 ARQ-016 it's mounted by the worker only;
+`HealthService.checkDocker` reads the daemon status the worker publishes to Redis
+instead of talking to the socket directly.
+
+**Schema provisioning.** `synchronize` is on only for `development`/`test`
+(`shared/infrastructure/database/typeorm.config.ts`) — correct, since it can drop
+columns — and off in production. Versioned migrations live in
+`shared/infrastructure/database/migrations/`, tracked in the `dockus_migrations`
+table; apply them with `npm run migration:run` (or `DB_RUN_MIGRATIONS=true`, which is
+unsafe with multiple API replicas racing on the same schema — prefer a single
+pre-start step). One trap when regenerating migrations: `migration:generate`
+proposes dropping `IDX_users_search_trgm` because `gin_trgm_ops` can't be expressed
+via decorators, and its `down` recreates the index *without* the operator class —
+silently degrading it to a plain GIN index that doesn't accelerate `ILIKE`. Never
+apply that part of the diff blindly. `memoria_tfg/anexos/anexo-a-esquema-bd.md`
+documents the resulting schema table by table.
 
 ## Hard architectural boundaries
 
@@ -306,8 +358,10 @@ Enforced by convention across the codebase — do not violate:
    or in the server process.
 3. Controllers contain no business logic and never orchestrate Docker/MinIO/LLM —
    that belongs in application services.
-4. `backend/src/shared/` never imports from `backend/src/modules/**` (one-way).
-5. `domain/` never imports TypeORM; prompts never live in `.ts` files.
+4. `backend/src/shared/` must not import from `backend/src/modules/**` (one-way).
+   One standing exception in `seed/` — see *Shared kernel* above; do not extend it.
+5. Prompts never live in `.ts` files. Keep new `domain/` code free of TypeORM
+   imports — the two existing repository interfaces do not meet that bar yet.
 6. Raw LLM prompts/responses are never exposed to the `STUDENT` role.
 7. Frontend global state is Context API only; `shared/components/ui/` stays
    business/API-agnostic.

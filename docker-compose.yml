@@ -94,10 +94,26 @@ services:
       REDIS_HOST: redis
       MINIO_ENDPOINT: minio
       MINIO_API_PORT: ${MINIO_API_PORT:-9000}
-      DOCKER_HOST: unix:///var/run/docker.sock
-      BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runc}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      # DOCKER_HOST sigue llegando aqui heredado del .env raiz (env_file, mas
+      # abajo). Es inerte: sin el mount de docker.sock de mas abajo, nada en
+      # el proceso de la API puede usarlo. Dos intentos de quitarlo, ambos
+      # descartados tras probarlos:
+      #   1. `DOCKER_HOST: ""` — Joi.string() rechaza el string vacio aunque
+      #      la clave sea opcional en dev, rompia el arranque.
+      #   2. `DOCKER_HOST:` (sin valor, sintaxis de passthrough de Compose) —
+      #      verificado en vivo (audit/04) que Compose solo sustituye desde
+      #      el shell que invoca `docker compose`; si esa variable no esta
+      #      exportada ahi (el caso normal), Compose NO la elimina, cae de
+      #      vuelta al valor de env_file. No es un operador de "unset".
+      # La unica vía real es que env.validation.ts exija DOCKER_HOST segun el
+      # rol del proceso, no solo segun NODE_ENV — pero el esquema Joi se
+      # comparte entre api y worker a traves de InfrastructureModule, que
+      # ademas de CoreModule importan por separado HealthModule y
+      # BuilderModule (tres puntos de import estatico, no uno), así que
+      # parametrizarlo por rol es un cambio de grafo de módulos, no un ajuste
+      # de una línea — fuera de alcance de esta tanda.
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,14 +127,29 @@ services:
       # @dockus/contracts es un symlink a /shared/contracts: sin este bind, un
       # cambio en el contrato compartido solo se ve reconstruyendo la imagen.
       - ./shared:/shared:ro
-      - /var/run/docker.sock:/var/run/docker.sock
+      # audit/04 ARQ-016: docker.sock ya NO se monta aqui. La API dejo de
+      # hablar con el daemon directamente (HealthService.checkDocker lee el
+      # estado que el worker publica en Redis); el socket solo lo necesita
+      # quien ejecuta contenedores de verdad.
       - /tmp:/tmp
+    # `backend` y `worker` comparten el volumen `backend_node_modules`. Sin el
+    # cerrojo ambos arrancan a la vez y lanzan `npm install` sobre el mismo
+    # arbol: uno deja `.bin/` a medio enlazar y el otro muere con EEXIST al
+    # crear el symlink de @dockus/contracts. El sintoma final no es el error de
+    # npm sino `sh: nest: Permission denied` en el arranque siguiente, porque
+    # los binarios quedan sin bit de ejecucion.
+    #
+    # El testigo NO puede llamarse `.package-lock.json`: ese nombre lo usa npm
+    # para su propia cache del arbol instalado, y sobrescribirlo la corrompe.
     command: >
       sh -c '
-        if [ ! -d node_modules ] || [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
-          npm install --legacy-peer-deps &&
-          cp package-lock.json node_modules/.package-lock.json;
-        fi &&
+        set -e;
+        flock /app/node_modules/.dockus-install.lock sh -c "
+          if ! cmp -s package-lock.json node_modules/.dockus-install.stamp; then
+            npm install --legacy-peer-deps &&
+            cp package-lock.json node_modules/.dockus-install.stamp;
+          fi
+        ";
         npm run start:dev
       '
     healthcheck:
@@ -127,7 +158,12 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 45s
+      # Un volumen de dependencias frio obliga a un `npm install` completo antes
+      # de escuchar en el puerto. Con 45s el contenedor se marcaba unhealthy a
+      # mitad de instalacion y `frontend`, que espera a que este sano, abortaba
+      # con "dependency failed to start". Solo alarga la ventana de arranque en
+      # frio: el primer sondeo correcto lo marca sano de inmediato.
+      start_period: 300s
     networks:
       - dockus-network
 
@@ -153,6 +189,18 @@ services:
       BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runc}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      # Raiz de los workspaces de evaluacion (ESC-ALTO-03). `os.tmpdir()`
+      # respeta TMPDIR, de modo que fijarlo aqui reubica tanto los workspaces
+      # como los contextos de build de imagen sin tocar codigo.
+      #
+      # La ruta tiene que ser LA MISMA dentro y fuera del contenedor. El worker
+      # no ejecuta el codigo del alumno: le pide al demonio del anfitrion que
+      # levante un contenedor montando `<workspace>/project:/app`, y el demonio
+      # resuelve esa ruta contra el sistema de ficheros del ANFITRION, no contra
+      # el del worker. Con el `/tmp` en tmpfs privado que habia aqui, esa ruta
+      # no existia fuera del contenedor y Docker montaba un directorio vacio:
+      # el contenedor de ejecucion recibia `/app` sin el codigo del alumno.
+      TMPDIR: /dockus-workspaces
     depends_on:
       postgres:
         condition: service_healthy
@@ -167,16 +215,35 @@ services:
       # cambio en el contrato compartido solo se ve reconstruyendo la imagen.
       - ./shared:/shared:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      # Ruta identica a ambos lados: es lo que hace resoluble el bind mount que
+      # el worker solicita al demonio. Vease TMPDIR arriba.
+      - /dockus-workspaces:/dockus-workspaces
+      # El tmpfs se conserva para lo que SI es local al proceso (el fichero de
+      # heartbeat que lee el healthcheck), que no necesita verse desde fuera.
+      #
+      # ESC-MED-04 apuntaba a este tmpfs: los workspaces vivian aqui, es decir
+      # sobre RAM del anfitrion, y cinco runs concurrentes se acercaban al cap
+      # de 2G llevandose al worker entero por ENOSPC/OOM. Al mover TMPDIR a
+      # /dockus-workspaces (disco) por ESC-ALTO-03 ese riesgo desaparecio: hoy
+      # aqui solo vive el heartbeat, del orden de kilobytes. Lo que queda del
+      # hallazgo es la RAM de los contenedores de ejecucion, sobre la que el
+      # worker avisa al arrancar si concurrencia x limite se acerca al total.
       - type: tmpfs
         target: /tmp
         tmpfs:
           size: 2G
+    # Mismo cerrojo que en `backend`: los dos servicios escriben en el mismo
+    # volumen de dependencias y arrancan en paralelo. Quien llega primero
+    # instala; el otro espera y se encuentra el arbol ya completo.
     command: >
       sh -c '
-        if [ ! -d node_modules ] || [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
-          npm install --legacy-peer-deps &&
-          cp package-lock.json node_modules/.package-lock.json;
-        fi &&
+        set -e;
+        flock /app/node_modules/.dockus-install.lock sh -c "
+          if ! cmp -s package-lock.json node_modules/.dockus-install.stamp; then
+            npm install --legacy-peer-deps &&
+            cp package-lock.json node_modules/.dockus-install.stamp;
+          fi
+        ";
         npm run start:worker:dev
       '
     healthcheck:
@@ -191,7 +258,9 @@ services:
       interval: 20s
       timeout: 5s
       retries: 3
-      start_period: 40s
+      # Puede quedarse esperando el cerrojo mientras `backend` instala, asi que
+      # necesita al menos la misma ventana en frio (vease `backend`).
+      start_period: 300s
     networks:
       - dockus-network
 
@@ -215,11 +284,15 @@ services:
       REDIS_HOST: redis
       MINIO_ENDPOINT: minio
       MINIO_API_PORT: ${MINIO_API_PORT:-9000}
-      DOCKER_HOST: unix:///var/run/docker.sock
-      BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runc}
       FRONTEND_URL: ${FRONTEND_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      # DOCKER_HOST llega heredado del .env raiz (env_file) y es obligatorio
+      # en produccion segun env.validation.ts (NODE_ENV, no el rol del
+      # proceso) — pero inerte aqui: sin el mount de docker.sock retirado mas
+      # abajo, nada en la API puede usarlo. Ver el comentario equivalente en
+      # el servicio `backend` (mas arriba) para los dos intentos de quitarlo
+      # que se probaron y descartaron.
     depends_on:
       postgres:
         condition: service_healthy
@@ -227,13 +300,10 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    # The non-root container user needs the host Docker group GID to access the
-    # mounted Docker socket. Set DOCKER_HOST_GID to the GID of the host's docker
-    # group (e.g. `stat -c '%g' /var/run/docker.sock`).
-    group_add:
-      - ${DOCKER_HOST_GID:-999}
+    # audit/04 ARQ-016: sin docker.sock — la API dejo de hablar
+    # con el daemon directamente. HealthService.checkDocker lee el estado que
+    # worker-prod publica en Redis; el socket (y el group_add que existia solo
+    # para acceder a el) ya no hace falta aqui.
     healthcheck:
       test:
         ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health/live || exit 1"]
@@ -266,6 +336,10 @@ services:
       FRONTEND_URL: ${FRONTEND_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      # Vease el servicio `worker` de dev: la ruta de los workspaces debe ser
+      # identica dentro y fuera del contenedor para que el demonio del anfitrion
+      # pueda resolver el bind mount del codigo del alumno (ESC-ALTO-03).
+      TMPDIR: /dockus-workspaces
     depends_on:
       postgres:
         condition: service_healthy
@@ -275,6 +349,7 @@ services:
         condition: service_healthy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /dockus-workspaces:/dockus-workspaces
       - type: tmpfs
         target: /tmp
         tmpfs:
@@ -315,21 +390,32 @@ services:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
       - ./shared:/shared:ro
+    # Un solo servicio escribe en `frontend_node_modules`, asi que aqui no hace
+    # falta cerrojo; el testigo si se renombra por el mismo motivo que en
+    # `backend`: `.package-lock.json` es un fichero interno de npm.
     command: >
       sh -c '
-        if [ ! -d node_modules ] || [ ! -f node_modules/.package-lock.json ] || ! cmp -s package-lock.json node_modules/.package-lock.json; then
-          npm install --legacy-peer-deps &&
-          cp package-lock.json node_modules/.package-lock.json;
-        fi &&
+        set -e;
+        if ! cmp -s package-lock.json node_modules/.dockus-install.stamp; then
+          npm install --legacy-peer-deps;
+          cp package-lock.json node_modules/.dockus-install.stamp;
+        fi;
         npm run dev -- --host 0.0.0.0 --port 5173
       '
     healthcheck:
+      # 127.0.0.1 y no `localhost`: Vite escucha solo en IPv4 (0.0.0.0:5173),
+      # pero /etc/hosts resuelve `localhost` tambien a ::1 y el wget de busybox
+      # prefiere IPv6, con lo que el sondeo moria con "connection refused"
+      # mientras el servidor atendia peticiones con normalidad desde fuera.
+      # El backend no sufre esto porque Nest abre el puerto en dual-stack (:::3000).
       test:
-        ["CMD-SHELL", "wget -qO- http://localhost:5173 || exit 1"]
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      # Comparte causa con `backend`: el arranque en frio incluye un npm install
+      # completo, que no cabe en 30s.
+      start_period: 300s
     networks:
       - dockus-network
 

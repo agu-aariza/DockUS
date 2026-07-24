@@ -118,6 +118,9 @@ jobs:
       - name: Lint backend
         run: npm run lint
 
+      - name: Check architectural boundaries
+        run: npm run boundaries
+
       - name: Typecheck backend
         run: npm run typecheck
 
