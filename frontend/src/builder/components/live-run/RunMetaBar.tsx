@@ -7,7 +7,6 @@ interface RunMetaBarProps {
 export function RunMetaBar({ selectedRun }: RunMetaBarProps): JSX.Element {
   return (
     <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-app-border pb-3">
-      <MetaField label="Contexto" value={selectedRun?.runKind ?? "—"} />
       <MetaField
         label="Arquitectura"
         value={selectedRun?.llmAssessment?.structuralType ?? "analizando…"}

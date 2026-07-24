@@ -15,7 +15,6 @@ import {
 } from "./live-run/EvidenceSection";
 import { LiveConsolePanel } from "./live-run/LiveConsolePanel";
 import { LlmAssessmentPanel } from "./live-run/LlmAssessmentPanel";
-import { PreflightSummaryPanel } from "./live-run/PreflightSummaryPanel";
 import { RunMetaBar } from "./live-run/RunMetaBar";
 import { RunStatusStrip } from "./live-run/RunStatusStrip";
 import { TimelinePanel } from "./live-run/TimelinePanel";
@@ -161,12 +160,6 @@ export function BuilderLiveRunPane({
             <>
               {selectedRun.llmAssessment ? (
                 <LlmAssessmentPanel assessment={selectedRun.llmAssessment} />
-              ) : null}
-
-              {selectedRun.preflightSummary ? (
-                <PreflightSummaryPanel
-                  preflightSummary={selectedRun.preflightSummary}
-                />
               ) : null}
 
               <div className="grid gap-6 2xl:grid-cols-[0.95fr_1.05fr]">

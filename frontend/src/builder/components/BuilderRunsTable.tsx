@@ -3,13 +3,6 @@ import { DataTable, type Column } from "../../shared/components/ui/DataTable";
 import { StatusBadge, type StatusTone } from "../../shared/components/ui/StatusBadge";
 import { formatDate } from "../utils";
 
-const PREFLIGHT_COMPATIBILITY_LABEL: Record<string, string> = {
-  SUPPORTED_AUTO: "auto",
-  SUPPORTED_WITH_MANIFEST: "manifest",
-  PARTIAL: "parcial",
-  UNSUPPORTED: "bloqueado",
-};
-
 const STATUS_TONE: Record<string, StatusTone> = {
   SUCCESS: "success",
   FAILED: "danger",
@@ -20,14 +13,6 @@ const STATUS_TONE: Record<string, StatusTone> = {
 
 function runStatusTone(status: string): StatusTone {
   return STATUS_TONE[status] ?? "idle";
-}
-
-function preflightLabel(run: BuildRunEntity): string {
-  if (!run.preflightSummary) return "n/d";
-  return (
-    PREFLIGHT_COMPATIBILITY_LABEL[run.preflightSummary.compatibility] ??
-    run.preflightSummary.compatibility
-  );
 }
 
 interface BuilderRunsTableProps {
@@ -73,40 +58,6 @@ export function BuilderRunsTable({
       ),
     },
     {
-      header: "Preflight",
-      accessor: (run) => preflightLabel(run),
-      sortable: true,
-      sortValue: (run) => preflightLabel(run),
-      render: (run) => (
-        <div className="text-sm text-slate-600">
-          <div>{preflightLabel(run)}</div>
-          <div className="mt-1 text-xs text-slate-500">
-            {run.preflightSummary?.executionProfile ?? "sin perfil"}
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: "Etapa",
-      accessor: (run) => run.activeStage ?? "n/d",
-      sortable: true,
-      sortValue: (run) => run.activeStage ?? "",
-      className: "text-sm text-slate-600",
-    },
-    {
-      header: "Entorno",
-      accessor: "id",
-      className: "whitespace-normal",
-      render: (run) => (
-        <div className="text-sm text-slate-600">
-          <div>{run.runtimeTarget?.executionNetworkName ?? "sin red"}</div>
-          <div className="mt-1 text-xs text-slate-500">
-            {run.runtimeTarget?.primaryContainerId ?? "contenedor resolviéndose"}
-          </div>
-        </div>
-      ),
-    },
-    {
       header: "Tokens (In/Out)",
       accessor: "id",
       className: "text-sm text-slate-600 font-mono data-figure",
@@ -130,7 +81,7 @@ export function BuilderRunsTable({
       className: "text-sm text-slate-700 font-mono data-figure",
       render: (run) => (
         run.executionCostUsd !== undefined && run.executionCostUsd > 0 ? (
-          <span className="text-emerald-600 font-semibold">
+          <span className="text-success-600 font-semibold">
             ${run.executionCostUsd.toFixed(4)}
           </span>
         ) : (
@@ -166,8 +117,8 @@ export function BuilderRunsTable({
             Historial de ejecuciones
           </h3>
           <p className="section-copy">
-            Selecciona una ejecución para inspeccionar su stream, su entorno y los
-            eventos persistidos.
+            Selecciona una ejecución para inspeccionar su stream y los eventos
+            persistidos.
           </p>
         </div>
       </div>
@@ -202,20 +153,12 @@ export function BuilderRunsTable({
                   </StatusBadge>
                 </div>
                 <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-                  <div>Etapa: {run.activeStage ?? "n/d"}</div>
-                  <div>Preflight: {preflightLabel(run)}</div>
-                  <div>Perfil: {run.preflightSummary?.executionProfile ?? "n/d"}</div>
-                  <div>Red: {run.runtimeTarget?.executionNetworkName ?? "sin red"}</div>
-                  <div>
-                    Contenedor:{" "}
-                    {run.runtimeTarget?.primaryContainerId ?? "resolviéndose"}
-                  </div>
                   <div>Fecha: {formatDate(run.createdAt)}</div>
                   {run.inputTokens !== undefined && run.inputTokens > 0 && (
                     <div>Tokens: <span className="font-mono">{run.inputTokens.toLocaleString()} / {run.outputTokens?.toLocaleString() ?? 0}</span></div>
                   )}
                   {run.executionCostUsd !== undefined && run.executionCostUsd > 0 && (
-                    <div>Coste: <span className="font-mono text-emerald-600 font-semibold">${run.executionCostUsd.toFixed(4)}</span></div>
+                    <div>Coste: <span className="font-mono text-success-600 font-semibold">${run.executionCostUsd.toFixed(4)}</span></div>
                   )}
                 </div>
               </button>

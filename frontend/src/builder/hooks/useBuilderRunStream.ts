@@ -4,6 +4,7 @@ import { builderApi } from "../../shared/api/services";
 import type { BuildRunEvent } from "../../features/builder/types";
 import type { SessionRecord } from "../../features/auth/types";
 import { getErrorMessage } from "../../shared/utils/errors";
+import { computeBackoffDelay } from "../../shared/utils/backoff";
 import { mergeEvents } from "../utils";
 
 export type StreamState = "idle" | "connecting" | "streaming" | "polling";
@@ -43,10 +44,30 @@ export function useBuilderRunStream(
     const abortController = new AbortController();
     let reconnectTimer: number | null = null;
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined = undefined;
+    // Intentos consecutivos fallidos. Se reinicia en cuanto el stream vuelve a
+    // entregar datos, de modo que una desconexión aislada no penaliza a la
+    // siguiente (ESC-ALTO-06).
+    let reconnectAttempt = 0;
 
     const updateStreamState = (next: StreamState) => {
       streamStateRef.current = next;
       setStreamState(next);
+    };
+
+    /**
+     * Reconexión con retroceso exponencial y dispersión. Antes era un retardo
+     * fijo de 2.000/2.500 ms: ante un corte que afecte a todos los clientes a
+     * la vez, todos volvían en el mismo instante y el pico se repetía idéntico
+     * en cada intento, porque nada rompía la alineación.
+     */
+    const scheduleReconnect = () => {
+      const delay = computeBackoffDelay(reconnectAttempt);
+      reconnectAttempt += 1;
+      reconnectTimer = window.setTimeout(() => {
+        if (!disposed) {
+          void connect();
+        }
+      }, delay);
     };
 
     const fetchBacklog = async () => {
@@ -54,6 +75,9 @@ export function useBuilderRunStream(
         buildRunId: runId,
         afterSequence: latestSequenceRef.current,
         limit: 200,
+        // Sin la señal, un cambio de runId deja viva la petición anterior: al
+        // resolver, escribe estado del run que ya no se observa.
+        signal: abortController.signal,
       });
       if (disposed || page.events.length === 0) {
         latestSequenceRef.current = Math.max(
@@ -139,6 +163,9 @@ export function useBuilderRunStream(
       try {
         setStreamError(null);
         await fetchBacklog();
+        if (disposed) {
+          return;
+        }
         updateStreamState("connecting");
 
         const response = await fetch(
@@ -157,6 +184,8 @@ export function useBuilderRunStream(
         }
 
         updateStreamState("streaming");
+        // Conexión establecida: la racha de fallos queda saldada.
+        reconnectAttempt = 0;
         reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -179,11 +208,7 @@ export function useBuilderRunStream(
 
         if (!disposed && !isTerminalRef.current) {
           updateStreamState("polling");
-          reconnectTimer = window.setTimeout(() => {
-            if (!disposed) {
-              void connect();
-            }
-          }, 2000);
+          scheduleReconnect();
         } else if (!disposed) {
           updateStreamState("idle");
         }
@@ -194,11 +219,7 @@ export function useBuilderRunStream(
         setStreamError(getErrorMessage(error));
         if (!isTerminalRef.current) {
           updateStreamState("polling");
-          reconnectTimer = window.setTimeout(() => {
-            if (!disposed) {
-              void connect();
-            }
-          }, 2500);
+          scheduleReconnect();
         } else {
           updateStreamState("idle");
         }

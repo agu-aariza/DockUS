@@ -48,6 +48,8 @@ export interface ProjectEntity {
   status: ProjectStatus;
   creatorId: string;
   teachers?: UserEntity[];
+  /** Solo la devuelve `GET /projects` (listado); ausente en otras rutas de proyecto. */
+  assignmentCount?: number;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;

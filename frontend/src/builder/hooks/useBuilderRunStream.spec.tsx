@@ -132,4 +132,54 @@ describe("useBuilderRunStream", () => {
     rerender(<TestComponent runId="run-1" session={null} />);
     expect(mockFetch).not.toHaveBeenCalled();
   });
+
+  it("MED-06: propaga el AbortSignal del efecto a la recuperacion del historico", async () => {
+    const listEventsSpy = vi.spyOn(builderApi, "listEvents");
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      body: {
+        getReader: () => ({
+          read: vi.fn().mockResolvedValue({ done: true }),
+          cancel: vi.fn().mockResolvedValue(undefined),
+          releaseLock: vi.fn(),
+        }),
+      },
+    });
+
+    render(<TestComponent runId="run-1" session={session} />);
+
+    await waitFor(() => expect(listEventsSpy).toHaveBeenCalled());
+
+    const signal = listEventsSpy.mock.calls[0][0].signal;
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(false);
+  });
+
+  it("MED-06: no emite estado del run anterior si el historico resuelve tras desmontar", async () => {
+    // El closure obsoleto: listEvents queda pendiente, el efecto se limpia y la
+    // promesa resuelve despues. Sin la comprobacion de `disposed`, escribia
+    // "connecting" del run que ya no se observa.
+    let resolveBacklog: (value: unknown) => void = () => undefined;
+    vi.spyOn(builderApi, "listEvents").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveBacklog = resolve;
+        }) as never,
+    );
+
+    const mockFetch = vi.fn();
+    global.fetch = mockFetch;
+
+    const { unmount, getByTestId } = render(
+      <TestComponent runId="run-1" session={session} />,
+    );
+
+    unmount();
+    resolveBacklog({ events: [], latestSequence: 0, hasMore: false });
+    await Promise.resolve();
+
+    // La peticion de stream nunca llega a lanzarse tras el desmontaje.
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(() => getByTestId("stream-state")).toThrow();
+  });
 });

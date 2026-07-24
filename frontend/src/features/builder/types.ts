@@ -1,66 +1,26 @@
+/**
+ * Shapes compartidas con el backend: fuente única en `@dockus/contracts`
+ * (audit/04 ARQ-008). `BuildRunChatMessage` es el nombre local de
+ * `ChatMessageResponse` del contrato.
+ */
+export type {
+  BuildRunEvent,
+  BuildRunEventsPage,
+  ChatMessageResponse as BuildRunChatMessage,
+} from "@dockus/contracts";
+
 export type BuilderOutcome = "PASS" | "FAIL" | "PARTIAL" | "UNKNOWN";
 export type QualityInsightCategory =
   | "security"
   | "architecture"
   | "quality"
   | "rubricCompliance";
-export type SupportedProjectType =
-  | "CLI"
-  | "MODULE_CLI"
-  | "WEB_ASGI"
-  | "WEB_WSGI"
-  | "DJANGO_SERVICE"
-  | "BATCH_WORKER"
-  | "PYPROJECT_GENERIC"
-  | "CUSTOM_MANIFEST"
-  | "UNKNOWN";
-export type PreflightCompatibility =
-  | "SUPPORTED_AUTO"
-  | "SUPPORTED_WITH_MANIFEST"
-  | "PARTIAL"
-  | "UNSUPPORTED";
-export type DependencyManager =
-  | "pip-requirements"
-  | "pyproject"
-  | "poetry"
-  | "pdm"
-  | "uv"
-  | "pipenv"
-  | "setuptools"
-  | "unknown";
-type PythonProjectLayout =
-  | "flat-root"
-  | "src-layout"
-  | "package-installable"
-  | "monorepo-subdir"
-  | "unknown";
-export type PythonExecutionProfile =
-  | "cli-script"
-  | "module-cli"
-  | "web-asgi"
-  | "web-wsgi"
-  | "django-service"
-  | "batch-worker"
-  | "custom-manifest"
-  | "unknown";
-export type ManifestSource = "AUTO" | "DOCKUS_MANIFEST";
-
-export interface BuildRunRuntimeTarget {
-  projectId: string;
-  workspaceNetworkName: string;
-  executionNetworkName: string;
-  primaryContainerId: string | null;
-  helperContainerIds: string[];
-}
-
 export type BuildRunStatus =
   | "QUEUED"
   | "RUNNING"
   | "SUCCESS"
   | "FAILED"
   | "CANCELLED";
-
-export type BuildRunKind = "STANDARD";
 
 export type EvidenceArtifactType =
   | "BUILD_LOG"
@@ -76,7 +36,6 @@ export type EvidenceArtifactType =
   | "STRATEGY"
   | "STATIC_FINDINGS"
   | "STATIC_REVIEW"
-  | "SELF_HEALING_TRACE"
   | "LLM_PLAN_PROMPT"
   | "LLM_PLAN_RAW_RESPONSE"
   | "LLM_PLAN_PARSED"
@@ -97,12 +56,6 @@ export interface EvidenceArtifactDto {
   sizeBytes: number;
   createdAt: string;
 }
-
-export type BuildStage =
-  | "WORKSPACE"
-  | "EXECUTION"
-  | "LLM_EVALUATION"
-  | "CLEANUP";
 
 export type TechnicalFeedbackSeverity = "low" | "medium" | "high";
 export type TechnicalFeedbackLevel = "basico" | "intermedio" | "avanzado";
@@ -147,74 +100,6 @@ export interface BuilderReportCoaching {
   nextAttemptChecklist: string[];
 }
 
-export interface BuilderSelfHealingReport {
-  attempted: boolean;
-  recovered: boolean;
-  attemptsUsed: number;
-  summary: string;
-}
-
-export interface BuilderPreflightFinding {
-  level: "info" | "warning" | "error";
-  code: string;
-  message: string;
-  file?: string | null;
-  line?: number | null;
-}
-
-interface PythonTestStrategy {
-  studentTestsPresent: boolean;
-  teacherTestsSupported: boolean;
-  suggestedCommand: string[] | null;
-}
-
-interface PythonHealthStrategy {
-  kind: "http" | "command" | "none";
-  command: string[] | null;
-  servicePort: number | null;
-  path: string | null;
-}
-
-export interface PythonProjectModel {
-  pythonVersionConstraint: string | null;
-  dependencyManager: DependencyManager;
-  projectLayout: PythonProjectLayout;
-  executionProfile: PythonExecutionProfile;
-  entrypoints: string[];
-  testStrategy: PythonTestStrategy;
-  healthStrategy: PythonHealthStrategy;
-  systemDependencies: string[];
-  workingDirectory: string;
-  detectedFramework: string | null;
-  packageRoot: string | null;
-}
-
-export interface BuilderPreflightSummary {
-  supportedProjectType: SupportedProjectType;
-  compatibility: PreflightCompatibility;
-  entrypointCandidates: string[];
-  testsPresent: boolean;
-  detectedFramework: string | null;
-  detectedProjectModel: PythonProjectModel;
-  dependencyManager: DependencyManager;
-  pythonVersionConstraint: string | null;
-  executionProfile: PythonExecutionProfile;
-  workingDirectory: string;
-  manifestSource: ManifestSource;
-  manifestPath: string | null;
-  resolvedCommands: {
-    install: string[][];
-    run: string[] | null;
-    test: string[][];
-    healthcheck: string[] | null;
-  };
-  resolvedEnvironment: Record<string, string>;
-  resolvedServicePort: number | null;
-  systemDependencies: string[];
-  findings: BuilderPreflightFinding[];
-  failureCode?: string | null;
-}
-
 export type PedagogicalNarrativeKind =
   | "success"
   | "gap"
@@ -237,7 +122,6 @@ export interface BuilderReportEntity {
   llmRecommendations?: string[];
   overallOutcome?: "PASS" | "FAIL" | "PARTIAL" | "UNKNOWN";
   technicalFeedback?: TechnicalFeedbackReport;
-  selfHealing?: BuilderSelfHealingReport;
   coaching?: BuilderReportCoaching;
   learningObjective?: string;
   professionalVerdict?: string;
@@ -250,17 +134,9 @@ export interface BuildRunEntity {
   id: string;
   deliveryId: string;
   triggeredById: string;
-  runKind: BuildRunKind;
   status: BuildRunStatus;
-  activeStage?: BuildStage | null;
   latestEventSequence?: number | null;
   isTerminal: boolean;
-  stackResult?: unknown;
-  dockerfileContent?: string | null;
-  buildLogs?: unknown;
-  timingsMs?: unknown;
-  staticFindings?: unknown;
-  stageResults?: unknown;
   llmAssessment?: {
     structuralType?: string;
     evaluativeState?: string;
@@ -288,18 +164,12 @@ export interface BuildRunEntity {
     >;
     recipe?: unknown;
   } | null;
-  preflightSummary?: BuilderPreflightSummary | null;
-  evidenceArtifacts?: EvidenceArtifactDto[] | null;
   report?: BuilderReportEntity | null;
-  executionContext?: unknown;
-  runtimeTarget?: BuildRunRuntimeTarget | null;
   failureReason?: string | null;
   warnings: string[];
   inputTokens?: number;
   outputTokens?: number;
   executionCostUsd?: number;
-  imageTag?: string | null;
-  imageExpiresAt?: string | null;
   startedAt?: string | null;
   finishedAt?: string | null;
   createdAt: string;
@@ -312,40 +182,3 @@ export interface EnqueueBuildRunResponse {
   deliveryId: string;
 }
 
-export interface BuildRunEvent {
-  id: string;
-  buildRunId: string;
-  sequence: number;
-  eventType:
-    | "RUN_ENQUEUED"
-    | "RUN_STARTED"
-    | "RUN_STATUS_CHANGED"
-    | "STAGE_STARTED"
-    | "STAGE_FINISHED"
-    | "LOG_CHUNK"
-    | "WARNING_ADDED"
-    | "ARTIFACT_ADDED"
-    | "REPORT_READY"
-    | "RUN_COMPLETED"
-    | "RUN_FAILED"
-    | "RUN_CANCELLED";
-  runStatus?: BuildRunStatus | null;
-  stage?: BuildStage | null;
-  message: string;
-  payload?: Record<string, unknown> | null;
-  createdAt: string;
-}
-
-export interface BuildRunEventsPage {
-  events: BuildRunEvent[];
-  latestSequence: number;
-  hasMore: boolean;
-}
-
-export interface BuildRunChatMessage {
-  id: string;
-  buildRunId: string;
-  sender: "user" | "assistant";
-  message: string;
-  createdAt: string;
-}

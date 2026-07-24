@@ -37,7 +37,7 @@ export function LiveConsolePanel({
       </header>
 
       {consoleOutput ? (
-        <pre className="custom-scrollbar max-h-[460px] max-w-full overflow-y-auto whitespace-pre-wrap break-all p-4 font-mono text-xs leading-6 text-emerald-300/90 selection:bg-emerald-500/30">
+        <pre className="custom-scrollbar max-h-[460px] max-w-full overflow-y-auto whitespace-pre-wrap break-all p-4 font-mono text-xs leading-6 text-success-300/90 selection:bg-success-500/30">
           {consoleOutput}
         </pre>
       ) : (

@@ -106,7 +106,7 @@ function TimelineNode({
         </p>
 
         {isEvidence && evidenceContent && (
-          <pre className="custom-scrollbar mt-2 max-w-full overflow-x-auto rounded-md bg-slate-950 p-3 font-mono text-xs leading-5 text-emerald-300">
+          <pre className="custom-scrollbar mt-2 max-w-full overflow-x-auto rounded-md bg-slate-950 p-3 font-mono text-xs leading-5 text-success-300">
             {evidenceContent.trim()}
           </pre>
         )}

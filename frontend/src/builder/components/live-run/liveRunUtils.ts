@@ -17,13 +17,6 @@ export function confidenceLabel(confidence?: string): string {
   return CONFIDENCE_LABEL[confidence] ?? confidence;
 }
 
-export const PREFLIGHT_COMPATIBILITY_LABEL: Record<string, string> = {
-  SUPPORTED_AUTO: "soportado automaticamente",
-  SUPPORTED_WITH_MANIFEST: "soportado mediante dockus.yml",
-  PARTIAL: "parcial",
-  UNSUPPORTED: "no soportado",
-};
-
 const ARTIFACT_LABELS: Record<string, string> = {
   BUILD_LOG: "Build log",
   RUNTIME_EVENTS: "Eventos del runtime",
@@ -38,7 +31,6 @@ const ARTIFACT_LABELS: Record<string, string> = {
   STRATEGY: "Estrategia",
   STATIC_FINDINGS: "Hallazgos estáticos",
   STATIC_REVIEW: "Revisión estática",
-  SELF_HEALING_TRACE: "Traza de autocorrección",
   LLM_PLAN_PROMPT: "Prompt del planner",
   LLM_PLAN_RAW_RESPONSE: "Respuesta bruta del planner",
   LLM_PLAN_PARSED: "Planner normalizado",
@@ -116,9 +108,9 @@ export const GRADE_TEXT_CLASS: Record<GradeTone, string> = {
 };
 
 const EVALUATIVE_STATE_TEXT_CLASS: Record<string, string> = {
-  E1: "text-emerald-500",
+  E1: "text-success-500",
   E2: "text-warning",
-  E3: "text-amber-500",
+  E3: "text-warning-500",
 };
 
 export function evaluativeStateTextClass(state?: string): string {
