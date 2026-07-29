@@ -4,12 +4,15 @@
  * @module groups.service
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CourseGroup } from '../entities/course-group.entity';
-import { GroupEnrollment } from '../entities/group-enrollment.entity';
 import { User, UserRole } from '../../users/entities/user.entity';
+import type { IUserRepository } from '../../users/domain/repositories/user.repository.interface';
+import { USER_REPOSITORY } from '../../users/domain/repositories/user.repository.interface';
+import type { ICourseGroupRepository } from '../domain/repositories/course-group.repository.interface';
+import { COURSE_GROUP_REPOSITORY } from '../domain/repositories/course-group.repository.interface';
+import type { IGroupEnrollmentRepository } from '../domain/repositories/group-enrollment.repository.interface';
+import { GROUP_ENROLLMENT_REPOSITORY } from '../domain/repositories/group-enrollment.repository.interface';
 import { CreateGroupDto } from '../dto/create-group.dto';
 import { BulkEnrollDto } from '../dto/bulk-enroll.dto';
 import { GroupEnrollmentEventsService } from '../../../shared/application/group-enrollment-events.service';
@@ -17,41 +20,32 @@ import { GroupEnrollmentEventsService } from '../../../shared/application/group-
 @Injectable()
 export class GroupsService {
   constructor(
-    @InjectRepository(CourseGroup)
-    private readonly groupsRepository: Repository<CourseGroup>,
-    @InjectRepository(GroupEnrollment)
-    private readonly enrollmentsRepository: Repository<GroupEnrollment>,
-    @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
+    @Inject(COURSE_GROUP_REPOSITORY)
+    private readonly groupsRepository: ICourseGroupRepository,
+    @Inject(GROUP_ENROLLMENT_REPOSITORY)
+    private readonly enrollmentsRepository: IGroupEnrollmentRepository,
+    @Inject(USER_REPOSITORY)
+    private readonly usersRepository: IUserRepository,
     private readonly groupEnrollmentEventsService: GroupEnrollmentEventsService,
   ) {}
 
   async list(): Promise<any[]> {
-    const groups = await this.groupsRepository.find({
-      order: { createdAt: 'DESC' },
-    });
+    const groups = await this.groupsRepository.findAllOrderedByCreatedAtDesc();
 
     if (groups.length === 0) {
       return [];
     }
 
     // Agregación única por grupo en lugar de consultas N+1 individuales.
-    const counts = await this.enrollmentsRepository
-      .createQueryBuilder('enrollment')
-      .select('enrollment.groupId', 'groupId')
-      .addSelect('COUNT(*)', 'studentCount')
-      .where('enrollment.groupId IN (:...groupIds)', {
-        groupIds: groups.map((group) => group.id),
-      })
-      .andWhere('enrollment.revokedAt IS NULL')
-      .groupBy('enrollment.groupId')
-      .getRawMany<{ groupId: string; studentCount: string }>();
+    const counts = await this.enrollmentsRepository.countActiveByGroupIds(
+      groups.map((group) => group.id),
+    );
 
     // Los grupos sin matriculados no aparecen en un `GROUP BY`, así que el
     // valor por defecto es 0 y no `undefined`: la vista muestra la cifra tal
     // cual y un hueco ahí se leería como un error de carga.
     const countByGroupId = new Map(
-      counts.map((row) => [row.groupId, Number(row.studentCount)]),
+      counts.map((row) => [row.groupId, row.studentCount]),
     );
 
     return groups.map((group) => ({
@@ -78,16 +72,7 @@ export class GroupsService {
   async listGroupsForStudent(
     studentId: string,
   ): Promise<Array<{ id: string; name: string; code: string | null }>> {
-    const groups = await this.groupsRepository
-      .createQueryBuilder('group')
-      .innerJoin(
-        GroupEnrollment,
-        'enrollment',
-        'enrollment."groupId" = group.id AND enrollment."studentId" = :studentId AND enrollment."revokedAt" IS NULL',
-        { studentId },
-      )
-      .orderBy('group.name', 'ASC')
-      .getMany();
+    const groups = await this.groupsRepository.findAllForStudent(studentId);
 
     return groups.map((group) => ({
       id: group.id,
@@ -108,9 +93,7 @@ export class GroupsService {
     groupId: string,
     dto: Partial<CreateGroupDto>,
   ): Promise<CourseGroup> {
-    const group = await this.groupsRepository.findOne({
-      where: { id: groupId },
-    });
+    const group = await this.groupsRepository.findById(groupId);
     if (!group) throw new NotFoundException('Grupo no encontrado');
 
     Object.assign(group, dto);
@@ -118,11 +101,8 @@ export class GroupsService {
   }
 
   async listEnrollments(groupId: string): Promise<any[]> {
-    const enrollments = await this.enrollmentsRepository.find({
-      where: { groupId },
-      relations: { student: true },
-      order: { enrolledAt: 'DESC' },
-    });
+    const enrollments =
+      await this.enrollmentsRepository.findByGroupWithStudent(groupId);
 
     return enrollments.map((e) => ({
       id: e.id,
@@ -141,9 +121,7 @@ export class GroupsService {
     dto: BulkEnrollDto,
     enrolledById: string,
   ): Promise<any> {
-    const group = await this.groupsRepository.findOne({
-      where: { id: groupId },
-    });
+    const group = await this.groupsRepository.findById(groupId);
     if (!group) throw new NotFoundException('Grupo no encontrado');
 
     const studentIds = dto.studentIds || [];
@@ -172,9 +150,10 @@ export class GroupsService {
 
     // Find students by email if provided
     if (studentEmails.length > 0) {
-      const emailStudents = await this.usersRepository.find({
-        where: { email: In(studentEmails), role: UserRole.STUDENT },
-      });
+      const emailStudents = await this.usersRepository.findByEmails(
+        studentEmails,
+        UserRole.STUDENT,
+      );
       emailStudents.forEach((s) => {
         if (!studentIds.includes(s.id)) studentIds.push(s.id);
       });
@@ -194,22 +173,18 @@ export class GroupsService {
 
       if (cleanName.includes(',')) {
         // Format: "LastName, FirstName"
-        students = await this.usersRepository.find({
-          where: {
-            lastName: parts[0],
-            firstName: parts[1],
-            role: UserRole.STUDENT,
-          },
-        });
+        students = await this.usersRepository.findByNameAndRole(
+          parts[1],
+          parts[0],
+          UserRole.STUDENT,
+        );
       } else if (parts.length >= 2) {
         // Format: "FirstName LastName" (simple)
-        students = await this.usersRepository.find({
-          where: {
-            firstName: parts[0],
-            lastName: parts[1],
-            role: UserRole.STUDENT,
-          },
-        });
+        students = await this.usersRepository.findByNameAndRole(
+          parts[0],
+          parts[1],
+          UserRole.STUDENT,
+        );
       }
 
       // If only one match, add it
@@ -237,10 +212,7 @@ export class GroupsService {
     // Calculate unresolved emails
     let foundStudents: User[] = [];
     if (studentIds.length > 0) {
-      foundStudents = await this.usersRepository.find({
-        where: { id: In(studentIds) },
-        select: { id: true, email: true, firstName: true, lastName: true },
-      });
+      foundStudents = await this.usersRepository.findByIds(studentIds);
     }
     const foundEmails = foundStudents.map((s) => s.email);
     results.summary.unresolvedEmails = studentEmails.filter(
@@ -261,56 +233,14 @@ export class GroupsService {
 
     // Matrícula masiva atómica bajo transacción para prevenir condiciones de carrera y duplicados.
     if (studentIds.length > 0) {
-      await this.enrollmentsRepository.manager.transaction(async (manager) => {
-        const existing = await manager.find(GroupEnrollment, {
-          where: { groupId, studentId: In(studentIds) },
-        });
-
-        const existingByStudentId = new Map(
-          existing.map((enrollment) => [enrollment.studentId, enrollment]),
-        );
-
-        const toReactivate = existing.filter(
-          (enrollment) => enrollment.revokedAt !== null,
-        );
-        const toInsert = studentIds.filter(
-          (studentId) => !existingByStudentId.has(studentId),
-        );
-
-        results.summary.alreadyActiveCount =
-          existing.length - toReactivate.length;
-
-        if (toReactivate.length > 0) {
-          await manager.update(
-            GroupEnrollment,
-            { id: In(toReactivate.map((enrollment) => enrollment.id)) },
-            { revokedAt: null, enrolledById, enrolledAt: new Date() },
-          );
-          results.summary.reactivatedCount = toReactivate.length;
-        }
-
-        if (toInsert.length > 0) {
-          // `orIgnore` cierra la carrera que quedaba: si otra petición
-          // concurrente insertó la misma matrícula entre la lectura y este
-          // punto, la fila duplicada se descarta en lugar de abortar el lote.
-          const inserted = await manager
-            .createQueryBuilder()
-            .insert()
-            .into(GroupEnrollment)
-            .values(
-              toInsert.map((studentId) => ({
-                groupId,
-                studentId,
-                enrolledById,
-              })),
-            )
-            .orIgnore()
-            .execute();
-
-          results.summary.enrolledCount =
-            inserted.identifiers.filter(Boolean).length;
-        }
-      });
+      const bulkResult = await this.enrollmentsRepository.bulkEnroll(
+        groupId,
+        studentIds,
+        enrolledById,
+      );
+      results.summary.alreadyActiveCount = bulkResult.alreadyActiveCount;
+      results.summary.reactivatedCount = bulkResult.reactivatedCount;
+      results.summary.enrolledCount = bulkResult.enrolledCount;
     }
 
     // Sync project assignments for the newly enrolled students
@@ -325,9 +255,7 @@ export class GroupsService {
   }
 
   async revokeEnrollment(enrollmentId: string): Promise<void> {
-    const enrollment = await this.enrollmentsRepository.findOne({
-      where: { id: enrollmentId },
-    });
+    const enrollment = await this.enrollmentsRepository.findById(enrollmentId);
     if (!enrollment) throw new NotFoundException('Matrícula no encontrada');
 
     enrollment.revokedAt = new Date();
@@ -335,9 +263,7 @@ export class GroupsService {
   }
 
   async remove(groupId: string): Promise<void> {
-    const group = await this.groupsRepository.findOne({
-      where: { id: groupId },
-    });
+    const group = await this.groupsRepository.findById(groupId);
     if (!group) throw new NotFoundException('Grupo no encontrado');
 
     // Soft delete or hard delete? The repo seems to use hard delete for enrollments in some cases,
