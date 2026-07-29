@@ -19,6 +19,7 @@
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "boundaries": "depcruise --config .dependency-cruiser.cjs src",
+    "boundaries:repository-ports": "node scripts/check-repository-ports.js",
     "test": "node ./test/run-jest.cjs",
     "test:watch": "node ./test/run-jest.cjs --watch",
     "test:cov": "node ./test/run-jest.cjs --coverage",
