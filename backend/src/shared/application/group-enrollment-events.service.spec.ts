@@ -34,4 +34,28 @@ describe('GroupEnrollmentEventsService', () => {
 
     expect(handler).not.toHaveBeenCalled();
   });
+
+  it('isolates a handler that throws: other handlers still run and the caller never sees the rejection', async () => {
+    const service = new GroupEnrollmentEventsService();
+    const calls: string[] = [];
+
+    service.registerStudentsEnrolledHandler(() => {
+      calls.push('before');
+    });
+    service.registerStudentsEnrolledHandler(() => {
+      throw new Error('handler blew up');
+    });
+    service.registerStudentsEnrolledHandler(() => {
+      calls.push('after');
+    });
+
+    await expect(
+      service.publishStudentsEnrolled({
+        groupId: 'group-1',
+        studentIds: ['student-1'],
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(calls).toEqual(['before', 'after']);
+  });
 });

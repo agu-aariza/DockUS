@@ -4,7 +4,7 @@
  * @module group-enrollment-events.service
  */
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 interface GroupStudentsEnrolled {
   groupId: string;
@@ -17,6 +17,8 @@ type GroupStudentsEnrolledHandler = (
 
 @Injectable()
 export class GroupEnrollmentEventsService {
+  private readonly logger = new Logger(GroupEnrollmentEventsService.name);
+
   private readonly studentsEnrolledHandlers =
     new Set<GroupStudentsEnrolledHandler>();
 
@@ -32,7 +34,20 @@ export class GroupEnrollmentEventsService {
 
   async publishStudentsEnrolled(event: GroupStudentsEnrolled): Promise<void> {
     for (const handler of this.studentsEnrolledHandlers) {
-      await handler(event);
+      try {
+        await handler(event);
+      } catch (error) {
+        // Las matrículas ya están confirmadas: que falle un suscriptor no puede
+        // deshacerlas ni devolver 500. Queda registrado para reconciliar a mano.
+        this.logger.error(
+          JSON.stringify({
+            event: 'group_enrollment_handler_failed',
+            groupId: event.groupId,
+            studentIds: event.studentIds,
+            detail: error instanceof Error ? error.message : String(error),
+          }),
+        );
+      }
     }
   }
 }
