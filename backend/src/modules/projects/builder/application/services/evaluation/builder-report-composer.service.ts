@@ -17,7 +17,12 @@ import {
   BuilderTeacherHighlights,
   PedagogicalNarrativeKind,
   RubricCriterion,
+  EVALUATIVE_STATE_SENTENCES,
 } from '../../../domain/builder.types';
+import {
+  extractRecommendation,
+  isStrengthFinding,
+} from '../../../domain/code-quality-finding.util';
 
 @Injectable()
 export class BuilderReportComposer {
@@ -148,7 +153,11 @@ export class BuilderReportComposer {
         (finding) =>
           finding.severity === 'high' && !this.isStrengthFinding(finding),
       ),
-      ...(assessment.evaluativeState !== 'E1' ? pedagogicalItems : []),
+      // Los items pedagógicos entran como bloqueo salvo que sean elogios: un
+      // "BUENA PRÁCTICA" nunca es algo que el alumno deba corregir.
+      ...(assessment.evaluativeState !== 'E1'
+        ? pedagogicalItems.filter((item) => !this.isStrengthFinding(item))
+        : []),
       ...this.buildBlockingLimitFindings(assessment.evaluationLimits),
     ]);
 
@@ -182,7 +191,12 @@ export class BuilderReportComposer {
       mustFix,
       shouldImprove,
       strengths,
-      nextAttemptChecklist: this.buildChecklist([...mustFix, ...shouldImprove]),
+      // El checklist es "qué hago antes de reenviar", no un índice del informe:
+      // se alimenta solo de lo bloqueante. Cuando no hay nada que bloquee, las
+      // mejoras opcionales ocupan su lugar para que la lista no quede vacía.
+      nextAttemptChecklist: this.buildChecklist(
+        mustFix.length > 0 ? mustFix : shouldImprove,
+      ),
     };
   }
 
@@ -224,12 +238,7 @@ export class BuilderReportComposer {
   }
 
   private isStrengthFinding(finding: CodeQualityFinding): boolean {
-    const normalizedTitle = finding.title
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toUpperCase()
-      .trim();
-    return normalizedTitle.startsWith('BUENA PRACTICA:');
+    return isStrengthFinding(finding);
   }
 
   private buildBlockingLimitFindings(limits: string[]): CodeQualityFinding[] {
@@ -270,7 +279,9 @@ export class BuilderReportComposer {
       if (!checklist.includes(entry)) {
         checklist.push(entry);
       }
-      if (checklist.length >= 5) {
+      // Tres pasos son accionables; cinco se leen como una lista de deberes y
+      // el alumno no sabe por dónde empezar.
+      if (checklist.length >= 3) {
         break;
       }
     }
@@ -279,16 +290,7 @@ export class BuilderReportComposer {
   }
 
   private extractRecommendation(detail: string): string {
-    const match = /Recomendaci[oó]n:\s*(.+)$/iu.exec(detail);
-    if (match?.[1]) {
-      return match[1].trim();
-    }
-
-    const firstSentence = detail
-      .split('.')
-      .map((part) => part.trim())
-      .find(Boolean);
-    return firstSentence ?? detail.trim();
+    return extractRecommendation(detail);
   }
 
   private dedupeFindings(findings: CodeQualityFinding[]): CodeQualityFinding[] {
@@ -540,7 +542,9 @@ export class BuilderReportComposer {
       assessment.recommendedGrade !== undefined
         ? `Nota recomendada: ${assessment.recommendedGrade}. `
         : '';
-    const state = `Estado evaluativo: ${assessment.evaluativeState}. `;
+    const stateSentence =
+      EVALUATIVE_STATE_SENTENCES[assessment.evaluativeState];
+    const state = stateSentence ? `${stateSentence} ` : '';
     const rationale = assessment.rationale;
     return `${outcome}. ${grade}${state}${rationale}`;
   }

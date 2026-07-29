@@ -12,9 +12,41 @@ interface CodeSnippetProps {
   code: string;
   runtimeFamily?: BuilderRuntimeFamily;
   title?: string;
+  /** Archivo del hallazgo: su extensión resuelve el lenguaje mejor que el runtime. */
+  file?: string | null;
 }
 
-function resolveLanguage(runtimeFamily?: BuilderRuntimeFamily): string {
+const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  c: "c",
+  h: "c",
+  cpp: "cpp",
+  cc: "cpp",
+  hpp: "cpp",
+  py: "python",
+  js: "javascript",
+  jsx: "jsx",
+  ts: "typescript",
+  tsx: "tsx",
+  java: "java",
+  sh: "bash",
+  json: "json",
+};
+
+/**
+ * El runtime declarado por el planificador puede llegar como `unknown` —y
+ * entonces el bloque se pintaba como `text`, sin resaltado, aunque el hallazgo
+ * apuntase a un `.c`. La extensión del archivo es la señal más directa; el
+ * runtime queda como respaldo.
+ */
+function resolveLanguage(
+  runtimeFamily?: BuilderRuntimeFamily,
+  file?: string | null,
+): string {
+  const extension = file?.split(".").pop()?.toLowerCase();
+  if (extension && LANGUAGE_BY_EXTENSION[extension]) {
+    return LANGUAGE_BY_EXTENSION[extension];
+  }
+
   switch (runtimeFamily) {
     case "python":
       return "python";
@@ -31,13 +63,14 @@ export function CodeSnippet({
   code,
   runtimeFamily,
   title = "Fragmento sugerido",
+  file,
 }: CodeSnippetProps): JSX.Element | null {
   const trimmed = code.trim();
   if (!trimmed) {
     return null;
   }
 
-  const language = resolveLanguage(runtimeFamily);
+  const language = resolveLanguage(runtimeFamily, file);
 
   return (
     <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-sm">

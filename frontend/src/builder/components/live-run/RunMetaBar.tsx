@@ -5,6 +5,7 @@
  */
 
 import type { BuildRunEntity } from "../../../features/builder/types";
+import { structuralTypeLabel } from "../../../shared/data/builderTaxonomy";
 
 interface RunMetaBarProps {
   selectedRun: BuildRunEntity | null;
@@ -14,8 +15,12 @@ export function RunMetaBar({ selectedRun }: RunMetaBarProps): JSX.Element {
   return (
     <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-app-border pb-3">
       <MetaField
-        label="Arquitectura"
-        value={selectedRun?.llmAssessment?.structuralType ?? "analizando…"}
+        label="Tipo de proyecto"
+        value={
+          selectedRun?.llmAssessment?.structuralType
+            ? structuralTypeLabel(selectedRun.llmAssessment.structuralType)
+            : "analizando…"
+        }
         accent
       />
       {selectedRun?.inputTokens !== undefined && selectedRun.inputTokens > 0 && (

@@ -11,17 +11,9 @@ export type LlmAssessment = NonNullable<BuildRunEntity["llmAssessment"]>;
 export const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(" ");
 
-const CONFIDENCE_LABEL: Record<string, string> = {
-  high: "alta",
-  medium: "media",
-  low: "baja",
-};
-
-/** El nivel de confianza del evaluador, en castellano y con una sola forma en toda la UI. */
-export function confidenceLabel(confidence?: string): string {
-  if (!confidence) return "n/d";
-  return CONFIDENCE_LABEL[confidence] ?? confidence;
-}
+// Las etiquetas de la taxonomía del builder (estados, tipos, confianza) viven en
+// shared/data/builderTaxonomy para que el informe y el visor en vivo digan lo mismo.
+export { confidenceLabel } from "../../../shared/data/builderTaxonomy";
 
 const ARTIFACT_LABELS: Record<string, string> = {
   BUILD_LOG: "Build log",

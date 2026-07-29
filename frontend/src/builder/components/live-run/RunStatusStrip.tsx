@@ -5,6 +5,7 @@
  */
 
 import type { BuildRunEntity } from "../../../features/builder/types";
+import { evaluativeStateLabel } from "../../../shared/data/builderTaxonomy";
 import { cn, confidenceLabel, gradeTone, GRADE_TEXT_CLASS } from "./liveRunUtils";
 
 interface RunStatusStripProps {
@@ -47,13 +48,13 @@ export function RunStatusStrip({ selectedRun }: RunStatusStripProps): JSX.Elemen
       <div className="bg-white px-5 py-4">
         <div className="ui-label">Evaluación</div>
         <div className="mt-2 flex items-baseline justify-between gap-4">
-          <div>
-            <span className="data-figure text-xl font-semibold">
-              {assessment?.evaluativeState ?? "—"}
-            </span>
-            <span className="ml-2 text-sm text-slate-500">
+          <div className="min-w-0">
+            <div className="data-figure text-base font-semibold leading-snug">
+              {evaluativeStateLabel(assessment?.evaluativeState, "—")}
+            </div>
+            <div className="text-sm text-slate-500">
               confianza {confidenceLabel(assessment?.confidence)}
-            </span>
+            </div>
           </div>
 
           {grade !== undefined && (

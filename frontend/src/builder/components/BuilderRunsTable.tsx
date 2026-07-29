@@ -5,6 +5,7 @@
  */
 
 import type { BuildRunEntity } from "../../features/builder/types";
+import { structuralTypeLabel } from "../../shared/data/builderTaxonomy";
 import { DataTable, type Column } from "../../shared/components/ui/DataTable";
 import { StatusBadge, type StatusTone } from "../../shared/components/ui/StatusBadge";
 import { formatDate } from "../utils";
@@ -49,7 +50,7 @@ export function BuilderRunsTable({
         <div>
           <div className="data-meta">{run.id.slice(0, 8)}</div>
           <div className="mt-1 text-sm font-medium text-slate-900">
-            {run.llmAssessment?.structuralType ?? "Tipo no identificado"}
+            {structuralTypeLabel(run.llmAssessment?.structuralType)}
           </div>
         </div>
       ),
@@ -151,7 +152,7 @@ export function BuilderRunsTable({
                   <div>
                     <div className="data-meta">{run.id.slice(0, 8)}</div>
                     <div className="mt-1 text-sm font-medium text-slate-900">
-                      {run.llmAssessment?.structuralType ?? "Tipo no identificado"}
+                      {structuralTypeLabel(run.llmAssessment?.structuralType)}
                     </div>
                   </div>
                   <StatusBadge tone={runStatusTone(run.status)}>

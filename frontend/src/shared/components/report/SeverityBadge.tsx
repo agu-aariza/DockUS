@@ -42,6 +42,13 @@ const SEVERITY_CONFIG: Record<
   },
 };
 
+/** El contrato guarda el nivel sin tildes; el alumno no debe leer "basico". */
+const LEVEL_LABELS: Record<TechnicalFeedbackLevel, string> = {
+  basico: "Nivel básico",
+  intermedio: "Nivel intermedio",
+  avanzado: "Nivel avanzado",
+};
+
 export function SeverityBadge({
   severity,
   level,
@@ -60,7 +67,7 @@ export function SeverityBadge({
       </span>
       {level ? (
         <span className="inline-flex rounded-full border border-app-border bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-          {level}
+          {LEVEL_LABELS[level] ?? level}
         </span>
       ) : null}
     </span>

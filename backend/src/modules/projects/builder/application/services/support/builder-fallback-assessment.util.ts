@@ -84,6 +84,46 @@ function buildFallbackEvaluationLimits(
   return limits;
 }
 
+/**
+ * Coherencia entre el estado y el desglose de nota. El evaluador tiende a emitir
+ * E2 por inercia, y un E2 con la rúbrica entera al máximo se contradice a sí
+ * mismo: el informe acaba diciendo "funcionó con fallos" y "Necesita mejoras"
+ * sobre una entrega de 10. Cuando no hay una sola deducción, la evidencia del
+ * propio contrato dice E1.
+ *
+ * Solo corrige en esa dirección. Un E1 con puntos descontados es legítimo: el
+ * estado describe si el programa hizo lo que se esperaba, no si la rúbrica
+ * repartió todos los puntos (se pueden perder por estructura o estilo sin que
+ * la ejecución fallase).
+ */
+function reconcileStateWithGradeBreakdown(
+  contract: BuilderEvaluationContractV2,
+): void {
+  if (contract.evaluativeState !== 'E2') {
+    return;
+  }
+
+  const breakdown = contract.gradeBreakdown;
+  if (!Array.isArray(breakdown) || breakdown.length === 0) {
+    return;
+  }
+
+  const hasDeductions = breakdown.some((item) => item.awarded < item.maxPoints);
+  if (hasDeductions) {
+    return;
+  }
+
+  logger.warn(
+    JSON.stringify({
+      event: 'builder_eval_state_reconciled',
+      from: 'E2',
+      to: 'E1',
+      reason: 'grade_breakdown_sin_deducciones',
+    }),
+  );
+  contract.evaluativeState = 'E1';
+}
+
 export function resolveEvaluationAssessment(
   trace: BuilderLlmStageTrace<BuilderEvaluationContractV2>,
   planAssessment: BuilderPlanContractV2,
@@ -117,6 +157,7 @@ export function resolveEvaluationAssessment(
         trace.parsedContract.confidence = 'low';
       }
     }
+    reconcileStateWithGradeBreakdown(trace.parsedContract);
     return trace.parsedContract;
   }
 
@@ -147,7 +188,12 @@ export function resolveEvaluationAssessment(
       'Evaluacion degradada por salida invalida del evaluador LLM. Se conserva la evidencia operativa para debugging.',
     structuralType: planAssessment.structuralType,
     capabilities: planAssessment.capabilities,
-    evaluativeState: 'E3',
+    // E4, no E3: aquí el que falló fue el evaluador, no la entrega. El programa
+    // del alumno puede haber funcionado perfectamente. E3 significa "el programa
+    // no produjo salida evaluable" y etiquetarlo así sería mentirle al alumno.
+    // Ambos estados siguen mapeando a FAIL y al mismo tope de nota, así que el
+    // resultado no cambia: cambia lo que el informe dice que pasó.
+    evaluativeState: 'E4',
     confidence: 'low',
     rationale: `El evaluador LLM devolvio un contrato invalido: ${errorMessage}`,
     recommendedGrade: undefined,

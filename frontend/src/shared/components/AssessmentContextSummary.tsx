@@ -5,6 +5,10 @@
  */
 
 import type { BuildRunEntity } from "../../features/builder/types";
+import {
+  capabilityLabel,
+  capabilityStatusLabel,
+} from "../data/builderTaxonomy";
 import { GlossaryTerm } from "./Glossary";
 import { MarkdownContent } from "./MarkdownContent";
 import { ReportCard } from "./report/ReportCard";
@@ -109,10 +113,12 @@ export function AssessmentContextSummary({
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm font-semibold text-slate-900">
-                    <GlossaryTerm term={capabilityId}>{capabilityId}</GlossaryTerm>
+                    <GlossaryTerm term={capabilityId}>
+                      {capabilityLabel(capabilityId)}
+                    </GlossaryTerm>
                   </span>
-                  <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                    {capability.status}
+                  <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                    {capabilityStatusLabel(capability.status)}
                   </span>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-slate-600">

@@ -1,4 +1,8 @@
 import { BuilderReportComposer } from './builder-report-composer.service';
+import {
+  EVALUATIVE_STATES,
+  EVALUATIVE_STATE_SENTENCES,
+} from '../../../domain/builder.types';
 import type {
   BuilderCodeQualityContractV2,
   BuilderEvaluationContractV2,
@@ -117,6 +121,96 @@ describe('BuilderReportComposer', () => {
     expect(report.coaching?.passReadiness).toBe('BLOCKED');
   });
 
+  it('mantiene los elogios fuera de las mejoras y del checklist', () => {
+    const praise: CodeQualityFinding = {
+      title: 'Separación correcta en archivos .h y .c',
+      detail:
+        'Observación: el código está separado en .h y .c. Impacto: facilita la reutilización. Recomendación: Mantener esta práctica para proyectos futuros.',
+      severity: 'low',
+      codeSnippet: '',
+      level: 'basico',
+      conceptExplanation: 'La separación cabecera/implementación permite compilar por módulos.',
+    };
+
+    const report = composer.composeReport(
+      buildAssessment(),
+      { ...emptyQualityFindings, quality: [praise, highQualityFinding] },
+      [],
+    );
+
+    expect(report.coaching?.strengths).toEqual([
+      expect.objectContaining({ title: praise.title }),
+    ]);
+    expect(report.coaching?.shouldImprove).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ title: praise.title })]),
+    );
+    expect(report.coaching?.nextAttemptChecklist.join('\n')).not.toContain(
+      praise.title,
+    );
+  });
+
+  it('limita el checklist a lo bloqueante y a tres pasos', () => {
+    const blockers: CodeQualityFinding[] = Array.from({ length: 4 }, (_, i) => ({
+      title: `Bloqueo ${i + 1}`,
+      detail: `Observación: fallo ${i + 1}. Impacto: rompe la salida. Recomendación: corregir el caso ${i + 1}.`,
+      severity: 'high',
+      codeSnippet: '',
+      level: 'basico',
+      conceptExplanation: 'Explicación del fallo.',
+    }));
+
+    const report = composer.composeReport(
+      buildAssessment(),
+      {
+        ...emptyQualityFindings,
+        quality: [...blockers, highQualityFinding],
+        architecture: [
+          {
+            title: 'Mejora opcional',
+            detail:
+              'Observación: función larga. Impacto: cuesta leerla. Recomendación: extraer una función auxiliar.',
+            severity: 'medium',
+            codeSnippet: '',
+            level: 'intermedio',
+            conceptExplanation: 'Funciones cortas se prueban mejor.',
+          },
+        ],
+      },
+      [],
+    );
+
+    expect(report.coaching?.nextAttemptChecklist).toHaveLength(3);
+    expect(report.coaching?.nextAttemptChecklist.join('\n')).not.toContain(
+      'Mejora opcional',
+    );
+  });
+
+  it('usa las mejoras opcionales en el checklist cuando nada bloquea', () => {
+    const report = composer.composeReport(
+      buildAssessment(),
+      {
+        ...emptyQualityFindings,
+        quality: [
+          {
+            title: 'Mejora opcional',
+            detail:
+              'Observación: función larga. Impacto: cuesta leerla. Recomendación: extraer una función auxiliar.',
+            severity: 'medium',
+            codeSnippet: '',
+            level: 'intermedio',
+            conceptExplanation: 'Funciones cortas se prueban mejor.',
+          },
+        ],
+      },
+      [],
+    );
+
+    expect(report.coaching?.passReadiness).toBe('READY_WITH_SUGGESTIONS');
+    expect(report.coaching?.nextAttemptChecklist.join('\n')).toContain(
+      'Mejora opcional',
+    );
+  });
+
   it('derives pedagogical narrative from structured student summary', () => {
     const studentSummary = [
       '## Logro',
@@ -186,10 +280,33 @@ describe('BuilderReportComposer', () => {
     );
 
     expect(report.professionalVerdict).toContain('Apto con observaciones');
-    expect(report.professionalVerdict).toContain('E1');
+    // El veredicto que lee el usuario describe qué hizo el programa en lenguaje
+    // llano; el código E1 solo vive en el contrato y en los artefactos.
+    expect(report.professionalVerdict).toContain(
+      'El programa se ejecutó y su salida coincide con lo esperado.',
+    );
+    expect(report.professionalVerdict).not.toContain('E1');
     expect(report.learningObjective).toContain('Funcionamiento');
     expect(report.printableMarkdown).toContain('# Informe de evaluación');
   });
+
+  it.each(EVALUATIVE_STATES)(
+    'describes %s in plain language and never leaks the code into the verdict',
+    (state) => {
+      const report = composer.composeReport(
+        buildAssessment({ evaluativeState: state }),
+        emptyQualityFindings,
+        [],
+      );
+
+      expect(report.professionalVerdict).toContain(
+        EVALUATIVE_STATE_SENTENCES[state],
+      );
+      // El código del contrato no debe aparecer en la prosa del informe: es el
+      // texto que leen alumno y profesor, y fuera del equipo nadie lo interpreta.
+      expect(report.professionalVerdict).not.toMatch(/\bE[1-4]\b/);
+    },
+  );
 
   it('falls back to heuristic parsing when summaries lack markdown markers', () => {
     const report = composer.composeReport(

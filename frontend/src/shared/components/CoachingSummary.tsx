@@ -15,7 +15,10 @@ import {
 import { MarkdownContent } from "./MarkdownContent";
 import { ReportCard } from "./report/ReportCard";
 import { TechnicalFindingCard } from "./report/TechnicalFindingCard";
-import { normalizeTechnicalFeedbackItem } from "../utils/technicalFeedback";
+import {
+  groupFindingsByLocation,
+  normalizeTechnicalFeedbackItem,
+} from "../utils/technicalFeedback";
 
 interface CoachingSummaryProps {
   coaching: BuilderReportCoaching;
@@ -53,23 +56,35 @@ function FindingList({
   items,
   runtimeFamily,
   variant,
+  tone = "finding",
 }: {
   items: TechnicalFeedbackItem[];
   runtimeFamily?: BuilderRuntimeFamily;
   variant?: "default" | "compact";
+  tone?: "finding" | "strength";
 }): JSX.Element {
+  // Varias observaciones sobre el mismo archivo:línea son un solo problema.
+  const groups = groupFindingsByLocation(items);
+
   return (
     <div className="space-y-3">
-      {items.map((item, index) => (
+      {groups.map(({ item, related }, index) => (
         <TechnicalFindingCard
           key={`${item.title}-${index}`}
           item={normalizeTechnicalFeedbackItem(item)}
           runtimeFamily={runtimeFamily}
           variant={variant}
+          related={related}
+          tone={tone}
         />
       ))}
     </div>
   );
+}
+
+/** Clave estable de un hallazgo para no repetirlo entre secciones. */
+function findingKey(item: TechnicalFeedbackItem): string {
+  return [item.title, item.file ?? "", item.line ?? ""].join("|");
 }
 
 export function CoachingSummary({
@@ -91,6 +106,18 @@ export function CoachingSummary({
   }
 
   const blocked = coaching.passReadiness === "BLOCKED";
+  const isStudent = mode === "student";
+
+  // La rúbrica se mostraba entera aunque sus hallazgos ya estuviesen arriba: el
+  // alumno veía el mismo bloqueo dos veces y contado tres en el checklist.
+  const shownKeys = new Set(
+    [...coaching.mustFix, ...coaching.shouldImprove].map((item) =>
+      findingKey(item),
+    ),
+  );
+  const pendingRubricItems = rubricItems.filter(
+    (item) => !shownKeys.has(findingKey(item)),
+  );
 
   if (variant === "compact") {
     return (
@@ -150,14 +177,18 @@ export function CoachingSummary({
       tone="indigo"
       icon={RiLightbulbFlashLine}
       title={
-        mode === "student"
+        isStudent
           ? "Cómo mejorar esta entrega"
           : "Orientación para la siguiente versión"
       }
       description={
         blocked
-          ? "El sistema ha detectado bloqueos que debes resolver antes de poder pasar esta práctica."
-          : "La entrega ya supera lo esencial y estas sugerencias sirven para dejarla más limpia y mantenible."
+          ? isStudent
+            ? "Estas son las correcciones que bloquean el aprobado. Lo demás son mejoras opcionales."
+            : "El alumno tiene correcciones bloqueantes pendientes; el resto son mejoras opcionales."
+          : isStudent
+            ? "La entrega ya supera lo esencial y estas sugerencias sirven para dejarla más limpia y mantenible."
+            : "La entrega supera lo esencial; estas sugerencias sirven para orientar la siguiente versión."
       }
     >
       <div className="mt-2">
@@ -176,7 +207,9 @@ export function CoachingSummary({
         <div className="mt-6">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-rose-700">
             <RiAlertLine className="text-base" aria-hidden="true" />
-            Qué debes corregir para pasar
+            {isStudent
+              ? "Qué debes corregir para pasar"
+              : "Qué debe corregir para aprobar"}
           </div>
           <FindingList items={coaching.mustFix} runtimeFamily={runtimeFamily} />
         </div>
@@ -186,7 +219,9 @@ export function CoachingSummary({
         <div className="mt-6">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-warning-700">
             <RiLightbulbFlashLine className="text-base" aria-hidden="true" />
-            Qué podrías mejorar aunque ya funcione
+            {isStudent
+              ? "Qué podrías mejorar aunque ya funcione"
+              : "Mejoras sugeridas"}
           </div>
           <FindingList
             items={coaching.shouldImprove}
@@ -199,19 +234,23 @@ export function CoachingSummary({
         <div className="mt-6">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-success-700">
             <RiSparklingLine className="text-base" aria-hidden="true" />
-            Qué has hecho bien
+            {isStudent ? "Qué has hecho bien" : "Fortalezas detectadas"}
           </div>
-          <FindingList items={coaching.strengths} runtimeFamily={runtimeFamily} />
+          <FindingList
+            items={coaching.strengths}
+            runtimeFamily={runtimeFamily}
+            tone="strength"
+          />
         </div>
       ) : null}
 
-      {rubricItems.length > 0 ? (
+      {pendingRubricItems.length > 0 ? (
         <div className="mt-6">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-fuchsia-700">
             <RiCheckboxCircleLine className="text-base" aria-hidden="true" />
             Cumplimiento de rúbrica
           </div>
-          <FindingList items={rubricItems} runtimeFamily={runtimeFamily} />
+          <FindingList items={pendingRubricItems} runtimeFamily={runtimeFamily} />
         </div>
       ) : null}
 
@@ -219,7 +258,9 @@ export function CoachingSummary({
         <div className="mt-6">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-700">
             <RiListCheck3 className="text-base" aria-hidden="true" />
-            Checklist para la siguiente versión
+            {isStudent
+              ? "Checklist para la siguiente versión"
+              : "Checklist que verá el alumno"}
           </div>
           <Checklist entries={coaching.nextAttemptChecklist} />
         </div>

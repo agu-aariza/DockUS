@@ -34,6 +34,24 @@ export type CapabilityId = (typeof CAPABILITY_IDS)[number];
 export const EVALUATIVE_STATES = ['E1', 'E2', 'E3', 'E4'] as const;
 export type EvaluativeState = (typeof EVALUATIVE_STATES)[number];
 
+/**
+ * Frase de informe para cada estado evaluativo. El código (`E2`) sigue viajando
+ * en el contrato y en los artefactos, pero nunca aparece en la prosa que leen
+ * alumno y profesor: fuera del equipo nadie sabe interpretarlo.
+ *
+ * Este es el registro *frase*; el frontend tiene el registro *etiqueta* (2–4
+ * palabras para el pill y las tablas) en `shared/data/builderTaxonomy.ts`. Son
+ * textos distintos del mismo concepto a propósito, no una copia que sincronizar:
+ * lo que sí debe mantenerse es el eje — qué hizo el programa al ejecutarse, no
+ * si la entrega aprueba (de eso ya habla `overallOutcome` y la nota).
+ */
+export const EVALUATIVE_STATE_SENTENCES: Record<EvaluativeState, string> = {
+  E1: 'El programa se ejecutó y su salida coincide con lo esperado.',
+  E2: 'El programa se ejecutó, pero su salida solo coincide en parte con lo esperado.',
+  E3: 'El programa no llegó a producir una salida que se pudiera evaluar.',
+  E4: 'La evaluación automática no pudo completarse, así que este resultado es provisional.',
+};
+
 export const ASSESSMENTS = ['yes', 'no', 'unknown'] as const;
 type Assessment = (typeof ASSESSMENTS)[number];
 

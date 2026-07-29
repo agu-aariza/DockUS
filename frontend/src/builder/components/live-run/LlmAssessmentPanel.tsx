@@ -5,6 +5,10 @@
  */
 
 import {
+  evaluativeStateLabel,
+  structuralTypeLabel,
+} from "../../../shared/data/builderTaxonomy";
+import {
   cn,
   confidenceLabel,
   evaluativeStateTextClass,
@@ -39,7 +43,7 @@ export function LlmAssessmentPanel({
           <div className="accent-rule mb-2" aria-hidden="true" />
           <div className="ui-label">Veredicto del evaluador</div>
           <h3 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
-            {assessment.structuralType}
+            {structuralTypeLabel(assessment.structuralType)}
           </h3>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-600">
             {assessment.rationale}
@@ -49,8 +53,10 @@ export function LlmAssessmentPanel({
         <dl className="flex shrink-0 items-start gap-6 lg:pl-6">
           <Reading
             label="Estado"
-            value={assessment.evaluativeState ?? "—"}
+            value={evaluativeStateLabel(assessment.evaluativeState, "—")}
             className={evaluativeStateTextClass(assessment.evaluativeState)}
+            // La etiqueta legible es una frase, no un código: no cabe a text-xl.
+            compact
           />
           <Reading
             label="Confianza"
@@ -99,15 +105,25 @@ function Reading({
   label,
   value,
   className,
+  compact = false,
 }: {
   label: string;
   value: string;
   className: string;
+  compact?: boolean;
 }): JSX.Element {
   return (
-    <div className="text-right">
+    <div className={cn("text-right", compact && "max-w-[11rem]")}>
       <dt className="ui-label">{label}</dt>
-      <dd className={cn("data-figure mt-1 text-xl font-semibold", className)}>{value}</dd>
+      <dd
+        className={cn(
+          "data-figure mt-1 font-semibold",
+          compact ? "text-sm leading-snug" : "text-xl",
+          className,
+        )}
+      >
+        {value}
+      </dd>
     </div>
   );
 }

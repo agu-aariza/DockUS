@@ -7,6 +7,7 @@
 import { RiAwardFill, RiCloseLine } from "react-icons/ri";
 import type { BuildRunEntity } from "../../features/builder/types";
 import type { DeliveryEntity } from "../../features/deliveries/types";
+import { evaluativeStateLabel } from "../data/builderTaxonomy";
 import { CodeViewer } from "./file-preview/CodeViewer";
 import { FileExplorer } from "./file-preview/FileExplorer";
 import { FilePreviewShell } from "./file-preview/FilePreviewShell";
@@ -67,7 +68,7 @@ export function TeacherGradingStudio({
             </span>
             <div className="h-3 w-px bg-warning-300" />
             <span className="text-xs font-bold text-warning-800">
-              Estado: {assessment.evaluativeState}
+              Estado: {evaluativeStateLabel(assessment.evaluativeState, "sin estado")}
             </span>
           </div>
         ) : null}

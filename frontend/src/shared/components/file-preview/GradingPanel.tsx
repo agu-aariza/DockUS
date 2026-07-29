@@ -8,6 +8,7 @@ import { useState } from "react";
 import { RiLoader4Line, RiSave2Line } from "react-icons/ri";
 import type { BuildRunEntity } from "../../../features/builder/types";
 import type { DeliveryEntity } from "../../../features/deliveries/types";
+import { structuralTypeLabel } from "../../data/builderTaxonomy";
 import { Button } from "../ui/Button";
 
 interface GradingPanelProps {
@@ -49,7 +50,7 @@ export function GradingPanel({
               Dictamen de la Inteligencia Artificial
             </div>
             <h4 className="text-base font-bold text-slate-900">
-              {assessment.structuralType}
+              {structuralTypeLabel(assessment.structuralType)}
             </h4>
             <p className="mt-2 text-xs leading-relaxed text-slate-500">
               {assessment.rationale}

@@ -32,6 +32,11 @@ import { TeacherHighlights } from "./TeacherHighlights";
 import { TerminalViewer } from "./TerminalViewer";
 import { TutorChatBlock } from "./TutorChatBlock";
 import { normalizeTechnicalFeedbackItem } from "../utils/technicalFeedback";
+import {
+  confidenceLabel,
+  evaluativeStateLabel,
+  structuralTypeLabel,
+} from "../data/builderTaxonomy";
 import { ReportCard } from "./report/ReportCard";
 import { ReportHeader } from "./report/ReportHeader";
 import { TechnicalFindingCard } from "./report/TechnicalFindingCard";
@@ -50,6 +55,30 @@ const AXIS_ICON: Record<string, typeof RiShieldCheckLine> = {
   "Cumplimiento de rubrica": RiInformationLine,
   Rubrica: RiInformationLine,
 };
+
+/** Recuento por eje y severidad: lo que el profesor mira antes de abrir nada. */
+function feedbackAxisSummary(feedback: {
+  security: TechnicalFeedbackItem[];
+  architecture: TechnicalFeedbackItem[];
+  quality: TechnicalFeedbackItem[];
+  rubricCompliance: TechnicalFeedbackItem[];
+}): string {
+  const all = [
+    ...feedback.security,
+    ...feedback.architecture,
+    ...feedback.quality,
+    ...feedback.rubricCompliance,
+  ];
+  const high = all.filter((item) => item.severity === "high").length;
+  const counts = [
+    `Seguridad ${feedback.security.length}`,
+    `Arquitectura ${feedback.architecture.length}`,
+    `Calidad ${feedback.quality.length}`,
+    `Rúbrica ${feedback.rubricCompliance.length}`,
+  ].join(" · ");
+
+  return `${all.length} hallazgos (${high} de severidad alta) — ${counts}`;
+}
 
 function FeedbackAxis({
   title,
@@ -269,7 +298,7 @@ export function ReportView({
                   <div className="mb-4">
                     <span className="inline-flex rounded-full border border-app-border bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500">
                       <GlossaryTerm term={run.llmAssessment.evaluativeState}>
-                        {run.llmAssessment.evaluativeState}
+                        {evaluativeStateLabel(run.llmAssessment.evaluativeState)}
                       </GlossaryTerm>
                     </span>
                   </div>
@@ -300,12 +329,27 @@ export function ReportView({
               <ReportCard tone="default" title="Resumen del run">
                 <div className="grid gap-3 sm:grid-cols-3">
                   {[
-                    { label: "Tipo", value: run.llmAssessment.structuralType },
                     {
-                      label: "Estado evaluativo",
-                      value: run.llmAssessment.evaluativeState,
+                      label: "Tipo de proyecto",
+                      term: run.llmAssessment.structuralType,
+                      display: run.llmAssessment.structuralType
+                        ? structuralTypeLabel(run.llmAssessment.structuralType)
+                        : null,
                     },
-                    { label: "Confianza", value: run.llmAssessment.confidence },
+                    {
+                      label: "Estado de la evaluación",
+                      term: run.llmAssessment.evaluativeState,
+                      display: run.llmAssessment.evaluativeState
+                        ? evaluativeStateLabel(run.llmAssessment.evaluativeState)
+                        : null,
+                    },
+                    {
+                      label: "Confianza",
+                      term: undefined,
+                      display: run.llmAssessment.confidence
+                        ? confidenceLabel(run.llmAssessment.confidence)
+                        : null,
+                    },
                   ].map((item) => (
                     <div
                       key={item.label}
@@ -315,12 +359,13 @@ export function ReportView({
                         {item.label}
                       </span>
                       <div className="mt-1 font-semibold text-slate-900">
-                        {item.value ? (
-                          item.label === "Tipo" ||
-                            item.label === "Estado evaluativo" ? (
-                            <GlossaryTerm term={item.value}>{item.value}</GlossaryTerm>
+                        {item.display ? (
+                          item.term ? (
+                            <GlossaryTerm term={item.term}>
+                              {item.display}
+                            </GlossaryTerm>
                           ) : (
-                            item.value
+                            item.display
                           )
                         ) : (
                           "—"
@@ -394,6 +439,38 @@ export function ReportView({
 
         {activeTab === "technical" && (
           <div className="space-y-6">
+            {/* El análisis por ejes es la vista del profesor: los hallazgos sin
+                el filtro pedagógico del plan de acción. El alumno se queda con
+                la evidencia curada, que es lo que puede accionar. */}
+            {mode === "teacher" && hasFeedback ? (
+              <ReportCard
+                tone="default"
+                title="Análisis técnico por ejes"
+                description={feedbackAxisSummary(techFeedback)}
+              >
+                <FeedbackAxis
+                  title="Seguridad"
+                  items={techFeedback.security}
+                  runtimeFamily={runtimeFamily}
+                />
+                <FeedbackAxis
+                  title="Arquitectura"
+                  items={techFeedback.architecture}
+                  runtimeFamily={runtimeFamily}
+                />
+                <FeedbackAxis
+                  title="Calidad y Estilo"
+                  items={techFeedback.quality}
+                  runtimeFamily={runtimeFamily}
+                />
+                <FeedbackAxis
+                  title="Cumplimiento de rubrica"
+                  items={techFeedback.rubricCompliance}
+                  runtimeFamily={runtimeFamily}
+                />
+              </ReportCard>
+            ) : null}
+
             {run.llmAssessment ? (
               <AssessmentContextSummary llmAssessment={run.llmAssessment} mode={mode} />
             ) : (

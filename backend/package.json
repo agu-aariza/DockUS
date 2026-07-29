@@ -32,14 +32,16 @@
     "migration:show": "npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:show -d ./src/shared/infrastructure/database/data-source.ts"
   },
   "overrides": {
+    "@babel/core": "7.29.7",
+    "brace-expansion": "^5.0.8",
     "class-validator": "^0.15.1",
+    "fast-uri": "^3.1.4",
+    "js-yaml": "^4.1.0",
     "lodash": "4.18.1",
     "path-to-regexp": "8.4.2",
     "picomatch": "4.0.4",
-    "@babel/core": "7.29.7",
-    "fast-uri": "^3.1.2",
-    "js-yaml": "^4.1.0",
     "qs": "^6.15.3",
+    "test-exclude": "^8.0.0",
     "uuid": "^11.1.1"
   },
   "dependencies": {
@@ -78,7 +80,7 @@
     "pino-http": "^11.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "typeorm": "^1.0.0"
+    "typeorm": "^1.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

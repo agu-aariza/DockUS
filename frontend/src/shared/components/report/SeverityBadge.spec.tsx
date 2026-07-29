@@ -13,13 +13,13 @@ describe('SeverityBadge', () => {
     const badge = screen.getByText(label);
     expect(badge).toBeInTheDocument();
     expect(badge.className).toContain(toneClass);
-    expect(screen.getByText('intermedio')).toBeInTheDocument();
+    expect(screen.getByText('Nivel intermedio')).toBeInTheDocument();
   });
 
   it('renders without level when omitted', () => {
     render(<SeverityBadge severity="low" />);
 
     expect(screen.getByText('Severidad baja')).toBeInTheDocument();
-    expect(screen.queryByText('basico')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nivel básico')).not.toBeInTheDocument();
   });
 });
