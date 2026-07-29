@@ -4,25 +4,25 @@
  * @module builder-quality-aggregation.service
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import {
   CODE_QUALITY_CATEGORIES,
   CodeQualityCategory,
   CodeQualityFinding,
 } from '../../../domain/builder.types';
-import { CodeQualityFindingEntity } from '../../../domain/entities/code-quality-finding.entity';
-import { ProjectAssignment } from '../../../../assignments/entities/project-assignment.entity';
+import type { ICodeQualityFindingRepository } from '../../../../domain/repositories/code-quality-finding.repository.interface';
+import { CODE_QUALITY_FINDING_REPOSITORY } from '../../../../domain/repositories/code-quality-finding.repository.interface';
+import type { IProjectAssignmentRepository } from '../../../../domain/repositories/project-assignment.repository.interface';
+import { PROJECT_ASSIGNMENT_REPOSITORY } from '../../../../domain/repositories/project-assignment.repository.interface';
 
 @Injectable()
 export class BuilderQualityAggregationService {
   constructor(
-    @InjectRepository(CodeQualityFindingEntity)
-    private readonly codeQualityFindingsRepository: Repository<CodeQualityFindingEntity>,
-    @InjectRepository(ProjectAssignment)
-    private readonly assignmentsRepository: Repository<ProjectAssignment>,
+    @Inject(CODE_QUALITY_FINDING_REPOSITORY)
+    private readonly codeQualityFindingsRepository: ICodeQualityFindingRepository,
+    @Inject(PROJECT_ASSIGNMENT_REPOSITORY)
+    private readonly assignmentsRepository: IProjectAssignmentRepository,
   ) {}
 
   /**
@@ -42,77 +42,46 @@ export class BuilderQualityAggregationService {
       category: CodeQualityCategory;
     }>;
   }> {
-    const assignment = await this.assignmentsRepository.findOne({
-      where: { id: assignmentId },
-    });
+    const assignment = await this.assignmentsRepository.findById(assignmentId);
     if (!assignment) {
       throw new NotFoundException('Asignación no encontrada.');
     }
 
-    const rows = await this.codeQualityFindingsRepository
-      .createQueryBuilder('finding')
-      .select('finding.title', 'title')
-      .addSelect('finding.category', 'category')
-      .addSelect('COUNT(*)::int', 'count')
-      .where('finding.projectId = :projectId', {
-        projectId: assignment.projectId,
-      })
-      .andWhere('finding.studentId = :studentId', {
-        studentId: assignment.studentId,
-      })
-      .groupBy('finding.title')
-      .addGroupBy('finding.category')
-      .orderBy('COUNT(*)', 'DESC')
-      .addOrderBy('finding.title', 'ASC')
-      .limit(10)
-      .getRawMany<{ title: string; category: string; count: number }>();
+    const rows =
+      await this.codeQualityFindingsRepository.findTopFindingsForAssignment(
+        assignment.projectId,
+        assignment.studentId,
+      );
 
-    const countRow = await this.codeQualityFindingsRepository
-      .createQueryBuilder('finding')
-      .select('COUNT(DISTINCT finding.buildRunId)::int', 'count')
-      .where('finding.projectId = :projectId', {
-        projectId: assignment.projectId,
-      })
-      .andWhere('finding.studentId = :studentId', {
-        studentId: assignment.studentId,
-      })
-      .getRawOne<{ count: number }>();
+    const totalDeliveriesAnalyzed =
+      await this.codeQualityFindingsRepository.countDistinctBuildRunsForAssignment(
+        assignment.projectId,
+        assignment.studentId,
+      );
 
     return {
-      totalDeliveriesAnalyzed: countRow?.count ?? 0,
+      totalDeliveriesAnalyzed,
       insights: rows.map((row) => ({
         title: row.title,
         category: row.category as CodeQualityCategory,
-        count: Number(row.count),
+        count: row.count,
       })),
     };
   }
 
   async getAggregatedFindings(projectId: string) {
     const totalStudentsAnalyzed = await this.countStudents(projectId);
-    const rows = await this.codeQualityFindingsRepository.query(
-      `
-        SELECT
-          title,
-          category,
-          severity,
-          COUNT(*)::int AS "studentCount"
-        FROM code_quality_findings
-        WHERE project_id = $1
-        GROUP BY title, category, severity
-        ORDER BY COUNT(*) DESC, title ASC
-      `,
-      [projectId],
-    );
+    const rows =
+      await this.codeQualityFindingsRepository.aggregateByProject(projectId);
 
     return {
       projectId,
       totalStudentsAnalyzed,
-      insights: rows.map((row: Record<string, unknown>) => ({
-        title: String(row.title),
+      insights: rows.map((row) => ({
+        title: row.title,
         category: row.category as CodeQualityCategory,
-        severity: String(row.severity) as CodeQualityFinding['severity'],
-        studentCount: Number(row.studentCount),
+        severity: row.severity as CodeQualityFinding['severity'],
+        studentCount: row.studentCount,
       })),
     };
   }
@@ -122,40 +91,31 @@ export class BuilderQualityAggregationService {
     category: CodeQualityCategory,
   ) {
     const totalStudentsAnalyzed = await this.countStudents(projectId);
-    const rows = await this.codeQualityFindingsRepository.query(
-      `
-        SELECT
-          title,
-          category,
-          severity,
-          COUNT(*)::int AS "studentCount"
-        FROM code_quality_findings
-        WHERE project_id = $1
-          AND category = $2
-        GROUP BY title, category, severity
-        ORDER BY COUNT(*) DESC, title ASC
-      `,
-      [projectId, category],
-    );
+    const rows =
+      await this.codeQualityFindingsRepository.aggregateByProjectAndCategory(
+        projectId,
+        category,
+      );
 
     return {
       projectId,
       category,
       totalStudentsAnalyzed,
-      insights: rows.map((row: Record<string, unknown>) => ({
-        title: String(row.title),
+      insights: rows.map((row) => ({
+        title: row.title,
         category: row.category as CodeQualityCategory,
-        severity: String(row.severity) as CodeQualityFinding['severity'],
-        studentCount: Number(row.studentCount),
+        severity: row.severity as CodeQualityFinding['severity'],
+        studentCount: row.studentCount,
       })),
     };
   }
 
   async getFindingsForStudent(projectId: string, studentId: string) {
-    const rows = await this.codeQualityFindingsRepository.find({
-      where: { projectId, studentId },
-      order: { createdAt: 'ASC' },
-    });
+    const rows =
+      await this.codeQualityFindingsRepository.findByProjectAndStudent(
+        projectId,
+        studentId,
+      );
 
     const findings = this.createEmptyCategoryMap();
     for (const row of rows) {
@@ -178,17 +138,10 @@ export class BuilderQualityAggregationService {
     };
   }
 
-  private async countStudents(projectId: string): Promise<number> {
-    const rows = await this.codeQualityFindingsRepository.query(
-      `
-        SELECT COUNT(DISTINCT student_id)::int AS count
-        FROM code_quality_findings
-        WHERE project_id = $1
-      `,
-      [projectId],
+  private countStudents(projectId: string): Promise<number> {
+    return this.codeQualityFindingsRepository.countDistinctStudentsForProject(
+      projectId,
     );
-
-    return Number(rows[0]?.count ?? 0);
   }
 
   private createEmptyCategoryMap(): Record<

@@ -1,11 +1,11 @@
 import { NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
 
 import { UserRole } from '../../../../../users/entities/user.entity';
 import { buildActor } from '../../../../../../test-support/domain-builders';
 import { EvidenceArtifactPublic } from '../../../domain/builder.types';
 import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
+import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
 import { BuilderRunEventsService } from '../../../infrastructure/events/builder-run-events.service';
 import { EvidenceService } from '../../../infrastructure/evidence/evidence.service';
 import { BuilderAccessService } from '../workspace/builder-access.service';
@@ -34,19 +34,11 @@ describe('BuilderRunQueriesService', () => {
     deliveryId: 'delivery-1',
   } as BuildRun;
 
-  const latestRunsQueryBuilder = {
-    distinctOn: jest.fn().mockReturnThis(),
-    innerJoin: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    addOrderBy: jest.fn().mockReturnThis(),
-    getMany: jest.fn(),
-  };
-
   let buildRunsRepository: {
-    findOne: jest.MockedFunction<Repository<BuildRun>['findOne']>;
-    createQueryBuilder: jest.Mock;
+    findById: jest.MockedFunction<IBuildRunRepository['findById']>;
+    findLatestByDeliveryIdsForActor: jest.MockedFunction<
+      IBuildRunRepository['findLatestByDeliveryIdsForActor']
+    >;
   };
   let builderAccessService: {
     assertCanAccessBuildRun: jest.MockedFunction<
@@ -68,17 +60,10 @@ describe('BuilderRunQueriesService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    latestRunsQueryBuilder.distinctOn.mockReturnThis();
-    latestRunsQueryBuilder.innerJoin.mockReturnThis();
-    latestRunsQueryBuilder.where.mockReturnThis();
-    latestRunsQueryBuilder.andWhere.mockReturnThis();
-    latestRunsQueryBuilder.orderBy.mockReturnThis();
-    latestRunsQueryBuilder.addOrderBy.mockReturnThis();
-    latestRunsQueryBuilder.getMany.mockResolvedValue([]);
 
     buildRunsRepository = {
-      findOne: jest.fn().mockResolvedValue(run),
-      createQueryBuilder: jest.fn(() => latestRunsQueryBuilder),
+      findById: jest.fn().mockResolvedValue(run),
+      findLatestByDeliveryIdsForActor: jest.fn().mockResolvedValue([]),
     };
     builderAccessService = {
       assertCanAccessBuildRun: jest.fn().mockResolvedValue(undefined),
@@ -98,7 +83,7 @@ describe('BuilderRunQueriesService', () => {
     };
 
     service = new BuilderRunQueriesService(
-      buildRunsRepository as unknown as Repository<BuildRun>,
+      buildRunsRepository as unknown as IBuildRunRepository,
       builderAccessService as unknown as BuilderAccessService,
       builderRunEventsService as BuilderRunEventsService,
       evidenceService as unknown as EvidenceService,
@@ -146,23 +131,28 @@ describe('BuilderRunQueriesService', () => {
       );
 
       expect(result).toEqual({});
-      expect(buildRunsRepository.createQueryBuilder).not.toHaveBeenCalled();
+      expect(
+        buildRunsRepository.findLatestByDeliveryIdsForActor,
+      ).not.toHaveBeenCalled();
     });
 
-    it('HIGH-09: resolves the latest run per delivery in a single query, defaulting missing deliveries to null', async () => {
+    it('HIGH-09: resolves the latest run per delivery in a single call, defaulting missing deliveries to null', async () => {
       const runA = { id: 'run-a', deliveryId: 'delivery-a' } as BuildRun;
       const runB = { id: 'run-b', deliveryId: 'delivery-b' } as BuildRun;
-      latestRunsQueryBuilder.getMany.mockResolvedValue([runA, runB]);
+      buildRunsRepository.findLatestByDeliveryIdsForActor.mockResolvedValue([
+        runA,
+        runB,
+      ]);
+      const actor = buildActor(UserRole.STUDENT, 'student-1');
 
       const result = await service.listLatestRunsByDeliveryIds(
         ['delivery-a', 'delivery-b', 'delivery-c'],
-        buildActor(UserRole.STUDENT, 'student-1'),
+        actor,
       );
 
-      expect(buildRunsRepository.createQueryBuilder).toHaveBeenCalledTimes(1);
-      expect(latestRunsQueryBuilder.distinctOn).toHaveBeenCalledWith([
-        'run.deliveryId',
-      ]);
+      expect(
+        buildRunsRepository.findLatestByDeliveryIdsForActor,
+      ).toHaveBeenCalledWith(['delivery-a', 'delivery-b', 'delivery-c'], actor);
       expect(result).toEqual({
         'delivery-a': runA,
         'delivery-b': runB,
@@ -170,46 +160,142 @@ describe('BuilderRunQueriesService', () => {
       });
     });
 
-    it('HIGH-09: scopes STUDENT actors to their own deliveries via delivery.authorId', async () => {
-      await service.listLatestRunsByDeliveryIds(
-        ['delivery-a'],
+    // HIGH-09: el scoping por actor (STUDENT/TEACHER/ADMIN) vive ahora en
+    // BuildRunRepository.findLatestByDeliveryIdsForActor — ver
+    // infrastructure/database/build-run-actor-scope.util.spec.ts.
+  });
+
+  describe('streamRunEvents', () => {
+    const firstEvent = { sequence: 1, eventType: 'RUN_STATUS_CHANGED' } as any;
+    const secondEvent = { sequence: 2, eventType: 'RUN_COMPLETED' } as any;
+
+    it('checks access once, emits ready with the backlog latestSequence, then the backlog events, then subscribes', async () => {
+      (builderRunEventsService.list as jest.Mock).mockResolvedValueOnce({
+        events: [firstEvent],
+        latestSequence: 1,
+        hasMore: false,
+      });
+      const unsubscribe = jest.fn();
+      (builderRunEventsService.subscribe as jest.Mock).mockReturnValueOnce(
+        unsubscribe,
+      );
+      const sink = { onReady: jest.fn(), onEvent: jest.fn() };
+
+      const result = await service.streamRunEvents(
+        buildRunId,
         buildActor(UserRole.STUDENT, 'student-1'),
+        0,
+        sink,
       );
 
-      expect(latestRunsQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'delivery.authorId = :userId',
-        { userId: 'student-1' },
+      expect(
+        builderAccessService.assertCanAccessBuildRun,
+      ).toHaveBeenCalledTimes(1);
+      expect(sink.onReady).toHaveBeenCalledWith(1);
+      expect(sink.onEvent).toHaveBeenCalledWith(firstEvent);
+      expect(builderRunEventsService.subscribe).toHaveBeenCalledWith(
+        buildRunId,
+        expect.any(Function),
       );
-      // El STUDENT no debe recibir el join adicional de teachers.
-      expect(latestRunsQueryBuilder.innerJoin).not.toHaveBeenCalledWith(
-        'project.teachers',
-        'scopedTeacher',
-      );
+      expect(result.unsubscribe).toBe(unsubscribe);
     });
 
-    it('HIGH-09: scopes TEACHER actors to projects they are assigned to via project.teachers', async () => {
-      await service.listLatestRunsByDeliveryIds(
-        ['delivery-a'],
-        buildActor(UserRole.TEACHER, 'teacher-1'),
+    it('propagates live events pushed by the subscription through the sink', async () => {
+      (builderRunEventsService.list as jest.Mock).mockResolvedValueOnce({
+        events: [],
+        latestSequence: 0,
+        hasMore: false,
+      });
+      let liveListener: (event: unknown) => void = () => {};
+      (builderRunEventsService.subscribe as jest.Mock).mockImplementation(
+        (_id, listener) => {
+          liveListener = listener;
+          return jest.fn();
+        },
       );
+      const sink = { onReady: jest.fn(), onEvent: jest.fn() };
 
-      expect(latestRunsQueryBuilder.innerJoin).toHaveBeenCalledWith(
-        'project.teachers',
-        'scopedTeacher',
+      await service.streamRunEvents(
+        buildRunId,
+        buildActor(UserRole.STUDENT, 'student-1'),
+        0,
+        sink,
       );
-      expect(latestRunsQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'scopedTeacher.id = :userId',
-        { userId: 'teacher-1' },
-      );
+      liveListener(secondEvent);
+
+      expect(sink.onEvent).toHaveBeenCalledWith(secondEvent);
     });
 
-    it('HIGH-09: does not add an ownership filter for ADMIN actors', async () => {
-      await service.listLatestRunsByDeliveryIds(
-        ['delivery-a'],
-        buildActor(UserRole.ADMIN, 'admin-1'),
+    it('drains the backlog across pages until hasMore is false', async () => {
+      (builderRunEventsService.list as jest.Mock)
+        .mockResolvedValueOnce({
+          events: [firstEvent],
+          latestSequence: 1,
+          hasMore: true,
+        })
+        .mockResolvedValueOnce({
+          events: [secondEvent],
+          latestSequence: 2,
+          hasMore: false,
+        });
+      (builderRunEventsService.subscribe as jest.Mock).mockReturnValueOnce(
+        jest.fn(),
+      );
+      const sink = { onReady: jest.fn(), onEvent: jest.fn() };
+
+      await service.streamRunEvents(
+        buildRunId,
+        buildActor(UserRole.STUDENT, 'student-1'),
+        0,
+        sink,
       );
 
-      expect(latestRunsQueryBuilder.andWhere).not.toHaveBeenCalled();
+      expect(builderRunEventsService.list).toHaveBeenCalledTimes(2);
+      expect(sink.onEvent).toHaveBeenNthCalledWith(1, firstEvent);
+      expect(sink.onEvent).toHaveBeenNthCalledWith(2, secondEvent);
+    });
+
+    it('ESC-ALTO-06: caps backlog draining instead of looping forever against a run that keeps producing events', async () => {
+      (builderRunEventsService.list as jest.Mock).mockResolvedValue({
+        events: [firstEvent],
+        latestSequence: 1,
+        hasMore: true,
+      });
+      (builderRunEventsService.subscribe as jest.Mock).mockReturnValueOnce(
+        jest.fn(),
+      );
+      const sink = { onReady: jest.fn(), onEvent: jest.fn() };
+
+      await service.streamRunEvents(
+        buildRunId,
+        buildActor(UserRole.STUDENT, 'student-1'),
+        0,
+        sink,
+      );
+
+      // 1 primera página + 10 de drenaje (MAX_BACKLOG_DRAIN_PAGES), nunca más.
+      expect(builderRunEventsService.list).toHaveBeenCalledTimes(11);
+      expect(builderRunEventsService.subscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects an actor without access before touching the events service', async () => {
+      const forbidden = new Error('forbidden');
+      builderAccessService.assertCanAccessBuildRun.mockRejectedValueOnce(
+        forbidden,
+      );
+      const sink = { onReady: jest.fn(), onEvent: jest.fn() };
+
+      await expect(
+        service.streamRunEvents(
+          buildRunId,
+          buildActor(UserRole.STUDENT, 'student-1'),
+          0,
+          sink,
+        ),
+      ).rejects.toBe(forbidden);
+
+      expect(builderRunEventsService.list).not.toHaveBeenCalled();
+      expect(builderRunEventsService.subscribe).not.toHaveBeenCalled();
     });
   });
 });

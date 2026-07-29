@@ -25,20 +25,17 @@ describe('BuilderController', () => {
       createdAt: '2026-05-11T10:01:00.000Z',
     };
 
-    let liveCallback: any = null;
+    let sinkRef: { onReady: (s: number) => void; onEvent: (e: any) => void };
     const unsubscribe = jest.fn();
     const builderRunCommandsService = {} as any;
     const builderRunQueriesService = {
-      listRunEvents: jest.fn().mockResolvedValueOnce({
-        events: [firstEvent],
-        latestSequence: 1,
-        hasMore: false,
-      }),
-      subscribeRunEvents: jest
+      streamRunEvents: jest
         .fn()
-        .mockImplementation(async (_runId, _user, callback) => {
-          liveCallback = callback;
-          return unsubscribe;
+        .mockImplementation(async (_runId, _user, _afterSequence, sink) => {
+          sinkRef = sink;
+          sink.onReady(1);
+          sink.onEvent(firstEvent);
+          return { unsubscribe };
         }),
     } as any;
     const builderLlmChatService = {} as any;
@@ -72,7 +69,7 @@ describe('BuilderController', () => {
     expect(writes[0]).toContain('event: ready');
     expect(writes[1]).toContain('"studentStage":"building"');
 
-    liveCallback?.(liveEvent);
+    sinkRef!.onEvent(liveEvent);
     expect(writes[writes.length - 1]).toContain('"studentStage":"completed"');
 
     request.emit('close');

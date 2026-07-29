@@ -10,7 +10,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { BuilderLlmConfigService } from '../../../infrastructure/config/builder-llm-config.service';
+import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
 import { BuilderStageTokenUsage } from '../../../domain/builder.types';
 import { calculateCost } from '../../../domain/ai/pricing.utility';
 

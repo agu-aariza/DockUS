@@ -4,6 +4,19 @@
  * @module llm.types
  */
 
+/**
+ * `BuilderLlmPromptStage`/`LlmProviderId`/`LLM_PROVIDER_IDS` se importan como
+ * `import type` desde 4 ficheros de `builder/domain/` (ARQ-019, ver
+ * `audit/areas/arquitectura/findings.md` y
+ * `plan_accion.md` P0-3). Es una excepción
+ * aceptada, no un descuido: son vocabulario que domain necesita (qué
+ * etapas/proveedores existen para asignar roles), pero este fichero también
+ * define contratos de transporte (`LlmProviderCredentials`, `LlmGenerateRequest`)
+ * que sí son de infraestructura — partirlo en dos ficheros solo para separar
+ * esos dos tipos introduciría indirección para un acoplamiento sin coste en
+ * runtime (los 4 imports son `import type`, se borran al compilar). Si en el
+ * futuro este fichero crece con más contratos de transporte, reevaluar.
+ */
 export type BuilderLlmPromptStage =
   'plan' | 'facts' | 'evaluation' | 'quality' | 'chat';
 

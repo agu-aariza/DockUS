@@ -10,8 +10,9 @@
 
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { DockerImageService } from '../../../../../../shared/infrastructure/docker/docker-image.service';
 import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
+import type { IContainerRuntime } from '../../../domain/ports/container-runtime.port';
+import { CONTAINER_RUNTIME } from '../../../domain/ports/container-runtime.port';
 import { PROCESS_ROLE } from '../../../../../../process-role.module';
 import type { ProcessRole } from '../../../../../../process-role.module';
 
@@ -22,7 +23,8 @@ export class BuilderImageRetentionService {
   private readonly logger = new Logger(BuilderImageRetentionService.name);
 
   constructor(
-    private readonly dockerImageService: DockerImageService,
+    @Inject(CONTAINER_RUNTIME)
+    private readonly containerRuntime: IContainerRuntime,
     private readonly builderConfigProvider: BuilderConfigProvider,
     @Inject(PROCESS_ROLE)
     private readonly processRole: ProcessRole,
@@ -47,7 +49,7 @@ export class BuilderImageRetentionService {
     const olderThanHours = this.builderConfigProvider.imageTtlMs / 3_600_000;
 
     try {
-      const deleted = await this.dockerImageService.pruneEnvironmentImages({
+      const deleted = await this.containerRuntime.pruneEnvironmentImages({
         olderThanHours,
         timeoutMs: PRUNE_TIMEOUT_MS,
       });

@@ -47,32 +47,16 @@ export enum BuildRunArtifactType {
   LLM_QUALITY_ERROR = 'LLM_QUALITY_ERROR',
 }
 
-export const STAFF_ONLY_BUILD_RUN_ARTIFACT_TYPES = [
-  BuildRunArtifactType.LLM_PLAN_PROMPT,
-  BuildRunArtifactType.LLM_PLAN_RAW_RESPONSE,
-  BuildRunArtifactType.LLM_PLAN_PARSED,
-  BuildRunArtifactType.LLM_PLAN_ERROR,
-  BuildRunArtifactType.LLM_FACTS_PROMPT,
-  BuildRunArtifactType.LLM_FACTS_RAW_RESPONSE,
-  BuildRunArtifactType.LLM_FACTS_PARSED,
-  BuildRunArtifactType.LLM_FACTS_ERROR,
-  BuildRunArtifactType.LLM_EVAL_PROMPT,
-  BuildRunArtifactType.LLM_EVAL_RAW_RESPONSE,
-  BuildRunArtifactType.LLM_EVAL_PARSED,
-  BuildRunArtifactType.LLM_EVAL_ERROR,
-  BuildRunArtifactType.LLM_QUALITY_PROMPT,
-  BuildRunArtifactType.LLM_QUALITY_RAW_RESPONSE,
-  BuildRunArtifactType.LLM_QUALITY_PARSED,
-  BuildRunArtifactType.LLM_QUALITY_ERROR,
-] as const;
-
 export function isStaffOnlyBuildRunArtifactType(
   type: BuildRunArtifactType,
 ): boolean {
-  return STAFF_ONLY_BUILD_RUN_ARTIFACT_TYPES.includes(
-    type as (typeof STAFF_ONLY_BUILD_RUN_ARTIFACT_TYPES)[number],
-  );
+  return type.startsWith('LLM_');
 }
+
+/** Derivada, no mantenida a mano. Se conserva porque `builder-run-queries` la usa. */
+export const STAFF_ONLY_BUILD_RUN_ARTIFACT_TYPES = Object.values(
+  BuildRunArtifactType,
+).filter(isStaffOnlyBuildRunArtifactType);
 
 @Entity('build_run_artifacts')
 @Index('IDX_build_run_artifacts_build_run_created_at', [

@@ -17,6 +17,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OptimisticLockVersionMismatchError } from 'typeorm';
 import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
 import { BuildRun, BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import { BuilderStudentStage } from '../../../domain/builder.types';
 import { DeliveryStatus } from '../../../../deliveries/entities/delivery.entity';
@@ -36,7 +37,7 @@ export class BuilderRunLifecycleService {
   private readonly promptVersion: string;
 
   constructor(
-    @Inject('IBuildRunRepository')
+    @Inject(BUILD_RUN_REPOSITORY)
     private readonly buildRunsRepository: IBuildRunRepository,
     private readonly builderAccessService: BuilderAccessService,
     private readonly deliveryStatusService: DeliveryStatusService,

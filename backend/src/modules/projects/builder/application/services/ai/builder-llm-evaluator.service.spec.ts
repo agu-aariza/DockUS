@@ -6,7 +6,7 @@ import { ILlmGenerationService } from '../../../../../../shared/infrastructure/a
 import { BedrockRequestError } from '../../../../../../shared/infrastructure/ai/bedrock-request.util';
 import { BuilderLlmDispatcherService } from './builder-llm-dispatcher.service';
 import { BuilderLogTrimmer } from '../../../infrastructure/utils/builder-log-trimmer.util';
-import { BuilderLlmConfigService } from '../../../infrastructure/config/builder-llm-config.service';
+import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
 import { resolveBuilderModelProfile } from '../../../domain/ai/builder-llm-model-profile';
 import type { BuilderLlmPromptStage } from '../../../../../../shared/infrastructure/ai/llm.types';
 import { BuilderLlmEvaluatorService } from './builder-llm-evaluator.service';

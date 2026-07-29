@@ -4,26 +4,23 @@
  * @module builder-run-support.service
  */
 
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 
-import {
-  BuildRun,
-  BuildRunStatus,
-} from '../../../domain/entities/build-run.entity';
+import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import {
   BuildRunEventType,
   BuilderStudentStage,
 } from '../../../domain/builder.types';
+import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
 import { BuilderRunEventsService } from '../../../infrastructure/events/builder-run-events.service';
 import { toErrorMessage as extractErrorMessage } from '../../../../../../shared/utils/error-message.util';
 
 @Injectable()
 export class BuilderRunSupportService {
   constructor(
-    @InjectRepository(BuildRun)
-    private readonly buildRunsRepository: Repository<BuildRun>,
+    @Inject(BUILD_RUN_REPOSITORY)
+    private readonly buildRunsRepository: IBuildRunRepository,
     private readonly builderRunEventsService: BuilderRunEventsService,
   ) {}
 
@@ -38,22 +35,12 @@ export class BuilderRunSupportService {
     // condicionados (ARQ-013): sigue siendo mas barato que un save() de la
     // entidad completa, pero cualquier save() en vuelo en otro sitio detecta
     // el conflicto via lock optimista en vez de pisarlo.
-    const result = await this.buildRunsRepository
-      .createQueryBuilder()
-      .update(BuildRun)
-      .set({
-        status: BuildRunStatus.FAILED,
-        finishedAt: () => 'NOW()',
-        failureReason: errorMessage,
-        version: () => '"version" + 1',
-      })
-      .where('"id" = :id', { id: buildRunId })
-      .andWhere('"status" != :cancelled', {
-        cancelled: BuildRunStatus.CANCELLED,
-      })
-      .execute();
+    const failed = await this.buildRunsRepository.failIfNotCancelled(
+      buildRunId,
+      errorMessage,
+    );
 
-    if (!result.affected) return;
+    if (!failed) return;
 
     await this.emitEvent({
       buildRunId,

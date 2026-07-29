@@ -18,6 +18,18 @@ import {
   DEFAULT_DOCKER_RUNTIME,
 } from './docker.types';
 
+/**
+ * Adaptador del puerto `IContainerRuntime`
+ * (`modules/projects/builder/domain/ports/container-runtime.port.ts`, Fase 1
+ * P1-1, ver audit/areas/arquitectura/plan_accion.md). Deliberadamente NO
+ * declara `implements IContainerRuntime`: shared/ no puede importar de
+ * modules/ (no-shared-to-modules en .dependency-cruiser.cjs), así que esta
+ * clase satisface el puerto por tipado estructural — el `useExisting` en
+ * `builder.module.ts` es lo que conecta ambos, no una relación de herencia
+ * declarada aquí. El resto de métodos públicos de esta clase (redes,
+ * contenedores daemon, inspect...) no forman parte del puerto porque no
+ * tienen ningún llamador fuera de la propia infraestructura Docker hoy.
+ */
 @Injectable()
 export class DockerExecutionService {
   private readonly dockerRuntime: string;
@@ -158,5 +170,12 @@ export class DockerExecutionService {
       timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
       maxBufferedChars: 50000,
     });
+  }
+
+  async pruneEnvironmentImages(options: {
+    olderThanHours: number;
+    timeoutMs: number;
+  }): Promise<number> {
+    return this.dockerImageService.pruneEnvironmentImages(options);
   }
 }

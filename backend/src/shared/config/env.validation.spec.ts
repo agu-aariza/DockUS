@@ -27,6 +27,17 @@ describe('envValidationSchema', () => {
     expect(value.BUILDER_LLM_QUALITY_MAX_INPUT_CHARS).toBe(30000);
   });
 
+  it('derives BUILDER_BEDROCK_FACTS_MODEL_ID from the stage list instead of leaving it undefined (ARQ-030)', () => {
+    const { error, value } = envValidationSchema.validate(baseEnv, {
+      abortEarly: false,
+    });
+
+    expect(error).toBeUndefined();
+    expect(value.BUILDER_BEDROCK_FACTS_MODEL_ID).toBe(
+      'anthropic.claude-3-5-haiku-20241022-v1:0',
+    );
+  });
+
   it('accepts explicit AWS region override', () => {
     const { error, value } = envValidationSchema.validate(
       { ...baseEnv, AWS_REGION: 'eu-west-1' },

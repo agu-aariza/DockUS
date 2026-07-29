@@ -34,7 +34,7 @@ import {
   normalizeRuntimeVersion,
   RUNTIME_CATALOG,
 } from '../../runtime-catalog';
-import { toPosixPath } from '../../../infrastructure/utils/builder-analysis.util';
+import { toPosixPath } from '../../../../../../shared/utils/path.util';
 
 import { normalizeString } from './contract-parser.utils';
 

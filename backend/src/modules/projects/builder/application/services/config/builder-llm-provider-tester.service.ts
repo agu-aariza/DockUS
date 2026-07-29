@@ -8,10 +8,11 @@
  * @module BuilderLlmProviderTester
  */
 
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { LlmGenerationRouter } from '../../../../../shared/infrastructure/ai/llm-generation.router';
-import { LlmRequestError } from '../../../../../shared/infrastructure/ai/llm-request.util';
-import type { LlmProviderId } from '../../../../../shared/infrastructure/ai/llm.types';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import type { ILlmGenerationService } from '../../../../../../shared/infrastructure/ai/llm-generation.token';
+import { LLM_GENERATION_SERVICE } from '../../../../../../shared/infrastructure/ai/llm-generation.token';
+import { LlmRequestError } from '../../../../../../shared/infrastructure/ai/llm-request.util';
+import type { LlmProviderId } from '../../../../../../shared/infrastructure/ai/llm.types';
 import { BuilderLlmConfigService } from './builder-llm-config.service';
 
 const TEST_PROMPT =
@@ -37,7 +38,8 @@ export class BuilderLlmProviderTester {
 
   constructor(
     private readonly llmConfigService: BuilderLlmConfigService,
-    private readonly llmRouter: LlmGenerationRouter,
+    @Inject(LLM_GENERATION_SERVICE)
+    private readonly llmRouter: ILlmGenerationService,
   ) {}
 
   async test(providerId: LlmProviderId): Promise<LlmProviderTestResult> {

@@ -31,7 +31,7 @@ import type { ComposedPromptPayload } from '../../../domain/ai/builder-prompt-co
 import { parseBuilderEvaluationContractV2 } from '../../../domain/ai/builder-evaluation-contract.parser';
 import { parseBuilderFactsContractV2 } from '../../../domain/ai/builder-facts-contract.parser';
 import { parseBuilderPlanContractV2 } from '../../../domain/ai/builder-plan-contract.parser';
-import { BuilderLlmConfigService } from '../../../infrastructure/config/builder-llm-config.service';
+import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
 import {
   composeEvaluationPrompt,
   composeFactsPrompt,

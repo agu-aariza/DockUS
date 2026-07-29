@@ -37,4 +37,12 @@ describe('BuildRunArtifactType', () => {
       isStaffOnlyBuildRunArtifactType(BuildRunArtifactType.REPORT_JSON),
     ).toBe(false);
   });
+
+  it('treats every LLM_-prefixed member as staff-only, and no other member as staff-only', () => {
+    for (const type of Object.values(BuildRunArtifactType)) {
+      expect(isStaffOnlyBuildRunArtifactType(type)).toBe(
+        type.startsWith('LLM_'),
+      );
+    }
+  });
 });

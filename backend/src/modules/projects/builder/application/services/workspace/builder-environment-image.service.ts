@@ -18,14 +18,16 @@
  * @module BuilderEnvironmentImageService
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 
-import { DockerExecutionService } from '../../../../../../shared/infrastructure/docker/docker-execution.service';
-import { DistributedLockService } from '../../../../../../shared/infrastructure/cache/distributed-lock.service';
+import type { IContainerRuntime } from '../../../domain/ports/container-runtime.port';
+import { CONTAINER_RUNTIME } from '../../../domain/ports/container-runtime.port';
+import type { IDistributedLock } from '../../../domain/ports/distributed-lock.port';
+import { DISTRIBUTED_LOCK } from '../../../domain/ports/distributed-lock.port';
 
 /** Ficheros de dependencias que se copian al contexto de construcción. */
 const DEPENDENCY_FILES = [
@@ -85,8 +87,10 @@ export class BuilderEnvironmentImageService {
   private readonly logger = new Logger(BuilderEnvironmentImageService.name);
 
   constructor(
-    private readonly dockerExecutionService: DockerExecutionService,
-    private readonly distributedLockService: DistributedLockService,
+    @Inject(CONTAINER_RUNTIME)
+    private readonly containerRuntime: IContainerRuntime,
+    @Inject(DISTRIBUTED_LOCK)
+    private readonly distributedLock: IDistributedLock,
   ) {}
 
   /**
@@ -115,7 +119,7 @@ export class BuilderEnvironmentImageService {
       dependencyFiles,
     })}`;
 
-    if (await this.dockerExecutionService.imageExists(imageTag)) {
+    if (await this.containerRuntime.imageExists(imageTag)) {
       return { imageTag, environment, built: false };
     }
 
@@ -127,7 +131,7 @@ export class BuilderEnvironmentImageService {
     //
     // El cerrojo se toma sobre el `imageTag`, no sobre el run: construcciones
     // de imágenes distintas siguen pudiendo ir en paralelo, que es lo deseable.
-    const outcome = await this.distributedLockService.withLock(
+    const outcome = await this.distributedLock.withLock(
       `builder:image-build:${imageTag}`,
       {
         ttlMs: IMAGE_BUILD_LOCK_TTL_MS,
@@ -137,7 +141,7 @@ export class BuilderEnvironmentImageService {
         // Segunda comprobación, ya dentro del cerrojo: es la que rentabiliza la
         // espera. Quien aguardó a que otro terminara encuentra aquí la imagen
         // recién construida y se ahorra rehacerla.
-        if (await this.dockerExecutionService.imageExists(imageTag)) {
+        if (await this.containerRuntime.imageExists(imageTag)) {
           return false;
         }
         await this.buildEnvironmentImage({
@@ -208,7 +212,7 @@ export class BuilderEnvironmentImageService {
         }),
       );
 
-      await this.dockerExecutionService.buildImage({
+      await this.containerRuntime.buildImage({
         imageTag,
         contextDir,
         labels: { 'dockus.role': 'environment' },

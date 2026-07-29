@@ -6,28 +6,31 @@
 
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
 import { BuildRunChatMessage } from '../../../domain/entities/build-run-chat-message.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
-import {
-  BuildRunArtifact,
-  BuildRunArtifactType,
-} from '../../../domain/entities/build-run-artifact.entity';
+import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
+import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunChatMessageRepository } from '../../../../domain/repositories/build-run-chat-message.repository.interface';
+import { BUILD_RUN_CHAT_MESSAGE_REPOSITORY } from '../../../../domain/repositories/build-run-chat-message.repository.interface';
+import type { IBuildRunArtifactRepository } from '../../../../domain/repositories/build-run-artifact.repository.interface';
+import { BUILD_RUN_ARTIFACT_REPOSITORY } from '../../../../domain/repositories/build-run-artifact.repository.interface';
 import { BuilderLlmDispatcherService } from './builder-llm-dispatcher.service';
 import {
   PromptRegistryService,
   PromptId,
 } from '../../../../../../shared/infrastructure/ai/prompt-registry.service';
-import { MinioStorageService } from '../../../../../../shared/infrastructure/storage/minio-storage.service';
-import { BuilderLlmConfigService } from '../../../infrastructure/config/builder-llm-config.service';
+import type { IObjectStorage } from '../../../../domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../../../../domain/ports/object-storage.port';
+import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
 import { BuilderRunCostService } from './builder-run-cost.service';
 import { BuilderStageTokenUsage } from '../../../domain/builder.types';
+import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
+import { BuilderRunQueriesService } from '../orchestration/builder-run-queries.service';
 
 // Secciones del prompt de evaluación que contienen la clave de corrección del
 // docente. El artefacto LLM_EVAL_PROMPT se reutiliza como contexto del Tutor IA
@@ -106,38 +109,41 @@ export class BuilderLlmChatService {
   private readonly logger = new Logger(BuilderLlmChatService.name);
 
   constructor(
-    @InjectRepository(BuildRunChatMessage)
-    private readonly chatMessageRepository: Repository<BuildRunChatMessage>,
-    @InjectRepository(BuildRun)
-    private readonly buildRunRepository: Repository<BuildRun>,
-    @InjectRepository(BuildRunArtifact)
-    private readonly artifactRepository: Repository<BuildRunArtifact>,
+    @Inject(BUILD_RUN_CHAT_MESSAGE_REPOSITORY)
+    private readonly chatMessageRepository: IBuildRunChatMessageRepository,
+    @Inject(BUILD_RUN_REPOSITORY)
+    private readonly buildRunRepository: IBuildRunRepository,
+    @Inject(BUILD_RUN_ARTIFACT_REPOSITORY)
+    private readonly artifactRepository: IBuildRunArtifactRepository,
     private readonly llmDispatcher: BuilderLlmDispatcherService,
     private readonly promptRegistryService: PromptRegistryService,
-    private readonly minioStorageService: MinioStorageService,
+    @Inject(OBJECT_STORAGE)
+    private readonly objectStorage: IObjectStorage,
     private readonly llmConfigService: BuilderLlmConfigService,
     private readonly runCostService: BuilderRunCostService,
+    private readonly builderRunQueriesService: BuilderRunQueriesService,
   ) {}
 
-  async getChatMessages(buildRunId: string): Promise<BuildRunChatMessage[]> {
-    return this.chatMessageRepository.find({
-      where: { buildRunId },
-      order: { createdAt: 'ASC' },
-    });
+  async getChatMessages(
+    buildRunId: string,
+    actor: AuthenticatedUser,
+  ): Promise<BuildRunChatMessage[]> {
+    await this.builderRunQueriesService.getRunById(buildRunId, actor);
+    return this.chatMessageRepository.findAllByBuildRun(buildRunId);
   }
 
   async postChatMessage(
     buildRunId: string,
     messageText: string,
+    actor: AuthenticatedUser,
   ): Promise<BuildRunChatMessage> {
-    const run = await this.buildRunRepository.findOne({
-      where: { id: buildRunId },
-    });
-    if (!run) {
-      throw new NotFoundException('Ejecución no encontrada.');
-    }
+    const run = await this.builderRunQueriesService.getRunById(
+      buildRunId,
+      actor,
+    );
 
-    const history = await this.getChatMessages(buildRunId);
+    const history =
+      await this.chatMessageRepository.findAllByBuildRun(buildRunId);
     if (history.length >= MAX_CHAT_TURNS_PER_RUN * 2) {
       throw new BadRequestException(
         `Se alcanzó el límite de ${MAX_CHAT_TURNS_PER_RUN} preguntas al Tutor IA para esta ejecución.`,
@@ -197,23 +203,11 @@ export class BuilderLlmChatService {
     const { inputTokens, outputTokens, costUsd } =
       await this.runCostService.summarize([usage]);
 
-    await this.buildRunRepository.increment(
-      { id: run.id },
-      'inputTokens',
+    await this.buildRunRepository.incrementUsage(run.id, {
       inputTokens,
-    );
-    await this.buildRunRepository.increment(
-      { id: run.id },
-      'outputTokens',
       outputTokens,
-    );
-    if (costUsd > 0) {
-      await this.buildRunRepository.increment(
-        { id: run.id },
-        'executionCostUsd',
-        costUsd,
-      );
-    }
+      executionCostUsd: costUsd,
+    });
   }
 
   private async generateTutorReply(
@@ -223,14 +217,13 @@ export class BuilderLlmChatService {
   ): Promise<{ text: string; usage: BuilderStageTokenUsage | null }> {
     let evaluationContext = '';
     try {
-      const evalPromptArtifact = await this.artifactRepository.findOne({
-        where: {
-          buildRunId: run.id,
-          artifactType: BuildRunArtifactType.LLM_EVAL_PROMPT,
-        },
-      });
+      const evalPromptArtifact =
+        await this.artifactRepository.findOneByBuildRunAndType(
+          run.id,
+          BuildRunArtifactType.LLM_EVAL_PROMPT,
+        );
       if (evalPromptArtifact) {
-        const buffer = await this.minioStorageService.getObjectBuffer(
+        const buffer = await this.objectStorage.getObjectBuffer(
           evalPromptArtifact.bucket,
           evalPromptArtifact.objectKey,
         );

@@ -13,16 +13,34 @@ import { Inject, Logger, Module, OnModuleInit } from '@nestjs/common';
 import { totalmem } from 'os';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DockerInfrastructureModule } from '../../../shared/infrastructure/docker/docker-infrastructure.module';
+import { DockerExecutionService } from '../../../shared/infrastructure/docker/docker-execution.service';
+import { CONTAINER_RUNTIME } from './domain/ports/container-runtime.port';
+import { RedisClientService } from '../../../shared/infrastructure/cache/redis-client.service';
+import { DistributedLockService } from '../../../shared/infrastructure/cache/distributed-lock.service';
+import { DISTRIBUTED_CACHE } from './domain/ports/distributed-cache.port';
+import { DISTRIBUTED_LOCK } from './domain/ports/distributed-lock.port';
 import { InfrastructureModule } from '../../../shared/infrastructure/infrastructure.module';
 import { PROCESS_ROLE } from '../../../process-role.module';
 import type { ProcessRole } from '../../../process-role.module';
 import { StorageInfrastructureModule } from '../../../shared/infrastructure/storage/storage-infrastructure.module';
+import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
+import { OBJECT_STORAGE } from '../domain/ports/object-storage.port';
 import { BuildRunRepository } from '../infrastructure/database/build-run.repository';
-import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
-import { Delivery } from '../deliveries/entities/delivery.entity';
+import { BUILD_RUN_REPOSITORY } from '../domain/repositories/build-run.repository.interface';
+import { CodeQualityFindingRepository } from '../infrastructure/database/code-quality-finding.repository';
+import { CODE_QUALITY_FINDING_REPOSITORY } from '../domain/repositories/code-quality-finding.repository.interface';
+import { BuildRunArtifactRepository } from '../infrastructure/database/build-run-artifact.repository';
+import { BUILD_RUN_ARTIFACT_REPOSITORY } from '../domain/repositories/build-run-artifact.repository.interface';
+import { BuildRunChatMessageRepository } from '../infrastructure/database/build-run-chat-message.repository';
+import { BUILD_RUN_CHAT_MESSAGE_REPOSITORY } from '../domain/repositories/build-run-chat-message.repository.interface';
+import { BuildRunEventRepository } from '../infrastructure/database/build-run-event.repository';
+import { BUILD_RUN_EVENT_REPOSITORY } from '../domain/repositories/build-run-event.repository.interface';
+import { LlmConfigurationRepository } from '../infrastructure/database/llm-configuration.repository';
+import { LLM_CONFIGURATION_REPOSITORY } from '../domain/repositories/llm-configuration.repository.interface';
 import { DeliveryStatusModule } from '../deliveries/delivery-status.module';
-import { Project } from '../entities/project.entity';
-import { StorageObject } from '../storage/entities/storage-object.entity';
+import { ProjectPersistenceModule } from '../project-persistence.module';
+import { ProjectAssignmentPersistenceModule } from '../assignments/project-assignment-persistence.module';
+import { StorageModule } from '../storage/storage.module';
 import { BuilderAccessService } from './application/services/workspace/builder-access.service';
 
 import { BuilderRunCommandsService } from './application/services/orchestration/builder-run-commands.service';
@@ -65,8 +83,8 @@ import { BuilderPipelineOrchestrator } from './application/services/orchestratio
 import { BuilderRunMetricsService } from './application/services/orchestration/builder-run-metrics.service';
 import { BuilderStaleRunRecoveryService } from './application/services/orchestration/builder-stale-run-recovery.service';
 import { BuilderImageRetentionService } from './application/services/orchestration/builder-image-retention.service';
-import { BuilderLlmConfigService } from './infrastructure/config/builder-llm-config.service';
-import { BuilderLlmProviderTester } from './infrastructure/config/builder-llm-provider-tester.service';
+import { BuilderLlmConfigService } from './application/services/config/builder-llm-config.service';
+import { BuilderLlmProviderTester } from './application/services/config/builder-llm-provider-tester.service';
 import { BuilderRunCostService } from './application/services/ai/builder-run-cost.service';
 import { BuilderLlmDispatcherService } from './application/services/ai/builder-llm-dispatcher.service';
 import { BuilderSpendQuotaService } from './application/services/orchestration/builder-spend-quota.service';
@@ -81,10 +99,6 @@ import { resolveWorkerConcurrency } from './presentation/builder.processor';
     DockerInfrastructureModule,
     InfrastructureModule,
     TypeOrmModule.forFeature([
-      Project,
-      ProjectAssignment,
-      Delivery,
-      StorageObject,
       BuildRun,
       BuildRunArtifact,
       BuildRunEventEntity,
@@ -94,12 +108,51 @@ import { resolveWorkerConcurrency } from './presentation/builder.processor';
     ]),
     StorageInfrastructureModule,
     DeliveryStatusModule,
+    ProjectPersistenceModule,
+    ProjectAssignmentPersistenceModule,
+    StorageModule,
   ],
   controllers: [BuilderController],
   providers: [
     {
-      provide: 'IBuildRunRepository',
+      provide: BUILD_RUN_REPOSITORY,
       useClass: BuildRunRepository,
+    },
+    {
+      provide: CODE_QUALITY_FINDING_REPOSITORY,
+      useClass: CodeQualityFindingRepository,
+    },
+    {
+      provide: BUILD_RUN_ARTIFACT_REPOSITORY,
+      useClass: BuildRunArtifactRepository,
+    },
+    {
+      provide: BUILD_RUN_CHAT_MESSAGE_REPOSITORY,
+      useClass: BuildRunChatMessageRepository,
+    },
+    {
+      provide: BUILD_RUN_EVENT_REPOSITORY,
+      useClass: BuildRunEventRepository,
+    },
+    {
+      provide: LLM_CONFIGURATION_REPOSITORY,
+      useClass: LlmConfigurationRepository,
+    },
+    {
+      provide: CONTAINER_RUNTIME,
+      useExisting: DockerExecutionService,
+    },
+    {
+      provide: OBJECT_STORAGE,
+      useExisting: MinioStorageService,
+    },
+    {
+      provide: DISTRIBUTED_CACHE,
+      useExisting: RedisClientService,
+    },
+    {
+      provide: DISTRIBUTED_LOCK,
+      useExisting: DistributedLockService,
     },
     BuilderConfigProvider,
     BuilderAccessService,
@@ -143,6 +196,7 @@ import { resolveWorkerConcurrency } from './presentation/builder.processor';
     BuilderQualityAggregationService,
     BuilderRunCommandsService,
     BuilderRunLifecycleService,
+    BUILD_RUN_REPOSITORY,
   ],
 })
 export class BuilderModule implements OnModuleInit {

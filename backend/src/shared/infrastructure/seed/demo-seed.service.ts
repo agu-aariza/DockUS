@@ -4,7 +4,7 @@
  * @module demo-seed.service
  */
 
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Logger } from 'nestjs-pino';
@@ -24,6 +24,8 @@ import {
   Delivery,
   DeliveryStatus,
 } from '../../../modules/projects/deliveries/entities/delivery.entity';
+import { PROCESS_ROLE } from '../../../process-role.module';
+import type { ProcessRole } from '../../../process-role.module';
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -44,9 +46,16 @@ export class DemoSeedService implements OnApplicationBootstrap {
     private readonly deliveriesRepository: Repository<Delivery>,
     private readonly configService: ConfigService,
     private readonly logger: Logger,
+    @Inject(PROCESS_ROLE)
+    private readonly processRole: ProcessRole,
   ) {}
 
+  /** El worker no siembra: solo la API arranca de cara a un operador humano. */
   async onApplicationBootstrap(): Promise<void> {
+    if (this.processRole !== 'api') {
+      return;
+    }
+
     if (!isEnabled(this.configService.get<string>('SEED_DEMO_DATA'))) {
       return;
     }

@@ -5,7 +5,7 @@ import { ILlmGenerationService } from '../../../../../../shared/infrastructure/a
 import { BedrockRequestError } from '../../../../../../shared/infrastructure/ai/bedrock-request.util';
 import { BuilderLlmDispatcherService } from './builder-llm-dispatcher.service';
 import { BuilderCodeQualityService } from './builder-code-quality.service';
-import { BuilderLlmConfigService } from '../../../infrastructure/config/builder-llm-config.service';
+import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
 import { resolveBuilderModelProfile } from '../../../domain/ai/builder-llm-model-profile';
 
 const validQualityResponse = JSON.stringify({

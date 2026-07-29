@@ -4,24 +4,25 @@
  * @module builder-access.service
  */
 
-import { ForbiddenException, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../../../../users/entities/user.entity';
 import { Delivery } from '../../../../deliveries/entities/delivery.entity';
-import { Project, ProjectStatus } from '../../../../entities/project.entity';
+import type { IDeliveryRepository } from '../../../../domain/repositories/delivery.repository.interface';
+import { DELIVERY_REPOSITORY } from '../../../../domain/repositories/delivery.repository.interface';
+import type { IProjectRepository } from '../../../../domain/repositories/project.repository.interface';
+import { PROJECT_REPOSITORY } from '../../../../domain/repositories/project.repository.interface';
+import { ProjectStatus } from '../../../../entities/project.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
-import { isTeacherAssignedToProject } from '../../../../project-access.policy';
 import { findDeliveryWithAssignmentOrThrow } from '../../../../deliveries/delivery-lookup.util';
 
 @Injectable()
 export class BuilderAccessService {
   constructor(
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
-    @InjectRepository(Project)
-    private readonly projectsRepository: Repository<Project>,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveriesRepository: IDeliveryRepository,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectsRepository: IProjectRepository,
   ) {}
 
   async findDeliveryOrThrow(deliveryId: string): Promise<Delivery> {
@@ -57,8 +58,7 @@ export class BuilderAccessService {
       return;
     }
 
-    const isAssigned = await isTeacherAssignedToProject(
-      this.projectsRepository,
+    const isAssigned = await this.projectsRepository.isTeacherAssignedToProject(
       delivery.assignment.project.id,
       actor.userId,
     );
@@ -94,8 +94,7 @@ export class BuilderAccessService {
       );
     }
 
-    const isAssigned = await isTeacherAssignedToProject(
-      this.projectsRepository,
+    const isAssigned = await this.projectsRepository.isTeacherAssignedToProject(
       delivery.assignment.project.id,
       actor.userId,
     );

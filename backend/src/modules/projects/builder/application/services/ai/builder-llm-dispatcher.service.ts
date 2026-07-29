@@ -19,9 +19,10 @@
  * @module BuilderLlmDispatcherService
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { LlmCircuitBreakerService } from '../../../../../../shared/infrastructure/ai/llm-circuit-breaker.service';
-import { LlmGenerationRouter } from '../../../../../../shared/infrastructure/ai/llm-generation.router';
+import type { ILlmGenerationService } from '../../../../../../shared/infrastructure/ai/llm-generation.token';
+import { LLM_GENERATION_SERVICE } from '../../../../../../shared/infrastructure/ai/llm-generation.token';
 import { LlmRequestError } from '../../../../../../shared/infrastructure/ai/llm-request.util';
 import type {
   BuilderLlmPromptStage,
@@ -30,7 +31,7 @@ import type {
   LlmModelProfile,
   LlmProviderCredentials,
 } from '../../../../../../shared/infrastructure/ai/llm.types';
-import { BuilderLlmConfigService } from '../../../infrastructure/config/builder-llm-config.service';
+import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
 
 /**
  * Construye la petición concreta para un candidato. El prompt ya está compuesto
@@ -80,7 +81,8 @@ export class BuilderLlmDispatcherService {
   private readonly logger = new Logger(BuilderLlmDispatcherService.name);
 
   constructor(
-    private readonly llmService: LlmGenerationRouter,
+    @Inject(LLM_GENERATION_SERVICE)
+    private readonly llmService: ILlmGenerationService,
     private readonly llmConfigService: BuilderLlmConfigService,
     private readonly circuitBreaker: LlmCircuitBreakerService,
   ) {}

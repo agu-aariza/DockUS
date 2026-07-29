@@ -4,9 +4,10 @@
  * @module execution-stage.handler
  */
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { IBuilderStageHandler } from './builder-stage.interface';
-import { DockerExecutionService } from '../../../../../../shared/infrastructure/docker/docker-execution.service';
+import type { IContainerRuntime } from '../../../domain/ports/container-runtime.port';
+import { CONTAINER_RUNTIME } from '../../../domain/ports/container-runtime.port';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
 import { BuilderEnvironmentImageService } from '../workspace/builder-environment-image.service';
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
@@ -47,7 +48,8 @@ export class BuilderExecutionStageHandler implements IBuilderStageHandler<
   ExecutionStageOutput
 > {
   constructor(
-    private readonly dockerExecutionService: DockerExecutionService,
+    @Inject(CONTAINER_RUNTIME)
+    private readonly containerRuntime: IContainerRuntime,
     private readonly builderRunSupportService: BuilderRunSupportService,
     private readonly builderEnvironmentImageService: BuilderEnvironmentImageService,
     private readonly builderConfigProvider: BuilderConfigProvider,
@@ -119,7 +121,7 @@ export class BuilderExecutionStageHandler implements IBuilderStageHandler<
     let capturingEvidence = false;
     let evidenceBuffer = '';
 
-    const execResult = await this.dockerExecutionService.runEphemeralContainer({
+    const execResult = await this.containerRuntime.runEphemeralContainer({
       containerName: `dockus-run-${runId}-${randomUUID().slice(0, 8)}`,
       imageTag: environmentImage.imageTag,
       command: compiled.finalCommand,

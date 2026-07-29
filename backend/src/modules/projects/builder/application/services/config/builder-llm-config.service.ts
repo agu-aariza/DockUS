@@ -10,35 +10,41 @@
  * - Las API keys se guardan cifradas y jamás salen del backend: la vista solo
  *   expone `hasApiKey` y los últimos 4 caracteres.
  *
- * Vive en `infrastructure/` porque habla con TypeORM: los servicios de
- * `domain/ai/` dependen de él como dependen del `BuilderLogTrimmer`.
+ * Vive en `application/` porque es un caso de uso: habla con TypeORM solo a
+ * través del puerto `ILlmConfigurationRepository`, igual que cualquier otro
+ * servicio de aplicación (ARQ-024).
  *
  * @module BuilderLlmConfigService
  */
 
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 
-import { SecretCipherService } from '../../../../../shared/infrastructure/security/secret-cipher.service';
+import { SecretCipherService } from '../../../../../../shared/infrastructure/security/secret-cipher.service';
 import type {
   BuilderLlmPromptStage,
   LlmModelProfile,
   LlmProviderCredentials,
   LlmProviderId,
-} from '../../../../../shared/infrastructure/ai/llm.types';
-import { LlmConfiguration } from '../../domain/entities/llm-configuration.entity';
+} from '../../../../../../shared/infrastructure/ai/llm.types';
+import { LlmConfiguration } from '../../../domain/entities/llm-configuration.entity';
+import type { ILlmConfigurationRepository } from '../../../../domain/repositories/llm-configuration.repository.interface';
+import { LLM_CONFIGURATION_REPOSITORY } from '../../../../domain/repositories/llm-configuration.repository.interface';
 import {
   BUILDER_LLM_ROLES,
   BuilderLlmRole,
   roleForStage,
-} from '../../domain/ai/builder-llm-roles';
-import { resolveBuilderModelProfile } from '../../domain/ai/builder-llm-model-profile';
+} from '../../../domain/ai/builder-llm-roles';
+import { resolveBuilderModelProfile } from '../../../domain/ai/builder-llm-model-profile';
 import {
   ModelPricing,
   resolveModelPricing,
-} from '../../domain/ai/pricing.utility';
+} from '../../../domain/ai/pricing.utility';
 
 /**
  * Vencimiento de la caché de configuración (ESC-MED-06). Acota cuánto puede
@@ -118,8 +124,8 @@ export class BuilderLlmConfigService {
   private cacheExpiresAt = 0;
 
   constructor(
-    @InjectRepository(LlmConfiguration)
-    private readonly configsRepository: Repository<LlmConfiguration>,
+    @Inject(LLM_CONFIGURATION_REPOSITORY)
+    private readonly configsRepository: ILlmConfigurationRepository,
     private readonly configService: ConfigService,
     private readonly secretCipher: SecretCipherService,
   ) {}
@@ -283,7 +289,7 @@ export class BuilderLlmConfigService {
   }
 
   async saveConfigs(input: SaveLlmConfigsInput): Promise<void> {
-    const existing = await this.configsRepository.find();
+    const existing = await this.configsRepository.findAll();
     const existingById = new Map(
       existing.map((item) => [item.providerId, item]),
     );
@@ -351,7 +357,7 @@ export class BuilderLlmConfigService {
       }
     }
 
-    await this.configsRepository.save(touched);
+    await this.configsRepository.saveMany(touched);
     this.invalidateCache();
   }
 
@@ -462,7 +468,7 @@ export class BuilderLlmConfigService {
     if (!this.cache) {
       this.cacheExpiresAt = Date.now() + CACHE_TTL_MS;
       this.cache = this.configsRepository
-        .find({ order: { providerId: 'ASC' } })
+        .findAllOrderedByProviderId()
         .catch((error: unknown) => {
           this.invalidateCache();
           throw error;

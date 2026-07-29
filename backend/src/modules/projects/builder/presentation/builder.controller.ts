@@ -9,7 +9,6 @@
  */
 
 import {
-  BadRequestException,
   Body,
   Controller,
   DefaultValuePipe,
@@ -47,16 +46,14 @@ import { UserRole } from '../../../users/entities/user.entity';
 import { BuilderRunCommandsService } from '../application/services/orchestration/builder-run-commands.service';
 import { BuilderRunQueriesService } from '../application/services/orchestration/builder-run-queries.service';
 import { BuilderLlmChatService } from '../application/services/ai/builder-llm-chat.service';
-import { BuilderLlmConfigService } from '../infrastructure/config/builder-llm-config.service';
-import { BuilderLlmProviderTester } from '../infrastructure/config/builder-llm-provider-tester.service';
-import {
-  LLM_PROVIDER_IDS,
-  LlmProviderId,
-} from '../../../../shared/infrastructure/ai/llm.types';
+import { BuilderLlmConfigService } from '../application/services/config/builder-llm-config.service';
+import { BuilderLlmProviderTester } from '../application/services/config/builder-llm-provider-tester.service';
+import { LLM_PROVIDER_IDS } from '../../../../shared/infrastructure/ai/llm.types';
 import {
   LlmConfigsResponseDto,
   LlmProviderTestResponseDto,
   SaveLlmConfigsDto,
+  TestLlmProviderParamsDto,
 } from './dto/llm-config.dto';
 import {
   BuildRunResponseDto,
@@ -91,25 +88,6 @@ const BUILD_RUN_ID_PARAM = {
   description: 'UUID de ejecución del builder.',
   example: '550e8400-e29b-41d4-a716-446655440000',
 } as const;
-
-/**
- * Tope de páginas al drenar el backlog inicial del SSE (200 eventos por página).
- * Cubre runs con historial extenso sin permitir que el bucle gire para siempre
- * sobre un run que aún está produciendo eventos.
- *
- * Reducido de 50 a 10 (ESC-ALTO-06). Con 50, **cada** conexión podía disparar
- * hasta 50 consultas secuenciales a Postgres antes de llegar al `subscribe()`,
- * de modo que una reconexión masiva —un redespliegue, la caída del balanceador—
- * multiplicaba ese coste por el número de clientes y se convertía en una
- * denegación de servicio provocada por el propio sistema.
- *
- * El recorte no pierde eventos: el cliente envía `afterSequence` y reanuda
- * exactamente donde lo dejó, así que el drenaje largo solo ocurría en conexiones
- * genuinamente frías. Para ese caso, 10 páginas son 2.000 eventos; quien
- * necesite más historial que eso lo tiene en el endpoint REST paginado, que es
- * el sitio adecuado para recorrerlo, y no reteniendo abierta una conexión SSE.
- */
-const MAX_BACKLOG_DRAIN_PAGES = 10;
 
 @ApiTags('Builder')
 @ApiBearerAuth()
@@ -267,49 +245,21 @@ export class BuilderController {
     response.setHeader('X-Accel-Buffering', 'no');
     response.flushHeaders();
 
-    const firstPage = await this.builderRunQueriesService.listRunEvents(
+    const { unsubscribe } = await this.builderRunQueriesService.streamRunEvents(
       buildRunId,
       request.user,
       afterSequence,
-      200,
-    );
-    let latestSequence = Math.max(afterSequence, firstPage.latestSequence);
-    response.write(
-      `event: ready\ndata: ${JSON.stringify({ latestSequence })}\n\n`,
-    );
-
-    for (const event of firstPage.events) {
-      response.write(`event: run-event\ndata: ${JSON.stringify(event)}\n\n`);
-    }
-
-    // Drena el backlog con un tope de páginas: sobre un run activo y verboso, el
-    // worker inserta eventos más rápido de lo que se leen y el bucle no
-    // terminaría, martilleando Postgres y sin llegar nunca al subscribe(). Los
-    // eventos que lleguen entre medias los recoge la suscripción, y el cliente
-    // deduplica por `sequence`.
-    let hasMore = firstPage.hasMore;
-    let drainedPages = 0;
-    while (hasMore && drainedPages < MAX_BACKLOG_DRAIN_PAGES) {
-      const page = await this.builderRunQueriesService.listRunEvents(
-        buildRunId,
-        request.user,
-        latestSequence,
-        200,
-      );
-      latestSequence = Math.max(latestSequence, page.latestSequence);
-      hasMore = page.hasMore;
-      drainedPages += 1;
-      for (const event of page.events) {
-        response.write(`event: run-event\ndata: ${JSON.stringify(event)}\n\n`);
-      }
-    }
-
-    const unsubscribe = await this.builderRunQueriesService.subscribeRunEvents(
-      buildRunId,
-      request.user,
-      (event) => {
-        latestSequence = Math.max(latestSequence, event.sequence);
-        response.write(`event: run-event\ndata: ${JSON.stringify(event)}\n\n`);
+      {
+        onReady: (latestSequence) => {
+          response.write(
+            `event: ready\ndata: ${JSON.stringify({ latestSequence })}\n\n`,
+          );
+        },
+        onEvent: (event) => {
+          response.write(
+            `event: run-event\ndata: ${JSON.stringify(event)}\n\n`,
+          );
+        },
       },
     );
 
@@ -552,9 +502,10 @@ export class BuilderController {
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<ChatMessageResponseDto[]> {
-    await this.builderRunQueriesService.getRunById(buildRunId, request.user);
-    const messages =
-      await this.builderLlmChatService.getChatMessages(buildRunId);
+    const messages = await this.builderLlmChatService.getChatMessages(
+      buildRunId,
+      request.user,
+    );
     return messages.map(toChatMessageResponseDto);
   }
 
@@ -571,10 +522,10 @@ export class BuilderController {
     @Body() body: PostChatMessageDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ChatMessageResponseDto> {
-    await this.builderRunQueriesService.getRunById(buildRunId, request.user);
     const message = await this.builderLlmChatService.postChatMessage(
       buildRunId,
       body.message,
+      request.user,
     );
     return toChatMessageResponseDto(message);
   }
@@ -612,11 +563,8 @@ export class BuilderController {
   @Post('llm-configs/:providerId/test')
   @HttpCode(HttpStatus.OK)
   async testLlmProvider(
-    @Param('providerId') providerId: string,
+    @Param() params: TestLlmProviderParamsDto,
   ): Promise<LlmProviderTestResponseDto> {
-    if (!(LLM_PROVIDER_IDS as readonly string[]).includes(providerId)) {
-      throw new BadRequestException(`Proveedor desconocido: "${providerId}".`);
-    }
-    return this.builderLlmProviderTester.test(providerId as LlmProviderId);
+    return this.builderLlmProviderTester.test(params.providerId);
   }
 }

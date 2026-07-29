@@ -15,6 +15,7 @@ import {
 
 import { JobsOptions, Queue } from 'bullmq';
 import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
 
 import { throwIfUniqueViolation } from '../../../../../../shared/database/unique-violation.util';
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
@@ -45,7 +46,7 @@ export class BuilderRunCommandsService {
   private readonly promptVersion: string;
 
   constructor(
-    @Inject('IBuildRunRepository')
+    @Inject(BUILD_RUN_REPOSITORY)
     private readonly buildRunsRepository: IBuildRunRepository,
     @InjectQueue(BUILDER_RUNS_QUEUE_NAME)
     private readonly builderRunsQueue: Queue,

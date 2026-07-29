@@ -4,22 +4,8 @@
  * @module builder-analysis.util
  */
 
-import { createHash } from 'crypto';
 import * as path from 'path';
-
-/**
- * Normaliza una ruta a formato POSIX (utilizando / como separador).
- */
-export function toPosixPath(input: string): string {
-  return input.replace(/\\/g, '/');
-}
-
-/**
- * Genera un hash SHA-256 en formato hexadecimal.
- */
-export function toSha256Hex(content: Buffer | string): string {
-  return createHash('sha256').update(content).digest('hex');
-}
+import { toPosixPath } from '../../../../../shared/utils/path.util';
 
 /**
  * Determina si una ruta relativa es insegura (intenta salir del directorio o es absoluta).

@@ -8,13 +8,13 @@
  * @module BuilderRunQueriesService
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { buildPaginationMeta } from '../../../../../../shared/utils/pagination.util';
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../../../../users/entities/user.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
+import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
 import { BuilderRunEventsService } from '../../../infrastructure/events/builder-run-events.service';
 import {
   BuilderRunEvent,
@@ -27,11 +27,42 @@ import { BuilderAccessService } from '../workspace/builder-access.service';
 import type { PaginatedBuildRunsResponse } from '../builder-application.types';
 import { BuilderQualityAggregationService } from '../evaluation/builder-quality-aggregation.service';
 
+/**
+ * Tope de páginas al drenar el backlog inicial del stream de eventos (200
+ * eventos por página). Cubre runs con historial extenso sin permitir que el
+ * bucle gire para siempre sobre un run que aún está produciendo eventos.
+ *
+ * Reducido de 50 a 10 (ESC-ALTO-06). Con 50, **cada** conexión podía disparar
+ * hasta 50 consultas secuenciales a Postgres antes de llegar al `subscribe()`,
+ * de modo que una reconexión masiva —un redespliegue, la caída del balanceador—
+ * multiplicaba ese coste por el número de clientes y se convertía en una
+ * denegación de servicio provocada por el propio sistema.
+ *
+ * El recorte no pierde eventos: el cliente envía `afterSequence` y reanuda
+ * exactamente donde lo dejó, así que el drenaje largo solo ocurría en conexiones
+ * genuinamente frías. Para ese caso, 10 páginas son 2.000 eventos; quien
+ * necesite más historial que eso lo tiene en el endpoint REST paginado, que es
+ * el sitio adecuado para recorrerlo, y no reteniendo abierta una conexión SSE.
+ */
+const MAX_BACKLOG_DRAIN_PAGES = 10;
+
+/**
+ * Receptor de los eventos de un stream de run. El controlador SSE es la única
+ * implementación real: `onReady` escribe el frame `event: ready`, `onEvent`
+ * escribe `event: run-event`. Mantener el formato de transporte fuera de este
+ * servicio es justo lo que permite reutilizar la paginación/drenaje/suscripción
+ * desde cualquier otro transporte el día que haga falta.
+ */
+export interface BuilderRunEventSink {
+  onReady(latestSequence: number): void;
+  onEvent(event: BuilderRunEvent): void;
+}
+
 @Injectable()
 export class BuilderRunQueriesService {
   constructor(
-    @InjectRepository(BuildRun)
-    private readonly buildRunsRepository: Repository<BuildRun>,
+    @Inject(BUILD_RUN_REPOSITORY)
+    private readonly buildRunsRepository: IBuildRunRepository,
     private readonly builderAccessService: BuilderAccessService,
     private readonly builderRunEventsService: BuilderRunEventsService,
     private readonly evidenceService: EvidenceService,
@@ -42,9 +73,7 @@ export class BuilderRunQueriesService {
     buildRunId: string,
     actor: AuthenticatedUser,
   ): Promise<BuildRun> {
-    const run = await this.buildRunsRepository.findOne({
-      where: { id: buildRunId },
-    });
+    const run = await this.buildRunsRepository.findById(buildRunId);
     if (!run) {
       throw new NotFoundException('BuildRun no encontrado.');
     }
@@ -65,22 +94,16 @@ export class BuilderRunQueriesService {
     const limit = query.limit ?? 20;
     const sortOrder = query.sortOrder;
 
-    const queryBuilder = this.buildRunsRepository
-      .createQueryBuilder('run')
-      .where('run.deliveryId = :deliveryId', { deliveryId });
+    const { data, total } =
+      await this.buildRunsRepository.findPaginatedByDelivery(deliveryId, {
+        status: query.status,
+        page,
+        limit,
+        sortOrder,
+      });
 
-    if (query.status) {
-      queryBuilder.andWhere('run.status = :status', { status: query.status });
-    }
-
-    queryBuilder
-      .orderBy('run.createdAt', sortOrder)
-      .skip((page - 1) * limit)
-      .take(limit);
-
-    const [rows, total] = await queryBuilder.getManyAndCount();
     return {
-      data: rows,
+      data,
       meta: buildPaginationMeta(page, limit, total),
     };
   }
@@ -111,30 +134,10 @@ export class BuilderRunQueriesService {
       return result;
     }
 
-    const queryBuilder = this.buildRunsRepository
-      .createQueryBuilder('run')
-      .distinctOn(['run.deliveryId'])
-      .innerJoin('run.delivery', 'delivery')
-      .where('run.deliveryId IN (:...uniqueIds)', { uniqueIds });
-
-    if (actor.role === UserRole.STUDENT) {
-      queryBuilder.andWhere('delivery.authorId = :userId', {
-        userId: actor.userId,
-      });
-    } else if (actor.role === UserRole.TEACHER) {
-      queryBuilder
-        .innerJoin('delivery.assignment', 'assignment')
-        .innerJoin('assignment.project', 'project')
-        .innerJoin('project.teachers', 'scopedTeacher')
-        .andWhere('scopedTeacher.id = :userId', { userId: actor.userId });
-    }
-    // ADMIN: sin filtro adicional, ve el batch completo.
-
-    queryBuilder
-      .orderBy('run.deliveryId', 'ASC')
-      .addOrderBy('run.createdAt', 'DESC');
-
-    const runs = await queryBuilder.getMany();
+    const runs = await this.buildRunsRepository.findLatestByDeliveryIdsForActor(
+      uniqueIds,
+      actor,
+    );
     for (const run of runs) {
       result[run.deliveryId] = run;
     }
@@ -158,6 +161,60 @@ export class BuilderRunQueriesService {
   ): Promise<() => void> {
     await this.getRunById(buildRunId, actor);
     return this.builderRunEventsService.subscribe(buildRunId, listener);
+  }
+
+  /**
+   * Drena el backlog de un run (con el tope de `MAX_BACKLOG_DRAIN_PAGES`) y
+   * deja el stream suscrito a los eventos que lleguen después, entregando todo
+   * al `sink` provisto. El control de acceso se resuelve una única vez al
+   * principio — igual que ya hacía `subscribeRunEvents` para toda la porción
+   * en vivo, que es la que domina la vida de la conexión — en vez de
+   * repetirse en cada página del drenaje.
+   */
+  async streamRunEvents(
+    buildRunId: string,
+    actor: AuthenticatedUser,
+    afterSequence: number,
+    sink: BuilderRunEventSink,
+  ): Promise<{ unsubscribe: () => void }> {
+    await this.getRunById(buildRunId, actor);
+
+    const firstPage = await this.builderRunEventsService.list(
+      buildRunId,
+      afterSequence,
+      200,
+    );
+    let latestSequence = Math.max(afterSequence, firstPage.latestSequence);
+    sink.onReady(latestSequence);
+    for (const event of firstPage.events) {
+      sink.onEvent(event);
+    }
+
+    let hasMore = firstPage.hasMore;
+    let drainedPages = 0;
+    while (hasMore && drainedPages < MAX_BACKLOG_DRAIN_PAGES) {
+      const page = await this.builderRunEventsService.list(
+        buildRunId,
+        latestSequence,
+        200,
+      );
+      latestSequence = Math.max(latestSequence, page.latestSequence);
+      hasMore = page.hasMore;
+      drainedPages += 1;
+      for (const event of page.events) {
+        sink.onEvent(event);
+      }
+    }
+
+    const unsubscribe = this.builderRunEventsService.subscribe(
+      buildRunId,
+      (event) => {
+        latestSequence = Math.max(latestSequence, event.sequence);
+        sink.onEvent(event);
+      },
+    );
+
+    return { unsubscribe };
   }
 
   async listEvidenceArtifacts(

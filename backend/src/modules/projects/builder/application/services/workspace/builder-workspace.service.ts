@@ -9,30 +9,27 @@
  */
 
 import {
+  Inject,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { access, chmod, mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { IsNull, Repository } from 'typeorm';
 
 import { RuntimeFile } from '../../../domain/builder.types';
-import { Delivery } from '../../../../deliveries/entities/delivery.entity';
-import {
-  StorageAssetRole,
-  StorageObject,
-} from '../../../../storage/entities/storage-object.entity';
-import { MinioStorageService } from '../../../../../../shared/infrastructure/storage/minio-storage.service';
+import type { IObjectStorage } from '../../../../domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../../../../domain/ports/object-storage.port';
+import type { IDeliveryRepository } from '../../../../domain/repositories/delivery.repository.interface';
+import { DELIVERY_REPOSITORY } from '../../../../domain/repositories/delivery.repository.interface';
+import type { IStorageObjectRepository } from '../../../../domain/repositories/storage-object.repository.interface';
+import { STORAGE_OBJECT_REPOSITORY } from '../../../../domain/repositories/storage-object.repository.interface';
 import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
 import { toErrorMessage } from '../../../../../../shared/utils/error-message.util';
 import { extractArchiveToWorkspace } from '../../../infrastructure/utils/archive-extractor.util';
-import {
-  buildSafeDestination,
-  toPosixPath,
-} from '../../../infrastructure/utils/builder-analysis.util';
+import { buildSafeDestination } from '../../../infrastructure/utils/builder-analysis.util';
+import { toPosixPath } from '../../../../../../shared/utils/path.util';
 
 interface WorkspaceInputObject {
   storageObjectId: string;
@@ -75,11 +72,12 @@ export class BuilderWorkspaceService {
   private readonly maxExtractedBytes: number;
 
   constructor(
-    @InjectRepository(StorageObject)
-    private readonly storageRepository: Repository<StorageObject>,
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
-    private readonly minioStorageService: MinioStorageService,
+    @Inject(STORAGE_OBJECT_REPOSITORY)
+    private readonly storageRepository: IStorageObjectRepository,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveriesRepository: IDeliveryRepository,
+    @Inject(OBJECT_STORAGE)
+    private readonly objectStorage: IObjectStorage,
     private readonly builderConfigProvider: BuilderConfigProvider,
   ) {
     this.maxExtractedFiles = this.builderConfigProvider.maxExtractedFiles;
@@ -87,27 +85,16 @@ export class BuilderWorkspaceService {
   }
 
   async prepareWorkspace(deliveryId: string): Promise<StageWorkspaceResult> {
-    const delivery = await this.deliveriesRepository.findOne({
-      where: { id: deliveryId },
-      relations: {
-        assignment: {
-          project: true,
-        },
-      },
-    });
+    const delivery =
+      await this.deliveriesRepository.findByIdWithAssignment(deliveryId);
     if (!delivery) {
       throw new NotFoundException(
         'Entrega no encontrada para preparar workspace.',
       );
     }
 
-    const studentSourceObjects = await this.storageRepository.find({
-      where: {
-        deliveryId,
-        assetRole: StorageAssetRole.STUDENT_SOURCE,
-      },
-      order: { createdAt: 'ASC' },
-    });
+    const studentSourceObjects =
+      await this.storageRepository.findAllStudentSourcesByDelivery(deliveryId);
 
     if (!studentSourceObjects.length) {
       throw new NotFoundException(
@@ -115,15 +102,10 @@ export class BuilderWorkspaceService {
       );
     }
 
-    const teacherTestObjects = await this.storageRepository.find({
-      where: {
-        projectId: delivery.assignment.projectId,
-        deliveryId: IsNull(),
-        assetRole: StorageAssetRole.TEACHER_TESTS,
-      },
-      order: { createdAt: 'DESC' },
-      take: 1,
-    });
+    const teacherTestObjects =
+      await this.storageRepository.findLatestTeacherTestSuite(
+        delivery.assignment.projectId,
+      );
 
     return this.prepareWorkspaceFromInputs(
       studentSourceObjects.map((item) => ({
@@ -324,7 +306,7 @@ export class BuilderWorkspaceService {
     inputObject: WorkspaceInputObject,
   ): Promise<Buffer> {
     try {
-      return await this.minioStorageService.getObjectBuffer(
+      return await this.objectStorage.getObjectBuffer(
         inputObject.bucket,
         inputObject.objectKey,
       );

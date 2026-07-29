@@ -9,8 +9,8 @@ import type { AuthenticatedUser } from '../../../../../auth/interfaces/authentic
 describe('BuilderAccessService — assertCanTriggerDelivery', () => {
   let service: BuilderAccessService;
 
-  const deliveriesRepository = { findOne: jest.fn() };
-  const projectsRepository = { createQueryBuilder: jest.fn() };
+  const deliveriesRepository = { findByIdWithAssignment: jest.fn() };
+  const projectsRepository = { isTeacherAssignedToProject: jest.fn() };
 
   const buildDelivery = (
     overrides: Partial<{
@@ -85,13 +85,7 @@ describe('BuilderAccessService — assertCanTriggerDelivery', () => {
 
   it('permite a TEACHER asignado al proyecto (misma politica que assertCanManageDelivery)', async () => {
     const delivery = buildDelivery();
-    const queryBuilder = {
-      innerJoin: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      getExists: jest.fn().mockResolvedValue(true),
-    };
-    projectsRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+    projectsRepository.isTeacherAssignedToProject.mockResolvedValue(true);
 
     await expect(
       service.assertCanTriggerDelivery(
@@ -103,13 +97,7 @@ describe('BuilderAccessService — assertCanTriggerDelivery', () => {
 
   it('rechaza a TEACHER no asignado al proyecto', async () => {
     const delivery = buildDelivery();
-    const queryBuilder = {
-      innerJoin: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      getExists: jest.fn().mockResolvedValue(false),
-    };
-    projectsRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+    projectsRepository.isTeacherAssignedToProject.mockResolvedValue(false);
 
     await expect(
       service.assertCanTriggerDelivery(

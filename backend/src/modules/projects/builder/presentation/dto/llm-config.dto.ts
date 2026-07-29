@@ -198,6 +198,12 @@ export class LlmConfigsResponseDto {
   credentialsEncryptionEnabled!: boolean;
 }
 
+export class TestLlmProviderParamsDto {
+  @ApiProperty({ enum: LLM_PROVIDER_IDS })
+  @IsIn(LLM_PROVIDER_IDS)
+  providerId!: LlmProviderId;
+}
+
 export class LlmProviderTestResponseDto {
   @ApiProperty()
   ok!: boolean;

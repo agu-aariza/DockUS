@@ -16,6 +16,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Queue } from 'bullmq';
 import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
 import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
 import {
   BUILDER_JOB_PRIORITY,
@@ -34,7 +35,7 @@ export class BuilderStaleRunRecoveryService {
   private readonly logger = new Logger(BuilderStaleRunRecoveryService.name);
 
   constructor(
-    @Inject('IBuildRunRepository')
+    @Inject(BUILD_RUN_REPOSITORY)
     private readonly buildRunsRepository: IBuildRunRepository,
     private readonly builderConfigProvider: BuilderConfigProvider,
     @InjectQueue(BUILDER_RUNS_QUEUE_NAME)

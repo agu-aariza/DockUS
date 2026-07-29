@@ -10,6 +10,7 @@ import { SecretCipherService } from '../security/secret-cipher.service';
 import { LlmCircuitBreakerService } from './llm-circuit-breaker.service';
 import { BedrockGenerationService } from './bedrock-generation.service';
 import { LlmGenerationRouter } from './llm-generation.router';
+import { LLM_GENERATION_SERVICE } from './llm-generation.token';
 import { PromptRegistryService } from './prompt-registry.service';
 import { AnthropicGenerationService } from './providers/anthropic-generation.service';
 import { GeminiGenerationService } from './providers/gemini-generation.service';
@@ -30,6 +31,10 @@ import { OpenAiCompatibleGenerationService } from './providers/openai-compatible
     AnthropicGenerationService,
     GeminiGenerationService,
     LlmGenerationRouter,
+    {
+      provide: LLM_GENERATION_SERVICE,
+      useExisting: LlmGenerationRouter,
+    },
   ],
   exports: [
     LlmCircuitBreakerService,
@@ -37,6 +42,7 @@ import { OpenAiCompatibleGenerationService } from './providers/openai-compatible
     SecretCipherService,
     BedrockGenerationService,
     LlmGenerationRouter,
+    LLM_GENERATION_SERVICE,
   ],
 })
 export class AiModule {}

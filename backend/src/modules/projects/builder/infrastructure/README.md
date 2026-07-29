@@ -15,11 +15,12 @@ Conectar la lógica de orquestación del builder con los adaptadores de almacena
 
 ```text
 .
-├── config/   # Configuración de infraestructura específica del builder
 ├── events/   # Clases de evento y escuchadores (event listeners)
 ├── evidence/ # Servicios de captura y almacenamiento de evidencias de ejecución
 └── utils/    # Utilidades de ruta y transformación de payloads POSIX
 ```
+
+`BuilderLlmConfigService`/`BuilderLlmProviderTester` vivían aquí (`config/`) pero se movieron a `application/services/config/`: son casos de uso (leen/escriben configuración vía el puerto `ILlmConfigurationRepository`, no TypeORM directo), no infraestructura (ARQ-024).
 
 ---
 

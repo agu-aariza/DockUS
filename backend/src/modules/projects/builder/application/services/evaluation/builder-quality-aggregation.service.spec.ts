@@ -1,57 +1,62 @@
 import { NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
 
 import { BuilderQualityAggregationService } from './builder-quality-aggregation.service';
-import { CodeQualityFindingEntity } from '../../../domain/entities/code-quality-finding.entity';
-import { ProjectAssignment } from '../../../../assignments/entities/project-assignment.entity';
+import type { ICodeQualityFindingRepository } from '../../../../domain/repositories/code-quality-finding.repository.interface';
+import type { IProjectAssignmentRepository } from '../../../../domain/repositories/project-assignment.repository.interface';
 
 describe('BuilderQualityAggregationService', () => {
   let repository: {
-    query: jest.MockedFunction<Repository<CodeQualityFindingEntity>['query']>;
-    find: jest.MockedFunction<Repository<CodeQualityFindingEntity>['find']>;
-    createQueryBuilder: jest.Mock;
+    aggregateByProject: jest.Mock;
+    aggregateByProjectAndCategory: jest.Mock;
+    countDistinctStudentsForProject: jest.Mock;
+    findByProjectAndStudent: jest.Mock;
+    findTopFindingsForAssignment: jest.Mock;
+    countDistinctBuildRunsForAssignment: jest.Mock;
   };
   let assignmentsRepository: {
-    findOne: jest.MockedFunction<Repository<ProjectAssignment>['findOne']>;
+    findById: jest.MockedFunction<IProjectAssignmentRepository['findById']>;
   };
   let service: BuilderQualityAggregationService;
 
   beforeEach(() => {
     repository = {
-      query: jest.fn(),
-      find: jest.fn(),
-      createQueryBuilder: jest.fn(),
+      aggregateByProject: jest.fn(),
+      aggregateByProjectAndCategory: jest.fn(),
+      countDistinctStudentsForProject: jest.fn(),
+      findByProjectAndStudent: jest.fn(),
+      findTopFindingsForAssignment: jest.fn(),
+      countDistinctBuildRunsForAssignment: jest.fn(),
     };
     assignmentsRepository = {
-      findOne: jest.fn(),
+      findById: jest.fn(),
     };
 
     service = new BuilderQualityAggregationService(
-      repository as unknown as Repository<CodeQualityFindingEntity>,
-      assignmentsRepository as unknown as Repository<ProjectAssignment>,
+      repository as unknown as ICodeQualityFindingRepository,
+      assignmentsRepository as unknown as IProjectAssignmentRepository,
     );
   });
 
   it('aggregates findings by project ordered by affected students', async () => {
-    repository.query
-      .mockResolvedValueOnce([{ count: '3' }])
-      .mockResolvedValueOnce([
-        {
-          title: 'Uso de if-else en lugar de switch',
-          category: 'quality',
-          severity: 'medium',
-          studentCount: '2',
-        },
-        {
-          title: 'sprintf inseguro',
-          category: 'security',
-          severity: 'high',
-          studentCount: '1',
-        },
-      ]);
+    repository.countDistinctStudentsForProject.mockResolvedValue(3);
+    repository.aggregateByProject.mockResolvedValue([
+      {
+        title: 'Uso de if-else en lugar de switch',
+        category: 'quality',
+        severity: 'medium',
+        studentCount: 2,
+      },
+      {
+        title: 'sprintf inseguro',
+        category: 'security',
+        severity: 'high',
+        studentCount: 1,
+      },
+    ]);
 
     const result = await service.getAggregatedFindings('project-1');
 
+    expect(repository.aggregateByProject).toHaveBeenCalledWith('project-1');
     expect(result).toEqual({
       projectId: 'project-1',
       totalStudentsAnalyzed: 3,
@@ -73,19 +78,22 @@ describe('BuilderQualityAggregationService', () => {
   });
 
   it('filters aggregated findings by category', async () => {
-    repository.query
-      .mockResolvedValueOnce([{ count: '2' }])
-      .mockResolvedValueOnce([
-        {
-          title: 'sprintf inseguro',
-          category: 'security',
-          severity: 'high',
-          studentCount: '2',
-        },
-      ]);
+    repository.countDistinctStudentsForProject.mockResolvedValue(2);
+    repository.aggregateByProjectAndCategory.mockResolvedValue([
+      {
+        title: 'sprintf inseguro',
+        category: 'security',
+        severity: 'high',
+        studentCount: 2,
+      },
+    ]);
 
     const result = await service.getFindingsByCategory('project-1', 'security');
 
+    expect(repository.aggregateByProjectAndCategory).toHaveBeenCalledWith(
+      'project-1',
+      'security',
+    );
     expect(result.projectId).toBe('project-1');
     expect(result.category).toBe('security');
     expect(result.insights).toEqual([
@@ -99,7 +107,7 @@ describe('BuilderQualityAggregationService', () => {
   });
 
   it('returns grouped findings for an individual student', async () => {
-    repository.find.mockResolvedValue([
+    repository.findByProjectAndStudent.mockResolvedValue([
       {
         category: 'security',
         title: 'sprintf inseguro',
@@ -116,13 +124,17 @@ describe('BuilderQualityAggregationService', () => {
         file: null,
         line: null,
       },
-    ] as CodeQualityFindingEntity[]);
+    ]);
 
     const result = await service.getFindingsForStudent(
       'project-1',
       'student-1',
     );
 
+    expect(repository.findByProjectAndStudent).toHaveBeenCalledWith(
+      'project-1',
+      'student-1',
+    );
     expect(result).toEqual({
       projectId: 'project-1',
       studentId: 'student-1',
@@ -157,43 +169,25 @@ describe('BuilderQualityAggregationService', () => {
 
   /** ARQ-005: reemplaza el agregador JS de getAssignmentQualityInsights. */
   describe('getInsightsForAssignment', () => {
-    const buildQueryBuilder = (rawMany: unknown[], rawOne: unknown) => ({
-      select: jest.fn().mockReturnThis(),
-      addSelect: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      groupBy: jest.fn().mockReturnThis(),
-      addGroupBy: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      addOrderBy: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      getRawMany: jest.fn().mockResolvedValue(rawMany),
-      getRawOne: jest.fn().mockResolvedValue(rawOne),
-    });
-
     it('lanza NotFoundException si la asignacion no existe', async () => {
-      assignmentsRepository.findOne.mockResolvedValue(null);
+      assignmentsRepository.findById.mockResolvedValue(null);
 
       await expect(
         service.getInsightsForAssignment('missing-assignment'),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('agrega con SQL sobre code_quality_findings filtrando por projectId+studentId de la asignacion', async () => {
-      assignmentsRepository.findOne.mockResolvedValue({
+    it('delega en el puerto la agregación filtrando por projectId+studentId de la asignacion', async () => {
+      assignmentsRepository.findById.mockResolvedValue({
         id: 'assignment-1',
         projectId: 'project-1',
         studentId: 'student-1',
       });
-
-      const queryBuilder = buildQueryBuilder(
-        [
-          { title: 'sprintf inseguro', category: 'security', count: 2 },
-          { title: 'Falta manejo de errores', category: 'quality', count: 1 },
-        ],
-        { count: 1 },
-      );
-      repository.createQueryBuilder.mockReturnValue(queryBuilder);
+      repository.findTopFindingsForAssignment.mockResolvedValue([
+        { title: 'sprintf inseguro', category: 'security', count: 2 },
+        { title: 'Falta manejo de errores', category: 'quality', count: 1 },
+      ]);
+      repository.countDistinctBuildRunsForAssignment.mockResolvedValue(1);
 
       const result = await service.getInsightsForAssignment('assignment-1');
 
@@ -204,10 +198,13 @@ describe('BuilderQualityAggregationService', () => {
           { title: 'Falta manejo de errores', category: 'quality', count: 1 },
         ],
       });
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        expect.stringContaining('studentId'),
-        { studentId: 'student-1' },
+      expect(repository.findTopFindingsForAssignment).toHaveBeenCalledWith(
+        'project-1',
+        'student-1',
       );
+      expect(
+        repository.countDistinctBuildRunsForAssignment,
+      ).toHaveBeenCalledWith('project-1', 'student-1');
     });
   });
 });

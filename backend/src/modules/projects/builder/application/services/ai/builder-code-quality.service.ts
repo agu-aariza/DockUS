@@ -22,7 +22,7 @@ import {
 import { BuilderLlmDispatcherService } from './builder-llm-dispatcher.service';
 import type { LlmGenerateResult } from '../../../../../../shared/infrastructure/ai/llm.types';
 import { parseBuilderCodeQualityContractV2 } from '../../../domain/ai/builder-code-quality-contract.parser';
-import { BuilderLlmConfigService } from '../../../infrastructure/config/builder-llm-config.service';
+import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
 import { composeQualityPrompt } from '../../../domain/ai/builder-prompt-composer';
 import {
   createPromptSnapshot,

@@ -18,6 +18,47 @@ const insecureJwtPlaceholders = [
   'CHANGE_ME_REFRESH_SECRET',
 ] as const;
 
+/**
+ * Las cinco etapas reales del pipeline LLM del builder (ver
+ * `builder-llm-roles.ts`). Fuente única para las claves
+ * `BUILDER_BEDROCK_<STAGE>_MODEL_ID` — listarlas a mano aquí dejó fuera
+ * `FACTS` durante un tiempo (ARQ-030), silenciosamente degradando esa etapa
+ * al modelo por defecto en vez de al modelo Bedrock configurado.
+ */
+const BUILDER_LLM_PROMPT_STAGES = [
+  'PLAN',
+  'FACTS',
+  'EVALUATION',
+  'QUALITY',
+  'CHAT',
+] as const;
+
+/** `FACTS` usa el mismo modelo barato que `PLAN` (extracción ligera, no evaluación). */
+const BUILDER_BEDROCK_STAGE_MODEL_DEFAULTS: Record<
+  (typeof BUILDER_LLM_PROMPT_STAGES)[number],
+  string
+> = {
+  PLAN: 'anthropic.claude-3-5-haiku-20241022-v1:0',
+  FACTS: 'anthropic.claude-3-5-haiku-20241022-v1:0',
+  EVALUATION: 'anthropic.claude-sonnet-4-20250514-v1:0',
+  QUALITY: 'anthropic.claude-sonnet-4-20250514-v1:0',
+  CHAT: 'anthropic.claude-sonnet-4-20250514-v1:0',
+};
+
+/**
+ * Claves `BUILDER_BEDROCK_<STAGE>_MODEL_ID` derivadas de
+ * `BUILDER_LLM_PROMPT_STAGES`. Se consumen por **interpolación** en
+ * `builder-llm-model-profile.ts` (`BUILDER_BEDROCK_${stage.toUpperCase()}_MODEL_ID`),
+ * así que un grep de referencias literales no las encontrará — no son código
+ * muerto.
+ */
+const builderBedrockModelIdKeys = Object.fromEntries(
+  BUILDER_LLM_PROMPT_STAGES.map((stage) => [
+    `BUILDER_BEDROCK_${stage}_MODEL_ID`,
+    Joi.string().default(BUILDER_BEDROCK_STAGE_MODEL_DEFAULTS[stage]),
+  ]),
+);
+
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
@@ -99,18 +140,7 @@ export const envValidationSchema = Joi.object({
     .integer()
     .min(50)
     .default(250),
-  BUILDER_BEDROCK_PLAN_MODEL_ID: Joi.string().default(
-    'anthropic.claude-3-5-haiku-20241022-v1:0',
-  ),
-  BUILDER_BEDROCK_EVALUATION_MODEL_ID: Joi.string().default(
-    'anthropic.claude-sonnet-4-20250514-v1:0',
-  ),
-  BUILDER_BEDROCK_QUALITY_MODEL_ID: Joi.string().default(
-    'anthropic.claude-sonnet-4-20250514-v1:0',
-  ),
-  BUILDER_BEDROCK_CHAT_MODEL_ID: Joi.string().default(
-    'anthropic.claude-sonnet-4-20250514-v1:0',
-  ),
+  ...builderBedrockModelIdKeys,
   BUILDER_LLM_PLAN_MAX_INPUT_CHARS: Joi.number()
     .integer()
     .min(2000)

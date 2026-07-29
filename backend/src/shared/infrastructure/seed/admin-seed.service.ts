@@ -8,7 +8,7 @@
  * @module AdminSeedService
  */
 
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -19,6 +19,8 @@ import {
   UserRole,
   UserStatus,
 } from '../../../modules/users/entities/user.entity';
+import { PROCESS_ROLE } from '../../../process-role.module';
+import type { ProcessRole } from '../../../process-role.module';
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -29,9 +31,16 @@ export class AdminSeedService implements OnApplicationBootstrap {
     private readonly usersRepository: Repository<User>,
     private readonly configService: ConfigService,
     private readonly logger: Logger,
+    @Inject(PROCESS_ROLE)
+    private readonly processRole: ProcessRole,
   ) {}
 
+  /** El worker no siembra: solo la API arranca de cara a un operador humano. */
   async onApplicationBootstrap(): Promise<void> {
+    if (this.processRole !== 'api') {
+      return;
+    }
+
     await this.seedAdminIfAbsent();
   }
 

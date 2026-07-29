@@ -4,9 +4,7 @@
  * @module builder-artifact-persister.service
  */
 
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   BuilderCodeQualityContractV2,
   BuilderLlmStagePromptSnapshot,
@@ -18,15 +16,16 @@ import {
   EvidenceArtifactPublic,
 } from '../../../domain/builder.types';
 import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
-import { CodeQualityFindingEntity } from '../../../domain/entities/code-quality-finding.entity';
+import type { ICodeQualityFindingRepository } from '../../../../domain/repositories/code-quality-finding.repository.interface';
+import { CODE_QUALITY_FINDING_REPOSITORY } from '../../../../domain/repositories/code-quality-finding.repository.interface';
 import { EvidenceService } from '../../../infrastructure/evidence/evidence.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
 
 @Injectable()
 export class BuilderArtifactPersister {
   constructor(
-    @InjectRepository(CodeQualityFindingEntity)
-    private readonly codeQualityFindingsRepository: Repository<CodeQualityFindingEntity>,
+    @Inject(CODE_QUALITY_FINDING_REPOSITORY)
+    private readonly codeQualityFindingsRepository: ICodeQualityFindingRepository,
     private readonly evidenceService: EvidenceService,
     private readonly builderRunSupportService: BuilderRunSupportService,
   ) {}
@@ -37,7 +36,10 @@ export class BuilderArtifactPersister {
     studentId: string,
     findings: BuilderCodeQualityContractV2,
   ): Promise<void> {
-    await this.codeQualityFindingsRepository.delete({ projectId, studentId });
+    await this.codeQualityFindingsRepository.deleteByProjectAndStudent(
+      projectId,
+      studentId,
+    );
 
     const rows = CODE_QUALITY_CATEGORIES.flatMap((category) =>
       findings[category].map((finding) => ({
@@ -56,11 +58,7 @@ export class BuilderArtifactPersister {
       })),
     );
 
-    if (rows.length === 0) {
-      return;
-    }
-
-    await this.codeQualityFindingsRepository.save(rows);
+    await this.codeQualityFindingsRepository.saveMany(rows);
   }
 
   async persistPromptArtifact(

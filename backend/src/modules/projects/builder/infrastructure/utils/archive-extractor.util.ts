@@ -10,8 +10,8 @@ import { gunzipSync, inflateRawSync } from 'zlib';
 import {
   buildSafeDestination,
   isUnsafeRelativePath,
-  toPosixPath,
 } from './builder-analysis.util';
+import { toPosixPath } from '../../../../../shared/utils/path.util';
 import { RuntimeFile } from '../../domain/builder.types';
 
 interface ExtractionLimits {

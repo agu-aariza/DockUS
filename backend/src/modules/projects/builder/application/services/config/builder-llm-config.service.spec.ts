@@ -1,8 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Repository } from 'typeorm';
-import { SecretCipherService } from '../../../../../shared/infrastructure/security/secret-cipher.service';
-import { LlmConfiguration } from '../../domain/entities/llm-configuration.entity';
+import { SecretCipherService } from '../../../../../../shared/infrastructure/security/secret-cipher.service';
+import { LlmConfiguration } from '../../../domain/entities/llm-configuration.entity';
+import type { ILlmConfigurationRepository } from '../../../../domain/repositories/llm-configuration.repository.interface';
 import { BuilderLlmConfigService } from './builder-llm-config.service';
 
 describe('BuilderLlmConfigService', () => {
@@ -40,10 +40,11 @@ describe('BuilderLlmConfigService', () => {
 
   const buildRepository = (rows: LlmConfiguration[]) =>
     ({
-      find: jest.fn(async () => rows),
+      findAll: jest.fn(async () => rows),
+      findAllOrderedByProviderId: jest.fn(async () => rows),
       create: jest.fn((partial) => buildConfig(partial)),
-      save: jest.fn(async (entities) => entities),
-    }) as unknown as jest.Mocked<Repository<LlmConfiguration>>;
+      saveMany: jest.fn(async (entities) => entities),
+    }) as unknown as jest.Mocked<ILlmConfigurationRepository>;
 
   const buildService = (
     rows: LlmConfiguration[],
@@ -111,7 +112,7 @@ describe('BuilderLlmConfigService', () => {
       await service.resolveStageProfile('facts');
       await service.resolveStageProfile('evaluation');
 
-      expect(repository.find).toHaveBeenCalledTimes(1);
+      expect(repository.findAllOrderedByProviderId).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -161,7 +162,7 @@ describe('BuilderLlmConfigService', () => {
         roleMappings: { eval: 'openai' },
       });
 
-      const saved = repository.save.mock.calls[0][0] as LlmConfiguration[];
+      const saved = repository.saveMany.mock.calls[0][0] as LlmConfiguration[];
       const bedrock = saved.find((item) => item.providerId === 'bedrock');
       const openai = saved.find((item) => item.providerId === 'openai');
 
@@ -187,7 +188,7 @@ describe('BuilderLlmConfigService', () => {
         roleMappings: {},
       });
 
-      const saved = repository.save.mock.calls[0][0] as LlmConfiguration[];
+      const saved = repository.saveMany.mock.calls[0][0] as LlmConfiguration[];
       expect(cipher.decrypt(saved[0].apiKeyEncrypted!)).toBe('sk-vieja');
     });
 
@@ -207,7 +208,7 @@ describe('BuilderLlmConfigService', () => {
         roleMappings: {},
       });
 
-      const saved = repository.save.mock.calls[0][0] as LlmConfiguration[];
+      const saved = repository.saveMany.mock.calls[0][0] as LlmConfiguration[];
       expect(saved[0].apiKeyEncrypted).toBeNull();
       expect(saved[0].apiKeyLast4).toBeNull();
     });
@@ -268,7 +269,7 @@ describe('BuilderLlmConfigService — vencimiento de la caché (ESC-MED-06)', ()
 
   function build() {
     const configsRepository = {
-      find: jest.fn().mockResolvedValue([]),
+      findAllOrderedByProviderId: jest.fn().mockResolvedValue([]),
     };
     const service = new (jest.requireActual<{
       BuilderLlmConfigService: new (...args: unknown[]) => {
@@ -290,7 +291,9 @@ describe('BuilderLlmConfigService — vencimiento de la caché (ESC-MED-06)', ()
     await service.resolvePricing('bedrock', 'm');
     await service.resolvePricing('bedrock', 'm');
 
-    expect(configsRepository.find).toHaveBeenCalledTimes(1);
+    expect(configsRepository.findAllOrderedByProviderId).toHaveBeenCalledTimes(
+      1,
+    );
   });
 
   it('vuelve a consultar cuando la ventana vence', async () => {
@@ -302,6 +305,8 @@ describe('BuilderLlmConfigService — vencimiento de la caché (ESC-MED-06)', ()
     await service.resolvePricing('bedrock', 'm');
 
     // Sin esto, una réplica que no escribe nunca veía un cambio hecho en otra.
-    expect(configsRepository.find).toHaveBeenCalledTimes(2);
+    expect(configsRepository.findAllOrderedByProviderId).toHaveBeenCalledTimes(
+      2,
+    );
   });
 });

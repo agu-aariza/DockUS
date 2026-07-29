@@ -4,23 +4,25 @@
  * @module evidence.service
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { MinioStorageService } from '../../../../../shared/infrastructure/storage/minio-storage.service';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import type { IObjectStorage } from '../../../domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../../../domain/ports/object-storage.port';
 import { EvidenceArtifactPublic } from '../../domain/builder.types';
 import {
   BuildRunArtifact,
   BuildRunArtifactType,
 } from '../../domain/entities/build-run-artifact.entity';
-import { toSha256Hex } from '../utils/builder-analysis.util';
+import type { IBuildRunArtifactRepository } from '../../../domain/repositories/build-run-artifact.repository.interface';
+import { BUILD_RUN_ARTIFACT_REPOSITORY } from '../../../domain/repositories/build-run-artifact.repository.interface';
+import { toSha256Hex } from '../../../../../shared/utils/hash.util';
 
 @Injectable()
 export class EvidenceService {
   constructor(
-    @InjectRepository(BuildRunArtifact)
-    private readonly artifactsRepository: Repository<BuildRunArtifact>,
-    private readonly minioStorageService: MinioStorageService,
+    @Inject(BUILD_RUN_ARTIFACT_REPOSITORY)
+    private readonly artifactsRepository: IBuildRunArtifactRepository,
+    @Inject(OBJECT_STORAGE)
+    private readonly objectStorage: IObjectStorage,
   ) {}
 
   async persistJsonArtifact(
@@ -53,10 +55,8 @@ export class EvidenceService {
   }
 
   async listArtifacts(buildRunId: string): Promise<EvidenceArtifactPublic[]> {
-    const artifacts = await this.artifactsRepository.find({
-      where: { buildRunId },
-      order: { createdAt: 'ASC' },
-    });
+    const artifacts =
+      await this.artifactsRepository.findAllByBuildRun(buildRunId);
     return artifacts.map((artifact) => this.toPublicArtifact(artifact));
   }
 
@@ -64,14 +64,15 @@ export class EvidenceService {
     buildRunId: string,
     artifactId: string,
   ): Promise<{ content: Buffer; contentType: string }> {
-    const artifact = await this.artifactsRepository.findOne({
-      where: { id: artifactId, buildRunId },
-    });
+    const artifact = await this.artifactsRepository.findOneByBuildRunAndId(
+      buildRunId,
+      artifactId,
+    );
     if (!artifact) {
       throw new NotFoundException('Artefacto de evidencia no encontrado.');
     }
 
-    const content = await this.minioStorageService.getObjectBuffer(
+    const content = await this.objectStorage.getObjectBuffer(
       artifact.bucket,
       artifact.objectKey,
     );
@@ -86,19 +87,20 @@ export class EvidenceService {
     downloadUrl: string;
     expiresAt: string;
   }> {
-    const artifact = await this.artifactsRepository.findOne({
-      where: { id: artifactId, buildRunId },
-    });
+    const artifact = await this.artifactsRepository.findOneByBuildRunAndId(
+      buildRunId,
+      artifactId,
+    );
     if (!artifact) {
       throw new NotFoundException('Artefacto de evidencia no encontrado.');
     }
 
-    const downloadUrl = await this.minioStorageService.createDownloadSignedUrl(
+    const downloadUrl = await this.objectStorage.createDownloadSignedUrl(
       artifact.bucket,
       artifact.objectKey,
     );
     const expiresAt = new Date(
-      Date.now() + this.minioStorageService.getSignedUrlTtlSeconds() * 1000,
+      Date.now() + this.objectStorage.getSignedUrlTtlSeconds() * 1000,
     ).toISOString();
 
     return {
@@ -114,7 +116,7 @@ export class EvidenceService {
     contentType: string,
     extension: string,
   ): Promise<EvidenceArtifactPublic> {
-    const bucket = this.minioStorageService.getBucketName();
+    const bucket = this.objectStorage.getBucketName();
     const sha256 = toSha256Hex(content);
     const objectKey = [
       'runs',
@@ -123,7 +125,7 @@ export class EvidenceService {
       `${Date.now()}-${sha256.slice(0, 8)}.${extension}`,
     ].join('/');
 
-    await this.minioStorageService.putObject({
+    await this.objectStorage.putObject({
       bucket,
       key: objectKey,
       body: content,

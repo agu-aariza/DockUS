@@ -11,9 +11,7 @@ import {
   OnApplicationShutdown,
   OnModuleInit,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import type Redis from 'ioredis';
-import { Repository } from 'typeorm';
 import { RedisClientService } from '../../../../../shared/infrastructure/cache/redis-client.service';
 import {
   BuilderRunEvent,
@@ -21,7 +19,10 @@ import {
   BuildRunEventType,
 } from '../../domain/builder.types';
 import { BuildRunEventEntity } from '../../domain/entities/build-run-event.entity';
-import { BuildRun } from '../../domain/entities/build-run.entity';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunEventRepository } from '../../../domain/repositories/build-run-event.repository.interface';
+import { BUILD_RUN_EVENT_REPOSITORY } from '../../../domain/repositories/build-run-event.repository.interface';
 import { PROCESS_ROLE } from '../../../../../process-role.module';
 import type { ProcessRole } from '../../../../../process-role.module';
 
@@ -46,10 +47,10 @@ export class BuilderRunEventsService
   private subscriberReady = false;
 
   constructor(
-    @InjectRepository(BuildRunEventEntity)
-    private readonly eventsRepository: Repository<BuildRunEventEntity>,
-    @InjectRepository(BuildRun)
-    private readonly buildRunsRepository: Repository<BuildRun>,
+    @Inject(BUILD_RUN_EVENT_REPOSITORY)
+    private readonly eventsRepository: IBuildRunEventRepository,
+    @Inject(BUILD_RUN_REPOSITORY)
+    private readonly buildRunsRepository: IBuildRunRepository,
     private readonly redisClientService: RedisClientService,
     @Inject(PROCESS_ROLE)
     private readonly processRole: ProcessRole,
@@ -93,16 +94,10 @@ export class BuilderRunEventsService
     // Un solo UPDATE con GREATEST en vez de leer-modificar-escribir: dos eventos
     // concurrentes del mismo run se pisaban la secuencia, y además esto evita el
     // SELECT + save() por cada evento (tres viajes a Postgres por línea de log).
-    await this.buildRunsRepository
-      .createQueryBuilder()
-      .update(BuildRun)
-      .set({
-        latestEventSequence: () =>
-          'GREATEST(COALESCE("latestEventSequence", 0), :seq)',
-      })
-      .where('id = :id', { id: input.buildRunId })
-      .setParameter('seq', saved.sequence)
-      .execute();
+    await this.buildRunsRepository.bumpLatestEventSequence(
+      input.buildRunId,
+      saved.sequence,
+    );
 
     const channel = this.channel(input.buildRunId);
     this.emitter.emit(channel, event);
@@ -125,17 +120,11 @@ export class BuilderRunEventsService
       Math.min(limit || DEFAULT_EVENT_PAGE_LIMIT, MAX_EVENT_PAGE_LIMIT),
     );
 
-    const query = this.eventsRepository
-      .createQueryBuilder('event')
-      .where('event.buildRunId = :buildRunId', { buildRunId })
-      .orderBy('event.sequence', 'ASC')
-      .take(boundedLimit + 1);
-
-    if (afterSequence > 0) {
-      query.andWhere('event.sequence > :afterSequence', { afterSequence });
-    }
-
-    const rows = await query.getMany();
+    const rows = await this.eventsRepository.findPage(
+      buildRunId,
+      afterSequence,
+      boundedLimit + 1,
+    );
     const events = rows
       .slice(0, boundedLimit)
       .map((row) => this.toPublicEvent(row));

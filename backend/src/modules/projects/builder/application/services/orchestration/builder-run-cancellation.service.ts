@@ -16,8 +16,10 @@
 
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
-import { RedisClientService } from '../../../../../../shared/infrastructure/cache/redis-client.service';
+import type { IDistributedCache } from '../../../domain/ports/distributed-cache.port';
+import { DISTRIBUTED_CACHE } from '../../../domain/ports/distributed-cache.port';
 import { RunCancelledError } from './run-cancelled.error';
 
 /** Cubre con margen la duración máxima razonable de un run; expira sola. */
@@ -41,15 +43,16 @@ export class BuilderRunCancellationService {
   private readonly logger = new Logger(BuilderRunCancellationService.name);
 
   constructor(
-    @Inject('IBuildRunRepository')
+    @Inject(BUILD_RUN_REPOSITORY)
     private readonly buildRunsRepository: IBuildRunRepository,
-    private readonly redisClientService: RedisClientService,
+    @Inject(DISTRIBUTED_CACHE)
+    private readonly distributedCache: IDistributedCache,
   ) {}
 
   /** Publica la señal de cancelación. `cancelRun` ya hizo el UPDATE atómico. */
   async markCancelled(runId: string): Promise<void> {
     try {
-      await this.redisClientService.set(
+      await this.distributedCache.set(
         this.cancelKey(runId),
         '1',
         CANCEL_KEY_TTL_SECONDS,
@@ -65,7 +68,7 @@ export class BuilderRunCancellationService {
 
   async isCancelled(runId: string): Promise<boolean> {
     try {
-      return await this.redisClientService.exists(this.cancelKey(runId));
+      return await this.distributedCache.exists(this.cancelKey(runId));
     } catch {
       const run = await this.buildRunsRepository.findById(runId);
       return run?.status === BuildRunStatus.CANCELLED;
