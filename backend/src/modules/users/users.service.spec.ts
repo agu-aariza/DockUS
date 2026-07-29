@@ -9,10 +9,11 @@
  */
 
 import { ConflictException } from '@nestjs/common';
-import { QueryFailedError, Repository } from 'typeorm';
+import { QueryFailedError } from 'typeorm';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User, UserRole, UserStatus } from './entities/user.entity';
+import type { IUserRepository } from './domain/repositories/user.repository.interface';
 
 const buildUser = (overrides: Partial<User> = {}): User => ({
   id: '2e141a4d-e163-43f8-87f8-75afee5e2f85',
@@ -32,26 +33,15 @@ const buildUser = (overrides: Partial<User> = {}): User => ({
 describe('UsersService', () => {
   let service: UsersService;
 
-  const queryBuilder = {
-    addSelect: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    getOne: jest.fn(),
-    orderBy: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    take: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    withDeleted: jest.fn().mockReturnThis(),
-    getManyAndCount: jest.fn(),
-  };
-
   const usersRepository = {
-    findOne: jest.fn(),
-    find: jest.fn(),
+    findById: jest.fn(),
+    findByEmail: jest.fn(),
+    findByEmailWithPasswordHash: jest.fn(),
+    findPaginated: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
     softRemove: jest.fn(),
     recover: jest.fn(),
-    createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
   };
 
   const authIdentityCache = {
@@ -60,45 +50,36 @@ describe('UsersService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    queryBuilder.addSelect.mockReturnThis();
-    queryBuilder.andWhere.mockReturnThis();
-    queryBuilder.where.mockReturnThis();
-    queryBuilder.withDeleted.mockReturnThis();
-    queryBuilder.orderBy.mockReturnThis();
-    queryBuilder.skip.mockReturnThis();
-    queryBuilder.take.mockReturnThis();
     service = new UsersService(
-      usersRepository as unknown as Repository<User>,
+      usersRepository as unknown as IUserRepository,
       authIdentityCache as never,
     );
   });
 
   it('debe normalizar email en findByEmail antes de consultar', async () => {
-    usersRepository.findOne.mockResolvedValue(null);
+    usersRepository.findByEmail.mockResolvedValue(null);
 
     await service.findByEmail('  TeSt@DockUs.com  ', true);
 
-    expect(usersRepository.findOne).toHaveBeenCalledWith({
-      where: { email: 'test@dockus.com' },
-      withDeleted: true,
-    });
+    expect(usersRepository.findByEmail).toHaveBeenCalledWith(
+      'test@dockus.com',
+      true,
+    );
   });
 
   it('debe cargar passwordHash solo en el lookup explícito de autenticación', async () => {
     const user = buildUser({ email: 'secure@dockus.com' });
-    queryBuilder.getOne.mockResolvedValue(user);
+    usersRepository.findByEmailWithPasswordHash.mockResolvedValue(user);
 
     const result = await service.findByEmailForAuth(
       '  Secure@DockUs.com  ',
       true,
     );
 
-    expect(usersRepository.createQueryBuilder).toHaveBeenCalledWith('user');
-    expect(queryBuilder.addSelect).toHaveBeenCalledWith('user.passwordHash');
-    expect(queryBuilder.where).toHaveBeenCalledWith('user.email = :email', {
-      email: 'secure@dockus.com',
-    });
-    expect(queryBuilder.withDeleted).toHaveBeenCalled();
+    expect(usersRepository.findByEmailWithPasswordHash).toHaveBeenCalledWith(
+      'secure@dockus.com',
+      true,
+    );
     expect(result).toBe(user);
   });
 
@@ -130,7 +111,7 @@ describe('UsersService', () => {
     await expect(service.createFromDto(dto)).rejects.toBeInstanceOf(
       ConflictException,
     );
-    expect(usersRepository.findOne).not.toHaveBeenCalled();
+    expect(usersRepository.findByEmail).not.toHaveBeenCalled();
     expect(usersRepository.save).toHaveBeenCalled();
   });
 
@@ -147,7 +128,7 @@ describe('UsersService', () => {
         role: UserRole.TEACHER,
       }),
     ];
-    queryBuilder.getManyAndCount.mockResolvedValue([users, 2]);
+    usersRepository.findPaginated.mockResolvedValue({ data: users, total: 2 });
 
     const result = await service.findAll({
       page: 1,
@@ -156,10 +137,15 @@ describe('UsersService', () => {
       sortOrder: 'DESC',
     });
 
-    expect(usersRepository.createQueryBuilder).toHaveBeenCalledWith('user');
-    expect(queryBuilder.orderBy).toHaveBeenCalledWith('user.createdAt', 'DESC');
-    expect(queryBuilder.skip).toHaveBeenCalledWith(0);
-    expect(queryBuilder.take).toHaveBeenCalledWith(20);
+    expect(usersRepository.findPaginated).toHaveBeenCalledWith({
+      role: undefined,
+      status: undefined,
+      search: undefined,
+      sortBy: 'createdAt',
+      sortOrder: 'DESC',
+      page: 1,
+      limit: 20,
+    });
     expect(result.data).toHaveLength(2);
     expect(result.data[0].email).toBe('teacher@dockus.com');
     expect(
@@ -176,7 +162,7 @@ describe('UsersService', () => {
   });
 
   it('debe aplicar filtros y orden seguro en el listado', async () => {
-    queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+    usersRepository.findPaginated.mockResolvedValue({ data: [], total: 0 });
 
     await service.findAll({
       page: 2,
@@ -188,24 +174,15 @@ describe('UsersService', () => {
       sortOrder: 'ASC',
     });
 
-    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
-      1,
-      'user.role = :role',
-      { role: UserRole.ADMIN },
-    );
-    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
-      2,
-      'user.status = :status',
-      { status: UserStatus.ACTIVE },
-    );
-    expect(queryBuilder.andWhere).toHaveBeenNthCalledWith(
-      3,
-      '(user.email ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search)',
-      { search: '%dock%' },
-    );
-    expect(queryBuilder.orderBy).toHaveBeenCalledWith('user.email', 'ASC');
-    expect(queryBuilder.skip).toHaveBeenCalledWith(10);
-    expect(queryBuilder.take).toHaveBeenCalledWith(10);
+    expect(usersRepository.findPaginated).toHaveBeenCalledWith({
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+      search: 'dock',
+      sortBy: 'email',
+      sortOrder: 'ASC',
+      page: 2,
+      limit: 10,
+    });
   });
 
   it('debe normalizar email en update antes de persistir', async () => {
@@ -218,19 +195,18 @@ describe('UsersService', () => {
       email: 'new.email@dockus.com',
     });
 
-    usersRepository.findOne
-      .mockResolvedValueOnce(existing)
-      .mockResolvedValueOnce(null);
+    usersRepository.findById.mockResolvedValue(existing);
+    usersRepository.findByEmail.mockResolvedValue(null);
     usersRepository.save.mockResolvedValue(updated);
 
     const result = await service.update(existing.id, {
       email: '  New.Email@DockUs.com  ',
     });
 
-    expect(usersRepository.findOne).toHaveBeenNthCalledWith(2, {
-      where: { email: 'new.email@dockus.com' },
-      withDeleted: true,
-    });
+    expect(usersRepository.findByEmail).toHaveBeenCalledWith(
+      'new.email@dockus.com',
+      true,
+    );
     expect(usersRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: existing.id,
@@ -243,15 +219,12 @@ describe('UsersService', () => {
   it('debe aplicar soft delete al eliminar identidad', async () => {
     const user = buildUser();
 
-    usersRepository.findOne.mockResolvedValue(user);
+    usersRepository.findById.mockResolvedValue(user);
     usersRepository.softRemove.mockResolvedValue(user);
 
     const result = await service.remove(user.id);
 
-    expect(usersRepository.findOne).toHaveBeenCalledWith({
-      where: { id: user.id },
-      withDeleted: false,
-    });
+    expect(usersRepository.findById).toHaveBeenCalledWith(user.id, false);
     expect(usersRepository.softRemove).toHaveBeenCalledWith(user);
     expect(result).toEqual({
       message: 'Identidad marcada como eliminada correctamente.',
@@ -266,22 +239,24 @@ describe('UsersService', () => {
       deletedAt: undefined as unknown as Date,
     });
 
-    usersRepository.findOne
+    usersRepository.findById
       .mockResolvedValueOnce(deletedUser)
       .mockResolvedValueOnce(restoredUser);
     usersRepository.recover.mockResolvedValue(restoredUser);
 
     const result = await service.restore(deletedUser.id);
 
-    expect(usersRepository.findOne).toHaveBeenNthCalledWith(1, {
-      where: { id: deletedUser.id },
-      withDeleted: true,
-    });
+    expect(usersRepository.findById).toHaveBeenNthCalledWith(
+      1,
+      deletedUser.id,
+      true,
+    );
     expect(usersRepository.recover).toHaveBeenCalledWith(deletedUser);
-    expect(usersRepository.findOne).toHaveBeenNthCalledWith(2, {
-      where: { id: deletedUser.id },
-      withDeleted: false,
-    });
+    expect(usersRepository.findById).toHaveBeenNthCalledWith(
+      2,
+      deletedUser.id,
+      false,
+    );
     expect(result).toEqual(
       expect.objectContaining({
         id: restoredUser.id,
@@ -296,7 +271,7 @@ describe('UsersService', () => {
     const user = buildUser();
     const updatedUser = buildUser({ status: UserStatus.SUSPENDED });
 
-    usersRepository.findOne.mockResolvedValue(user);
+    usersRepository.findById.mockResolvedValue(user);
     usersRepository.save.mockResolvedValue(updatedUser);
 
     const result = await service.updateStatus(user.id, UserStatus.SUSPENDED);
@@ -333,7 +308,7 @@ describe('UsersService', () => {
       [
         'update',
         () => {
-          usersRepository.findOne.mockResolvedValue(user);
+          usersRepository.findById.mockResolvedValue(user);
           usersRepository.save.mockResolvedValue(user);
           return service.update(user.id, { firstName: 'Nombre' });
         },
@@ -341,7 +316,7 @@ describe('UsersService', () => {
       [
         'remove (baja lógica)',
         () => {
-          usersRepository.findOne.mockResolvedValue(user);
+          usersRepository.findById.mockResolvedValue(user);
           usersRepository.softRemove.mockResolvedValue(user);
           return service.remove(user.id);
         },
@@ -350,7 +325,7 @@ describe('UsersService', () => {
         'restore',
         () => {
           const deleted = buildUser({ deletedAt: new Date() });
-          usersRepository.findOne
+          usersRepository.findById
             .mockResolvedValueOnce(deleted)
             .mockResolvedValueOnce(user);
           usersRepository.recover.mockResolvedValue(user);
@@ -360,7 +335,7 @@ describe('UsersService', () => {
       [
         'updateStatus',
         () => {
-          usersRepository.findOne.mockResolvedValue(user);
+          usersRepository.findById.mockResolvedValue(user);
           usersRepository.save.mockResolvedValue(user);
           return service.updateStatus(user.id, UserStatus.SUSPENDED);
         },

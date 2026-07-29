@@ -9,16 +9,15 @@
  */
 
 import {
+  Inject,
   Injectable,
   NotFoundException,
   ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { User, UserStatus } from './entities/user.entity';
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
-import { ListUsersQueryDto, UserSortField } from './dto/list-users-query.dto';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import * as bcrypt from 'bcrypt';
 import {
   buildPaginationMeta,
@@ -26,17 +25,10 @@ import {
 } from '../../shared/utils/pagination.util';
 import { throwIfUniqueViolation } from '../../shared/database/unique-violation.util';
 import { AuthIdentityCacheService } from '../../shared/infrastructure/cache/auth-identity-cache.service';
+import type { IUserRepository } from './domain/repositories/user.repository.interface';
+import { USER_REPOSITORY } from './domain/repositories/user.repository.interface';
 
 const BCRYPT_SALT_ROUNDS = 10;
-const USER_SORT_COLUMNS: Record<UserSortField, string> = {
-  createdAt: 'user.createdAt',
-  updatedAt: 'user.updatedAt',
-  email: 'user.email',
-  firstName: 'user.firstName',
-  lastName: 'user.lastName',
-  role: 'user.role',
-  status: 'user.status',
-};
 
 export interface PaginatedUsersResponse {
   data: Omit<User, 'passwordHash'>[];
@@ -46,8 +38,8 @@ export interface PaginatedUsersResponse {
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
+    @Inject(USER_REPOSITORY)
+    private readonly usersRepository: IUserRepository,
     private readonly authIdentityCache: AuthIdentityCacheService,
   ) {}
 
@@ -59,10 +51,7 @@ export class UsersService {
     includeDeleted = false,
   ): Promise<User | null> {
     const normalizedEmail = this.normalizeEmail(email);
-    return this.usersRepository.findOne({
-      where: { email: normalizedEmail },
-      withDeleted: includeDeleted,
-    });
+    return this.usersRepository.findByEmail(normalizedEmail, includeDeleted);
   }
 
   /**
@@ -75,26 +64,17 @@ export class UsersService {
     includeDeleted = false,
   ): Promise<User | null> {
     const normalizedEmail = this.normalizeEmail(email);
-    const queryBuilder = this.usersRepository
-      .createQueryBuilder('user')
-      .addSelect('user.passwordHash')
-      .where('user.email = :email', { email: normalizedEmail });
-
-    if (includeDeleted) {
-      queryBuilder.withDeleted();
-    }
-
-    return queryBuilder.getOne();
+    return this.usersRepository.findByEmailWithPasswordHash(
+      normalizedEmail,
+      includeDeleted,
+    );
   }
 
   /**
    * Busca una identidad por UUID.
    */
   async findById(id: string, includeDeleted = false): Promise<User | null> {
-    return this.usersRepository.findOne({
-      where: { id },
-      withDeleted: includeDeleted,
-    });
+    return this.usersRepository.findById(id, includeDeleted);
   }
 
   /**
@@ -104,32 +84,16 @@ export class UsersService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const search = query.search?.trim();
-    const sortBy = query.sortBy;
-    const sortOrder = query.sortOrder;
 
-    const queryBuilder = this.usersRepository.createQueryBuilder('user');
-
-    if (query.role) {
-      queryBuilder.andWhere('user.role = :role', { role: query.role });
-    }
-
-    if (query.status) {
-      queryBuilder.andWhere('user.status = :status', { status: query.status });
-    }
-
-    if (search) {
-      queryBuilder.andWhere(
-        '(user.email ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search)',
-        { search: `%${search}%` },
-      );
-    }
-
-    queryBuilder
-      .orderBy(USER_SORT_COLUMNS[sortBy], sortOrder)
-      .skip((page - 1) * limit)
-      .take(limit);
-
-    const [users, total] = await queryBuilder.getManyAndCount();
+    const { data: users, total } = await this.usersRepository.findPaginated({
+      role: query.role,
+      status: query.status,
+      search,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+      page,
+      limit,
+    });
 
     return {
       data: users.map((user) => this.sanitizeUser(user)),
