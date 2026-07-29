@@ -5,19 +5,18 @@
  */
 
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull } from 'typeorm';
-import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
 import * as path from 'path';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
-import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
+import type { IObjectStorage } from '../domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../domain/ports/object-storage.port';
+import type { IStorageObjectRepository } from '../domain/repositories/storage-object.repository.interface';
+import { STORAGE_OBJECT_REPOSITORY } from '../domain/repositories/storage-object.repository.interface';
 import { throwIfUniqueViolation } from '../../../shared/database/unique-violation.util';
 import { UserRole } from '../../users/entities/user.entity';
-import {
-  Delivery,
-  DeliveryStatus,
-} from '../deliveries/entities/delivery.entity';
+import { DeliveryStatus } from '../deliveries/entities/delivery.entity';
+import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
+import { DELIVERY_REPOSITORY } from '../domain/repositories/delivery.repository.interface';
 import { StorageAccessService } from './storage-access.service';
 import { CreateStorageObjectDto } from './dto/create-storage-object.dto';
 import {
@@ -41,11 +40,12 @@ import {
 @Injectable()
 export class StorageUploadService {
   constructor(
-    @InjectRepository(StorageObject)
-    private readonly storageRepository: Repository<StorageObject>,
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
-    private readonly minioStorageService: MinioStorageService,
+    @Inject(STORAGE_OBJECT_REPOSITORY)
+    private readonly storageRepository: IStorageObjectRepository,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveriesRepository: IDeliveryRepository,
+    @Inject(OBJECT_STORAGE)
+    private readonly objectStorage: IObjectStorage,
     private readonly storageAccessService: StorageAccessService,
   ) {}
 
@@ -101,7 +101,7 @@ export class StorageUploadService {
       actor,
     );
 
-    const bucket = this.minioStorageService.getBucketName();
+    const bucket = this.objectStorage.getBucketName();
     const objectKey = this.buildDeliveryObjectKey(delivery.id, dto.logicalName);
     // El hash lo sigue calculando el servidor, no se toma del cliente: es la
     // huella de integridad del objeto almacenado y no puede depender de un valor
@@ -112,7 +112,7 @@ export class StorageUploadService {
 
     let uploadedObject = false;
     try {
-      await this.minioStorageService.putObject({
+      await this.objectStorage.putObject({
         bucket,
         key: objectKey,
         body: openUploadBody(file),
@@ -143,7 +143,7 @@ export class StorageUploadService {
       return toStorageObjectResponse(saved);
     } catch (error) {
       if (uploadedObject) {
-        await this.minioStorageService
+        await this.objectStorage
           .deleteObject(bucket, objectKey)
           .catch(() => undefined);
       }
@@ -184,25 +184,20 @@ export class StorageUploadService {
       'La suite docente debe subirse como .zip o .tar.gz.',
     );
 
-    const existing = await this.storageRepository.findOne({
-      where: {
-        projectId,
-        deliveryId: IsNull(),
-        assetRole: StorageAssetRole.TEACHER_TESTS,
-      },
-    });
+    const existing =
+      await this.storageRepository.findActiveTeacherTestSuite(projectId);
 
     const logicalName =
       path.posix.basename(file.originalname ?? 'teacher-tests.zip') ||
       'teacher-tests.zip';
-    const bucket = this.minioStorageService.getBucketName();
+    const bucket = this.objectStorage.getBucketName();
     const objectKey = this.buildProjectTestSuiteObjectKey(
       projectId,
       logicalName,
     );
     const hash = await computeUploadHash(file);
 
-    await this.minioStorageService.putObject({
+    await this.objectStorage.putObject({
       bucket,
       key: objectKey,
       body: openUploadBody(file),
@@ -228,17 +223,17 @@ export class StorageUploadService {
         }),
       );
     } catch (dbError) {
-      await this.minioStorageService
+      await this.objectStorage
         .deleteObject(bucket, objectKey)
         .catch(() => undefined);
       throw dbError;
     }
 
     if (existing) {
-      await this.minioStorageService
+      await this.objectStorage
         .deleteObject(existing.bucket, existing.objectKey)
         .catch(() => undefined);
-      await this.storageRepository.delete({ id: existing.id });
+      await this.storageRepository.deleteById(existing.id);
     }
 
     return toStorageObjectResponse(saved);
@@ -253,11 +248,11 @@ export class StorageUploadService {
     ) => Promise<StorageObject>,
   ): Promise<{ message: string }> {
     const storageObject = await findProjectTestSuiteEntity(projectId, actor);
-    await this.minioStorageService.deleteObject(
+    await this.objectStorage.deleteObject(
       storageObject.bucket,
       storageObject.objectKey,
     );
-    await this.storageRepository.delete({ id: storageObject.id });
+    await this.storageRepository.deleteById(storageObject.id);
     return { message: 'Suite docente eliminada correctamente.' };
   }
 

@@ -56,41 +56,29 @@ describe('ProjectGradebookService — MED-07: neutralización de fórmulas en CS
 
 describe('ProjectGradebookService — ESC-CRIT-05: el gradebook no carga columnas jsonb', () => {
   function buildService() {
-    const qb: Record<string, jest.Mock> = {};
-    Object.assign(qb, {
-      select: jest.fn(() => qb),
-      addSelect: jest.fn(() => qb),
-      distinctOn: jest.fn(() => qb),
-      innerJoin: jest.fn(() => qb),
-      where: jest.fn(() => qb),
-      andWhere: jest.fn(() => qb),
-      orderBy: jest.fn(() => qb),
-      addOrderBy: jest.fn(() => qb),
-      getRawMany: jest.fn(() =>
+    // El puerto solo expone `findLatestOutcomeByProject` (columna derivada
+    // extraída en SQL, sin la entidad completa): a diferencia de la versión
+    // anterior con `createQueryBuilder`/`find()` expuestos, aquí no hay forma
+    // de "volver por accidente" a cargar los jsonb pesados — el tipo del
+    // puerto ya lo impide. La lógica de `DISTINCT ON`/filtro por proyecto
+    // vive en `infrastructure/database/build-run.repository.ts`.
+    const buildRuns = {
+      findLatestOutcomeByProject: jest.fn(() =>
         Promise.resolve([
           { deliveryId: 'delivery-1', overallOutcome: 'PASS' },
           { deliveryId: 'delivery-2', overallOutcome: null },
         ]),
       ),
-    });
-
-    const buildRuns = {
-      createQueryBuilder: jest.fn(() => qb),
-      // Si el servicio volviera a `find()`, cargaría la entidad completa: el
-      // doble lo hace fallar de forma explícita en vez de pasar en silencio.
-      find: jest.fn(() => {
-        throw new Error('find() carga las columnas jsonb completas');
-      }),
     };
 
     const service = new ProjectGradebookService(
       {
-        findOne: jest.fn(() =>
+        findById: jest.fn(() =>
           Promise.resolve({ id: 'p-1', maxDeliveriesPerStudent: 3 }),
         ),
       } as never,
       {
-        find: jest.fn(() =>
+        findActiveForProject: jest.fn(() =>
           Promise.resolve([
             {
               id: 'assignment-1',
@@ -107,7 +95,7 @@ describe('ProjectGradebookService — ESC-CRIT-05: el gradebook no carga columna
         ),
       } as never,
       {
-        find: jest.fn(() =>
+        findByAssignmentIds: jest.fn(() =>
           Promise.resolve([
             {
               id: 'delivery-1',
@@ -125,42 +113,17 @@ describe('ProjectGradebookService — ESC-CRIT-05: el gradebook no carga columna
       { assertCanManageProject: jest.fn(() => Promise.resolve()) } as never,
     );
 
-    return { service, buildRuns, qb };
+    return { service, buildRuns };
   }
 
-  it('extrae overallOutcome en SQL en lugar de cargar la entidad', async () => {
-    const { service, buildRuns, qb } = buildService();
+  it('delega en el puerto la extracción de overallOutcome por proyecto (no por lista de entregas)', async () => {
+    const { service, buildRuns } = buildService();
 
     await service.getGradebook('p-1', { userId: 'u-1' } as never);
 
-    expect(buildRuns.find).not.toHaveBeenCalled();
-    expect(buildRuns.createQueryBuilder).toHaveBeenCalled();
-    expect(qb.addSelect).toHaveBeenCalledWith(
-      expect.stringContaining('overallOutcome'),
-      'overallOutcome',
-    );
-  });
-
-  it('delega en DISTINCT ON la selección de la última ejecución por entrega', async () => {
-    const { service, qb } = buildService();
-
-    await service.getGradebook('p-1', { userId: 'u-1' } as never);
-
-    // Antes se traían TODAS las ejecuciones y se filtraba en memoria.
-    expect(qb.distinctOn).toHaveBeenCalledWith(['run.deliveryId']);
-    expect(qb.addOrderBy).toHaveBeenCalledWith('run.createdAt', 'DESC');
-  });
-
-  it('filtra por proyecto y no por una lista de identificadores de entrega', async () => {
-    const { service, qb } = buildService();
-
-    await service.getGradebook('p-1', { userId: 'u-1' } as never);
-
-    // Un `IN` con los ids de todas las entregas crece con el tamaño del curso.
-    expect(qb.where).toHaveBeenCalledWith(
-      expect.stringContaining('projectId'),
-      expect.objectContaining({ projectId: 'p-1' }),
-    );
+    // Un `IN` con los ids de todas las entregas crece con el tamaño del
+    // curso; el puerto filtra por proyecto, no por lista de deliveryIds.
+    expect(buildRuns.findLatestOutcomeByProject).toHaveBeenCalledWith('p-1');
   });
 
   it('mapea el veredicto extraído al resultado', async () => {

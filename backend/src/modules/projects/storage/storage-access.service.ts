@@ -7,37 +7,36 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
 import {
   Delivery,
   DeliveryStatus,
 } from '../deliveries/entities/delivery.entity';
+import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
+import { DELIVERY_REPOSITORY } from '../domain/repositories/delivery.repository.interface';
+import type { IProjectRepository } from '../domain/repositories/project.repository.interface';
+import { PROJECT_REPOSITORY } from '../domain/repositories/project.repository.interface';
+import type { IStorageObjectRepository } from '../domain/repositories/storage-object.repository.interface';
+import { STORAGE_OBJECT_REPOSITORY } from '../domain/repositories/storage-object.repository.interface';
 import { Project } from '../entities/project.entity';
-import {
-  assertTeacherCanManageProject,
-  isTeacherAssignedToProject,
-} from '../project-access.policy';
+import { assertTeacherCanManageProject } from '../project-access.policy';
 import { findDeliveryWithAssignmentOrThrow } from '../deliveries/delivery-lookup.util';
-import {
-  StorageAssetRole,
-  StorageObject,
-} from './entities/storage-object.entity';
+import { StorageObject } from './entities/storage-object.entity';
 
 @Injectable()
 export class StorageAccessService {
   constructor(
-    @InjectRepository(StorageObject)
-    private readonly storageRepository: Repository<StorageObject>,
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
-    @InjectRepository(Project)
-    private readonly projectsRepository: Repository<Project>,
+    @Inject(STORAGE_OBJECT_REPOSITORY)
+    private readonly storageRepository: IStorageObjectRepository,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveriesRepository: IDeliveryRepository,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectsRepository: IProjectRepository,
   ) {}
 
   async findStorageObjectWithAccess(
@@ -45,19 +44,10 @@ export class StorageAccessService {
     actor: AuthenticatedUser,
     includeDeleted = false,
   ): Promise<StorageObject> {
-    const storageObject = await this.storageRepository.findOne({
-      where: { id },
-      withDeleted: includeDeleted,
-      relations: {
-        project: true,
-        delivery: {
-          author: true,
-          assignment: {
-            project: true,
-          },
-        },
-      },
-    });
+    const storageObject = await this.storageRepository.findByIdWithRelations(
+      id,
+      includeDeleted,
+    );
 
     if (!storageObject) {
       throw new NotFoundException('Objeto de storage no encontrado.');
@@ -74,11 +64,11 @@ export class StorageAccessService {
       if (actor.role === UserRole.ADMIN) {
         return storageObject;
       }
-      const isAssigned = await isTeacherAssignedToProject(
-        this.projectsRepository,
-        project.id,
-        actor.userId,
-      );
+      const isAssigned =
+        await this.projectsRepository.isTeacherAssignedToProject(
+          project.id,
+          actor.userId,
+        );
 
       if (isAssigned) {
         return storageObject;
@@ -100,9 +90,7 @@ export class StorageAccessService {
   }
 
   async findProjectOrThrow(projectId: string): Promise<Project> {
-    const project = await this.projectsRepository.findOne({
-      where: { id: projectId },
-    });
+    const project = await this.projectsRepository.findById(projectId);
     if (!project) {
       throw new NotFoundException('Proyecto no encontrado.');
     }
@@ -123,11 +111,11 @@ export class StorageAccessService {
     }
 
     if (actor.role === UserRole.TEACHER) {
-      const isAssigned = await isTeacherAssignedToProject(
-        this.projectsRepository,
-        delivery.assignment.project.id,
-        actor.userId,
-      );
+      const isAssigned =
+        await this.projectsRepository.isTeacherAssignedToProject(
+          delivery.assignment.project.id,
+          actor.userId,
+        );
 
       if (isAssigned) {
         return;
@@ -165,32 +153,6 @@ export class StorageAccessService {
       actor,
       'No tiene permisos para administrar la suite docente del proyecto.',
     );
-  }
-
-  applyActorScope(
-    queryBuilder: ReturnType<Repository<StorageObject>['createQueryBuilder']>,
-    actor: AuthenticatedUser,
-  ): void {
-    if (actor.role === UserRole.ADMIN) {
-      return;
-    }
-
-    if (actor.role === UserRole.STUDENT) {
-      queryBuilder
-        .andWhere('storage.assetRole = :studentSourceRole', {
-          studentSourceRole: StorageAssetRole.STUDENT_SOURCE,
-        })
-        .andWhere('delivery.authorId = :requestUserId', {
-          requestUserId: actor.userId,
-        });
-      return;
-    }
-
-    queryBuilder
-      .innerJoin('project.teachers', 'teacher')
-      .andWhere('teacher.id = :requestUserId', {
-        requestUserId: actor.userId,
-      });
   }
 
   assertTeacherOrAdmin(

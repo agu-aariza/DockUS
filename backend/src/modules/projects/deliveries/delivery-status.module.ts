@@ -1,10 +1,14 @@
 /**
- * @fileoverview Módulo hoja para `DeliveryStatusService` (ARQ-003).
+ * @fileoverview Módulo hoja para `DeliveryStatusService` y el puerto de
+ * persistencia de `Delivery` (ARQ-003, ARQ-022).
  *
  * Contexto:
- * - `ProjectsModule` importa `BuilderModule`, nunca al revés: un `Delivery`
- *   escribible desde ambos lados sin crear un ciclo de módulos necesita vivir
- *   en un módulo hoja que los dos puedan importar de forma independiente.
+ * - `ProjectsModule` importa `BuilderModule` y `StorageModule`, nunca al
+ *   revés: un `Delivery` escribible desde los tres sin crear un ciclo de
+ *   módulos necesita vivir en un módulo hoja que los tres puedan importar de
+ *   forma independiente. Exporta también `DELIVERY_REPOSITORY` por el mismo
+ *   motivo — es el precedente que `ProjectPersistenceModule` y
+ *   `ProjectAssignmentPersistenceModule` replican (P1-1).
  *
  * @module DeliveryStatusModule
  */
@@ -13,10 +17,18 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Delivery } from './entities/delivery.entity';
 import { DeliveryStatusService } from './delivery-status.service';
+import { DeliveryRepository } from '../infrastructure/database/delivery.repository';
+import { DELIVERY_REPOSITORY } from '../domain/repositories/delivery.repository.interface';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Delivery])],
-  providers: [DeliveryStatusService],
-  exports: [DeliveryStatusService],
+  providers: [
+    DeliveryStatusService,
+    {
+      provide: DELIVERY_REPOSITORY,
+      useClass: DeliveryRepository,
+    },
+  ],
+  exports: [DeliveryStatusService, DELIVERY_REPOSITORY],
 })
 export class DeliveryStatusModule {}

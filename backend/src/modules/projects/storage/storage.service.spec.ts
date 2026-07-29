@@ -14,7 +14,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { QueryFailedError, Repository } from 'typeorm';
+import { QueryFailedError } from 'typeorm';
 import {
   buildActor,
   buildDelivery,
@@ -24,11 +24,11 @@ import {
   createMinioStorageServiceMock,
 } from '../../../test-support/domain-builders';
 import { UserRole } from '../../users/entities/user.entity';
-import { Delivery } from '../deliveries/entities/delivery.entity';
-import { Project } from '../entities/project.entity';
+import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
+import type { IProjectRepository } from '../domain/repositories/project.repository.interface';
+import type { IStorageObjectRepository } from '../domain/repositories/storage-object.repository.interface';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
 import { StorageAccessService } from './storage-access.service';
-import { StorageObject } from './entities/storage-object.entity';
 import { StorageQueryService } from './storage-query.service';
 import { StorageService } from './storage.service';
 import { StorageUploadService } from './storage-upload.service';
@@ -38,26 +38,22 @@ describe('StorageService', () => {
 
   const storageRepository = {
     create: jest.fn(),
-    delete: jest.fn(),
-    findOne: jest.fn(),
+    deleteById: jest.fn(),
+    findByIdWithRelations: jest.fn(),
+    findActiveTeacherTestSuite: jest.fn(),
     recover: jest.fn(),
     save: jest.fn(),
     softRemove: jest.fn(),
   };
 
   const deliveriesRepository = {
-    findOne: jest.fn(),
+    findByIdWithAssignment: jest.fn(),
     save: jest.fn(),
   };
 
   const projectsRepository = {
-    findOne: jest.fn(),
-    createQueryBuilder: jest.fn().mockReturnValue({
-      innerJoin: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      getExists: jest.fn().mockResolvedValue(true),
-    }),
+    findById: jest.fn(),
+    isTeacherAssignedToProject: jest.fn().mockResolvedValue(true),
   };
 
   const minioStorageService = createMinioStorageServiceMock();
@@ -72,24 +68,24 @@ describe('StorageService', () => {
     minioStorageService.objectExists.mockResolvedValue(true);
 
     const storageAccessService = new StorageAccessService(
-      storageRepository as unknown as Repository<StorageObject>,
-      deliveriesRepository as unknown as Repository<Delivery>,
-      projectsRepository as unknown as Repository<Project>,
+      storageRepository as unknown as IStorageObjectRepository,
+      deliveriesRepository as unknown as IDeliveryRepository,
+      projectsRepository as unknown as IProjectRepository,
     );
     const storageQueryService = new StorageQueryService(
-      storageRepository as unknown as Repository<StorageObject>,
+      storageRepository as unknown as IStorageObjectRepository,
       minioStorageService as unknown as MinioStorageService,
       storageAccessService,
     );
     const storageUploadService = new StorageUploadService(
-      storageRepository as unknown as Repository<StorageObject>,
-      deliveriesRepository as unknown as Repository<Delivery>,
+      storageRepository as unknown as IStorageObjectRepository,
+      deliveriesRepository as unknown as IDeliveryRepository,
       minioStorageService as unknown as MinioStorageService,
       storageAccessService,
     );
 
     service = new StorageService(
-      storageRepository as unknown as Repository<StorageObject>,
+      storageRepository as unknown as IStorageObjectRepository,
       minioStorageService as unknown as MinioStorageService,
       storageAccessService,
       storageQueryService,
@@ -106,7 +102,7 @@ describe('StorageService', () => {
       size: 8,
     });
 
-    deliveriesRepository.findOne.mockResolvedValue(delivery);
+    deliveriesRepository.findByIdWithAssignment.mockResolvedValue(delivery);
     storageRepository.create.mockReturnValue(saved);
     storageRepository.save.mockResolvedValue(saved);
 
@@ -153,7 +149,7 @@ describe('StorageService', () => {
       size: 8,
     });
 
-    deliveriesRepository.findOne.mockResolvedValue(delivery);
+    deliveriesRepository.findByIdWithAssignment.mockResolvedValue(delivery);
     storageRepository.create.mockReturnValue(saved);
     storageRepository.save.mockResolvedValue(saved);
 
@@ -244,7 +240,9 @@ describe('StorageService', () => {
       authorId: 'c17c421a-14cb-4a9c-a64a-62395cc542f4',
     });
     const file = buildUploadedStorageFile();
-    deliveriesRepository.findOne.mockResolvedValue(otherDelivery);
+    deliveriesRepository.findByIdWithAssignment.mockResolvedValue(
+      otherDelivery,
+    );
 
     await expect(
       service.upload(
@@ -270,7 +268,7 @@ describe('StorageService', () => {
       size: 8,
     });
 
-    deliveriesRepository.findOne.mockResolvedValue(delivery);
+    deliveriesRepository.findByIdWithAssignment.mockResolvedValue(delivery);
     storageRepository.create.mockReturnValue(
       buildStorageObject({ uploaderId: student.userId }),
     );
@@ -302,8 +300,10 @@ describe('StorageService', () => {
   it('debe generar signed URL con TTL configurado', async () => {
     const admin = buildActor(UserRole.ADMIN, 'admin-1');
     const storageObject = buildStorageObject();
-    storageRepository.findOne.mockResolvedValue(storageObject);
-    deliveriesRepository.findOne.mockResolvedValue(buildDelivery());
+    storageRepository.findByIdWithRelations.mockResolvedValue(storageObject);
+    deliveriesRepository.findByIdWithAssignment.mockResolvedValue(
+      buildDelivery(),
+    );
     minioStorageService.createDownloadSignedUrl.mockResolvedValue(
       'https://minio.local/signed-url',
     );
@@ -328,13 +328,15 @@ describe('StorageService', () => {
       deletedAt: undefined,
     });
 
-    storageRepository.findOne
+    storageRepository.findByIdWithRelations
       .mockResolvedValueOnce(activeObject)
       .mockResolvedValueOnce(deletedObject)
       .mockResolvedValueOnce(restoredObject);
     storageRepository.softRemove.mockResolvedValue(deletedObject);
     storageRepository.recover.mockResolvedValue(restoredObject);
-    deliveriesRepository.findOne.mockResolvedValue(buildDelivery());
+    deliveriesRepository.findByIdWithAssignment.mockResolvedValue(
+      buildDelivery(),
+    );
     minioStorageService.objectExists.mockResolvedValue(true);
 
     const removeResult = await service.remove(activeObject.id, admin);
@@ -348,8 +350,10 @@ describe('StorageService', () => {
   it('debe purgar físicamente solo como ADMIN', async () => {
     const admin = buildActor(UserRole.ADMIN);
     const object = buildStorageObject();
-    storageRepository.findOne.mockResolvedValue(object);
-    deliveriesRepository.findOne.mockResolvedValue(buildDelivery());
+    storageRepository.findByIdWithRelations.mockResolvedValue(object);
+    deliveriesRepository.findByIdWithAssignment.mockResolvedValue(
+      buildDelivery(),
+    );
 
     const result = await service.purge(object.id, admin);
 
@@ -357,7 +361,7 @@ describe('StorageService', () => {
       object.bucket,
       object.objectKey,
     );
-    expect(storageRepository.delete).toHaveBeenCalledWith({ id: object.id });
+    expect(storageRepository.deleteById).toHaveBeenCalledWith(object.id);
     expect(result.message).toContain('purgado');
   });
 
@@ -374,8 +378,10 @@ describe('StorageService', () => {
     const deletedObject = buildStorageObject({
       deletedAt: new Date('2026-03-10T00:00:00.000Z'),
     });
-    storageRepository.findOne.mockResolvedValue(deletedObject);
-    deliveriesRepository.findOne.mockResolvedValue(buildDelivery());
+    storageRepository.findByIdWithRelations.mockResolvedValue(deletedObject);
+    deliveriesRepository.findByIdWithAssignment.mockResolvedValue(
+      buildDelivery(),
+    );
     minioStorageService.objectExists.mockResolvedValue(false);
 
     await expect(
@@ -397,8 +403,8 @@ describe('StorageService', () => {
       contentType: 'application/zip',
     });
 
-    projectsRepository.findOne.mockResolvedValue(project);
-    storageRepository.findOne.mockResolvedValue(null);
+    projectsRepository.findById.mockResolvedValue(project);
+    storageRepository.findActiveTeacherTestSuite.mockResolvedValue(null);
     storageRepository.create.mockReturnValue(saved);
     storageRepository.save.mockResolvedValue(saved);
 

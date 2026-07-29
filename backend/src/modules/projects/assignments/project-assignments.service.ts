@@ -11,13 +11,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
-import { User, UserRole } from '../../users/entities/user.entity';
-import { Delivery } from '../deliveries/entities/delivery.entity';
-import { Project, ProjectStatus } from '../entities/project.entity';
-import { isTeacherAssignedToProject } from '../project-access.policy';
+import { UserRole } from '../../users/entities/user.entity';
+import type { IUserRepository } from '../../users/domain/repositories/user.repository.interface';
+import { USER_REPOSITORY } from '../../users/domain/repositories/user.repository.interface';
+import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
+import { DELIVERY_REPOSITORY } from '../domain/repositories/delivery.repository.interface';
+import type { IProjectRepository } from '../domain/repositories/project.repository.interface';
+import { PROJECT_REPOSITORY } from '../domain/repositories/project.repository.interface';
+import type { IProjectAssignmentRepository } from '../domain/repositories/project-assignment.repository.interface';
+import { PROJECT_ASSIGNMENT_REPOSITORY } from '../domain/repositories/project-assignment.repository.interface';
 import { ProjectAccessService } from '../project-access.service';
 import { ProjectAssignment } from './entities/project-assignment.entity';
 import { GROUP_ROSTER_READER } from '../../../shared/application/group-roster-reader.port';
@@ -37,14 +40,14 @@ import type {
 @Injectable()
 export class ProjectAssignmentsService {
   constructor(
-    @InjectRepository(ProjectAssignment)
-    private readonly assignmentsRepository: Repository<ProjectAssignment>,
-    @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
-    @InjectRepository(Project)
-    private readonly projectsRepository: Repository<Project>,
+    @Inject(PROJECT_ASSIGNMENT_REPOSITORY)
+    private readonly assignmentsRepository: IProjectAssignmentRepository,
+    @Inject(USER_REPOSITORY)
+    private readonly usersRepository: IUserRepository,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveriesRepository: IDeliveryRepository,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectsRepository: IProjectRepository,
     private readonly projectAccessService: ProjectAccessService,
     @Inject(GROUP_ROSTER_READER)
     private readonly groupRosterReader: GroupRosterReader,
@@ -61,26 +64,18 @@ export class ProjectAssignmentsService {
   ): Promise<void> {
     // 1. Find all project IDs that are currently assigned to this group.
     // We look for any assignment that has this groupId in its sourceGroupIds.
-    // We use a raw query or query builder to search within the array column.
-    const assignmentsWithGroup = await this.assignmentsRepository
-      .createQueryBuilder('assignment')
-      .distinct(true)
-      .select('assignment.projectId', 'projectId')
-      .addSelect('assignment.assignedById', 'assignedById') // We'll use the last assigner as a proxy
-      .where(':groupId = ANY(assignment.sourceGroupIds)', { groupId })
-      .andWhere('assignment.revokedAt IS NULL')
-      .getRawMany<{ projectId: string; assignedById: string }>();
+    const assignmentsWithGroup =
+      await this.assignmentsRepository.findProjectAssignersByGroupId(groupId);
 
     if (assignmentsWithGroup.length === 0) return;
 
     // 2. For each project, ensure all new students have an assignment.
     const projectIds = assignmentsWithGroup.map((a) => a.projectId);
-    const existings = await this.assignmentsRepository.find({
-      where: {
-        projectId: In(projectIds),
-        studentId: In(studentIds),
-      },
-    });
+    const existings =
+      await this.assignmentsRepository.findByProjectIdsAndStudentIds(
+        projectIds,
+        studentIds,
+      );
 
     const existingMap = new Map<string, ProjectAssignment>(
       existings.map((e) => [`${e.projectId}_${e.studentId}`, e]),
@@ -100,6 +95,7 @@ export class ProjectAssignmentsService {
               studentId,
               assignedById,
               assignedAt: new Date(),
+              revokedAt: null,
               sourceGroupIds: [groupId],
             }),
           );
@@ -122,7 +118,7 @@ export class ProjectAssignmentsService {
     }
 
     if (toSave.length > 0) {
-      await this.assignmentsRepository.save(toSave);
+      await this.assignmentsRepository.saveMany(toSave);
     }
   }
 
@@ -195,9 +191,7 @@ export class ProjectAssignmentsService {
     const groupStudentIds = Array.from(studentToGroups.keys());
 
     const usersByEmail = requestedEmails.length
-      ? await this.usersRepository.find({
-          where: requestedEmails.map((email) => ({ email })),
-        })
+      ? await this.usersRepository.findByEmails(requestedEmails)
       : [];
     const emailToStudentId = new Map(
       usersByEmail.map((user) => [user.email.toLowerCase(), user.id]),
@@ -214,9 +208,7 @@ export class ProjectAssignmentsService {
           .filter((candidateId): candidateId is string => Boolean(candidateId)),
       ]),
     ];
-    const students = await this.usersRepository.find({
-      where: { id: In(uniqueStudentIds) },
-    });
+    const students = await this.usersRepository.findByIds(uniqueStudentIds);
 
     if (students.length !== uniqueStudentIds.length) {
       throw new NotFoundException(
@@ -233,12 +225,11 @@ export class ProjectAssignmentsService {
     }
 
     const studentIds = students.map((s) => s.id);
-    const existingAssignments = await this.assignmentsRepository.find({
-      where: {
-        projectId: project.id,
-        studentId: In(studentIds),
-      },
-    });
+    const existingAssignments =
+      await this.assignmentsRepository.findByProjectIdsAndStudentIds(
+        [project.id],
+        studentIds,
+      );
 
     const assignmentMap = new Map(
       existingAssignments.map((a) => [a.studentId, a]),
@@ -288,7 +279,7 @@ export class ProjectAssignmentsService {
     }
 
     if (assignmentsToSave.length > 0) {
-      await this.assignmentsRepository.save(assignmentsToSave);
+      await this.assignmentsRepository.saveMany(assignmentsToSave);
     }
 
     const assignments = await this.listByProject(project.id, actor);
@@ -314,16 +305,8 @@ export class ProjectAssignmentsService {
   ): Promise<ProjectAssignmentResponse[]> {
     await this.projectAccessService.assertCanAccessProject(projectId, actor);
 
-    const assignments = await this.assignmentsRepository
-      .createQueryBuilder('assignment')
-      .innerJoinAndSelect('assignment.project', 'project')
-      .leftJoinAndSelect('project.teachers', 'teacher')
-      .innerJoinAndSelect('assignment.student', 'student')
-      .where('assignment.projectId = :projectId', { projectId })
-      .andWhere('assignment.revokedAt IS NULL')
-      .orderBy('student.lastName', 'ASC')
-      .addOrderBy('student.firstName', 'ASC')
-      .getMany();
+    const assignments =
+      await this.assignmentsRepository.findActiveForProject(projectId);
 
     return this.toResponses(assignments);
   }
@@ -337,16 +320,9 @@ export class ProjectAssignmentsService {
       );
     }
 
-    const assignments = await this.assignmentsRepository
-      .createQueryBuilder('assignment')
-      .innerJoinAndSelect('assignment.project', 'project')
-      .leftJoinAndSelect('project.teachers', 'teacher')
-      .innerJoinAndSelect('assignment.student', 'student')
-      .where('assignment.studentId = :studentId', { studentId: actor.userId })
-      .andWhere('assignment.revokedAt IS NULL')
-      .andWhere('project.status != :status', { status: ProjectStatus.DRAFT })
-      .orderBy('assignment.assignedAt', 'DESC')
-      .getMany();
+    const assignments = await this.assignmentsRepository.findActiveForStudent(
+      actor.userId,
+    );
 
     return this.toResponses(assignments);
   }
@@ -355,12 +331,10 @@ export class ProjectAssignmentsService {
     assignmentId: string,
     actor: AuthenticatedUser,
   ): Promise<{ message: string }> {
-    const assignment = await this.assignmentsRepository.findOne({
-      where: { id: assignmentId },
-      relations: {
-        project: true,
-      },
-    });
+    const assignment =
+      await this.assignmentsRepository.findByIdWithProjectAndStudent(
+        assignmentId,
+      );
     if (!assignment) {
       throw new NotFoundException('Asignación no encontrada.');
     }
@@ -371,8 +345,7 @@ export class ProjectAssignmentsService {
       // que ProjectAccessService/BuilderAccessService.
       const isAssignedTeacher =
         actor.role === UserRole.TEACHER &&
-        (await isTeacherAssignedToProject(
-          this.projectsRepository,
+        (await this.projectsRepository.isTeacherAssignedToProject(
           assignment.project.id,
           actor.userId,
         ));
@@ -392,13 +365,10 @@ export class ProjectAssignmentsService {
     assignmentId: string,
     actor: AuthenticatedUser,
   ): Promise<ProjectAssignment> {
-    const assignment = await this.assignmentsRepository.findOne({
-      where: { id: assignmentId },
-      relations: {
-        project: true,
-        student: true,
-      },
-    });
+    const assignment =
+      await this.assignmentsRepository.findByIdWithProjectAndStudent(
+        assignmentId,
+      );
     if (!assignment) {
       throw new NotFoundException('Asignación no encontrada.');
     }
@@ -409,11 +379,11 @@ export class ProjectAssignmentsService {
 
     if (actor.role === UserRole.TEACHER) {
       // Idem: co-docente asignado, no solo creatorId (HIGH-10).
-      const isAssignedTeacher = await isTeacherAssignedToProject(
-        this.projectsRepository,
-        assignment.project.id,
-        actor.userId,
-      );
+      const isAssignedTeacher =
+        await this.projectsRepository.isTeacherAssignedToProject(
+          assignment.project.id,
+          actor.userId,
+        );
       if (!isAssignedTeacher) {
         throw new ForbiddenException(
           'No tiene permisos sobre la asignación solicitada.',
@@ -513,20 +483,8 @@ export class ProjectAssignmentsService {
 
     // Resolvemos contadores por asignación en una única agregación para no
     // cargar entregas completas cuando el panel solo necesita progreso.
-    const rows = await this.deliveriesRepository
-      .createQueryBuilder('delivery')
-      .withDeleted()
-      .select('delivery.assignmentId', 'assignmentId')
-      .addSelect('MAX(delivery.version)', 'deliveryCount')
-      .where('delivery.assignmentId IN (:...assignmentIds)', { assignmentIds })
-      .groupBy('delivery.assignmentId')
-      .getRawMany<{ assignmentId: string; deliveryCount: string | null }>();
-
-    return new Map(
-      rows.map((row) => [
-        row.assignmentId,
-        Number.parseInt(row.deliveryCount ?? '0', 10) || 0,
-      ]),
+    return this.deliveriesRepository.resolveMaxVersionsByAssignmentIds(
+      assignmentIds,
     );
   }
 }

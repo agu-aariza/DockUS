@@ -6,29 +6,32 @@
 
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../users/entities/user.entity';
-import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import { Project, ProjectStatus } from './entities/project.entity';
 import { assertTeacherCanManageProject } from './project-access.policy';
+import type { IProjectRepository } from './domain/repositories/project.repository.interface';
+import { PROJECT_REPOSITORY } from './domain/repositories/project.repository.interface';
+import type { IProjectAssignmentRepository } from './domain/repositories/project-assignment.repository.interface';
+import { PROJECT_ASSIGNMENT_REPOSITORY } from './domain/repositories/project-assignment.repository.interface';
 import { applyProjectActorScope } from './infrastructure/database/project-actor-scope.util';
 
 @Injectable()
 export class ProjectAccessService {
   constructor(
-    @InjectRepository(Project)
-    private readonly projectsRepository: Repository<Project>,
-    @InjectRepository(ProjectAssignment)
-    private readonly assignmentsRepository: Repository<ProjectAssignment>,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectsRepository: IProjectRepository,
+    @Inject(PROJECT_ASSIGNMENT_REPOSITORY)
+    private readonly assignmentsRepository: IProjectAssignmentRepository,
   ) {}
 
   async findProjectOrThrow(id: string): Promise<Project> {
-    const project = await this.projectsRepository.findOne({ where: { id } });
+    const project = await this.projectsRepository.findById(id);
     if (!project) {
       throw new NotFoundException('Proyecto no encontrado.');
     }
@@ -46,12 +49,11 @@ export class ProjectAccessService {
     }
 
     if (actor.role === UserRole.TEACHER) {
-      const isAssigned = await this.projectsRepository
-        .createQueryBuilder('project')
-        .innerJoin('project.teachers', 'teacher')
-        .where('project.id = :projectId', { projectId })
-        .andWhere('teacher.id = :teacherId', { teacherId: actor.userId })
-        .getExists();
+      const isAssigned =
+        await this.projectsRepository.isTeacherAssignedToProject(
+          projectId,
+          actor.userId,
+        );
 
       if (!isAssigned) {
         throw new ForbiddenException(
@@ -61,13 +63,11 @@ export class ProjectAccessService {
       return project;
     }
 
-    const assignment = await this.assignmentsRepository.findOne({
-      where: {
+    const assignment =
+      await this.assignmentsRepository.findActiveByProjectAndStudent(
         projectId,
-        studentId: actor.userId,
-        revokedAt: IsNull(),
-      },
-    });
+        actor.userId,
+      );
     if (!assignment) {
       throw new ForbiddenException(
         'No tiene una asignación activa sobre el proyecto solicitado.',

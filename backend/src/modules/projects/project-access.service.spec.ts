@@ -3,19 +3,14 @@ import { Repository } from 'typeorm';
 import { buildActor, buildProject } from '../../test-support/domain-builders';
 import { UserRole } from '../users/entities/user.entity';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
-import { Project } from './entities/project.entity';
+import type { IProjectRepository } from './domain/repositories/project.repository.interface';
 import { ProjectAccessService } from './project-access.service';
 
 describe('ProjectAccessService', () => {
   let service: ProjectAccessService;
   const projectsRepository = {
-    findOne: jest.fn(),
-    createQueryBuilder: jest.fn().mockReturnValue({
-      innerJoin: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      getExists: jest.fn().mockResolvedValue(true),
-    }),
+    findById: jest.fn(),
+    isTeacherAssignedToProject: jest.fn(),
   };
   const assignmentsRepository = {
     findOne: jest.fn(),
@@ -24,16 +19,16 @@ describe('ProjectAccessService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     service = new ProjectAccessService(
-      projectsRepository as unknown as Repository<Project>,
+      projectsRepository as unknown as IProjectRepository,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
     );
-    projectsRepository.createQueryBuilder().getExists.mockResolvedValue(true);
+    projectsRepository.isTeacherAssignedToProject.mockResolvedValue(true);
   });
 
   it('permite a un teacher acceder a su propio proyecto', async () => {
     const actor = buildActor(UserRole.TEACHER, 'teacher-1');
     const project = buildProject({ creatorId: actor.userId });
-    projectsRepository.findOne.mockResolvedValue(project);
+    projectsRepository.findById.mockResolvedValue(project);
 
     const result = await service.assertCanAccessProject(project.id, actor);
 
@@ -42,10 +37,10 @@ describe('ProjectAccessService', () => {
 
   it('rechaza a un teacher sobre proyecto ajeno', async () => {
     const actor = buildActor(UserRole.TEACHER, 'teacher-1');
-    projectsRepository.findOne.mockResolvedValue(
+    projectsRepository.findById.mockResolvedValue(
       buildProject({ creatorId: 'teacher-2' }),
     );
-    projectsRepository.createQueryBuilder().getExists.mockResolvedValue(false);
+    projectsRepository.isTeacherAssignedToProject.mockResolvedValue(false);
 
     await expect(
       service.assertCanAccessProject('project-1', actor),

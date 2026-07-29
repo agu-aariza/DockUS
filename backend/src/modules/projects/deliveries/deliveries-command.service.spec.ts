@@ -9,7 +9,6 @@
  */
 
 import { ConflictException, ForbiddenException } from '@nestjs/common';
-import { Repository } from 'typeorm';
 import {
   buildActor,
   buildAssignment,
@@ -17,9 +16,10 @@ import {
   buildProject,
 } from '../../../test-support/domain-builders';
 import { UserRole } from '../../users/entities/user.entity';
-import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
-import { Project } from '../entities/project.entity';
-import { Delivery, DeliveryStatus } from './entities/delivery.entity';
+import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
+import type { IProjectRepository } from '../domain/repositories/project.repository.interface';
+import type { IProjectAssignmentRepository } from '../domain/repositories/project-assignment.repository.interface';
+import { DeliveryStatus } from './entities/delivery.entity';
 import { DeliveriesCommandService } from './deliveries-command.service';
 import { DeliveriesQueryService } from './deliveries-query.service';
 
@@ -34,18 +34,11 @@ describe('DeliveriesCommandService', () => {
   };
 
   const assignmentsRepository = {
-    findOne: jest.fn(),
-  };
-
-  const isTeacherAssignedQueryBuilder = {
-    innerJoin: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    getExists: jest.fn(),
+    findByIdWithProjectAndStudent: jest.fn(),
   };
 
   const projectsRepository = {
-    createQueryBuilder: jest.fn(() => isTeacherAssignedQueryBuilder),
+    isTeacherAssignedToProject: jest.fn(),
   };
 
   const deliveriesQueryService = {
@@ -60,15 +53,12 @@ describe('DeliveriesCommandService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    isTeacherAssignedQueryBuilder.innerJoin.mockReturnThis();
-    isTeacherAssignedQueryBuilder.where.mockReturnThis();
-    isTeacherAssignedQueryBuilder.andWhere.mockReturnThis();
-    isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(false);
+    projectsRepository.isTeacherAssignedToProject.mockResolvedValue(false);
 
     service = new DeliveriesCommandService(
-      deliveriesRepository as unknown as Repository<Delivery>,
-      assignmentsRepository as unknown as Repository<ProjectAssignment>,
-      projectsRepository as unknown as Repository<Project>,
+      deliveriesRepository as unknown as IDeliveryRepository,
+      assignmentsRepository as unknown as IProjectAssignmentRepository,
+      projectsRepository as unknown as IProjectRepository,
       {} as any, // storageService mock
       deliveriesQueryService,
       deliveryStatusService as any,
@@ -88,7 +78,9 @@ describe('DeliveriesCommandService', () => {
       notes: 'Entrega base',
     });
 
-    assignmentsRepository.findOne.mockResolvedValue(assignment);
+    assignmentsRepository.findByIdWithProjectAndStudent.mockResolvedValue(
+      assignment,
+    );
     deliveriesRepository.create.mockReturnValue(created);
     deliveriesRepository.save.mockResolvedValue(created);
     deliveriesQueryService.resolveCurrentMaxVersion.mockResolvedValue(0);
@@ -137,7 +129,9 @@ describe('DeliveriesCommandService', () => {
       project: buildProject({ maxDeliveriesPerStudent: 1 }),
     });
 
-    assignmentsRepository.findOne.mockResolvedValue(assignment);
+    assignmentsRepository.findByIdWithProjectAndStudent.mockResolvedValue(
+      assignment,
+    );
     deliveriesQueryService.resolveCurrentMaxVersion.mockResolvedValue(1);
 
     await expect(
@@ -181,7 +175,7 @@ describe('DeliveriesCommandService', () => {
       const delivery = buildDelivery({ assignment });
 
       deliveriesQueryService.findEntityById.mockResolvedValue(delivery);
-      isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(true);
+      projectsRepository.isTeacherAssignedToProject.mockResolvedValue(true);
       deliveriesRepository.save.mockResolvedValue(delivery);
       deliveriesQueryService.toResponse.mockResolvedValue({
         id: delivery.id,
@@ -193,10 +187,9 @@ describe('DeliveriesCommandService', () => {
         teacher,
       );
 
-      expect(isTeacherAssignedQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'teacher.id = :teacherId',
-        { teacherId: 'teacher-2' },
-      );
+      expect(
+        projectsRepository.isTeacherAssignedToProject,
+      ).toHaveBeenCalledWith(project.id, 'teacher-2');
       expect(deliveriesRepository.save).toHaveBeenCalled();
       expect(result.id).toBe(delivery.id);
     });
@@ -208,7 +201,7 @@ describe('DeliveriesCommandService', () => {
       const delivery = buildDelivery({ assignment });
 
       deliveriesQueryService.findEntityById.mockResolvedValue(delivery);
-      isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(false);
+      projectsRepository.isTeacherAssignedToProject.mockResolvedValue(false);
 
       await expect(
         service.updateGrading(delivery.id, { grade: 8 }, teacher),

@@ -6,27 +6,23 @@
 
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
-import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
+import type { IObjectStorage } from '../domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../domain/ports/object-storage.port';
+import type { IStorageObjectRepository } from '../domain/repositories/storage-object.repository.interface';
+import { STORAGE_OBJECT_REPOSITORY } from '../domain/repositories/storage-object.repository.interface';
 import { parseZipEntries } from '../builder/infrastructure/utils/archive-extractor.util';
 import {
   DEFAULT_MAX_EXTRACTED_BYTES,
   DEFAULT_MAX_EXTRACTED_FILES,
 } from '../builder/domain/builder.constants';
 import { StorageAccessService } from './storage-access.service';
-import {
-  ListStorageObjectsQueryDto,
-  StorageSortField,
-} from './dto/list-storage-objects-query.dto';
-import {
-  StorageAssetRole,
-  StorageObject,
-} from './entities/storage-object.entity';
+import { ListStorageObjectsQueryDto } from './dto/list-storage-objects-query.dto';
+import { StorageObject } from './entities/storage-object.entity';
 import {
   CreateDownloadUrlResponse,
   PaginatedStorageResponse,
@@ -40,19 +36,13 @@ const PREVIEW_ZIP_LIMITS = {
   maxEntries: DEFAULT_MAX_EXTRACTED_FILES,
 };
 
-const STORAGE_SORT_COLUMNS: Record<StorageSortField, string> = {
-  createdAt: 'storage.createdAt',
-  updatedAt: 'storage.updatedAt',
-  logicalName: 'storage.logicalName',
-  sizeBytes: 'storage.sizeBytes',
-};
-
 @Injectable()
 export class StorageQueryService {
   constructor(
-    @InjectRepository(StorageObject)
-    private readonly storageRepository: Repository<StorageObject>,
-    private readonly minioStorageService: MinioStorageService,
+    @Inject(STORAGE_OBJECT_REPOSITORY)
+    private readonly storageRepository: IStorageObjectRepository,
+    @Inject(OBJECT_STORAGE)
+    private readonly objectStorage: IObjectStorage,
     private readonly storageAccessService: StorageAccessService,
   ) {}
 
@@ -62,8 +52,6 @@ export class StorageQueryService {
   ): Promise<PaginatedStorageResponse> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const sortBy = query.sortBy;
-    const sortOrder = query.sortOrder;
     const createdFrom = query.createdFrom ? new Date(query.createdFrom) : null;
     const createdTo = query.createdTo ? new Date(query.createdTo) : null;
 
@@ -73,58 +61,21 @@ export class StorageQueryService {
       );
     }
 
-    const queryBuilder = this.storageRepository
-      .createQueryBuilder('storage')
-      .leftJoinAndSelect('storage.project', 'project')
-      .leftJoinAndSelect('storage.delivery', 'delivery')
-      .leftJoinAndSelect('delivery.author', 'author')
-      .leftJoinAndSelect('delivery.assignment', 'assignment')
-      .leftJoinAndSelect('assignment.project', 'assignmentProject');
-
-    this.storageAccessService.applyActorScope(queryBuilder, actor);
-
-    if (query.deliveryId) {
-      queryBuilder.andWhere('storage.deliveryId = :deliveryId', {
+    const { data: rows, total } = await this.storageRepository.findPaginated(
+      {
         deliveryId: query.deliveryId,
-      });
-    }
-
-    if (query.projectId) {
-      queryBuilder.andWhere('storage.projectId = :projectId', {
         projectId: query.projectId,
-      });
-    }
-
-    if (query.assetRole) {
-      queryBuilder.andWhere('storage.assetRole = :assetRole', {
         assetRole: query.assetRole,
-      });
-    }
-
-    if (query.uploaderId) {
-      queryBuilder.andWhere('storage.uploaderId = :uploaderId', {
         uploaderId: query.uploaderId,
-      });
-    }
-
-    if (createdFrom) {
-      queryBuilder.andWhere('storage.createdAt >= :createdFrom', {
-        createdFrom: createdFrom.toISOString(),
-      });
-    }
-
-    if (createdTo) {
-      queryBuilder.andWhere('storage.createdAt <= :createdTo', {
-        createdTo: createdTo.toISOString(),
-      });
-    }
-
-    queryBuilder
-      .orderBy(STORAGE_SORT_COLUMNS[sortBy], sortOrder)
-      .skip((page - 1) * limit)
-      .take(limit);
-
-    const [rows, total] = await queryBuilder.getManyAndCount();
+        createdFrom: createdFrom ?? undefined,
+        createdTo: createdTo ?? undefined,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+        page,
+        limit,
+      },
+      actor,
+    );
 
     return {
       data: rows.map((row) => toStorageObjectResponse(row)),
@@ -147,11 +98,11 @@ export class StorageQueryService {
   ): Promise<CreateDownloadUrlResponse> {
     const storageObject =
       await this.storageAccessService.findStorageObjectWithAccess(id, actor);
-    const downloadUrl = await this.minioStorageService.createDownloadSignedUrl(
+    const downloadUrl = await this.objectStorage.createDownloadSignedUrl(
       storageObject.bucket,
       storageObject.objectKey,
     );
-    const ttl = this.minioStorageService.getSignedUrlTtlSeconds();
+    const ttl = this.objectStorage.getSignedUrlTtlSeconds();
     const expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
 
     return {
@@ -174,13 +125,7 @@ export class StorageQueryService {
   async findProjectTestSuiteStorage(
     projectId: string,
   ): Promise<StorageObject | null> {
-    return this.storageRepository.findOne({
-      where: {
-        projectId,
-        deliveryId: IsNull(),
-        assetRole: StorageAssetRole.TEACHER_TESTS,
-      },
-    });
+    return this.storageRepository.findActiveTeacherTestSuite(projectId);
   }
 
   async findProjectTestSuiteEntity(
@@ -204,12 +149,8 @@ export class StorageQueryService {
     deliveryId: string,
     actor: AuthenticatedUser,
   ): Promise<StorageObject> {
-    const storageObject = await this.storageRepository.findOne({
-      where: {
-        deliveryId,
-        assetRole: StorageAssetRole.STUDENT_SOURCE,
-      },
-    });
+    const storageObject =
+      await this.storageRepository.findActiveStudentSource(deliveryId);
     if (!storageObject) {
       throw new NotFoundException(
         'La entrega no tiene un archivo fuente activo.',
@@ -232,7 +173,7 @@ export class StorageQueryService {
       actor,
     );
 
-    const buffer = await this.minioStorageService.getObjectBuffer(
+    const buffer = await this.objectStorage.getObjectBuffer(
       storageObject.bucket,
       storageObject.objectKey,
     );
@@ -261,7 +202,7 @@ export class StorageQueryService {
       actor,
     );
 
-    const buffer = await this.minioStorageService.getObjectBuffer(
+    const buffer = await this.objectStorage.getObjectBuffer(
       storageObject.bucket,
       storageObject.objectKey,
     );

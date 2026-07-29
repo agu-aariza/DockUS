@@ -4,11 +4,8 @@
  * @module project-gradebook.service
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Repository } from 'typeorm';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import { BuildRun } from './builder/domain/entities/build-run.entity';
 import {
   BuilderOutcome,
   ProjectProgressQueryDto,
@@ -17,22 +14,28 @@ import {
   Delivery,
   DeliveryStatus,
 } from './deliveries/entities/delivery.entity';
-import { Project } from './entities/project.entity';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectGradebookRow, ProjectProgressSummary } from './projects.types';
-import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
+import type { IDeliveryRepository } from './domain/repositories/delivery.repository.interface';
+import { DELIVERY_REPOSITORY } from './domain/repositories/delivery.repository.interface';
+import type { IProjectRepository } from './domain/repositories/project.repository.interface';
+import { PROJECT_REPOSITORY } from './domain/repositories/project.repository.interface';
+import type { IProjectAssignmentRepository } from './domain/repositories/project-assignment.repository.interface';
+import { PROJECT_ASSIGNMENT_REPOSITORY } from './domain/repositories/project-assignment.repository.interface';
+import type { IBuildRunRepository } from './domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from './domain/repositories/build-run.repository.interface';
 
 @Injectable()
 export class ProjectGradebookService {
   constructor(
-    @InjectRepository(Project)
-    private readonly projectsRepository: Repository<Project>,
-    @InjectRepository(ProjectAssignment)
-    private readonly assignmentsRepository: Repository<ProjectAssignment>,
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
-    @InjectRepository(BuildRun)
-    private readonly buildRunsRepository: Repository<BuildRun>,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectsRepository: IProjectRepository,
+    @Inject(PROJECT_ASSIGNMENT_REPOSITORY)
+    private readonly assignmentsRepository: IProjectAssignmentRepository,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveriesRepository: IDeliveryRepository,
+    @Inject(BUILD_RUN_REPOSITORY)
+    private readonly buildRunsRepository: IBuildRunRepository,
     private readonly projectAccessService: ProjectAccessService,
   ) {}
 
@@ -263,30 +266,22 @@ export class ProjectGradebookService {
     actor: AuthenticatedUser,
     _groupId?: string,
   ): Promise<ProjectGradebookRow[]> {
-    const project = await this.projectsRepository.findOne({
-      where: { id: projectId },
-    });
+    const project = await this.projectsRepository.findById(projectId);
     if (!project) {
       throw new NotFoundException('Proyecto no encontrado.');
     }
     await this.projectAccessService.assertCanManageProject(project, actor);
 
-    const assignments = await this.assignmentsRepository.find({
-      where: { projectId, revokedAt: IsNull() },
-      relations: { student: true, project: true },
-      order: { student: { lastName: 'ASC', firstName: 'ASC' } },
-    });
+    const assignments =
+      await this.assignmentsRepository.findActiveForProject(projectId);
 
     const assignmentIds = assignments.map((assignment) => assignment.id);
     const deliveries =
       assignmentIds.length === 0
         ? []
-        : await this.deliveriesRepository.find({
-            where: { assignmentId: In(assignmentIds) },
-            relations: {},
-            order: {
-              createdAt: 'ASC',
-            },
+        : await this.deliveriesRepository.findByAssignmentIds(assignmentIds, {
+            orderBy: 'createdAt',
+            orderDirection: 'ASC',
           });
 
     const deliveriesByAssignmentId = new Map<string, Delivery[]>();
@@ -306,24 +301,10 @@ export class ProjectGradebookService {
     // (ESC-CRIT-05). Se extrae el campo en SQL y `DISTINCT ON` deja que
     // PostgreSQL elija la última ejecución por entrega, en lugar de traerlas
     // todas y filtrarlas aquí.
-    const latestOutcomeRows = await this.buildRunsRepository
-      .createQueryBuilder('run')
-      .select('run.deliveryId', 'deliveryId')
-      .addSelect(`run.report ->> 'overallOutcome'`, 'overallOutcome')
-      .distinctOn(['run.deliveryId'])
-      // El filtro va por proyecto y no por una lista de identificadores: con
-      // 300 alumnos, un `IN` con 900 UUID crece con el tamaño del curso.
-      .innerJoin('deliveries', 'delivery', 'delivery.id = run."deliveryId"')
-      .innerJoin(
-        'project_assignments',
-        'assignment',
-        'assignment.id = delivery."assignmentId"',
-      )
-      .where('assignment."projectId" = :projectId', { projectId })
-      .andWhere('assignment."revokedAt" IS NULL')
-      .orderBy('run.deliveryId')
-      .addOrderBy('run.createdAt', 'DESC')
-      .getRawMany<{ deliveryId: string; overallOutcome: string | null }>();
+    // El filtro va por proyecto y no por una lista de identificadores: con
+    // 300 alumnos, un `IN` con 900 UUID crece con el tamaño del curso.
+    const latestOutcomeRows =
+      await this.buildRunsRepository.findLatestOutcomeByProject(projectId);
 
     const latestOutcomeByDeliveryId = new Map<string, string | null>(
       latestOutcomeRows.map((row) => [row.deliveryId, row.overallOutcome]),

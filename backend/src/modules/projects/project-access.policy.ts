@@ -6,32 +6,22 @@
  *   él) es idéntica para el proyecto en sí y para su suite docente. Vivía
  *   duplicada en `ProjectAccessService` y `StorageAccessService`; aquí queda
  *   como función pura reutilizable, sin acoplar ambos servicios entre sí.
+ * - Hasta la Fase 2 P2-2 (`audit/areas/arquitectura/plan_accion.md`) este
+ *   fichero también declaraba `isTeacherAssignedToProject(Repository<Project>, ...)`,
+ *   la consulta más reutilizada de `projects/` (7 sitios). Ahora vive como
+ *   método del puerto (`IProjectRepository.isTeacherAssignedToProject`) y los
+ *   antiguos llamadores invocan `projectRepository.isTeacherAssignedToProject(...)`
+ *   directo — mantener aquí un envoltorio de una sola línea sobre el puerto no
+ *   aportaba nada.
  *
  * @module ProjectAccessPolicy
  */
 
 import { ForbiddenException } from '@nestjs/common';
-import type { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../users/entities/user.entity';
 import type { Project } from './entities/project.entity';
-
-/**
- * Comprueba si un docente está asignado a un proyecto. Es la consulta que varios
- * servicios de acceso repetían textualmente; centralizarla evita que diverjan.
- */
-export function isTeacherAssignedToProject(
-  projectsRepository: Repository<Project>,
-  projectId: string,
-  teacherId: string,
-): Promise<boolean> {
-  return projectsRepository
-    .createQueryBuilder('project')
-    .innerJoin('project.teachers', 'teacher')
-    .where('project.id = :projectId', { projectId })
-    .andWhere('teacher.id = :teacherId', { teacherId })
-    .getExists();
-}
+import type { IProjectRepository } from './domain/repositories/project.repository.interface';
 
 /**
  * Autoriza a `actor` a administrar `project`. Permite a los administradores y a
@@ -39,7 +29,7 @@ export function isTeacherAssignedToProject(
  * `ForbiddenException` con el mensaje indicado por el llamante.
  */
 export async function assertTeacherCanManageProject(
-  projectsRepository: Repository<Project>,
+  projectRepository: IProjectRepository,
   project: Project,
   actor: AuthenticatedUser,
   forbiddenMessage: string,
@@ -50,8 +40,7 @@ export async function assertTeacherCanManageProject(
 
   if (
     actor.role === UserRole.TEACHER &&
-    (await isTeacherAssignedToProject(
-      projectsRepository,
+    (await projectRepository.isTeacherAssignedToProject(
       project.id,
       actor.userId,
     ))

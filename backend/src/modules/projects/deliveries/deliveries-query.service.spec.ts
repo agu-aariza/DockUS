@@ -2,12 +2,14 @@
  * @fileoverview Pruebas unitarias del servicio de consulta de entregas.
  *
  * Contexto:
- * - Valida paginación, scopes de actor y proyección de respuestas.
+ * - Valida delegación en el puerto `IDeliveryRepository` y proyección de
+ *   respuestas. El paginado/scoping SQL en sí vive ahora en `DeliveryRepository`
+ *   (plan_accion.md P2-1) — cubierto en `delivery-actor-scope.util.spec.ts` y
+ *   por inspección directa del adaptador.
  *
  * @module DeliveriesQueryServiceSpec
  */
 
-import { Repository } from 'typeorm';
 import {
   buildActor,
   buildAssignment,
@@ -15,46 +17,19 @@ import {
   buildProject,
 } from '../../../test-support/domain-builders';
 import { UserRole } from '../../users/entities/user.entity';
-import { Delivery } from './entities/delivery.entity';
+import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
 import { DeliveriesQueryService } from './deliveries-query.service';
-
-const createQueryBuilder = (
-  config: {
-    many?: Delivery[];
-    count?: number;
-    one?: Delivery | null;
-    rawOne?: { maxVersion: string | null };
-    rawMany?: Array<{ assignmentId: string; maxVersion: string | null }>;
-  } = {},
-) => {
-  const builder = {
-    leftJoinAndSelect: () => builder,
-    innerJoinAndSelect: () => builder,
-    innerJoin: jest.fn(() => builder),
-    where: () => builder,
-    withDeleted: () => builder,
-    andWhere: jest.fn(() => builder),
-    orderBy: () => builder,
-    skip: () => builder,
-    take: () => builder,
-    select: () => builder,
-    addSelect: () => builder,
-    groupBy: () => builder,
-    getOne: () => Promise.resolve(config.one ?? null),
-    getManyAndCount: () =>
-      Promise.resolve([config.many ?? [], config.count ?? 0]),
-    getRawOne: () => Promise.resolve(config.rawOne ?? { maxVersion: '0' }),
-    getRawMany: () => Promise.resolve(config.rawMany ?? []),
-  };
-
-  return builder;
-};
 
 describe('DeliveriesQueryService', () => {
   let service: DeliveriesQueryService;
 
   const deliveriesRepository = {
-    createQueryBuilder: jest.fn(),
+    findById: jest.fn(),
+    findByIdWithAssignment: jest.fn(),
+    findByIdForActor: jest.fn(),
+    findAllForActor: jest.fn(),
+    resolveMaxVersionsByAssignmentIds: jest.fn(),
+    resolveMaxVersionForAssignment: jest.fn(),
   };
 
   const storageService = {} as any;
@@ -62,29 +37,34 @@ describe('DeliveriesQueryService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     service = new DeliveriesQueryService(
-      deliveriesRepository as unknown as Repository<Delivery>,
+      deliveriesRepository as unknown as IDeliveryRepository,
       storageService,
     );
   });
 
   it('debe devolver null cuando findById no encuentra la entrega', async () => {
-    deliveriesRepository.createQueryBuilder.mockReturnValue(
-      createQueryBuilder({ one: null }),
-    );
+    deliveriesRepository.findByIdForActor.mockResolvedValue(null);
 
     const actor = buildActor(UserRole.ADMIN, 'admin-1');
     const result = await service.findById('missing-id', actor);
 
     expect(result).toBeNull();
+    expect(deliveriesRepository.findByIdForActor).toHaveBeenCalledWith(
+      'missing-id',
+      actor,
+      { includeDeleted: false },
+    );
   });
 
-  it('debe aplicar scope de estudiante en findAll', async () => {
+  it('delega el listado paginado en el puerto con el actor recibido', async () => {
     const actor = buildActor(
       UserRole.STUDENT,
       '44444444-4444-4444-4444-444444444444',
     );
-    const builder = createQueryBuilder({ many: [], count: 0 });
-    deliveriesRepository.createQueryBuilder.mockReturnValue(builder);
+    deliveriesRepository.findAllForActor.mockResolvedValue({
+      deliveries: [],
+      total: 0,
+    });
 
     await service.findAll(
       {
@@ -96,38 +76,27 @@ describe('DeliveriesQueryService', () => {
       actor,
     );
 
-    expect(builder.andWhere).toHaveBeenCalledWith(
-      'delivery.authorId = :requestUserId',
-      { requestUserId: actor.userId },
+    expect(deliveriesRepository.findAllForActor).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, limit: 20, sortBy: 'createdAt' }),
+      actor,
     );
   });
 
-  it('HIGH-10: debe aplicar scope de docente via project.teachers, no solo el creador (co-docentes)', async () => {
-    const actor = buildActor(
-      UserRole.TEACHER,
-      '55555555-5555-5555-5555-555555555555',
-    );
-    const builder = createQueryBuilder({ many: [], count: 0 });
-    deliveriesRepository.createQueryBuilder.mockReturnValue(builder);
+  it('no consulta versiones máximas cuando el listado vuelve vacío', async () => {
+    const actor = buildActor(UserRole.ADMIN, 'admin-1');
+    deliveriesRepository.findAllForActor.mockResolvedValue({
+      deliveries: [],
+      total: 0,
+    });
 
     await service.findAll(
-      {
-        page: 1,
-        limit: 20,
-        sortBy: 'createdAt',
-        sortOrder: 'DESC',
-      } as any,
+      { page: 1, limit: 20, sortBy: 'createdAt', sortOrder: 'DESC' } as any,
       actor,
     );
 
-    expect(builder.innerJoin).toHaveBeenCalledWith(
-      'project.teachers',
-      'scopedTeacher',
-    );
-    expect(builder.andWhere).toHaveBeenCalledWith(
-      'scopedTeacher.id = :requestUserId',
-      { requestUserId: actor.userId },
-    );
+    expect(
+      deliveriesRepository.resolveMaxVersionsByAssignmentIds,
+    ).not.toHaveBeenCalled();
   });
 
   it('debe calcular deliveryCount, remainingDeliveries y minimumRequirementMet en toResponse', async () => {
@@ -135,9 +104,7 @@ describe('DeliveriesQueryService', () => {
     const assignment = buildAssignment({ project });
     const delivery = buildDelivery({ assignment, version: 2 });
 
-    deliveriesRepository.createQueryBuilder.mockReturnValue(
-      createQueryBuilder({ rawOne: { maxVersion: '2' } }),
-    );
+    deliveriesRepository.resolveMaxVersionForAssignment.mockResolvedValue(2);
 
     const response = await service.toResponse(delivery);
 

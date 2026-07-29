@@ -4,11 +4,12 @@
  * @module project-operational-issues.service
  */
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import { MinioStorageService } from '../../shared/infrastructure/storage/minio-storage.service';
+import type { IObjectStorage } from './domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from './domain/ports/object-storage.port';
 import { UserRole } from '../users/entities/user.entity';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import {
@@ -59,7 +60,8 @@ export class ProjectOperationalIssuesService {
     private readonly deliveriesRepository: Repository<Delivery>,
     @InjectRepository(StorageObject)
     private readonly storageObjectsRepository: Repository<StorageObject>,
-    private readonly minioStorageService: MinioStorageService,
+    @Inject(OBJECT_STORAGE)
+    private readonly objectStorage: IObjectStorage,
     private readonly projectAccessService: ProjectAccessService,
   ) {}
 
@@ -225,7 +227,7 @@ export class ProjectOperationalIssuesService {
           where: { id: In(storageIds) },
         });
         for (const obj of storageObjects) {
-          await this.minioStorageService
+          await this.objectStorage
             .deleteObject(obj.bucket, obj.objectKey)
             .catch(() => undefined);
         }

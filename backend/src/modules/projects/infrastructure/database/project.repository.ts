@@ -11,6 +11,7 @@ import type { AuthenticatedUser } from '../../../auth/interfaces/authenticated-u
 import { Project } from '../../entities/project.entity';
 import {
   IProjectRepository,
+  NewProjectData,
   ProjectListPage,
   ProjectListQuery,
 } from '../../domain/repositories/project.repository.interface';
@@ -64,8 +65,7 @@ export class ProjectRepository implements IProjectRepository {
     query: ProjectListQuery,
     actor: AuthenticatedUser,
   ): Promise<ProjectListPage> {
-    const { page, limit, sortBy, sortOrder, status, creatorId, search } =
-      query;
+    const { page, limit, sortBy, sortOrder, status, creatorId, search } = query;
 
     const queryBuilder = this.repository.createQueryBuilder('project');
 
@@ -125,5 +125,59 @@ export class ProjectRepository implements IProjectRepository {
     });
 
     return { projects, total };
+  }
+
+  isTeacherAssignedToProject(
+    projectId: string,
+    teacherId: string,
+  ): Promise<boolean> {
+    return this.repository
+      .createQueryBuilder('project')
+      .innerJoin('project.teachers', 'teacher')
+      .where('project.id = :projectId', { projectId })
+      .andWhere('teacher.id = :teacherId', { teacherId })
+      .getExists();
+  }
+
+  create(data: NewProjectData): Project {
+    return this.repository.create(data);
+  }
+
+  save(project: Project): Promise<Project> {
+    return this.repository.save(project);
+  }
+
+  softRemove(project: Project): Promise<Project> {
+    return this.repository.softRemove(project);
+  }
+
+  recover(project: Project): Promise<Project> {
+    return this.repository.recover(project);
+  }
+
+  async listTeacherIds(projectId: string): Promise<string[]> {
+    const teachers = await this.repository
+      .createQueryBuilder()
+      .relation(Project, 'teachers')
+      .of(projectId)
+      .loadMany<{ id: string }>();
+
+    return teachers.map((teacher) => teacher.id);
+  }
+
+  async addTeacher(projectId: string, teacherId: string): Promise<void> {
+    await this.repository
+      .createQueryBuilder()
+      .relation(Project, 'teachers')
+      .of(projectId)
+      .add(teacherId);
+  }
+
+  async removeTeacher(projectId: string, teacherId: string): Promise<void> {
+    await this.repository
+      .createQueryBuilder()
+      .relation(Project, 'teachers')
+      .of(projectId)
+      .remove(teacherId);
   }
 }

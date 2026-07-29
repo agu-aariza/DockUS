@@ -10,13 +10,15 @@
 
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
-import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
+import type { IObjectStorage } from '../domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../domain/ports/object-storage.port';
+import type { IStorageObjectRepository } from '../domain/repositories/storage-object.repository.interface';
+import { STORAGE_OBJECT_REPOSITORY } from '../domain/repositories/storage-object.repository.interface';
 import { CreateStorageObjectDto } from './dto/create-storage-object.dto';
 import { ListStorageObjectsQueryDto } from './dto/list-storage-objects-query.dto';
 import { StorageAccessService } from './storage-access.service';
@@ -40,9 +42,10 @@ export type {
 @Injectable()
 export class StorageService {
   constructor(
-    @InjectRepository(StorageObject)
-    private readonly storageRepository: Repository<StorageObject>,
-    private readonly minioStorageService: MinioStorageService,
+    @Inject(STORAGE_OBJECT_REPOSITORY)
+    private readonly storageRepository: IStorageObjectRepository,
+    @Inject(OBJECT_STORAGE)
+    private readonly objectStorage: IObjectStorage,
     private readonly storageAccessService: StorageAccessService,
     private readonly storageQueryService: StorageQueryService,
     private readonly storageUploadService: StorageUploadService,
@@ -140,11 +143,11 @@ export class StorageService {
         true,
       );
 
-    await this.minioStorageService.deleteObject(
+    await this.objectStorage.deleteObject(
       storageObject.bucket,
       storageObject.objectKey,
     );
-    await this.storageRepository.delete({ id: storageObject.id });
+    await this.storageRepository.deleteById(storageObject.id);
 
     return { message: 'Objeto purgado fisicamente de forma correcta.' };
   }
@@ -168,7 +171,7 @@ export class StorageService {
       throw new ConflictException('El objeto ya se encuentra activo.');
     }
 
-    const exists = await this.minioStorageService.objectExists(
+    const exists = await this.objectStorage.objectExists(
       storageObject.bucket,
       storageObject.objectKey,
     );

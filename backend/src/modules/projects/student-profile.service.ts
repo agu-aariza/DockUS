@@ -16,18 +16,30 @@
  */
 
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
 
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import { User, UserRole } from '../users/entities/user.entity';
+import {
+  USER_REPOSITORY,
+  type IUserRepository,
+} from '../users/domain/repositories/user.repository.interface';
+import { UserRole } from '../users/entities/user.entity';
 import {
   GROUP_ROSTER_READER,
   type GroupRosterReader,
 } from '../../shared/application/group-roster-reader.port';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
-import { BuildRun } from './builder/domain/entities/build-run.entity';
-import { Delivery } from './deliveries/entities/delivery.entity';
+import {
+  BUILD_RUN_REPOSITORY,
+  type IBuildRunRepository,
+} from './domain/repositories/build-run.repository.interface';
+import {
+  DELIVERY_REPOSITORY,
+  type IDeliveryRepository,
+} from './domain/repositories/delivery.repository.interface';
+import {
+  PROJECT_ASSIGNMENT_REPOSITORY,
+  type IProjectAssignmentRepository,
+} from './domain/repositories/project-assignment.repository.interface';
 import type {
   StudentProfileDelivery,
   StudentProfileProject,
@@ -38,14 +50,14 @@ import type {
 @Injectable()
 export class StudentProfileService {
   constructor(
-    @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
-    @InjectRepository(ProjectAssignment)
-    private readonly assignmentsRepository: Repository<ProjectAssignment>,
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
-    @InjectRepository(BuildRun)
-    private readonly buildRunsRepository: Repository<BuildRun>,
+    @Inject(USER_REPOSITORY)
+    private readonly usersRepository: IUserRepository,
+    @Inject(PROJECT_ASSIGNMENT_REPOSITORY)
+    private readonly assignmentsRepository: IProjectAssignmentRepository,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveriesRepository: IDeliveryRepository,
+    @Inject(BUILD_RUN_REPOSITORY)
+    private readonly buildRunsRepository: IBuildRunRepository,
     @Inject(GROUP_ROSTER_READER)
     private readonly groupRosterReader: GroupRosterReader,
   ) {}
@@ -54,9 +66,10 @@ export class StudentProfileService {
     studentId: string,
     actor: AuthenticatedUser,
   ): Promise<StudentProfileResponse> {
-    const student = await this.usersRepository.findOne({
-      where: { id: studentId, role: UserRole.STUDENT },
-    });
+    const student = await this.usersRepository.findByIdAndRole(
+      studentId,
+      UserRole.STUDENT,
+    );
     if (!student) {
       throw new NotFoundException('Alumno no encontrado.');
     }
@@ -92,28 +105,7 @@ export class StudentProfileService {
     studentId: string,
     actor: AuthenticatedUser,
   ): Promise<ProjectAssignment[]> {
-    const query = this.assignmentsRepository
-      .createQueryBuilder('assignment')
-      .innerJoinAndSelect('assignment.project', 'project')
-      .leftJoinAndSelect('project.teachers', 'teacher')
-      .where('assignment.studentId = :studentId', { studentId })
-      .andWhere('assignment.revokedAt IS NULL')
-      .orderBy('assignment.assignedAt', 'DESC');
-
-    if (actor.role === UserRole.TEACHER) {
-      // `teacher` ya está en el leftJoin, pero filtrar por él lo convertiría en
-      // un inner join implícito y recortaría el equipo docente devuelto: se usa
-      // una subconsulta para acotar sin mutilar la relación.
-      query.andWhere(
-        `EXISTS (
-          SELECT 1 FROM project_teachers pt
-          WHERE pt."projectId" = project.id AND pt."teacherId" = :actorId
-        )`,
-        { actorId: actor.userId },
-      );
-    }
-
-    return query.getMany();
+    return this.assignmentsRepository.findVisibleForStudent(studentId, actor);
   }
 
   private async buildProjectTimeline(
@@ -124,9 +116,9 @@ export class StudentProfileService {
     const deliveries =
       assignmentIds.length === 0
         ? []
-        : await this.deliveriesRepository.find({
-            where: { assignmentId: In(assignmentIds) },
-            order: { version: 'DESC' },
+        : await this.deliveriesRepository.findByAssignmentIds(assignmentIds, {
+            orderBy: 'version',
+            orderDirection: 'DESC',
           });
 
     const deliveryIds = deliveries.map((delivery) => delivery.id);
@@ -139,20 +131,9 @@ export class StudentProfileService {
     const runs =
       deliveryIds.length === 0
         ? []
-        : await this.buildRunsRepository.find({
-            select: {
-              id: true,
-              deliveryId: true,
-              status: true,
-              createdAt: true,
-              finishedAt: true,
-              inputTokens: true,
-              outputTokens: true,
-              executionCostUsd: true,
-            },
-            where: { deliveryId: In(deliveryIds) },
-            order: { createdAt: 'DESC' },
-          });
+        : await this.buildRunsRepository.findScalarSummaryByDeliveryIds(
+            deliveryIds,
+          );
 
     const runsByDeliveryId = new Map<string, StudentProfileRun[]>();
     for (const run of runs) {

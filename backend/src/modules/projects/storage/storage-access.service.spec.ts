@@ -1,34 +1,34 @@
 import { ForbiddenException } from '@nestjs/common';
-import { Repository } from 'typeorm';
 import {
   buildActor,
   buildDelivery,
   buildStorageObject,
 } from '../../../test-support/domain-builders';
 import { UserRole } from '../../users/entities/user.entity';
-import { Delivery } from '../deliveries/entities/delivery.entity';
-import { Project } from '../entities/project.entity';
-import { StorageObject } from './entities/storage-object.entity';
+import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
+import type { IProjectRepository } from '../domain/repositories/project.repository.interface';
+import type { IStorageObjectRepository } from '../domain/repositories/storage-object.repository.interface';
 import { StorageAccessService } from './storage-access.service';
 
 describe('StorageAccessService', () => {
   let service: StorageAccessService;
   const storageRepository = {
-    findOne: jest.fn(),
+    findByIdWithRelations: jest.fn(),
   };
   const deliveriesRepository = {
-    findOne: jest.fn(),
+    findByIdWithAssignment: jest.fn(),
   };
   const projectsRepository = {
-    findOne: jest.fn(),
+    findById: jest.fn(),
+    isTeacherAssignedToProject: jest.fn(),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
     service = new StorageAccessService(
-      storageRepository as unknown as Repository<StorageObject>,
-      deliveriesRepository as unknown as Repository<Delivery>,
-      projectsRepository as unknown as Repository<Project>,
+      storageRepository as unknown as IStorageObjectRepository,
+      deliveriesRepository as unknown as IDeliveryRepository,
+      projectsRepository as unknown as IProjectRepository,
     );
   });
 
@@ -36,8 +36,8 @@ describe('StorageAccessService', () => {
     const actor = buildActor(UserRole.STUDENT, 'student-1');
     const delivery = buildDelivery({ authorId: actor.userId });
     const storageObject = buildStorageObject({ deliveryId: delivery.id });
-    storageRepository.findOne.mockResolvedValue(storageObject);
-    deliveriesRepository.findOne.mockResolvedValue(delivery);
+    storageRepository.findByIdWithRelations.mockResolvedValue(storageObject);
+    deliveriesRepository.findByIdWithAssignment.mockResolvedValue(delivery);
 
     const result = await service.findStorageObjectWithAccess(
       storageObject.id,
@@ -51,8 +51,8 @@ describe('StorageAccessService', () => {
     const actor = buildActor(UserRole.STUDENT, 'student-1');
     const delivery = buildDelivery({ authorId: 'student-2' });
     const storageObject = buildStorageObject({ deliveryId: delivery.id });
-    storageRepository.findOne.mockResolvedValue(storageObject);
-    deliveriesRepository.findOne.mockResolvedValue(delivery);
+    storageRepository.findByIdWithRelations.mockResolvedValue(storageObject);
+    deliveriesRepository.findByIdWithAssignment.mockResolvedValue(delivery);
 
     await expect(
       service.findStorageObjectWithAccess(storageObject.id, actor),

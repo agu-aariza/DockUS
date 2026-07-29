@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { User, UserRole, UserStatus } from '../users/entities/user.entity';
+import type { IUserRepository } from '../users/domain/repositories/user.repository.interface';
 import type { GroupRosterReader } from '../../shared/application/group-roster-reader.port';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import {
@@ -12,6 +12,9 @@ import {
   Delivery,
   DeliveryStatus,
 } from './deliveries/entities/delivery.entity';
+import type { IDeliveryRepository } from './domain/repositories/delivery.repository.interface';
+import type { IProjectAssignmentRepository } from './domain/repositories/project-assignment.repository.interface';
+import type { IBuildRunRepository } from './domain/repositories/build-run.repository.interface';
 import { StudentProfileService } from './student-profile.service';
 
 describe('StudentProfileService', () => {
@@ -27,18 +30,6 @@ describe('StudentProfileService', () => {
     status: UserStatus.ACTIVE,
   } as User;
 
-  const buildQueryBuilder = (assignments: ProjectAssignment[]) => {
-    const qb = {
-      innerJoinAndSelect: jest.fn(() => qb),
-      leftJoinAndSelect: jest.fn(() => qb),
-      where: jest.fn(() => qb),
-      andWhere: jest.fn(() => qb),
-      orderBy: jest.fn(() => qb),
-      getMany: jest.fn(async () => assignments),
-    };
-    return qb;
-  };
-
   const buildService = (options: {
     assignments?: ProjectAssignment[];
     deliveries?: Delivery[];
@@ -46,25 +37,23 @@ describe('StudentProfileService', () => {
     groups?: Array<{ id: string; name: string; code: string | null }>;
     studentFound?: boolean;
   }) => {
-    const queryBuilder = buildQueryBuilder(options.assignments ?? []);
-
     const usersRepository = {
-      findOne: jest.fn(async () =>
+      findByIdAndRole: jest.fn(async () =>
         options.studentFound === false ? null : student,
       ),
-    } as unknown as Repository<User>;
+    } as unknown as IUserRepository;
 
     const assignmentsRepository = {
-      createQueryBuilder: jest.fn(() => queryBuilder),
-    } as unknown as Repository<ProjectAssignment>;
+      findVisibleForStudent: jest.fn(async () => options.assignments ?? []),
+    } as unknown as IProjectAssignmentRepository;
 
     const deliveriesRepository = {
-      find: jest.fn(async () => options.deliveries ?? []),
-    } as unknown as Repository<Delivery>;
+      findByAssignmentIds: jest.fn(async () => options.deliveries ?? []),
+    } as unknown as IDeliveryRepository;
 
     const buildRunsRepository = {
-      find: jest.fn(async () => options.runs ?? []),
-    } as unknown as Repository<BuildRun>;
+      findScalarSummaryByDeliveryIds: jest.fn(async () => options.runs ?? []),
+    } as unknown as IBuildRunRepository;
 
     const groupRosterReader = {
       listEnrollments: jest.fn(),
@@ -82,7 +71,7 @@ describe('StudentProfileService', () => {
 
     return {
       service,
-      queryBuilder,
+      assignmentsRepository,
       deliveriesRepository,
       buildRunsRepository,
       groupRosterReader,
@@ -158,11 +147,11 @@ describe('StudentProfileService', () => {
 
     const profile = await service.getProfile(STUDENT_ID, actor(UserRole.ADMIN));
 
-    // La query de runs se filtra por deliveryId; jamás por triggeredById, que es
-    // siempre el profesor y devolvería cero.
-    const runQuery = jest.mocked(buildRunsRepository.find).mock.calls[0][0];
-    expect(JSON.stringify(runQuery)).toContain('deliveryId');
-    expect(JSON.stringify(runQuery)).not.toContain('triggeredById');
+    // Los runs se resuelven por deliveryId (findScalarSummaryByDeliveryIds);
+    // jamás por triggeredById, que es siempre el profesor y devolvería cero.
+    expect(
+      buildRunsRepository.findScalarSummaryByDeliveryIds,
+    ).toHaveBeenCalledWith(['delivery-1']);
 
     expect(profile.summary.runsCount).toBe(2);
     expect(profile.projects[0].deliveries[0].runs).toHaveLength(2);
@@ -199,30 +188,18 @@ describe('StudentProfileService', () => {
     );
   });
 
-  it('acota al docente a los proyectos en los que está asignado', async () => {
-    const { service, queryBuilder } = buildService({
+  it('delega el scoping por actor en el puerto (cubierto en detalle por project-assignment-actor-scope.util.spec.ts)', async () => {
+    const { service, assignmentsRepository } = buildService({
       assignments: [buildAssignment()],
     });
+    const teacher = actor(UserRole.TEACHER, TEACHER_ID);
 
-    await service.getProfile(STUDENT_ID, actor(UserRole.TEACHER, TEACHER_ID));
+    await service.getProfile(STUDENT_ID, teacher);
 
-    const scoping = queryBuilder.andWhere.mock.calls
-      .map(([clause]) => String(clause))
-      .join(' | ');
-    expect(scoping).toContain('project_teachers');
-  });
-
-  it('no acota al administrador', async () => {
-    const { service, queryBuilder } = buildService({
-      assignments: [buildAssignment()],
-    });
-
-    await service.getProfile(STUDENT_ID, actor(UserRole.ADMIN));
-
-    const scoping = queryBuilder.andWhere.mock.calls
-      .map(([clause]) => String(clause))
-      .join(' | ');
-    expect(scoping).not.toContain('project_teachers');
+    expect(assignmentsRepository.findVisibleForStudent).toHaveBeenCalledWith(
+      STUDENT_ID,
+      teacher,
+    );
   });
 
   it('devuelve un expediente vacío sin romper cuando el alumno no ha entregado', async () => {
@@ -245,19 +222,10 @@ describe('StudentProfileService', () => {
     });
     expect(profile.groups).toHaveLength(1);
     // Sin asignaciones no se consulta ni entregas ni runs.
-    expect(deliveriesRepository.find).not.toHaveBeenCalled();
-    expect(buildRunsRepository.find).not.toHaveBeenCalled();
-  });
-
-  it('excluye asignaciones revocadas', async () => {
-    const { service, queryBuilder } = buildService({ assignments: [] });
-
-    await service.getProfile(STUDENT_ID, actor(UserRole.ADMIN));
-
-    const clauses = queryBuilder.andWhere.mock.calls
-      .map(([clause]) => String(clause))
-      .join(' | ');
-    expect(clauses).toContain('assignment.revokedAt IS NULL');
+    expect(deliveriesRepository.findByAssignmentIds).not.toHaveBeenCalled();
+    expect(
+      buildRunsRepository.findScalarSummaryByDeliveryIds,
+    ).not.toHaveBeenCalled();
   });
 
   it('falla con 404 si el id no corresponde a un alumno', async () => {

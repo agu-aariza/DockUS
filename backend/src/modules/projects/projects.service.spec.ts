@@ -13,35 +13,25 @@ import { Repository } from 'typeorm';
 import { buildActor, buildProject } from '../../test-support/domain-builders';
 import { UserRole } from '../users/entities/user.entity';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
-import { Delivery } from './deliveries/entities/delivery.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
-import { Project, ProjectStatus } from './entities/project.entity';
+import { ProjectStatus } from './entities/project.entity';
+import type { IProjectRepository } from './domain/repositories/project.repository.interface';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectGradebookService } from './project-gradebook.service';
 import { ProjectLifecycleService } from './project-lifecycle.service';
 import { ProjectOperationalIssuesService } from './project-operational-issues.service';
 import { ProjectsService } from './projects.service';
-import type { IProjectRepository } from './domain/repositories/project.repository.interface';
 import { BuilderQualityAggregationService } from './builder/application/services/evaluation/builder-quality-aggregation.service';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
 
-  // Query builder mínimo para isTeacherAssignedToProject (project-access.policy.ts),
-  // el único camino que ProjectAccessService sigue resolviendo con
-  // createQueryBuilder tras ARQ-007.
-  const accessQueryBuilder = {
-    innerJoin: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    getExists: jest.fn().mockResolvedValue(true),
-  };
-
-  // Repositorio TypeORM crudo: alimenta la instancia REAL de
-  // ProjectAccessService (findOwnedProjectOrThrow, etc.), no el puerto.
-  const projectsTypeOrmRepository = {
-    findOne: jest.fn(),
-    createQueryBuilder: jest.fn().mockReturnValue(accessQueryBuilder),
+  // Puerto real: alimenta la instancia REAL de ProjectAccessService
+  // (findOwnedProjectOrThrow, etc.), distinta de la que ProjectsService
+  // recibe como PROJECT_REPOSITORY más abajo.
+  const projectAccessRepository = {
+    findById: jest.fn(),
+    isTeacherAssignedToProject: jest.fn().mockResolvedValue(true),
   };
 
   // Puerto real (ARQ-007): lo que ProjectsService inyecta como
@@ -57,10 +47,6 @@ describe('ProjectsService', () => {
   const assignmentsRepository = {
     find: jest.fn(),
     findOne: jest.fn(),
-  };
-
-  const deliveriesRepository = {
-    createQueryBuilder: jest.fn(),
   };
 
   const projectLifecycleService = {
@@ -91,12 +77,11 @@ describe('ProjectsService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     const projectAccessService = new ProjectAccessService(
-      projectsTypeOrmRepository as unknown as Repository<Project>,
+      projectAccessRepository as unknown as IProjectRepository,
       assignmentsRepository as unknown as Repository<ProjectAssignment>,
     );
     service = new ProjectsService(
-      projectRepositoryPort as unknown as IProjectRepository,
-      deliveriesRepository as unknown as Repository<Delivery>,
+      projectRepositoryPort,
       projectLifecycleService as unknown as ProjectLifecycleService,
       projectAccessService,
       projectGradebookService as unknown as ProjectGradebookService,
@@ -267,7 +252,7 @@ describe('ProjectsService', () => {
   it('debe delegar los insights agregados de calidad tras validar acceso al proyecto', async () => {
     const actor = buildActor(UserRole.TEACHER, 'teacher-1');
     const project = buildProject({ id: 'project-1' });
-    projectsTypeOrmRepository.findOne.mockResolvedValue(project);
+    projectAccessRepository.findById.mockResolvedValue(project);
     builderQualityAggregationService.getAggregatedFindings.mockResolvedValue({
       projectId: project.id,
       totalStudentsAnalyzed: 2,

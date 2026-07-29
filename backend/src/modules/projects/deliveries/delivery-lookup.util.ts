@@ -11,23 +11,16 @@
  */
 
 import { NotFoundException } from '@nestjs/common';
-import type { Repository } from 'typeorm';
+import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
 import { Delivery } from './entities/delivery.entity';
 
 export async function findDeliveryWithAssignmentOrThrow(
-  deliveriesRepository: Repository<Delivery>,
+  deliveriesRepository: IDeliveryRepository,
   deliveryId: string,
   notFoundMessage: string,
 ): Promise<Delivery> {
-  const delivery = await deliveriesRepository.findOne({
-    where: { id: deliveryId },
-    relations: {
-      assignment: {
-        project: true,
-        student: true,
-      },
-    },
-  });
+  const delivery =
+    await deliveriesRepository.findByIdWithAssignment(deliveryId);
 
   if (!delivery) {
     throw new NotFoundException(notFoundMessage);

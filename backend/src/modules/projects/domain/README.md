@@ -34,3 +34,9 @@ Definir las entidades puras, objetos de valor (Value Objects) y reglas del domin
 ```bash
 npm run test -- src/modules/projects/domain
 ```
+
+---
+
+## Convención: transacciones en el adaptador, no en la aplicación
+
+Una operación que debe ser atómica se expresa como **un único método** de la interfaz de repositorio (`repositories/`); la transacción vive dentro del adaptador de `infrastructure/database/` que la implementa, nunca en la capa de aplicación. Ver [DESIGN_DECISIONS.md](../../../../../docs/DESIGN_DECISIONS.md) D-15, referencia: `IGroupEnrollmentRepository.bulkEnroll`.

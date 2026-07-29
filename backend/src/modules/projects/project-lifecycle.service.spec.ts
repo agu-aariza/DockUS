@@ -1,9 +1,8 @@
-import { Repository } from 'typeorm';
-
 import { buildActor, buildProject } from '../../test-support/domain-builders';
 import { UserRole } from '../users/entities/user.entity';
 import { ProjectAssignmentsService } from './assignments/project-assignments.service';
-import { Delivery } from './deliveries/entities/delivery.entity';
+import type { IDeliveryRepository } from './domain/repositories/delivery.repository.interface';
+import type { IProjectRepository } from './domain/repositories/project.repository.interface';
 import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
 import { Project, ProjectStatus } from './entities/project.entity';
 import { ProjectAccessService } from './project-access.service';
@@ -11,12 +10,12 @@ import { ProjectLifecycleService } from './project-lifecycle.service';
 
 describe('ProjectLifecycleService', () => {
   let projectsRepository: {
-    create: jest.MockedFunction<Repository<Project>['create']>;
-    save: jest.MockedFunction<Repository<Project>['save']>;
+    create: jest.MockedFunction<IProjectRepository['create']>;
+    save: jest.MockedFunction<IProjectRepository['save']>;
   };
   let deliveriesRepository: {
-    createQueryBuilder: jest.MockedFunction<
-      Repository<Delivery>['createQueryBuilder']
+    resolveMaxVersionForProject: jest.MockedFunction<
+      IDeliveryRepository['resolveMaxVersionForProject']
     >;
   };
   let projectAccessService: {
@@ -35,7 +34,7 @@ describe('ProjectLifecycleService', () => {
       save: jest.fn(async (value) => value as Project) as any,
     };
     deliveriesRepository = {
-      createQueryBuilder: jest.fn(),
+      resolveMaxVersionForProject: jest.fn(),
     };
     projectAccessService = {
       findOwnedProjectOrThrow: jest.fn(),
@@ -45,8 +44,8 @@ describe('ProjectLifecycleService', () => {
     };
 
     service = new ProjectLifecycleService(
-      projectsRepository as unknown as Repository<Project>,
-      deliveriesRepository as unknown as Repository<Delivery>,
+      projectsRepository as unknown as IProjectRepository,
+      deliveriesRepository as unknown as IDeliveryRepository,
       projectAccessService as unknown as ProjectAccessService,
       projectAssignmentsService as unknown as ProjectAssignmentsService,
     );

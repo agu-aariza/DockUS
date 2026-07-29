@@ -13,16 +13,18 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
 import { ProjectAssignment } from '../assignments/entities/project-assignment.entity';
-import { Project, ProjectStatus } from '../entities/project.entity';
-import { isTeacherAssignedToProject } from '../project-access.policy';
+import { ProjectStatus } from '../entities/project.entity';
+import type { IProjectRepository } from '../domain/repositories/project.repository.interface';
+import { PROJECT_REPOSITORY } from '../domain/repositories/project.repository.interface';
+import type { IProjectAssignmentRepository } from '../domain/repositories/project-assignment.repository.interface';
+import { PROJECT_ASSIGNMENT_REPOSITORY } from '../domain/repositories/project-assignment.repository.interface';
 import { StorageService } from '../storage/storage.service';
 import { throwIfUniqueViolation } from '../../../shared/database/unique-violation.util';
 import {
@@ -31,6 +33,8 @@ import {
   UpdateDeliveryDto,
 } from './dto/create-delivery.dto';
 import { Delivery, DeliveryStatus } from './entities/delivery.entity';
+import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
+import { DELIVERY_REPOSITORY } from '../domain/repositories/delivery.repository.interface';
 import {
   DeliveriesQueryService,
   DeliveryResponse,
@@ -40,12 +44,12 @@ import { DeliveryStatusService } from './delivery-status.service';
 @Injectable()
 export class DeliveriesCommandService {
   constructor(
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
-    @InjectRepository(ProjectAssignment)
-    private readonly assignmentsRepository: Repository<ProjectAssignment>,
-    @InjectRepository(Project)
-    private readonly projectsRepository: Repository<Project>,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveriesRepository: IDeliveryRepository,
+    @Inject(PROJECT_ASSIGNMENT_REPOSITORY)
+    private readonly assignmentsRepository: IProjectAssignmentRepository,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectsRepository: IProjectRepository,
     private readonly storageService: StorageService,
     private readonly deliveriesQueryService: DeliveriesQueryService,
     private readonly deliveryStatusService: DeliveryStatusService,
@@ -287,8 +291,7 @@ export class DeliveriesCommandService {
     // entregas de un proyecto que ya podian ejecutar y ver en el gradebook.
     if (
       actor.role === UserRole.TEACHER &&
-      (await isTeacherAssignedToProject(
-        this.projectsRepository,
+      (await this.projectsRepository.isTeacherAssignedToProject(
         delivery.assignment.project.id,
         actor.userId,
       ))
@@ -306,13 +309,10 @@ export class DeliveriesCommandService {
   ): Promise<
     ProjectAssignment & { project: NonNullable<ProjectAssignment['project']> }
   > {
-    const assignment = await this.assignmentsRepository.findOne({
-      where: { id: assignmentId },
-      relations: {
-        project: true,
-        student: true,
-      },
-    });
+    const assignment =
+      await this.assignmentsRepository.findByIdWithProjectAndStudent(
+        assignmentId,
+      );
 
     if (!assignment) {
       throw new NotFoundException('Asignación no encontrada.');

@@ -8,34 +8,24 @@ import { ProjectAssignmentsService } from './project-assignments.service';
 import type { GroupRosterReader } from '../../../shared/application/group-roster-reader.port';
 
 describe('ProjectAssignmentsService', () => {
-  const isTeacherAssignedQueryBuilder = {
-    innerJoin: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    getExists: jest.fn(),
-  };
-
   const projectsRepository = {
-    createQueryBuilder: jest.fn(() => isTeacherAssignedQueryBuilder),
+    isTeacherAssignedToProject: jest.fn(),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    isTeacherAssignedQueryBuilder.innerJoin.mockReturnThis();
-    isTeacherAssignedQueryBuilder.where.mockReturnThis();
-    isTeacherAssignedQueryBuilder.andWhere.mockReturnThis();
-    isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(false);
+    projectsRepository.isTeacherAssignedToProject.mockResolvedValue(false);
   });
 
   it('resolves students from requested groups through the group roster reader', async () => {
     const assignmentsRepository = {
       create: jest.fn((input) => input),
-      findOne: jest.fn().mockResolvedValue(null),
-      find: jest.fn().mockResolvedValue([]),
-      save: jest.fn(async (input) => input),
+      findByProjectIdsAndStudentIds: jest.fn().mockResolvedValue([]),
+      saveMany: jest.fn(async (input) => input),
     } as any;
     const usersRepository = {
-      find: jest.fn().mockResolvedValue([
+      findByEmails: jest.fn().mockResolvedValue([]),
+      findByIds: jest.fn().mockResolvedValue([
         {
           id: 'student-1',
           email: 'student@example.com',
@@ -108,10 +98,10 @@ describe('ProjectAssignmentsService', () => {
         revokedAt: null as Date | null,
       };
       const assignmentsRepository = {
-        findOne: jest.fn().mockResolvedValue(assignment),
+        findByIdWithProjectAndStudent: jest.fn().mockResolvedValue(assignment),
         save: jest.fn(async (input: any) => input),
       };
-      isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(true);
+      projectsRepository.isTeacherAssignedToProject.mockResolvedValue(true);
 
       const service = buildService(assignmentsRepository);
       const result = await service.revoke(
@@ -127,10 +117,10 @@ describe('ProjectAssignmentsService', () => {
       const project = buildProject({ id: 'project-1', creatorId: 'teacher-1' });
       const assignment = { id: 'assignment-1', project, revokedAt: null };
       const assignmentsRepository = {
-        findOne: jest.fn().mockResolvedValue(assignment),
+        findByIdWithProjectAndStudent: jest.fn().mockResolvedValue(assignment),
         save: jest.fn(),
       };
-      isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(false);
+      projectsRepository.isTeacherAssignedToProject.mockResolvedValue(false);
 
       const service = buildService(assignmentsRepository);
 
@@ -151,9 +141,9 @@ describe('ProjectAssignmentsService', () => {
         studentId: 'student-1',
       };
       const assignmentsRepository = {
-        findOne: jest.fn().mockResolvedValue(assignment),
+        findByIdWithProjectAndStudent: jest.fn().mockResolvedValue(assignment),
       };
-      isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(true);
+      projectsRepository.isTeacherAssignedToProject.mockResolvedValue(true);
 
       const service = buildService(assignmentsRepository);
       const result = await service.findByIdOrThrow(
@@ -172,9 +162,9 @@ describe('ProjectAssignmentsService', () => {
         studentId: 'student-1',
       };
       const assignmentsRepository = {
-        findOne: jest.fn().mockResolvedValue(assignment),
+        findByIdWithProjectAndStudent: jest.fn().mockResolvedValue(assignment),
       };
-      isTeacherAssignedQueryBuilder.getExists.mockResolvedValue(false);
+      projectsRepository.isTeacherAssignedToProject.mockResolvedValue(false);
 
       const service = buildService(assignmentsRepository);
 

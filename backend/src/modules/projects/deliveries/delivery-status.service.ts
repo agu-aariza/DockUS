@@ -14,25 +14,23 @@
  * @module DeliveryStatusService
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Delivery, DeliveryStatus } from './entities/delivery.entity';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { DeliveryStatus } from './entities/delivery.entity';
+import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
+import { DELIVERY_REPOSITORY } from '../domain/repositories/delivery.repository.interface';
 
 @Injectable()
 export class DeliveryStatusService {
   constructor(
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveriesRepository: IDeliveryRepository,
   ) {}
 
   async updateStatusInternal(
     id: string,
     status: DeliveryStatus,
   ): Promise<void> {
-    const delivery = await this.deliveriesRepository.findOne({
-      where: { id },
-    });
+    const delivery = await this.deliveriesRepository.findById(id);
     if (!delivery) {
       throw new NotFoundException('Entrega no encontrada.');
     }

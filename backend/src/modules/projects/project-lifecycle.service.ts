@@ -7,13 +7,11 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import {
   CreateProjectDto,
   RubricCriterionDto,
@@ -25,17 +23,20 @@ import {
   type RubricCriterion,
 } from './entities/project.entity';
 import { ProjectAccessService } from './project-access.service';
-import { Delivery } from './deliveries/entities/delivery.entity';
+import type { IDeliveryRepository } from './domain/repositories/delivery.repository.interface';
+import { DELIVERY_REPOSITORY } from './domain/repositories/delivery.repository.interface';
+import type { IProjectRepository } from './domain/repositories/project.repository.interface';
+import { PROJECT_REPOSITORY } from './domain/repositories/project.repository.interface';
 
 import { ProjectAssignmentsService } from './assignments/project-assignments.service';
 
 @Injectable()
 export class ProjectLifecycleService {
   constructor(
-    @InjectRepository(Project)
-    private readonly projectsRepository: Repository<Project>,
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
+    @Inject(PROJECT_REPOSITORY)
+    private readonly projectsRepository: IProjectRepository,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveriesRepository: IDeliveryRepository,
     private readonly projectAccessService: ProjectAccessService,
     private readonly projectAssignmentsService: ProjectAssignmentsService,
   ) {}
@@ -161,9 +162,8 @@ export class ProjectLifecycleService {
   }
 
   async restore(id: string, actor: AuthenticatedUser): Promise<Project> {
-    const project = await this.projectsRepository.findOne({
-      where: { id },
-      withDeleted: true,
+    const project = await this.projectsRepository.findById(id, {
+      includeDeleted: true,
     });
     if (!project) {
       throw new NotFoundException('No se encontro un proyecto con ese ID.');
@@ -189,21 +189,13 @@ export class ProjectLifecycleService {
       id,
       actor,
     );
-    const teachers = await this.projectsRepository
-      .createQueryBuilder()
-      .relation(Project, 'teachers')
-      .of(project)
-      .loadMany();
+    const teacherIds = await this.projectsRepository.listTeacherIds(id);
 
-    if (teachers.some((t) => t.id === teacherId)) {
+    if (teacherIds.includes(teacherId)) {
       return project;
     }
 
-    await this.projectsRepository
-      .createQueryBuilder()
-      .relation(Project, 'teachers')
-      .of(project)
-      .add(teacherId);
+    await this.projectsRepository.addTeacher(id, teacherId);
 
     return this.projectAccessService.findProjectOrThrow(id);
   }
@@ -213,47 +205,22 @@ export class ProjectLifecycleService {
     teacherId: string,
     actor: AuthenticatedUser,
   ): Promise<Project> {
-    const project = await this.projectAccessService.findOwnedProjectOrThrow(
-      id,
-      actor,
-    );
-    const teachers = await this.projectsRepository
-      .createQueryBuilder()
-      .relation(Project, 'teachers')
-      .of(project)
-      .loadMany();
+    await this.projectAccessService.findOwnedProjectOrThrow(id, actor);
+    const teacherIds = await this.projectsRepository.listTeacherIds(id);
 
-    if (teachers.length <= 1) {
+    if (teacherIds.length <= 1) {
       throw new BadRequestException(
         'No se puede eliminar al único profesor asignado al proyecto.',
       );
     }
 
-    await this.projectsRepository
-      .createQueryBuilder()
-      .relation(Project, 'teachers')
-      .of(project)
-      .remove(teacherId);
+    await this.projectsRepository.removeTeacher(id, teacherId);
 
     return this.projectAccessService.findProjectOrThrow(id);
   }
 
-  private async resolveMaxIssuedDeliveryVersion(
-    projectId: string,
-  ): Promise<number> {
-    const row = await this.deliveriesRepository
-      .createQueryBuilder('delivery')
-      .withDeleted()
-      .innerJoin(
-        ProjectAssignment,
-        'assignment',
-        'assignment.id = delivery.assignmentId',
-      )
-      .select('MAX(delivery.version)', 'maxVersion')
-      .where('assignment.projectId = :projectId', { projectId })
-      .getRawOne<{ maxVersion: string | null }>();
-
-    return Number.parseInt(row?.maxVersion ?? '0', 10) || 0;
+  private resolveMaxIssuedDeliveryVersion(projectId: string): Promise<number> {
+    return this.deliveriesRepository.resolveMaxVersionForProject(projectId);
   }
 
   private normalizeTitle(title: string): string {

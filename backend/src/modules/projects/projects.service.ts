@@ -9,10 +9,9 @@
  */
 
 import { BadRequestException, Injectable, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import type { IProjectRepository } from './domain/repositories/project.repository.interface';
+import { PROJECT_REPOSITORY } from './domain/repositories/project.repository.interface';
 import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
 import { ListProjectsQueryDto } from './dto/list-projects-query.dto';
 import { ProjectProgressQueryDto } from './dto/project-progress-query.dto';
@@ -24,7 +23,6 @@ import { ProjectOperationalIssuesService } from './project-operational-issues.se
 import { ProjectAccessService } from './project-access.service';
 import { BuilderQualityAggregationService } from './builder/application/services/evaluation/builder-quality-aggregation.service';
 import { buildPaginationMeta } from '../../shared/utils/pagination.util';
-import { Delivery } from './deliveries/entities/delivery.entity';
 import {
   PaginatedProjectsResponse,
   ProjectGradebookRow,
@@ -48,10 +46,8 @@ export type {
 @Injectable()
 export class ProjectsService {
   constructor(
-    @Inject('IProjectRepository')
+    @Inject(PROJECT_REPOSITORY)
     private readonly projectsRepository: IProjectRepository,
-    @InjectRepository(Delivery)
-    private readonly deliveriesRepository: Repository<Delivery>,
     private readonly projectLifecycleService: ProjectLifecycleService,
     private readonly projectAccessService: ProjectAccessService,
     private readonly projectGradebookService: ProjectGradebookService,
