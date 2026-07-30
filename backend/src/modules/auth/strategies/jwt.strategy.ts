@@ -12,7 +12,7 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { UsersService } from '../../users/users.service';
+import { UsersService } from '../../users/application/users.service';
 import { AuthIdentityCacheService } from '../../../shared/infrastructure/cache/auth-identity-cache.service';
 import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 

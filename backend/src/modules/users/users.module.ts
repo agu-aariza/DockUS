@@ -12,8 +12,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '../../shared/infrastructure/cache/cache.module';
 import { User } from './entities/user.entity';
-import { UsersService } from './users.service';
-import { UsersController } from './users.controller';
+import { UsersService } from './application/users.service';
+import { UsersController } from './presentation/users.controller';
 import { UserRepository } from './infrastructure/database/user.repository';
 import { USER_REPOSITORY } from './domain/repositories/user.repository.interface';
 

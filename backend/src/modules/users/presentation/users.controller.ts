@@ -36,19 +36,19 @@ import {
   INVALID_INPUT_DESCRIPTION,
   INVALID_UUID_DESCRIPTION,
   UNAUTHORIZED_DESCRIPTION,
-} from '../../shared/http/http-response.constants';
-import { UsersService } from './users.service';
-import type { PaginatedUsersResponse } from './users.service';
-import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
-import { ListUsersQueryDto } from './dto/list-users-query.dto';
+} from '../../../shared/http/http-response.constants';
+import { UsersService } from '../application/users.service';
+import type { PaginatedUsersResponse } from '../application/users.service';
+import { CreateUserDto, UpdateUserDto } from '../dto/create-user.dto';
+import { ListUsersQueryDto } from '../dto/list-users-query.dto';
 import {
   UserResponseDto,
   PaginatedUsersResponseDto,
-} from './dto/user-response.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard, Roles } from '../auth/guards/roles.guard';
-import { UserRole, UserStatus } from './entities/user.entity';
-import type { User } from './entities/user.entity';
+} from '../dto/user-response.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard, Roles } from '../../auth/guards/roles.guard';
+import { UserRole, UserStatus } from '../entities/user.entity';
+import type { User } from '../entities/user.entity';
 
 type SanitizedUser = Omit<User, 'passwordHash'>;
 

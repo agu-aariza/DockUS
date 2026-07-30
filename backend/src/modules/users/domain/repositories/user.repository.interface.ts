@@ -10,7 +10,7 @@ import type { UserSortField } from '../../dto/list-users-query.dto';
 import type { SortOrder } from '../../../../shared/dto/paginated-query.dto';
 
 /**
- * Puerto real (audit/areas/arquitectura/plan_accion.md P2-5): sin puerto
+ * Puerto real (ARQ-007 P2-5): sin puerto
  * previo — diseñado desde cero auditando los 4 consumidores reales que
  * inyectaban el repositorio TypeORM crudo fuera de los dos seeders de
  * `shared/` (excepción documentada, igual que en `Project`/`Delivery`/

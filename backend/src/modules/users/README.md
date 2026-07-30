@@ -15,14 +15,13 @@ Mantener la información de los usuarios del sistema y gestionar sus preferencia
 
 ```text
 .
-├── application/       # Servicios de aplicación y casos de uso de gestión de usuarios
+├── application/       # Servicios de aplicación y casos de uso (`users.service.ts`)
 ├── domain/            # Entidades y reglas puras del dominio de usuarios
 ├── dto/               # DTOs para la creación, actualización y filtrado de usuarios
 ├── entities/          # Entidades TypeORM del modelo User
 ├── infrastructure/    # Repositorios de base de datos e integración con TypeORM
-├── users.controller.ts # Endpoints HTTP de consulta y gestión de usuarios
-├── users.module.ts    # Registro del módulo de usuarios en NestJS
-└── users.service.ts   # Servicio de búsqueda, actualización y eliminación de usuarios
+├── presentation/      # Endpoints HTTP (`users.controller.ts`)
+└── users.module.ts    # Registro del módulo de usuarios en NestJS
 ```
 
 ---

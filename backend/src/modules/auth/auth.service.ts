@@ -17,7 +17,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
-import { UsersService } from '../users/users.service';
+import { UsersService } from '../users/application/users.service';
 import { User } from '../users/entities/user.entity';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 

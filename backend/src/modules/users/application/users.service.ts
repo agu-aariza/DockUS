@@ -15,18 +15,18 @@ import {
   ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { User, UserStatus } from './entities/user.entity';
-import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
-import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import { User, UserStatus } from '../entities/user.entity';
+import { CreateUserDto, UpdateUserDto } from '../dto/create-user.dto';
+import { ListUsersQueryDto } from '../dto/list-users-query.dto';
 import * as bcrypt from 'bcrypt';
 import {
   buildPaginationMeta,
   PaginationMeta,
-} from '../../shared/utils/pagination.util';
-import { throwIfUniqueViolation } from '../../shared/database/unique-violation.util';
-import { AuthIdentityCacheService } from '../../shared/infrastructure/cache/auth-identity-cache.service';
-import type { IUserRepository } from './domain/repositories/user.repository.interface';
-import { USER_REPOSITORY } from './domain/repositories/user.repository.interface';
+} from '../../../shared/utils/pagination.util';
+import { throwIfUniqueViolation } from '../../../shared/database/unique-violation.util';
+import { AuthIdentityCacheService } from '../../../shared/infrastructure/cache/auth-identity-cache.service';
+import type { IUserRepository } from '../domain/repositories/user.repository.interface';
+import { USER_REPOSITORY } from '../domain/repositories/user.repository.interface';
 
 const BCRYPT_SALT_ROUNDS = 10;
 

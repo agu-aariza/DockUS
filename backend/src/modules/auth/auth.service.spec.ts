@@ -15,7 +15,7 @@ import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { User, UserRole, UserStatus } from '../users/entities/user.entity';
 import { ConfigService } from '@nestjs/config';
-import { UsersService } from '../users/users.service';
+import { UsersService } from '../users/application/users.service';
 
 const buildUser = (overrides: Partial<User> = {}): User => ({
   id: '72cf42cc-50b4-4ef1-ae70-d6fd89f5b4ba',

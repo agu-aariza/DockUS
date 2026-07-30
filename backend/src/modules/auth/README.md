@@ -15,7 +15,6 @@ Garantizar la identidad segura de los usuarios en la plataforma.
 
 ```text
 .
-├── application/       # Servicios de aplicación y casos de uso de autenticación
 ├── auth.controller.ts # Endpoints /auth/login, /auth/register, /auth/refresh, etc.
 ├── auth.module.ts     # Registro de NestJS, Passport y Passport-JWT
 ├── auth.service.ts    # Lógica de verificación de hash de contraseñas y firma JWT

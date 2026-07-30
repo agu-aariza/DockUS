@@ -12,7 +12,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
 import { User, UserRole, UserStatus } from '../../users/entities/user.entity';
-import { UsersService } from '../../users/users.service';
+import { UsersService } from '../../users/application/users.service';
 
 const buildUser = (overrides: Partial<User> = {}): User => ({
   id: '4ff512db-c595-4076-a9c3-e7499f2d3bbf',

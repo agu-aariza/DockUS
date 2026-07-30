@@ -11,9 +11,9 @@
 import { ConflictException } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { User, UserRole, UserStatus } from './entities/user.entity';
-import type { IUserRepository } from './domain/repositories/user.repository.interface';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { User, UserRole, UserStatus } from '../entities/user.entity';
+import type { IUserRepository } from '../domain/repositories/user.repository.interface';
 
 const buildUser = (overrides: Partial<User> = {}): User => ({
   id: '2e141a4d-e163-43f8-87f8-75afee5e2f85',
