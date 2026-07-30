@@ -17,31 +17,12 @@ export type {
 
 export type BuilderOutcome = "PASS" | "FAIL" | "PARTIAL" | "UNKNOWN";
 export type QualityInsightCategory =
-  | "security"
-  | "architecture"
-  | "quality"
-  | "rubricCompliance";
+  "security" | "architecture" | "quality" | "rubricCompliance";
 export type BuildRunStatus =
-  | "QUEUED"
-  | "RUNNING"
-  | "SUCCESS"
-  | "FAILED"
-  | "CANCELLED";
+  "QUEUED" | "RUNNING" | "SUCCESS" | "FAILED" | "CANCELLED";
 
 export type EvidenceArtifactType =
-  | "BUILD_LOG"
-  | "RUNTIME_EVENTS"
-  | "CONTAINER_INSPECT"
-  | "CONTAINER_LOG"
-  | "TEST_LOG"
-  | "REPORT_TEXT"
   | "REPORT_JSON"
-  | "REPRODUCIBILITY_JSON"
-  | "PREFLIGHT"
-  | "CLASSIFICATION"
-  | "STRATEGY"
-  | "STATIC_FINDINGS"
-  | "STATIC_REVIEW"
   | "LLM_PLAN_PROMPT"
   | "LLM_PLAN_RAW_RESPONSE"
   | "LLM_FACTS_PROMPT"
@@ -110,11 +91,7 @@ export interface BuilderReportCoaching {
   nextAttemptChecklist: string[];
 }
 
-export type PedagogicalNarrativeKind =
-  | "success"
-  | "gap"
-  | "bridge"
-  | "action";
+export type PedagogicalNarrativeKind = "success" | "gap" | "bridge" | "action";
 
 export interface BuilderPedagogicalNarrativeItem {
   kind: PedagogicalNarrativeKind;
@@ -191,4 +168,3 @@ export interface EnqueueBuildRunResponse {
   status: BuildRunStatus;
   deliveryId: string;
 }
-

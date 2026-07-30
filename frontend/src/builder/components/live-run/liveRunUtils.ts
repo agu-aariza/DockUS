@@ -16,19 +16,7 @@ export const cn = (...classes: (string | boolean | undefined)[]) =>
 export { confidenceLabel } from "../../../shared/data/builderTaxonomy";
 
 const ARTIFACT_LABELS: Record<string, string> = {
-  BUILD_LOG: "Build log",
-  RUNTIME_EVENTS: "Eventos del runtime",
-  CONTAINER_INSPECT: "Estado del contenedor",
-  CONTAINER_LOG: "Log del contenedor",
-  TEST_LOG: "Log de tests",
-  REPORT_TEXT: "Informe legible",
   REPORT_JSON: "Informe JSON",
-  REPRODUCIBILITY_JSON: "Reproducibilidad",
-  PREFLIGHT: "Preflight",
-  CLASSIFICATION: "Clasificación",
-  STRATEGY: "Estrategia",
-  STATIC_FINDINGS: "Hallazgos estáticos",
-  STATIC_REVIEW: "Revisión estática",
   LLM_PLAN_PROMPT: "Prompt del planner",
   LLM_PLAN_RAW_RESPONSE: "Respuesta bruta del planner",
   LLM_FACTS_PROMPT: "Prompt de hechos",

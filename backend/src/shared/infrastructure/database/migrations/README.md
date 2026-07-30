@@ -16,8 +16,9 @@ Mantener la evolución histórica e incremental del esquema de la base de datos 
 .
 ├── 1784737064232-InitialSchema.ts                   # Migración 1: Tablas e infraestructura base
 ├── 1784738476041-HotPathIndexes.ts                  # Migración 2: Índices para consultas de alto rendimiento
-├── 1784818513497-RemoveSelfHealingArtifactType.ts   # Migración 3: Ajuste de tipos de artefacto
-└── 1784895385789-AddBuildRunVersionColumn.ts        # Migración 4: Columna de versión en ejecuciones
+├── 1784818513497-RemoveSelfHealingArtifactType.ts    # Migración 3: Ajuste de tipos de artefacto
+├── 1784895385789-AddBuildRunVersionColumn.ts         # Migración 4: Columna de versión en ejecuciones
+└── 1785356773922-RemoveUnusedBuildRunArtifactTypes.ts # Migración 5: Retirada segura de valores sin productor
 ```
 
 ---

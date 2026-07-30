@@ -13,7 +13,7 @@ export class EvidenceArtifactDto {
   id!: string;
 
   @ApiProperty({
-    example: 'BUILD_LOG',
+    example: 'REPORT_JSON',
   })
   type!: string;
 
