@@ -19,6 +19,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { DockusThrottlerGuard } from './shared/infrastructure/security/dockus-throttler.guard';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
+import type { CorsOptions } from 'cors';
 
 /**
  * Opciones para adaptar la inicialización al contexto de ejecución (ej. entorno de tests E2E vs producción).
@@ -120,7 +121,7 @@ export function applyAppBootstrap(
     );
   }
 
-  app.enableCors({
+  const corsOptions: CorsOptions = {
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
@@ -129,7 +130,8 @@ export function applyAppBootstrap(
       callback(new Error(`Origin ${origin} no permitida por CORS.`), false);
     },
     credentials: true,
-  });
+  };
+  app.enableCors(corsOptions);
 
   if (enableShutdownHooks) {
     app.enableShutdownHooks();

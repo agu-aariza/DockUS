@@ -28,7 +28,11 @@ const SAFE_CORRELATION_ID = /^[A-Za-z0-9._-]+$/;
  * @returns ID de correlación válido (existente sanitizado o un nuevo UUID v4).
  */
 export function resolveCorrelationId(headerValue: unknown): string {
-  const candidate = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+  // `Array.isArray` narrows `unknown` a `any[]` (lib.es5.d.ts), no a
+  // `unknown[]`; se recupera el tipo explícitamente antes de indexar.
+  const candidate: unknown = Array.isArray(headerValue)
+    ? (headerValue as unknown[])[0]
+    : headerValue;
 
   if (
     typeof candidate === 'string' &&

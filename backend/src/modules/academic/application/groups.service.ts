@@ -29,7 +29,7 @@ export class GroupsService {
     private readonly groupEnrollmentEventsService: GroupEnrollmentEventsService,
   ) {}
 
-  async list(): Promise<any[]> {
+  async list(): Promise<Array<CourseGroup & { studentCount: number }>> {
     const groups = await this.groupsRepository.findAllOrderedByCreatedAtDesc();
 
     if (groups.length === 0) {

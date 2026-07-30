@@ -33,9 +33,14 @@ export default tseslint.config(
       ],
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
-      '@typescript-eslint/no-unsafe-assignment': 'warn',
-      '@typescript-eslint/no-unsafe-call': 'warn',
-      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      // 'error' en código de producción: sí detectan fugas reales de `any`.
+      // Se desactivan en *.spec.ts (ver override más abajo) porque ahí el
+      // 99% del ruido no es riesgo real sino que `globals.jest` registra
+      // jest/describe/it/expect como globals sin tipar para el linter
+      // type-aware, y cada jest.fn()/expect(...) se lee como "any".
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-call': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
       '@typescript-eslint/no-unsafe-return': 'warn',
       '@typescript-eslint/require-await': 'warn',
       '@typescript-eslint/no-redundant-type-constituents': 'warn',
@@ -45,9 +50,20 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.spec.ts'],
+    files: [
+      '**/*.spec.ts',
+      '**/*.e2e-spec.ts',
+      'src/test-support/**/*.ts',
+    ],
     rules: {
       '@typescript-eslint/unbound-method': 'off',
+      // Mismo motivo que arriba: sin tipos de @types/jest resueltos por el
+      // linter type-aware, cada llamada a la API de Jest (jest.fn(),
+      // expect(...).toHaveBeenCalledWith(...), etc.) dispara estas reglas
+      // sin que exista un `any` real que corregir en el test.
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
     },
   },
   {

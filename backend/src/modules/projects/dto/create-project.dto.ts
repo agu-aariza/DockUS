@@ -83,7 +83,11 @@ export class RubricWeightsSumTo100Constraint implements ValidatorConstraintInter
     if (!Array.isArray(value) || value.length === 0) {
       return true;
     }
-    const total = value.reduce((sum, criterion) => {
+    // `Array.isArray` narrows a `unknown` a `any[]` (típico de lib.es5.d.ts),
+    // no a `unknown[]`; se recupera la ausencia de `any` explícitamente antes
+    // de reducir, para no perder la comprobación de tipos del resto del cuerpo.
+    const criteria: unknown[] = value;
+    const total = criteria.reduce((sum: number, criterion) => {
       const weight = (criterion as RubricCriterionDto)?.weight;
       return sum + (typeof weight === 'number' ? weight : 0);
     }, 0);

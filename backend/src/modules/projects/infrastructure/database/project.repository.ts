@@ -118,7 +118,8 @@ export class ProjectRepository implements IProjectRepository {
       .skip((page - 1) * limit)
       .take(limit);
 
-    const { entities, raw } = await queryBuilder.getRawAndEntities();
+    const { entities, raw } =
+      await queryBuilder.getRawAndEntities<Record<string, unknown>>();
     const projects = entities.map((project, index) => {
       project.assignmentCount = Number(raw[index]?.assignmentCount ?? 0);
       return project;
