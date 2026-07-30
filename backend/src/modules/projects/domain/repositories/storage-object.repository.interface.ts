@@ -14,7 +14,7 @@ import type { StorageSortField } from '../../storage/dto/list-storage-objects-qu
 import type { SortOrder } from '../../../../shared/dto/paginated-query.dto';
 
 /**
- * Puerto real (audit/areas/arquitectura/plan_accion.md P2-6): sin puerto
+ * Puerto real (ARQ-007 P2-6): sin puerto
  * previo — diseñado desde cero auditando los 5 consumidores reales que
  * inyectaban el repositorio TypeORM crudo fuera de
  * `project-operational-issues.service.ts` (excepción documentada, misma

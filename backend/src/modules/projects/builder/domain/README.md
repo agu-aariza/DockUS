@@ -17,6 +17,8 @@ Definir las reglas de negocio puras del motor de ejecución sin acoplamiento a i
 .
 ├── ai/                        # Subdominio de parsers y utilidades de IA
 ├── entities/                  # Entidades puras del builder
+├── ports/                     # Puertos externos del builder
+├── repositories/               # Puertos de persistencia de BuildRun y agregados del builder
 ├── builder-config.provider.ts # Proveedor de configuración del builder
 ├── builder.constants.ts       # Constantes del ciclo de vida de ejecuciones
 ├── builder.types.ts           # Tipos de datos e interfaces del builder

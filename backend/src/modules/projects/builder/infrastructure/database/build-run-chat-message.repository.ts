@@ -8,7 +8,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BuildRunChatMessage } from '../../builder/domain/entities/build-run-chat-message.entity';
+import { BuildRunChatMessage } from '../../domain/entities/build-run-chat-message.entity';
 import {
   IBuildRunChatMessageRepository,
   NewBuildRunChatMessageData,

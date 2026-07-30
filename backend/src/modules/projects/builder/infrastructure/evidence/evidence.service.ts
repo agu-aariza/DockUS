@@ -5,15 +5,15 @@
  */
 
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import type { IObjectStorage } from '../../../domain/ports/object-storage.port';
-import { OBJECT_STORAGE } from '../../../domain/ports/object-storage.port';
+import type { IObjectStorage } from '../../domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../../domain/ports/object-storage.port';
 import { EvidenceArtifactPublic } from '../../domain/builder.types';
 import {
   BuildRunArtifact,
   BuildRunArtifactType,
 } from '../../domain/entities/build-run-artifact.entity';
-import type { IBuildRunArtifactRepository } from '../../../domain/repositories/build-run-artifact.repository.interface';
-import { BUILD_RUN_ARTIFACT_REPOSITORY } from '../../../domain/repositories/build-run-artifact.repository.interface';
+import type { IBuildRunArtifactRepository } from '../../domain/repositories/build-run-artifact.repository.interface';
+import { BUILD_RUN_ARTIFACT_REPOSITORY } from '../../domain/repositories/build-run-artifact.repository.interface';
 import { toSha256Hex } from '../../../../../shared/utils/hash.util';
 
 @Injectable()

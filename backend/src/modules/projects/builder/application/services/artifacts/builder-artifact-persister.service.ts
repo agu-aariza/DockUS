@@ -16,8 +16,8 @@ import {
   EvidenceArtifactPublic,
 } from '../../../domain/builder.types';
 import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
-import type { ICodeQualityFindingRepository } from '../../../../domain/repositories/code-quality-finding.repository.interface';
-import { CODE_QUALITY_FINDING_REPOSITORY } from '../../../../domain/repositories/code-quality-finding.repository.interface';
+import type { ICodeQualityFindingRepository } from '../../../domain/repositories/code-quality-finding.repository.interface';
+import { CODE_QUALITY_FINDING_REPOSITORY } from '../../../domain/repositories/code-quality-finding.repository.interface';
 import { EvidenceService } from '../../../infrastructure/evidence/evidence.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
 

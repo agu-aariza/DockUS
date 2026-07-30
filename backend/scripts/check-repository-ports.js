@@ -2,7 +2,7 @@
 /**
  * Impide nuevas inyecciones directas de Repository<T> para las entidades que
  * ya tienen puerto real, fuera de sus adaptadores (ARQ-017,
- * audit/areas/arquitectura/reports/findings.md y plan_accion.md Fase 2).
+ * ARQ-017 y el cierre de la Fase 2).
  *
  * Trece agregados tienen puerto real hoy: los seis de la Fase 2 principal
  * (`Project`/`Delivery`/`ProjectAssignment`/`BuildRun`/`User`/`StorageObject`,
@@ -42,7 +42,7 @@ const RULES = [
   {
     entity: 'BuildRun',
     pattern: /@InjectRepository\(BuildRun\)/,
-    adapter: 'modules/projects/infrastructure/database/build-run.repository.ts',
+    adapter: 'modules/projects/builder/infrastructure/database/build-run.repository.ts',
     // P2-4 (plan_accion.md) migró los 6 consumidores reales a
     // BUILD_RUN_REPOSITORY. Sin excepciones: ni demo-seed ni el diagnóstico
     // admin tocan BuildRun.
@@ -115,7 +115,7 @@ const RULES = [
     entity: 'CodeQualityFindingEntity',
     pattern: /@InjectRepository\(CodeQualityFindingEntity\)/,
     adapter:
-      'modules/projects/infrastructure/database/code-quality-finding.repository.ts',
+      'modules/projects/builder/infrastructure/database/code-quality-finding.repository.ts',
     // P2-7 (plan_accion.md) migró los 2 consumidores reales a
     // CODE_QUALITY_FINDING_REPOSITORY. Sin excepciones.
     allowed: [],
@@ -124,7 +124,7 @@ const RULES = [
     entity: 'BuildRunArtifact',
     pattern: /@InjectRepository\(BuildRunArtifact\)/,
     adapter:
-      'modules/projects/infrastructure/database/build-run-artifact.repository.ts',
+      'modules/projects/builder/infrastructure/database/build-run-artifact.repository.ts',
     // P2-7 migró los 2 consumidores reales a BUILD_RUN_ARTIFACT_REPOSITORY.
     // Sin excepciones.
     allowed: [],
@@ -133,7 +133,7 @@ const RULES = [
     entity: 'BuildRunChatMessage',
     pattern: /@InjectRepository\(BuildRunChatMessage\)/,
     adapter:
-      'modules/projects/infrastructure/database/build-run-chat-message.repository.ts',
+      'modules/projects/builder/infrastructure/database/build-run-chat-message.repository.ts',
     // P2-7 migró el único consumidor real a
     // BUILD_RUN_CHAT_MESSAGE_REPOSITORY. Sin excepciones.
     allowed: [],
@@ -142,7 +142,7 @@ const RULES = [
     entity: 'BuildRunEventEntity',
     pattern: /@InjectRepository\(BuildRunEventEntity\)/,
     adapter:
-      'modules/projects/infrastructure/database/build-run-event.repository.ts',
+      'modules/projects/builder/infrastructure/database/build-run-event.repository.ts',
     // P2-7 migró el único consumidor real (BuilderRunEventsService, vive en
     // infrastructure/events/ pero es agregado de dominio, mismo criterio que
     // BuildRun en P2-4) a BUILD_RUN_EVENT_REPOSITORY. Sin excepciones.
@@ -152,7 +152,7 @@ const RULES = [
     entity: 'LlmConfiguration',
     pattern: /@InjectRepository\(LlmConfiguration\)/,
     adapter:
-      'modules/projects/infrastructure/database/llm-configuration.repository.ts',
+      'modules/projects/builder/infrastructure/database/llm-configuration.repository.ts',
     // P2-7 migró el único consumidor real a LLM_CONFIGURATION_REPOSITORY.
     // Sin excepciones.
     allowed: [],
@@ -222,7 +222,7 @@ if (violations.length > 0) {
       'COURSE_GROUP_REPOSITORY / GROUP_ENROLLMENT_REPOSITORY, ver ' +
       'domain/repositories/*.repository.interface.ts) en vez de @InjectRepository directo. ' +
       'Si el fichero ya está cubierto por el plan de migración (Fase 2 de ' +
-      'audit/areas/arquitectura/plan_accion.md), añádelo a `allowed` en este script con su ID.',
+      'ARQ-017), añádelo a `allowed` en este script con su ID.',
   );
   process.exit(1);
 }

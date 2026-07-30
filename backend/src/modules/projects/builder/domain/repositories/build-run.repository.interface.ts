@@ -4,12 +4,12 @@
  * @module build-run.repository.interface
  */
 
-import type { AuthenticatedUser } from '../../../auth/interfaces/authenticated-user.interface';
+import type { AuthenticatedUser } from '../../../../auth/interfaces/authenticated-user.interface';
 import {
   BuildRun,
   BuildRunStatus,
-} from '../../builder/domain/entities/build-run.entity';
-import type { SortOrder } from '../../../../shared/dto/paginated-query.dto';
+} from '../entities/build-run.entity';
+import type { SortOrder } from '../../../../../shared/dto/paginated-query.dto';
 
 /**
  * Puerto real (audit/04 ARQ-007): sin tipos de TypeORM en la firma. La
@@ -18,9 +18,9 @@ import type { SortOrder } from '../../../../shared/dto/paginated-query.dto';
  * gasto escribían SQL-builder de TypeORM "contra la interfaz" en vez de
  * expresar intención. Cada método de aquí corresponde 1:1 a un UPDATE
  * condicionado o SELECT que ya existía — es una mudanza mecánica a
- * `infrastructure/database/build-run.repository.ts`, no un cambio de SQL.
+ * `builder/infrastructure/database/build-run.repository.ts`, no un cambio de SQL.
  *
- * Ampliado en la Fase 2 P2-4 (`audit/areas/arquitectura/plan_accion.md`) para
+ * Ampliado en la Fase 2 P2-4 (`ARQ-007`) para
  * cubrir los 6 consumidores reales que hasta entonces inyectaban
  * `Repository<BuildRun>` directo.
  */

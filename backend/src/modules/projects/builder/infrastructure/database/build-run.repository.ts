@@ -7,11 +7,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import type { AuthenticatedUser } from '../../../auth/interfaces/authenticated-user.interface';
+import type { AuthenticatedUser } from '../../../../auth/interfaces/authenticated-user.interface';
 import {
   BuildRun,
   BuildRunStatus,
-} from '../../builder/domain/entities/build-run.entity';
+} from '../../domain/entities/build-run.entity';
 import {
   BuildRunListPage,
   BuildRunListQuery,

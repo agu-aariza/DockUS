@@ -22,8 +22,8 @@ import type { IProjectRepository } from './domain/repositories/project.repositor
 import { PROJECT_REPOSITORY } from './domain/repositories/project.repository.interface';
 import type { IProjectAssignmentRepository } from './domain/repositories/project-assignment.repository.interface';
 import { PROJECT_ASSIGNMENT_REPOSITORY } from './domain/repositories/project-assignment.repository.interface';
-import type { IBuildRunRepository } from './domain/repositories/build-run.repository.interface';
-import { BUILD_RUN_REPOSITORY } from './domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from './builder/domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from './builder/domain/repositories/build-run.repository.interface';
 
 @Injectable()
 export class ProjectGradebookService {

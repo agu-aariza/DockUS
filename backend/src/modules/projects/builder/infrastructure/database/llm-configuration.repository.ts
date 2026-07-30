@@ -8,7 +8,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { LlmConfiguration } from '../../builder/domain/entities/llm-configuration.entity';
+import { LlmConfiguration } from '../../domain/entities/llm-configuration.entity';
 import {
   ILlmConfigurationRepository,
   NewLlmConfigurationData,

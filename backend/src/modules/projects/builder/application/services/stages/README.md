@@ -16,7 +16,6 @@ Implementar los pasos individuales y aislados del flujo de trabajo de evaluació
 ```text
 .
 ├── builder-execution-log-batcher.ts # Agrupador y emisor en lote de logs de ejecución
-├── builder-stage.interface.ts         # Interface común de las etapas del pipeline
 ├── compile-stage.handler.ts           # Etapa de compilación del código fuente
 ├── evaluation-stage.handler.ts        # Etapa de evaluación pedagógica y rúbricas
 ├── execution-stage.handler.ts         # Etapa de ejecución de pruebas en contenedor Docker

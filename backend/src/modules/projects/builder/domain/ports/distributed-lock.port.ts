@@ -6,7 +6,7 @@
 
 /**
  * Plan de arquitectura hexagonal, Fase 1 (P1-4, ver
- * audit/areas/arquitectura/plan_accion.md). Redefine `LockOptions`/
+ * ARQ-007). Redefine `LockOptions`/
  * `LockOutcome<T>` en vez de reutilizar los de `distributed-lock.service.ts`:
  * ese fichero no es un módulo puro de tipos (clase `@Injectable`), así que no
  * calificaría para la excepción de `.dependency-cruiser.cjs` — mismo criterio

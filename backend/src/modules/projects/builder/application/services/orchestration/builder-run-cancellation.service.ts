@@ -15,8 +15,8 @@
  */
 
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
-import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import type { IDistributedCache } from '../../../domain/ports/distributed-cache.port';
 import { DISTRIBUTED_CACHE } from '../../../domain/ports/distributed-cache.port';

@@ -31,7 +31,7 @@ import { ProjectAssignment } from './assignments/entities/project-assignment.ent
 import {
   BUILD_RUN_REPOSITORY,
   type IBuildRunRepository,
-} from './domain/repositories/build-run.repository.interface';
+} from './builder/domain/repositories/build-run.repository.interface';
 import {
   DELIVERY_REPOSITORY,
   type IDeliveryRepository,

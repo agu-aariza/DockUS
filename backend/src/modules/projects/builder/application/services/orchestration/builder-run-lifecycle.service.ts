@@ -16,8 +16,8 @@
 
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OptimisticLockVersionMismatchError } from 'typeorm';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
-import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
 import { BuildRun, BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import { BuilderStudentStage } from '../../../domain/builder.types';
 import { DeliveryStatus } from '../../../../deliveries/entities/delivery.entity';

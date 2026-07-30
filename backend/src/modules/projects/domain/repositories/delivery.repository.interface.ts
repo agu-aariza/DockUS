@@ -13,7 +13,7 @@ import type { DeliverySortField } from '../../deliveries/dto/list-deliveries-que
 import type { SortOrder } from '../../../../shared/dto/paginated-query.dto';
 
 /**
- * Puerto real (audit/areas/arquitectura/plan_accion.md P2-1): mismo criterio
+ * Puerto real (ARQ-007 P2-1): mismo criterio
  * que ARQ-007 aplicó a `IProjectRepository`/`IBuildRunRepository` — sin tipos
  * de TypeORM en la firma (nada de `SelectQueryBuilder`/`FindOneOptions`/
  * `Repository`).

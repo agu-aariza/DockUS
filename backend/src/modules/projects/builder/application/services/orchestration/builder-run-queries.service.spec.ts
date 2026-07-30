@@ -5,7 +5,7 @@ import { buildActor } from '../../../../../../test-support/domain-builders';
 import { EvidenceArtifactPublic } from '../../../domain/builder.types';
 import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
 import { BuilderRunEventsService } from '../../../infrastructure/events/builder-run-events.service';
 import { EvidenceService } from '../../../infrastructure/evidence/evidence.service';
 import { BuilderAccessService } from '../workspace/builder-access.service';
@@ -162,7 +162,7 @@ describe('BuilderRunQueriesService', () => {
 
     // HIGH-09: el scoping por actor (STUDENT/TEACHER/ADMIN) vive ahora en
     // BuildRunRepository.findLatestByDeliveryIdsForActor — ver
-    // infrastructure/database/build-run-actor-scope.util.spec.ts.
+    // builder/infrastructure/database/build-run-actor-scope.util.spec.ts.
   });
 
   describe('streamRunEvents', () => {

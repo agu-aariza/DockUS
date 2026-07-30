@@ -5,7 +5,6 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { IBuilderStageHandler } from './builder-stage.interface';
 import { BuilderLlmEvaluatorService } from '../ai/builder-llm-evaluator.service';
 import { BuilderArtifactPersister } from '../artifacts/builder-artifact-persister.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
@@ -30,10 +29,7 @@ interface PlanStageOutput {
 }
 
 @Injectable()
-export class BuilderPlanStageHandler implements IBuilderStageHandler<
-  PlanStageInput,
-  PlanStageOutput
-> {
+export class BuilderPlanStageHandler {
   constructor(
     private readonly builderLlmEvaluatorService: BuilderLlmEvaluatorService,
     private readonly builderArtifactPersister: BuilderArtifactPersister,

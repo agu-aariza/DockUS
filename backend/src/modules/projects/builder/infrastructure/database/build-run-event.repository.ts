@@ -8,7 +8,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BuildRunEventEntity } from '../../builder/domain/entities/build-run-event.entity';
+import { BuildRunEventEntity } from '../../domain/entities/build-run-event.entity';
 import {
   IBuildRunEventRepository,
   NewBuildRunEventData,

@@ -7,9 +7,9 @@ import {
 import { ILlmGenerationService } from '../../../../../../shared/infrastructure/ai/llm-generation.token';
 import { MinioStorageService } from '../../../../../../shared/infrastructure/storage/minio-storage.service';
 import { ConfigService } from '@nestjs/config';
-import type { IBuildRunChatMessageRepository } from '../../../../domain/repositories/build-run-chat-message.repository.interface';
-import type { IBuildRunArtifactRepository } from '../../../../domain/repositories/build-run-artifact.repository.interface';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunChatMessageRepository } from '../../../domain/repositories/build-run-chat-message.repository.interface';
+import type { IBuildRunArtifactRepository } from '../../../domain/repositories/build-run-artifact.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
 import {
   BadRequestException,
   ForbiddenException,

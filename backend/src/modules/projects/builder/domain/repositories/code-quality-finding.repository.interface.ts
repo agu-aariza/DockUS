@@ -5,10 +5,10 @@
  * @module code-quality-finding.repository.interface
  */
 
-import { CodeQualityFindingEntity } from '../../builder/domain/entities/code-quality-finding.entity';
+import { CodeQualityFindingEntity } from '../entities/code-quality-finding.entity';
 
 /**
- * Puerto real (audit/areas/arquitectura/plan_accion.md P2-7): sin puerto
+ * Puerto real (ARQ-007 P2-7): sin puerto
  * previo, único consumidor real cada uno de sus dos sitios
  * (`BuilderArtifactPersister`/`BuilderQualityAggregationService`). Mismo
  * criterio que ARQ-007: sin tipos de TypeORM en la firma. Las 3 consultas que

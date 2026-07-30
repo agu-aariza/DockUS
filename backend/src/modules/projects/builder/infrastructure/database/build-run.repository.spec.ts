@@ -1,5 +1,5 @@
 import { BuildRunRepository } from './build-run.repository';
-import { BuildRunStatus } from '../../builder/domain/entities/build-run.entity';
+import { BuildRunStatus } from '../../domain/entities/build-run.entity';
 
 /**
  * audit/04 ARQ-007: la lógica de query-builder que antes vivía (y se

@@ -15,8 +15,8 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Queue } from 'bullmq';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
-import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
 import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
 import {
   BUILDER_JOB_PRIORITY,

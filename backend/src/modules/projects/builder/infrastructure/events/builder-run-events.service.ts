@@ -19,10 +19,10 @@ import {
   BuildRunEventType,
 } from '../../domain/builder.types';
 import { BuildRunEventEntity } from '../../domain/entities/build-run-event.entity';
-import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
-import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
-import type { IBuildRunEventRepository } from '../../../domain/repositories/build-run-event.repository.interface';
-import { BUILD_RUN_EVENT_REPOSITORY } from '../../../domain/repositories/build-run-event.repository.interface';
+import type { IBuildRunRepository } from '../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunEventRepository } from '../../domain/repositories/build-run-event.repository.interface';
+import { BUILD_RUN_EVENT_REPOSITORY } from '../../domain/repositories/build-run-event.repository.interface';
 import { PROCESS_ROLE } from '../../../../../process-role.module';
 import type { ProcessRole } from '../../../../../process-role.module';
 

@@ -14,7 +14,7 @@ import {
 } from './deliveries/entities/delivery.entity';
 import type { IDeliveryRepository } from './domain/repositories/delivery.repository.interface';
 import type { IProjectAssignmentRepository } from './domain/repositories/project-assignment.repository.interface';
-import type { IBuildRunRepository } from './domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from './builder/domain/repositories/build-run.repository.interface';
 import { StudentProfileService } from './student-profile.service';
 
 describe('StudentProfileService', () => {

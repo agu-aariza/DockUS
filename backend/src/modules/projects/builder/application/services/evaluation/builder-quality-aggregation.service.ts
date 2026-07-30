@@ -11,8 +11,8 @@ import {
   CodeQualityCategory,
   CodeQualityFinding,
 } from '../../../domain/builder.types';
-import type { ICodeQualityFindingRepository } from '../../../../domain/repositories/code-quality-finding.repository.interface';
-import { CODE_QUALITY_FINDING_REPOSITORY } from '../../../../domain/repositories/code-quality-finding.repository.interface';
+import type { ICodeQualityFindingRepository } from '../../../domain/repositories/code-quality-finding.repository.interface';
+import { CODE_QUALITY_FINDING_REPOSITORY } from '../../../domain/repositories/code-quality-finding.repository.interface';
 import type { IProjectAssignmentRepository } from '../../../../domain/repositories/project-assignment.repository.interface';
 import { PROJECT_ASSIGNMENT_REPOSITORY } from '../../../../domain/repositories/project-assignment.repository.interface';
 

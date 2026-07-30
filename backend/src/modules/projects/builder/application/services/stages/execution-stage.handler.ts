@@ -5,7 +5,6 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { IBuilderStageHandler } from './builder-stage.interface';
 import type { IContainerRuntime } from '../../../domain/ports/container-runtime.port';
 import { CONTAINER_RUNTIME } from '../../../domain/ports/container-runtime.port';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
@@ -43,10 +42,7 @@ const NOBODY_UID = 65534;
 const NOBODY_GID = 65534;
 
 @Injectable()
-export class BuilderExecutionStageHandler implements IBuilderStageHandler<
-  ExecutionStageInput,
-  ExecutionStageOutput
-> {
+export class BuilderExecutionStageHandler {
   constructor(
     @Inject(CONTAINER_RUNTIME)
     private readonly containerRuntime: IContainerRuntime,

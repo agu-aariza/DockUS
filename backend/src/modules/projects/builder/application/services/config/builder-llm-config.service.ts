@@ -33,8 +33,8 @@ import type {
   LlmProviderId,
 } from '../../../../../../shared/infrastructure/ai/llm.types';
 import { LlmConfiguration } from '../../../domain/entities/llm-configuration.entity';
-import type { ILlmConfigurationRepository } from '../../../../domain/repositories/llm-configuration.repository.interface';
-import { LLM_CONFIGURATION_REPOSITORY } from '../../../../domain/repositories/llm-configuration.repository.interface';
+import type { ILlmConfigurationRepository } from '../../../domain/repositories/llm-configuration.repository.interface';
+import { LLM_CONFIGURATION_REPOSITORY } from '../../../domain/repositories/llm-configuration.repository.interface';
 import {
   BUILDER_LLM_ROLES,
   BuilderLlmRole,

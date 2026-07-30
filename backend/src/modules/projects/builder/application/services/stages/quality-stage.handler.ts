@@ -5,7 +5,6 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { IBuilderStageHandler } from './builder-stage.interface';
 import { BuilderCodeQualityService } from '../ai/builder-code-quality.service';
 import { BuilderArtifactPersister } from '../artifacts/builder-artifact-persister.service';
 import { BuilderRunSupportService } from '../orchestration/builder-run-support.service';
@@ -43,10 +42,7 @@ interface QualityStageOutput {
 }
 
 @Injectable()
-export class BuilderQualityStageHandler implements IBuilderStageHandler<
-  QualityStageInput,
-  QualityStageOutput
-> {
+export class BuilderQualityStageHandler {
   private readonly logger = new Logger(BuilderQualityStageHandler.name);
 
   constructor(

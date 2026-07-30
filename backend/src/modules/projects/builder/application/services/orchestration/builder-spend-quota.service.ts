@@ -10,8 +10,8 @@
 
 import { ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
-import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
 
 /** `0` desactiva el tope, que es el comportamiento histórico. */
 const DEFAULT_PROJECT_QUOTA_USD = 0;

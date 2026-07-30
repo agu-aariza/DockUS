@@ -11,7 +11,7 @@ import { Repository } from 'typeorm';
 import {
   BuildRunArtifact,
   BuildRunArtifactType,
-} from '../../builder/domain/entities/build-run-artifact.entity';
+} from '../../domain/entities/build-run-artifact.entity';
 import {
   IBuildRunArtifactRepository,
   NewBuildRunArtifactData,

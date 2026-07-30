@@ -14,8 +14,8 @@ import {
 } from '@nestjs/common';
 
 import { JobsOptions, Queue } from 'bullmq';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
-import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
 
 import { throwIfUniqueViolation } from '../../../../../../shared/database/unique-violation.util';
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';

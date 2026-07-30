@@ -6,7 +6,7 @@
 
 /**
  * Plan de arquitectura hexagonal, Fase 1 (P1-4, ver
- * audit/areas/arquitectura/plan_accion.md). `RedisClientService` tiene una
+ * ARQ-007). `RedisClientService` tiene una
  * superficie mucho más amplia (rate-limiting, pub/sub, primitivas de lock)
  * pero solo un consumidor real fuera de `shared/infrastructure/` necesita un
  * puerto: `BuilderRunCancellationService`, y solo usa `set`/`exists` — el

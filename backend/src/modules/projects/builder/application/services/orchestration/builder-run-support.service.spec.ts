@@ -1,6 +1,6 @@
 import { BuilderRunSupportService } from './builder-run-support.service';
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
 import { BuilderRunEventsService } from '../../../infrastructure/events/builder-run-events.service';
 
 describe('BuilderRunSupportService', () => {

@@ -5,7 +5,6 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { IBuilderStageHandler } from './builder-stage.interface';
 import {
   BuilderRecipeCompiler,
   CompiledRecipe,
@@ -32,10 +31,7 @@ interface CompileStageOutput {
 }
 
 @Injectable()
-export class BuilderCompileStageHandler implements IBuilderStageHandler<
-  CompileStageInput,
-  CompileStageOutput
-> {
+export class BuilderCompileStageHandler {
   constructor(
     private readonly builderRecipeCompiler: BuilderRecipeCompiler,
     private readonly builderRunSupportService: BuilderRunSupportService,

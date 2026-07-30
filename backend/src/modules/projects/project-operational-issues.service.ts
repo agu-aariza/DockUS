@@ -8,8 +8,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import type { IObjectStorage } from './domain/ports/object-storage.port';
-import { OBJECT_STORAGE } from './domain/ports/object-storage.port';
+import type { IObjectStorage } from './builder/domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from './builder/domain/ports/object-storage.port';
 import { UserRole } from '../users/entities/user.entity';
 import { ProjectAssignment } from './assignments/entities/project-assignment.entity';
 import {

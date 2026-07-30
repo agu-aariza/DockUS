@@ -5,10 +5,10 @@
  * @module build-run-chat-message.repository.interface
  */
 
-import { BuildRunChatMessage } from '../../builder/domain/entities/build-run-chat-message.entity';
+import { BuildRunChatMessage } from '../entities/build-run-chat-message.entity';
 
 /**
- * Puerto real (audit/areas/arquitectura/plan_accion.md P2-7): sin puerto
+ * Puerto real (ARQ-007 P2-7): sin puerto
  * previo, único consumidor real (`BuilderLlmChatService`). Mismo criterio que
  * ARQ-007: sin tipos de TypeORM en la firma.
  */

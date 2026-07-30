@@ -21,7 +21,7 @@ import type { SortOrder } from '../../../../shared/dto/paginated-query.dto';
  *
  * `create`/`save` se habían eliminado originalmente porque `ProjectLifecycleService`
  * —el único que crea/persiste proyectos— bypaseaba el puerto por completo. La
- * Fase 2 (P2-2, `audit/areas/arquitectura/plan_accion.md`) cierra esa brecha:
+ * Fase 2 (P2-2, `ARQ-007`) cierra esa brecha:
  * ahora sí los declara, junto con `softRemove`/`recover`/las mutaciones de la
  * relación `teachers` y `isTeacherAssignedToProject` (la consulta más
  * reutilizada de todo `projects/` — 7 sitios reales la llamaban vía el helper

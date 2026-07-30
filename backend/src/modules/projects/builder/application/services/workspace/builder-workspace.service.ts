@@ -19,8 +19,8 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { RuntimeFile } from '../../../domain/builder.types';
-import type { IObjectStorage } from '../../../../domain/ports/object-storage.port';
-import { OBJECT_STORAGE } from '../../../../domain/ports/object-storage.port';
+import type { IObjectStorage } from '../../../domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../../../domain/ports/object-storage.port';
 import type { IDeliveryRepository } from '../../../../domain/repositories/delivery.repository.interface';
 import { DELIVERY_REPOSITORY } from '../../../../domain/repositories/delivery.repository.interface';
 import type { IStorageObjectRepository } from '../../../../domain/repositories/storage-object.repository.interface';

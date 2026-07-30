@@ -61,7 +61,7 @@ describe('ProjectGradebookService — ESC-CRIT-05: el gradebook no carga columna
     // anterior con `createQueryBuilder`/`find()` expuestos, aquí no hay forma
     // de "volver por accidente" a cargar los jsonb pesados — el tipo del
     // puerto ya lo impide. La lógica de `DISTINCT ON`/filtro por proyecto
-    // vive en `infrastructure/database/build-run.repository.ts`.
+    // vive en `builder/infrastructure/database/build-run.repository.ts`.
     const buildRuns = {
       findLatestOutcomeByProject: jest.fn(() =>
         Promise.resolve([

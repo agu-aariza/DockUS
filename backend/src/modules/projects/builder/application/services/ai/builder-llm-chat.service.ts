@@ -13,19 +13,19 @@ import {
 import { BuildRunChatMessage } from '../../../domain/entities/build-run-chat-message.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
 import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
-import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
-import type { IBuildRunChatMessageRepository } from '../../../../domain/repositories/build-run-chat-message.repository.interface';
-import { BUILD_RUN_CHAT_MESSAGE_REPOSITORY } from '../../../../domain/repositories/build-run-chat-message.repository.interface';
-import type { IBuildRunArtifactRepository } from '../../../../domain/repositories/build-run-artifact.repository.interface';
-import { BUILD_RUN_ARTIFACT_REPOSITORY } from '../../../../domain/repositories/build-run-artifact.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunChatMessageRepository } from '../../../domain/repositories/build-run-chat-message.repository.interface';
+import { BUILD_RUN_CHAT_MESSAGE_REPOSITORY } from '../../../domain/repositories/build-run-chat-message.repository.interface';
+import type { IBuildRunArtifactRepository } from '../../../domain/repositories/build-run-artifact.repository.interface';
+import { BUILD_RUN_ARTIFACT_REPOSITORY } from '../../../domain/repositories/build-run-artifact.repository.interface';
 import { BuilderLlmDispatcherService } from './builder-llm-dispatcher.service';
 import {
   PromptRegistryService,
   PromptId,
 } from '../../../../../../shared/infrastructure/ai/prompt-registry.service';
-import type { IObjectStorage } from '../../../../domain/ports/object-storage.port';
-import { OBJECT_STORAGE } from '../../../../domain/ports/object-storage.port';
+import type { IObjectStorage } from '../../../domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../../../domain/ports/object-storage.port';
 import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
 import { BuilderRunCostService } from './builder-run-cost.service';
 import { BuilderStageTokenUsage } from '../../../domain/builder.types';

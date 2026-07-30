@@ -8,7 +8,7 @@ import type { Readable } from 'stream';
 
 /**
  * Plan de arquitectura hexagonal, Fase 1 (P1-2, ver
- * audit/areas/arquitectura/plan_accion.md). Cubre la superficie pública
+ * ARQ-007). Cubre la superficie pública
  * completa de `MinioStorageService` salvo `onModuleInit` (hook de ciclo de
  * vida, no forma parte del contrato de negocio) — auditado con grep contra
  * los 7 consumidores reales antes de diseñar: entre todos usan los 7 métodos.

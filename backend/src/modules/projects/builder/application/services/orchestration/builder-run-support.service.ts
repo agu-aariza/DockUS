@@ -11,8 +11,8 @@ import {
   BuildRunEventType,
   BuilderStudentStage,
 } from '../../../domain/builder.types';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
-import { BUILD_RUN_REPOSITORY } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
+import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
 import { BuilderRunEventsService } from '../../../infrastructure/events/builder-run-events.service';
 import { toErrorMessage as extractErrorMessage } from '../../../../../../shared/utils/error-message.util';
 

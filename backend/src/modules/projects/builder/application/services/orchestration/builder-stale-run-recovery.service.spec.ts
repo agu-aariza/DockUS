@@ -5,7 +5,7 @@ import { ProcessRole } from '../../../../../../process-role.module';
  * Doble del puerto (ARQ-007): las tres queries de este servicio
  * (failStaleRunning/findStaleQueued/failIfStillQueued) ahora viven en
  * BuildRunRepository, con su propia cobertura de SQL en
- * infrastructure/database/build-run.repository.spec.ts. Aquí solo se cubre
+ * builder/infrastructure/database/build-run.repository.spec.ts. Aquí solo se cubre
  * la orquestación: qué método se llama, con qué argumentos, y cómo se
  * comporta el barrido ante los resultados de la cola.
  */

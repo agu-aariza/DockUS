@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SecretCipherService } from '../../../../../../shared/infrastructure/security/secret-cipher.service';
 import { LlmConfiguration } from '../../../domain/entities/llm-configuration.entity';
-import type { ILlmConfigurationRepository } from '../../../../domain/repositories/llm-configuration.repository.interface';
+import type { ILlmConfigurationRepository } from '../../../domain/repositories/llm-configuration.repository.interface';
 import { BuilderLlmConfigService } from './builder-llm-config.service';
 
 describe('BuilderLlmConfigService', () => {

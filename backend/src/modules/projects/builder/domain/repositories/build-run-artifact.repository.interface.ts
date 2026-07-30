@@ -8,10 +8,10 @@
 import {
   BuildRunArtifact,
   BuildRunArtifactType,
-} from '../../builder/domain/entities/build-run-artifact.entity';
+} from '../entities/build-run-artifact.entity';
 
 /**
- * Puerto real (audit/areas/arquitectura/plan_accion.md P2-7): sin puerto
+ * Puerto real (ARQ-007 P2-7): sin puerto
  * previo, 2 consumidores reales (`EvidenceService`/`BuilderLlmChatService`).
  * Mismo criterio que ARQ-007: sin tipos de TypeORM en la firma.
  */

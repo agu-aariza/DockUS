@@ -12,8 +12,8 @@
  * @module BuildRunActorScopeUtilSpec
  */
 
-import { buildActor } from '../../../../test-support/domain-builders';
-import { UserRole } from '../../../users/entities/user.entity';
+import { buildActor } from '../../../../../test-support/domain-builders';
+import { UserRole } from '../../../../users/entities/user.entity';
 import { applyBuildRunActorScope } from './build-run-actor-scope.util';
 
 const buildQueryBuilder = () => {

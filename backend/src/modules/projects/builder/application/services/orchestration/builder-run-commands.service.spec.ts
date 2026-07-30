@@ -7,7 +7,7 @@ import { BuilderRunSupportService } from './builder-run-support.service';
 import { BuilderAccessService } from '../workspace/builder-access.service';
 import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
 import { BuilderRunCancellationService } from './builder-run-cancellation.service';
-import type { IBuildRunRepository } from '../../../../domain/repositories/build-run.repository.interface';
+import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
 import {
   BuildRun,
   BuildRunStatus,

@@ -18,9 +18,9 @@
  */
 
 import { Repository } from 'typeorm';
-import type { AuthenticatedUser } from '../../../auth/interfaces/authenticated-user.interface';
-import { UserRole } from '../../../users/entities/user.entity';
-import { BuildRun } from '../../builder/domain/entities/build-run.entity';
+import type { AuthenticatedUser } from '../../../../auth/interfaces/authenticated-user.interface';
+import { UserRole } from '../../../../users/entities/user.entity';
+import { BuildRun } from '../../domain/entities/build-run.entity';
 
 export function applyBuildRunActorScope(
   queryBuilder: ReturnType<Repository<BuildRun>['createQueryBuilder']>,

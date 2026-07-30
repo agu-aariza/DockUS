@@ -5,11 +5,11 @@
  * @module build-run-event.repository.interface
  */
 
-import { BuildRunEventEntity } from '../../builder/domain/entities/build-run-event.entity';
-import type { BuildRunEventType } from '../../builder/domain/builder.types';
+import { BuildRunEventEntity } from '../entities/build-run-event.entity';
+import type { BuildRunEventType } from '../builder.types';
 
 /**
- * Puerto real (audit/areas/arquitectura/plan_accion.md P2-7): sin puerto
+ * Puerto real (ARQ-007 P2-7): sin puerto
  * previo, único consumidor real (`BuilderRunEventsService`). Este servicio
  * vive en `infrastructure/events/` pero se migra igualmente, mismo criterio
  * que `BuildRun` en P2-4: `BuildRunEventEntity` es un agregado de dominio (el

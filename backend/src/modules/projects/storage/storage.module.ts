@@ -19,7 +19,7 @@ import { StorageService } from './storage.service';
 import { StorageUploadService } from './storage-upload.service';
 import { StorageInfrastructureModule } from '../../../shared/infrastructure/storage/storage-infrastructure.module';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
-import { OBJECT_STORAGE } from '../domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../builder/domain/ports/object-storage.port';
 import { StorageObjectRepository } from '../infrastructure/database/storage-object.repository';
 import { STORAGE_OBJECT_REPOSITORY } from '../domain/repositories/storage-object.repository.interface';
 import { DeliveryStatusModule } from '../deliveries/delivery-status.module';

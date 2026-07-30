@@ -15,8 +15,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
-import type { IObjectStorage } from '../domain/ports/object-storage.port';
-import { OBJECT_STORAGE } from '../domain/ports/object-storage.port';
+import type { IObjectStorage } from '../builder/domain/ports/object-storage.port';
+import { OBJECT_STORAGE } from '../builder/domain/ports/object-storage.port';
 import type { IStorageObjectRepository } from '../domain/repositories/storage-object.repository.interface';
 import { STORAGE_OBJECT_REPOSITORY } from '../domain/repositories/storage-object.repository.interface';
 import { CreateStorageObjectDto } from './dto/create-storage-object.dto';

@@ -6,7 +6,7 @@
  *   él) es idéntica para el proyecto en sí y para su suite docente. Vivía
  *   duplicada en `ProjectAccessService` y `StorageAccessService`; aquí queda
  *   como función pura reutilizable, sin acoplar ambos servicios entre sí.
- * - Hasta la Fase 2 P2-2 (`audit/areas/arquitectura/plan_accion.md`) este
+ * - Hasta la Fase 2 P2-2 (`ARQ-007`) este
  *   fichero también declaraba `isTeacherAssignedToProject(Repository<Project>, ...)`,
  *   la consulta más reutilizada de `projects/` (7 sitios). Ahora vive como
  *   método del puerto (`IProjectRepository.isTeacherAssignedToProject`) y los

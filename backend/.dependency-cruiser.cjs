@@ -46,7 +46,7 @@ module.exports = {
         'ARQ-019). The former narrow exception for domain/ai/parsers/plan-contract.parser.ts (audit/04 ARQ-002, ' +
         'then tracked as ARQ-018 in a later pass) was closed by moving the offending import (toPosixPath) to ' +
         'shared/utils/path.util.ts — the parser no longer imports from /infrastructure/ at all, so this rule ' +
-        'now applies to it with no carve-out. See audit/areas/arquitectura/plan_accion.md P0-1. ' +
+        'now applies to it with no carve-out. See ARQ-018/P0-1. ' +
         'docker.types.ts is exempt for the same reason as llm.types.ts (Fase 1, P1-1): zero imports, zero ' +
         'classes, pure type/const module — builder/domain/ports/container-runtime.port.ts imports ' +
         '`DockerRunOptions` from it as `import type` only.',

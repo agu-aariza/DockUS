@@ -8,7 +8,7 @@ import type { DockerRunOptions } from '../../../../../shared/infrastructure/dock
 
 /**
  * Plan de arquitectura hexagonal, Fase 1 (P1-1, ver
- * audit/areas/arquitectura/plan_accion.md). Cubre exactamente los 4 métodos
+ * ARQ-007). Cubre exactamente los 4 métodos
  * que los consumidores reales usan hoy de `DockerExecutionService`/
  * `DockerImageService` — auditado con grep antes de diseñar, no adivinado
  * (el resto de la superficie de esas dos clases, p. ej. redes o contenedores

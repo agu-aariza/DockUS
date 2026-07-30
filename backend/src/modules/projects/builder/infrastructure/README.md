@@ -15,6 +15,7 @@ Conectar la lógica de orquestación del builder con los adaptadores de almacena
 
 ```text
 .
+├── database/ # Adaptadores TypeORM de los repositorios del builder
 ├── events/   # Clases de evento y escuchadores (event listeners)
 ├── evidence/ # Servicios de captura y almacenamiento de evidencias de ejecución
 └── utils/    # Utilidades de ruta y transformación de payloads POSIX

@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 
 import { BuilderQualityAggregationService } from './builder-quality-aggregation.service';
-import type { ICodeQualityFindingRepository } from '../../../../domain/repositories/code-quality-finding.repository.interface';
+import type { ICodeQualityFindingRepository } from '../../../domain/repositories/code-quality-finding.repository.interface';
 import type { IProjectAssignmentRepository } from '../../../../domain/repositories/project-assignment.repository.interface';
 
 describe('BuilderQualityAggregationService', () => {
