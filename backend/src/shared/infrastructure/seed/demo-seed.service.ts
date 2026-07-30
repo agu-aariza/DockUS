@@ -60,6 +60,20 @@ export class DemoSeedService implements OnApplicationBootstrap {
       return;
     }
 
+    // INF-001: guardarraíl de producción, mismo patrón que
+    // `DockerHostService.assertDockerAvailable` — un `SEED_DEMO_DATA=true`
+    // filtrado a producción (p. ej. por copiar un `.env` de desarrollo) no
+    // debe crear usuarios con contraseña conocida en silencio.
+    if (this.configService.get<string>('NODE_ENV') === 'production') {
+      this.logger.error(
+        'SEED_DEMO_DATA esta activo con NODE_ENV=production: seed de demo bloqueado. ' +
+          'No se ha creado ningun usuario. Retire SEED_DEMO_DATA del entorno de produccion.',
+        undefined,
+        DemoSeedService.name,
+      );
+      return;
+    }
+
     await this.seedDemoWorkspace();
   }
 

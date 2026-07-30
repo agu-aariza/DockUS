@@ -114,6 +114,16 @@ export const envValidationSchema = Joi.object({
   LLM_CIRCUIT_BREAKER_COOLDOWN_SECONDS: Joi.number().min(1).default(120),
   SEED_ADMIN_EMAIL: Joi.string().email().optional(),
   SEED_ADMIN_PASSWORD: Joi.string().optional(),
+  // Seed de demo (INF-001): nunca debe activarse en producción —
+  // `DemoSeedService` rechaza sembrar si `NODE_ENV=production` sin importar
+  // este flag. Declarado aquí para que deje de ser una variable invisible al
+  // esquema fail-fast, no porque el esquema por sí solo la bloquee.
+  // String, no boolean: `DemoSeedService` acepta "1"/"true"/"yes"/"on" vía su
+  // propio `isEnabled()`, más permisivo que la coerción estricta de
+  // `Joi.boolean()` — declararla boolean aquí rechazaría en el arranque un
+  // valor como "yes" que el propio servicio sí entiende.
+  SEED_DEMO_DATA: Joi.string().optional(),
+  SEED_DEMO_PASSWORD: Joi.string().optional(),
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().default(6379),
   REDIS_PASSWORD: Joi.string().allow('').optional(),

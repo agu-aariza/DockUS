@@ -24,6 +24,7 @@
  */
 
 import type { ExecutionContext } from '@nestjs/common';
+import { createHash } from 'crypto';
 
 interface ThrottlerRequestLike {
   ip?: string;
@@ -71,6 +72,38 @@ function readEmail(req: ThrottlerRequestLike): string | null {
   return value.trim().toLowerCase();
 }
 
+function readRefreshToken(req: ThrottlerRequestLike): string | null {
+  const body = req.body;
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
+  const value = (body as Record<string, unknown>).refreshToken;
+  if (typeof value !== 'string' || value.trim() === '') {
+    return null;
+  }
+  return value.trim();
+}
+
+/**
+ * Cuenta por el propio refresh token (hasheado, nunca en claro en la clave de
+ * Redis). `/auth/refresh` no trae `email` en el body (INF-002), así que
+ * `auth-identity` nunca se activa ahí — sin este cubo, `/refresh` corría solo
+ * con `global`/`burst` relajados, sin ninguna protección por identidad. No se
+ * decodifica/verifica el JWT: eso añadiría una verificación de firma previa al
+ * guard (superficie nueva) para un beneficio marginal, ya que un refresh token
+ * es un secreto de alta entropía, no una contraseña adivinable — lo que
+ * interesa frenar es la reutilización repetida de un token concreto (robado o
+ * replay), no una enumeración (criptográficamente inviable de todos modos).
+ */
+export function trackByRefreshToken(req: ThrottlerRequestLike): string {
+  const token = readRefreshToken(req);
+  if (token) {
+    return `refresh:${createHash('sha256').update(token).digest('hex')}`;
+  }
+  // Sin refresh token el cubo se salta (véase `skipIf`).
+  return `ip:${resolveClientIp(req)}`;
+}
+
 export function resolveClientIp(req: ThrottlerRequestLike): string {
   return req.ips?.[0] ?? req.ip ?? 'unknown';
 }
@@ -100,6 +133,18 @@ export const throttlerConfig = [
     // resto de rutas no hay nada que contar y el cubo se ignora.
     skipIf: (context: ExecutionContext) =>
       readEmail(requestOf(context)) === null,
+  },
+  {
+    // INF-002: la protección por identidad equivalente a `auth-identity`,
+    // pero para `/auth/refresh`, que no tiene correo en el body y por tanto
+    // nunca activaba aquel cubo.
+    name: 'refresh-identity',
+    ttl: 60_000,
+    limit: 10,
+    getTracker: (req: ThrottlerRequestLike) =>
+      Promise.resolve(trackByRefreshToken(req)),
+    skipIf: (context: ExecutionContext) =>
+      readRefreshToken(requestOf(context)) === null,
   },
 ];
 

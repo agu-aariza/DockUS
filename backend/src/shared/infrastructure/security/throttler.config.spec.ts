@@ -3,6 +3,7 @@ import {
   authThrottleOverrides,
   throttlerConfig,
   trackByAuthIdentity,
+  trackByRefreshToken,
   trackByUserOrIp,
 } from './throttler.config';
 
@@ -73,6 +74,56 @@ describe('throttlerConfig — ESC-C02: conteo por identidad, no por IP', () => {
       expect(trackByAuthIdentity({ ip: '10.0.0.1', body: {} })).toBe(
         'ip:10.0.0.1',
       );
+    });
+  });
+
+  describe('trackByRefreshToken', () => {
+    it('cuenta por el refresh token, no por IP, cuando está presente', () => {
+      const desdeUnaIp = trackByRefreshToken({
+        ip: '10.0.0.1',
+        body: { refreshToken: 'a-refresh-token' },
+      });
+      const desdeOtraIp = trackByRefreshToken({
+        ip: '198.51.100.7',
+        body: { refreshToken: 'a-refresh-token' },
+      });
+
+      expect(desdeUnaIp).toBe(desdeOtraIp);
+      expect(desdeUnaIp).not.toContain('a-refresh-token');
+    });
+
+    it('dos refresh tokens distintos no comparten cuota', () => {
+      const a = trackByRefreshToken({ body: { refreshToken: 'token-a' } });
+      const b = trackByRefreshToken({ body: { refreshToken: 'token-b' } });
+
+      expect(a).not.toBe(b);
+    });
+
+    it('degrada a IP si el cuerpo no trae refreshToken', () => {
+      expect(trackByRefreshToken({ ip: '10.0.0.1', body: {} })).toBe(
+        'ip:10.0.0.1',
+      );
+    });
+  });
+
+  describe('cubo refresh-identity (INF-002)', () => {
+    it('se salta cuando la petición no lleva refreshToken', () => {
+      const skipIf = bucket('refresh-identity').skipIf;
+
+      expect(skipIf?.(contextWith({}))).toBe(true);
+      expect(skipIf?.(contextWith(undefined))).toBe(true);
+    });
+
+    it('interviene cuando la petición lleva refreshToken — antes /auth/refresh no tenía ningún cubo por identidad', () => {
+      const skipIf = bucket('refresh-identity').skipIf;
+
+      expect(skipIf?.(contextWith({ refreshToken: 'a-refresh-token' }))).toBe(
+        false,
+      );
+    });
+
+    it('mantiene un límite estricto equivalente a auth-identity', () => {
+      expect(bucket('refresh-identity').limit).toBeLessThanOrEqual(10);
     });
   });
 
