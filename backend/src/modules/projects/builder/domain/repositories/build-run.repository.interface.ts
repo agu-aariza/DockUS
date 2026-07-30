@@ -5,10 +5,7 @@
  */
 
 import type { AuthenticatedUser } from '../../../../auth/interfaces/authenticated-user.interface';
-import {
-  BuildRun,
-  BuildRunStatus,
-} from '../entities/build-run.entity';
+import { BuildRun, BuildRunStatus } from '../entities/build-run.entity';
 import type { SortOrder } from '../../../../../shared/dto/paginated-query.dto';
 
 /**
@@ -55,6 +52,19 @@ export interface BuildRunListPage {
   total: number;
 }
 
+/** Campos que persiste un `BuildRun` al completar el pipeline con éxito. */
+export interface BuildRunResultPatch {
+  finishedAt: Date;
+  llmAssessment: unknown;
+  llmReasoning: string | null;
+  warnings: string[];
+  codeQualityFindings: unknown;
+  report: unknown;
+  inputTokens: number;
+  outputTokens: number;
+  executionCostUsd: number;
+}
+
 /**
  * Token de inyección tipado (audit/areas/arquitectura ARQ-020, plan_accion.md
  * P0-2). Ver el comentario equivalente en `project.repository.interface.ts`.
@@ -69,15 +79,35 @@ export interface StaleQueuedRunRef {
 export interface IBuildRunRepository {
   findById(id: string): Promise<BuildRun | null>;
 
-  /** Persiste el estado completo de `run` (transición a RUNNING, resultado final). */
-  save(run: BuildRun): Promise<BuildRun>;
-
   /** Crea y persiste un run nuevo en QUEUED. */
   createQueuedRun(input: {
     deliveryId: string;
     triggeredById: string;
     promptVersion: string | null;
   }): Promise<BuildRun>;
+
+  /**
+   * UPDATE condicionado (ORC-001): reclama un run QUEUED y lo pasa a
+   * RUNNING en una única sentencia atómica — reemplaza el antiguo
+   * `findById` + mutar en memoria + `save()`, que dependía de que
+   * `repository.save()` de TypeORM aplicara el optimistic lock del
+   * `@VersionColumn` de forma atómica. Una sonda directa contra Postgres
+   * demostró que no lo hace: un escritor con una entidad obsoleta podía
+   * pisar una cancelación ya confirmada sin lanzar
+   * `OptimisticLockVersionMismatchError`. Devuelve `false` si el run ya no
+   * estaba QUEUED (cancelado, o reclamado por otro worker).
+   */
+  claimQueuedRun(id: string, startedAt: Date): Promise<boolean>;
+
+  /**
+   * UPDATE condicionado (ORC-001): persiste el resultado final del pipeline
+   * solo si el run seguía RUNNING. Devuelve `false` si ya no lo estaba
+   * (cancelado, o marcado FAILED por otra vía) — en ese caso el resultado
+   * calculado se descarta sin reintentar: sea cual sea el motivo por el que
+   * ya no está RUNNING, esa transición ya la decidió otro escritor y no debe
+   * pisarse con un resultado calculado en memoria contra un estado viejo.
+   */
+  completeRunningRun(id: string, patch: BuildRunResultPatch): Promise<boolean>;
 
   /**
    * UPDATE condicionado: cancela solo si sigue QUEUED/RUNNING. Devuelve si
@@ -130,11 +160,15 @@ export interface IBuildRunRepository {
   incrementUsage(id: string, delta: BuildRunUsageDelta): Promise<void>;
 
   /**
-   * UPDATE condicionado: falla el run salvo que ya esté CANCELLED (una
-   * cancelación concurrente no debe pisarse con FAILED). Devuelve si
-   * transicionó.
+   * UPDATE condicionado: falla el run solo si sigue en un estado activo
+   * (QUEUED o RUNNING). Antes (`failIfNotCancelled`) el WHERE era
+   * `status != CANCELLED`, que también dejaba pasar SUCCESS/FAILED — ORC-002
+   * confirmó que un fallo posterior (p. ej. al persistir el evento
+   * RUN_COMPLETED) podía degradar un run ya SUCCESS a FAILED. FAILED es
+   * ahora absorbente igual que SUCCESS y CANCELLED: nunca se sobreescribe un
+   * terminal ya escrito. Devuelve si transicionó.
    */
-  failIfNotCancelled(id: string, reason: string): Promise<boolean>;
+  failIfActive(id: string, reason: string): Promise<boolean>;
 
   /** Runs de una entrega, paginados y opcionalmente filtrados por estado. */
   findPaginatedByDelivery(

@@ -13,7 +13,7 @@ import { GroupEnrollment } from '../../entities/group-enrollment.entity';
  * ARQ-007: sin tipos de TypeORM en la firma. `bulkEnroll` absorbe la
  * transacción completa (lectura + reactivación + inserción con `orIgnore`)
  * que antes vivía en el servicio vía `manager.transaction`, mismo criterio
- * que `IBuildRunRepository.incrementUsage`/`failIfNotCancelled`: exponer
+ * que `IBuildRunRepository.incrementUsage`/`failIfActive`: exponer
  * `EntityManager`/`QueryBuilder` en la firma del puerto habría violado ARQ-007
  * tanto como exponerlos directamente.
  */

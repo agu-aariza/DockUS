@@ -28,14 +28,12 @@ export class BuilderRunSupportService {
     buildRunId: string,
     errorMessage: string,
   ): Promise<void> {
-    // UPDATE condicionado al estado (no lectura-modificacion-escritura): si
-    // cancelRun cancelo este run de forma atomica mientras el pipeline
-    // fallaba en paralelo, este WHERE ya evita pisar esa cancelacion con
-    // FAILED. Incrementa "version" igual que el resto de los UPDATE
-    // condicionados (ARQ-013): sigue siendo mas barato que un save() de la
-    // entidad completa, pero cualquier save() en vuelo en otro sitio detecta
-    // el conflicto via lock optimista en vez de pisarlo.
-    const failed = await this.buildRunsRepository.failIfNotCancelled(
+    // UPDATE condicionado al estado (no lectura-modificacion-escritura,
+    // ORC-002): FAILED solo es una transicion valida desde QUEUED/RUNNING —
+    // SUCCESS, FAILED y CANCELLED son absorbentes, así que un fallo tardío
+    // (p.ej. al persistir RUN_COMPLETED) nunca degrada un resultado ya
+    // terminal.
+    const failed = await this.buildRunsRepository.failIfActive(
       buildRunId,
       errorMessage,
     );

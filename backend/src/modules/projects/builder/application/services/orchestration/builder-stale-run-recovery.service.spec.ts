@@ -22,13 +22,19 @@ function buildRepositoryDouble(queuedCandidates: unknown[] = []) {
 describe('BuilderStaleRunRecoveryService — ESC-C04', () => {
   const configProvider = { staleRunThresholdMs: 600_000 } as never;
 
+  type JobDouble = { id: string; getState: () => Promise<string> };
+
   function buildService(
     queuedCandidates: unknown[] = [],
     queueOverrides: Record<string, unknown> = {},
     processRole: ProcessRole = 'worker',
   ) {
     const double = buildRepositoryDouble(queuedCandidates);
-    const queue = {
+    const queue: {
+      getJob: jest.Mock<Promise<JobDouble | null>, any[]>;
+      add: jest.Mock;
+      [key: string]: unknown;
+    } = {
       getJob: jest.fn(() => Promise.resolve(null)),
       add: jest.fn(() => Promise.resolve({ id: 'job' })),
       ...queueOverrides,
@@ -52,16 +58,19 @@ describe('BuilderStaleRunRecoveryService — ESC-C04', () => {
         expect.any(Date),
       );
       const calledWith = repository.failStaleRunning.mock.calls[0][0] as Date;
-      expect(Date.now() - calledWith.getTime()).toBeGreaterThanOrEqual(
-        600_000,
-      );
+      expect(Date.now() - calledWith.getTime()).toBeGreaterThanOrEqual(600_000);
     });
 
     it('no toca un QUEUED antiguo cuyo job sigue en la cola', async () => {
       const { service, queue } = buildService([
         { id: 'run-1', deliveryId: 'delivery-1' },
       ]);
-      queue.getJob = jest.fn(() => Promise.resolve({ id: 'run-1' }));
+      queue.getJob = jest.fn(() =>
+        Promise.resolve({
+          id: 'run-1',
+          getState: jest.fn().mockResolvedValue('waiting'),
+        }),
+      );
 
       await service.failStaleRunsOnStartup();
 
@@ -110,14 +119,61 @@ describe('BuilderStaleRunRecoveryService — ESC-C04', () => {
       );
     });
 
-    it('tolera un fallo al consultar la cola sin abortar el barrido', async () => {
-      const { service, queue } = buildService(
+    it('ORC-006: un fallo al consultar la cola no muta el run (indeterminado, no "no existe")', async () => {
+      const { service, queue, repository } = buildService(
         [{ id: 'run-1', deliveryId: 'delivery-1' }],
         { getJob: jest.fn(() => Promise.reject(new Error('timeout'))) },
       );
 
       await expect(service.failStaleRunsOnStartup()).resolves.toBeUndefined();
-      expect(queue.add).toHaveBeenCalled();
+
+      // Antes esto reencolaba (tratando el error como "job no encontrado"),
+      // lo que podia fallar un run sano por una caida transitoria de Redis
+      // si el reencolado tambien fallaba. Ahora un error de consulta no
+      // muta nada: se reintenta en la siguiente pasada del barrido.
+      expect(queue.add).not.toHaveBeenCalled();
+      expect(repository.failIfStillQueued).not.toHaveBeenCalled();
+    });
+
+    it('ORC-006: un job ya completed/failed en BullMQ con BuildRun QUEUED se reconcilia como perdido, no se deja colgado', async () => {
+      const { service, queue, repository } = buildService(
+        [{ id: 'run-1', deliveryId: 'delivery-1' }],
+        {
+          getJob: jest.fn(() =>
+            Promise.resolve({
+              getState: jest.fn().mockResolvedValue('completed'),
+            }),
+          ),
+        },
+      );
+
+      await service.failStaleRunsOnStartup();
+
+      // No se reencola (el job "existe" segun BullMQ) pero tampoco se deja
+      // QUEUED para siempre: se reconcilia como perdido.
+      expect(queue.add).not.toHaveBeenCalled();
+      expect(repository.failIfStillQueued).toHaveBeenCalledWith(
+        'run-1',
+        expect.stringContaining('RUN_LOST_IN_QUEUE'),
+      );
+    });
+
+    it('ORC-006: un job todavia activo/en espera en BullMQ no se toca aunque el run sea candidato a stale', async () => {
+      const { service, queue, repository } = buildService(
+        [{ id: 'run-1', deliveryId: 'delivery-1' }],
+        {
+          getJob: jest.fn(() =>
+            Promise.resolve({
+              getState: jest.fn().mockResolvedValue('active'),
+            }),
+          ),
+        },
+      );
+
+      await service.failStaleRunsOnStartup();
+
+      expect(queue.add).not.toHaveBeenCalled();
+      expect(repository.failIfStillQueued).not.toHaveBeenCalled();
     });
   });
 

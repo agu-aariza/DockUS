@@ -15,6 +15,7 @@ import {
 import {
   BuildRunListPage,
   BuildRunListQuery,
+  BuildRunResultPatch,
   BuildRunScalarSummary,
   BuildRunUsageDelta,
   IBuildRunRepository,
@@ -33,8 +34,52 @@ export class BuildRunRepository implements IBuildRunRepository {
     return this.repository.findOne({ where: { id } });
   }
 
-  save(run: BuildRun): Promise<BuildRun> {
-    return this.repository.save(run);
+  async claimQueuedRun(id: string, startedAt: Date): Promise<boolean> {
+    const result = await this.repository
+      .createQueryBuilder()
+      .update(BuildRun)
+      .set({
+        status: BuildRunStatus.RUNNING,
+        startedAt,
+        version: () => '"version" + 1',
+      })
+      .where('"id" = :id', { id })
+      .andWhere('"status" = :status', { status: BuildRunStatus.QUEUED })
+      .execute();
+
+    return Boolean(result.affected);
+  }
+
+  async completeRunningRun(
+    id: string,
+    patch: BuildRunResultPatch,
+  ): Promise<boolean> {
+    const result = await this.repository
+      .createQueryBuilder()
+      .update(BuildRun)
+      .set({
+        status: BuildRunStatus.SUCCESS,
+        finishedAt: patch.finishedAt,
+        // jsonb: la entidad las tipa `unknown` a proposito (no hay un
+        // esquema unico para el contrato de evaluacion, ver
+        // build-run.entity.ts) — QueryDeepPartialEntity no acepta `unknown`
+        // sin este cast, igual que `repository.save()` tampoco lo exigia por
+        // pasar por una ruta de tipado distinta.
+        llmAssessment: patch.llmAssessment as never,
+        llmReasoning: patch.llmReasoning,
+        warnings: patch.warnings,
+        codeQualityFindings: patch.codeQualityFindings as never,
+        report: patch.report as never,
+        inputTokens: patch.inputTokens,
+        outputTokens: patch.outputTokens,
+        executionCostUsd: patch.executionCostUsd,
+        version: () => '"version" + 1',
+      })
+      .where('"id" = :id', { id })
+      .andWhere('"status" = :status', { status: BuildRunStatus.RUNNING })
+      .execute();
+
+    return Boolean(result.affected);
   }
 
   async createQueuedRun(input: {
@@ -211,11 +256,13 @@ export class BuildRunRepository implements IBuildRunRepository {
     }
   }
 
-  async failIfNotCancelled(id: string, reason: string): Promise<boolean> {
-    // UPDATE condicionado al estado (no lectura-modificacion-escritura): si
-    // cancelRun canceló este run de forma atómica mientras el pipeline
-    // fallaba en paralelo, este WHERE ya evita pisar esa cancelación con
-    // FAILED.
+  async failIfActive(id: string, reason: string): Promise<boolean> {
+    // UPDATE condicionado al estado (no lectura-modificacion-escritura):
+    // ORC-002 — el WHERE anterior era `status != CANCELLED`, que tambien
+    // dejaba pasar SUCCESS/FAILED; un fallo posterior (p.ej. al persistir el
+    // evento RUN_COMPLETED) degradaba en silencio un run ya SUCCESS. Solo
+    // QUEUED/RUNNING son estados desde los que FAILED es una transicion
+    // valida; SUCCESS, FAILED y CANCELLED son absorbentes.
     const result = await this.repository
       .createQueryBuilder()
       .update(BuildRun)
@@ -226,8 +273,8 @@ export class BuildRunRepository implements IBuildRunRepository {
         version: () => '"version" + 1',
       })
       .where('"id" = :id', { id })
-      .andWhere('"status" != :cancelled', {
-        cancelled: BuildRunStatus.CANCELLED,
+      .andWhere('"status" IN (:...activeStatuses)', {
+        activeStatuses: [BuildRunStatus.QUEUED, BuildRunStatus.RUNNING],
       })
       .execute();
 

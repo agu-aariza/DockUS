@@ -29,6 +29,8 @@ import {
   BuildRun,
   BuildRunStatus,
 } from '../../../domain/entities/build-run.entity';
+import { DeliveryStatus } from '../../../../deliveries/entities/delivery.entity';
+import { DeliveryStatusService } from '../../../../deliveries/delivery-status.service';
 import { BuilderAccessService } from '../workspace/builder-access.service';
 import {
   EnqueueBuildRunResponse,
@@ -56,6 +58,7 @@ export class BuilderRunCommandsService {
     private readonly builderConfigProvider: BuilderConfigProvider,
     private readonly builderRunCancellationService: BuilderRunCancellationService,
     private readonly builderSpendQuotaService: BuilderSpendQuotaService,
+    private readonly deliveryStatusService: DeliveryStatusService,
   ) {
     this.promptVersion = this.builderConfigProvider.promptVersion;
   }
@@ -185,6 +188,31 @@ export class BuilderRunCommandsService {
     // Postgres entre etapas. Si Redis falla, el chequeo de resguardo del
     // servicio cae a BD, así que no perder este publish no es fatal.
     await this.builderRunCancellationService.markCancelled(buildRunId);
+
+    // ORC-004: antes, cancelar dejaba `Delivery` en IN_REVIEW para siempre
+    // (nadie la sacaba de ahi) y nunca se publicaba RUN_CANCELLED, asi que ni
+    // la entrega ni el timeline reflejaban el terminal real. Mismo criterio
+    // que el catch de fallo en BuilderRunLifecycleService: sacar la entrega
+    // de revision es lo que evita que quede colgada; el estado real del
+    // intento se lee del BuildRun (CANCELLED), no del Delivery.
+    //
+    // Nota de alcance (plan_de_accion.md P0.2): esto no es una transaccion
+    // atomica con el UPDATE de `cancelIfActive` de mas arriba — un crash justo
+    // entre ambas dejaria Delivery en IN_REVIEW pese a BuildRun=CANCELLED,
+    // igual que ya podia pasar (sin cierre alguno) antes de este cambio. El
+    // diseno con outbox/transaccion cruzada que lo cerraria del todo queda
+    // fuera de esta tanda; ver reports/plan_de_accion.md.
+    await this.deliveryStatusService.updateStatusInternal(
+      run.deliveryId,
+      DeliveryStatus.EVALUATED,
+    );
+
+    await this.builderRunSupportService.emitEvent({
+      buildRunId,
+      eventType: 'RUN_CANCELLED',
+      runStatus: BuildRunStatus.CANCELLED,
+      message: 'Ejecucion cancelada por el usuario.',
+    });
 
     if (run.status === BuildRunStatus.QUEUED) {
       // Oportunista: si el job ya lo tomo un worker, `remove` no hace nada y

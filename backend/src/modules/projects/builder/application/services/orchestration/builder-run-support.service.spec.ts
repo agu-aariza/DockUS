@@ -7,7 +7,7 @@ describe('BuilderRunSupportService', () => {
   let service: BuilderRunSupportService;
 
   const buildRunRepository = {
-    failIfNotCancelled: jest.fn(),
+    failIfActive: jest.fn(),
   };
 
   const builderRunEventsService = {
@@ -16,7 +16,7 @@ describe('BuilderRunSupportService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    buildRunRepository.failIfNotCancelled.mockResolvedValue(true);
+    buildRunRepository.failIfActive.mockResolvedValue(true);
 
     service = new BuilderRunSupportService(
       buildRunRepository as unknown as IBuildRunRepository,
@@ -25,10 +25,10 @@ describe('BuilderRunSupportService', () => {
   });
 
   describe('markRunAsFailed', () => {
-    it('HIGH-06: marca el run como FAILED mediante un UPDATE atomico condicionado a que no este ya CANCELLED', async () => {
+    it('HIGH-06: marca el run como FAILED mediante un UPDATE atomico condicionado a QUEUED/RUNNING', async () => {
       await service.markRunAsFailed('run-1', 'boom');
 
-      expect(buildRunRepository.failIfNotCancelled).toHaveBeenCalledWith(
+      expect(buildRunRepository.failIfActive).toHaveBeenCalledWith(
         'run-1',
         'boom',
       );
@@ -41,8 +41,8 @@ describe('BuilderRunSupportService', () => {
       );
     });
 
-    it('HIGH-06: no emite RUN_FAILED si el run ya fue cancelado (0 filas afectadas) — no pisa la cancelacion', async () => {
-      buildRunRepository.failIfNotCancelled.mockResolvedValue(false);
+    it('HIGH-06: no emite RUN_FAILED si el run ya no esta activo (0 filas afectadas) — ORC-002, no pisa un terminal ya escrito (CANCELLED o SUCCESS)', async () => {
+      buildRunRepository.failIfActive.mockResolvedValue(false);
 
       await service.markRunAsFailed('run-1', 'boom');
 

@@ -79,7 +79,7 @@ export class CodeQualityFindingRepository implements ICodeQualityFindingReposito
   async aggregateByProject(
     projectId: string,
   ): Promise<CodeQualityAggregatedRow[]> {
-    const rows = await this.repository.query(
+    const rows = await this.repository.query<Array<Record<string, unknown>>>(
       `
         SELECT
           title,
@@ -101,7 +101,7 @@ export class CodeQualityFindingRepository implements ICodeQualityFindingReposito
     projectId: string,
     category: string,
   ): Promise<CodeQualityAggregatedRow[]> {
-    const rows = await this.repository.query(
+    const rows = await this.repository.query<Array<Record<string, unknown>>>(
       `
         SELECT
           title,
@@ -121,7 +121,7 @@ export class CodeQualityFindingRepository implements ICodeQualityFindingReposito
   }
 
   async countDistinctStudentsForProject(projectId: string): Promise<number> {
-    const rows = await this.repository.query(
+    const rows = await this.repository.query<Array<{ count: number }>>(
       `
         SELECT COUNT(DISTINCT student_id)::int AS count
         FROM code_quality_findings

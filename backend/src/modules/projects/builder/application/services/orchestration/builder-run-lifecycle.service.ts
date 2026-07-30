@@ -15,10 +15,15 @@
  */
 
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { OptimisticLockVersionMismatchError } from 'typeorm';
-import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
+import type {
+  BuildRunResultPatch,
+  IBuildRunRepository,
+} from '../../../domain/repositories/build-run.repository.interface';
 import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
-import { BuildRun, BuildRunStatus } from '../../../domain/entities/build-run.entity';
+import {
+  BuildRun,
+  BuildRunStatus,
+} from '../../../domain/entities/build-run.entity';
 import { BuilderStudentStage } from '../../../domain/builder.types';
 import { DeliveryStatus } from '../../../../deliveries/entities/delivery.entity';
 import { DeliveryStatusService } from '../../../../deliveries/delivery-status.service';
@@ -55,9 +60,9 @@ export class BuilderRunLifecycleService {
     if (!run) return;
     // Idempotencia: si este job llega aquí una segunda vez (reencolado por
     // BullMQ tras un "stalled", redrive manual, etc.) el estado ya no será
-    // QUEUED. Esta comprobación es la primera línea de defensa; el lock
-    // optimista (ARQ-013, @VersionColumn) cubre además la ventana residual
-    // entre esta lectura y el save() de más abajo.
+    // QUEUED. Esta comprobación es la primera línea de defensa; el UPDATE
+    // atómico condicionado de más abajo (claimQueuedRun, ORC-001) cubre
+    // además la ventana residual entre esta lectura y esa transición.
     if (run.status !== BuildRunStatus.QUEUED) {
       this.logger.warn(
         `processBuildRunJob: run ${run.id} ignorado, estado '${run.status}' distinto de QUEUED (posible reprocesado duplicado).`,
@@ -74,24 +79,27 @@ export class BuilderRunLifecycleService {
       DeliveryStatus.IN_REVIEW,
     );
 
-    run.status = BuildRunStatus.RUNNING;
-    run.startedAt = new Date();
-    try {
-      await this.buildRunsRepository.save(run);
-    } catch (error) {
-      if (!(error instanceof OptimisticLockVersionMismatchError)) {
-        throw error;
-      }
-      // ARQ-013: otro escritor (cancelRun, el sweep de huérfanos) ganó la
-      // carrera entre el findOne de arriba y este save() — el lock optimista
-      // lo detecta ahora en vez de pisarlo en silencio. No hay nada que
-      // reintentar: si alguien ya tocó este run antes de que arrancara a
-      // procesarse, lo correcto es no arrancar el pipeline.
+    // ORC-001: UPDATE atómico condicionado a QUEUED, no lectura-modificación-
+    // escritura. Reemplaza el antiguo `run.status = RUNNING; save(run)`, que
+    // dependía de que `repository.save()` de TypeORM aplicara el optimistic
+    // lock del `@VersionColumn` de forma atómica — una sonda directa contra
+    // Postgres demostró que no lo hace: un escritor obsoleto podía pisar una
+    // cancelación ya confirmada sin lanzar ninguna excepción.
+    const claimed = await this.buildRunsRepository.claimQueuedRun(
+      run.id,
+      new Date(),
+    );
+    if (!claimed) {
+      // Otro escritor (cancelRun, el sweep de huérfanos) ganó la carrera
+      // entre el findById de arriba y este claim: no hay nada que
+      // reintentar, lo correcto es no arrancar el pipeline.
       this.logger.warn(
-        `processBuildRunJob: run ${run.id} modificado por otro escritor justo al recogerlo (version mismatch); se descarta sin ejecutar el pipeline.`,
+        `processBuildRunJob: run ${run.id} ya no estaba QUEUED al reclamarlo (otro escritor gano la carrera); se descarta sin ejecutar el pipeline.`,
       );
       return;
     }
+    run.status = BuildRunStatus.RUNNING;
+    run.startedAt = new Date();
 
     await this.builderRunSupportService.emitEvent({
       buildRunId: run.id,
@@ -131,10 +139,10 @@ export class BuilderRunLifecycleService {
 
       // Guarda frente a la carrera con cancelRun: el orquestador ya comprueba
       // la cancelacion entre etapas y durante la ejecucion Docker, pero queda
-      // esta ultima ventana entre ese chequeo y este save(). El release del
-      // findOne+save (ARQ-013) es lo que cierra esa ventana: si un docente
-      // cancelo el run justo despues de la relectura de abajo, el lock
-      // optimista lo detecta en el save() y no pisa la cancelacion con el
+      // esta ultima ventana entre ese chequeo y la persistencia del
+      // resultado. El UPDATE atomico condicionado a RUNNING (ORC-001) es lo
+      // que cierra esa ventana: si un docente cancelo el run justo antes,
+      // completeRunningRun afecta 0 filas y no pisa la cancelacion con el
       // resultado calculado en memoria.
       const saved = await this.saveRunResultUnlessCancelled(run);
       if (!saved) {
@@ -185,54 +193,33 @@ export class BuilderRunLifecycleService {
   }
 
   /**
-   * Persiste el resultado calculado en `run`, salvo que otro escritor haya
-   * cancelado el run en la ventana entre el chequeo de más arriba y este
-   * punto (ARQ-013). Devuelve `false` si se descartó por cancelación.
+   * Persiste el resultado calculado en `run` mediante un único UPDATE
+   * atómico condicionado a que el run siga RUNNING (ORC-001). Devuelve
+   * `false` si ya no lo estaba — cancelado por `cancelRun`, o marcado FAILED
+   * por otra vía (p. ej. el sweep de huérfanos) mientras el pipeline seguía
+   * en curso — y en ese caso el resultado calculado se descarta sin
+   * reintentar: sea cual sea el motivo, esa transición ya la decidió otro
+   * escritor y no debe pisarse.
    *
-   * Dos capas de protección, no una: la relectura explícita cubre el caso
-   * común (cancelación ya visible); el lock optimista (`@VersionColumn`)
-   * cubre la ventana residual entre esa relectura y el `save()` en sí, que
-   * ninguna relectura previa puede cerrar del todo. Si el conflicto no fue
-   * por cancelación (p.ej. el sweep de huérfanos tocó el mismo run por otro
-   * motivo en la misma ventana — extremadamente improbable pero no
-   * imposible), se relee una vez más y se reintenta con los mismos datos en
-   * vez de perder el resultado ya calculado.
+   * Antes esto era un findById + comprobación en memoria + `save()` con
+   * captura de `OptimisticLockVersionMismatchError` y reintento manual sobre
+   * una relectura. El único UPDATE condicionado de aquí cubre exactamente el
+   * mismo caso sin la ventana de lectura-modificación-escritura que ese
+   * patrón dejaba abierta.
    */
   private async saveRunResultUnlessCancelled(run: BuildRun): Promise<boolean> {
-    const currentRun = await this.buildRunsRepository.findById(run.id);
-    if (currentRun?.status === BuildRunStatus.CANCELLED) {
-      return false;
-    }
+    const patch: BuildRunResultPatch = {
+      finishedAt: run.finishedAt!,
+      llmAssessment: run.llmAssessment,
+      llmReasoning: run.llmReasoning,
+      warnings: run.warnings,
+      codeQualityFindings: run.codeQualityFindings,
+      report: run.report,
+      inputTokens: run.inputTokens,
+      outputTokens: run.outputTokens,
+      executionCostUsd: run.executionCostUsd,
+    };
 
-    try {
-      await this.buildRunsRepository.save(run);
-      return true;
-    } catch (error) {
-      if (!(error instanceof OptimisticLockVersionMismatchError)) {
-        throw error;
-      }
-
-      const reread = await this.buildRunsRepository.findById(run.id);
-      if (!reread) {
-        throw error;
-      }
-      if (reread.status === BuildRunStatus.CANCELLED) {
-        return false;
-      }
-
-      reread.status = run.status;
-      reread.finishedAt = run.finishedAt;
-      reread.llmAssessment = run.llmAssessment;
-      reread.llmReasoning = run.llmReasoning;
-      reread.warnings = run.warnings;
-      reread.codeQualityFindings = run.codeQualityFindings;
-      reread.report = run.report;
-      reread.inputTokens = run.inputTokens;
-      reread.outputTokens = run.outputTokens;
-      reread.executionCostUsd = run.executionCostUsd;
-
-      await this.buildRunsRepository.save(reread);
-      return true;
-    }
+    return this.buildRunsRepository.completeRunningRun(run.id, patch);
   }
 }

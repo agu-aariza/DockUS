@@ -12,6 +12,7 @@ import {
   BuildRun,
   BuildRunStatus,
 } from '../../../domain/entities/build-run.entity';
+import { DeliveryStatus } from '../../../../deliveries/entities/delivery.entity';
 
 describe('BuilderRunCommandsService', () => {
   let service: BuilderRunCommandsService;
@@ -53,6 +54,10 @@ describe('BuilderRunCommandsService', () => {
     markCancelled: jest.fn().mockResolvedValue(undefined),
   };
 
+  const deliveryStatusService = {
+    updateStatusInternal: jest.fn().mockResolvedValue(undefined),
+  };
+
   const buildRun = (): BuildRun =>
     ({
       id: runId,
@@ -85,6 +90,7 @@ describe('BuilderRunCommandsService', () => {
       // ESC-MED-03: sin cuota configurada el encolado pasa siempre; la cuota
       // tiene su propia suite.
       { assertProjectWithinQuota: jest.fn() } as never,
+      deliveryStatusService as never,
     );
   });
 
@@ -213,6 +219,42 @@ describe('BuilderRunCommandsService', () => {
       await service.cancelRun(runId, actor);
 
       expect(builderRunsQueue.remove).not.toHaveBeenCalled();
+    });
+
+    it('ORC-004: saca la entrega de IN_REVIEW y publica RUN_CANCELLED tras cancelar', async () => {
+      (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
+        ...buildRun(),
+        status: BuildRunStatus.RUNNING,
+      });
+
+      await service.cancelRun(runId, actor);
+
+      expect(deliveryStatusService.updateStatusInternal).toHaveBeenCalledWith(
+        deliveryId,
+        DeliveryStatus.EVALUATED,
+      );
+      expect(builderRunSupportService.emitEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          buildRunId: runId,
+          eventType: 'RUN_CANCELLED',
+          runStatus: BuildRunStatus.CANCELLED,
+        }),
+      );
+    });
+
+    it('ORC-004: no reconcilia Delivery ni publica evento si el UPDATE de cancelacion afecto 0 filas', async () => {
+      (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
+        ...buildRun(),
+        status: BuildRunStatus.RUNNING,
+      });
+      buildRunRepository.cancelIfActive.mockResolvedValue(false);
+
+      await expect(service.cancelRun(runId, actor)).rejects.toThrow(
+        ConflictException,
+      );
+
+      expect(deliveryStatusService.updateStatusInternal).not.toHaveBeenCalled();
+      expect(builderRunSupportService.emitEvent).not.toHaveBeenCalled();
     });
   });
 });

@@ -116,6 +116,20 @@ export class BuilderStaleRunRecoveryService {
    * está esperando y no debe tocarse. Si no lo conserva, el job se perdió y el
    * run nunca arrancará; en ese caso se reencola en lugar de fallarlo, porque
    * el trabajo sigue siendo válido y el alumno no ha hecho nada mal.
+   *
+   * ORC-006: la version anterior convertia cualquier error de `getJob()` en
+   * "no existe" (`.catch(() => null)`), y si el job existia, hacia `continue`
+   * sin consultar `getState()`. Eso confundia tres cosas distintas:
+   *   - Redis no responde -> antes se trataba como "job perdido" y se podia
+   *     marcar FAILED un run perfectamente sano por una caida transitoria.
+   *   - El job existe pero ya esta 'completed'/'failed' en BullMQ (el
+   *     handler nunca llego a reclamarlo, p.ej. broke antes del primer
+   *     UPDATE) -> antes se dejaba QUEUED para siempre, colgando la entrega.
+   *   - El job existe y sigue activo/en espera -> unico caso en el que no
+   *     tocar nada es correcto.
+   * Ahora se distinguen explicitamente: indeterminado (no se muta, se
+   * reintenta en la siguiente pasada), terminal-sin-reconciliar (se falla,
+   * como el caso de perdida real), y activo (se deja tal cual).
    */
   private async reconcileStaleQueuedRuns(
     staleThresholdDate: Date,
@@ -129,11 +143,45 @@ export class BuilderStaleRunRecoveryService {
     let requeued = 0;
 
     for (const run of candidates) {
-      const job = await this.builderRunsQueue.getJob(run.id).catch(() => null);
-      if (job) {
+      let job: Awaited<ReturnType<Queue['getJob']>>;
+      try {
+        job = await this.builderRunsQueue.getJob(run.id);
+      } catch (error) {
+        // Indeterminado: no sabemos si el job existe. Mutar aqui es
+        // exactamente el bug de ORC-006 (falso FAILED por Redis caido); se
+        // deja el candidato tal cual para la siguiente pasada del barrido.
+        this.logger.warn(
+          `No se pudo consultar el estado en cola del run ${run.id} huerfano candidato (se reintenta en la siguiente pasada): ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
         continue;
       }
 
+      if (job) {
+        const state = await job.getState().catch(() => 'unknown' as const);
+
+        if (state === 'completed' || state === 'failed') {
+          // BullMQ ya considera terminado este job (attempts:1, sin mas
+          // reintentos posibles) pero el run sigue QUEUED en DB: el handler
+          // nunca llego a reclamarlo. Dejarlo QUEUED para siempre colgaria
+          // la entrega en revision indefinidamente.
+          const failedNow = await this.buildRunsRepository.failIfStillQueued(
+            run.id,
+            `RUN_LOST_IN_QUEUE: el job de BullMQ ya esta '${state}' pero el run seguia QUEUED.`,
+          );
+          if (failedNow) failed += 1;
+          continue;
+        }
+
+        // waiting/active/delayed/prioritized/waiting-children/unknown: sigue
+        // en juego, o su estado es indeterminado pero el job existe — en
+        // ambos casos, no mutar.
+        continue;
+      }
+
+      // job === null: BullMQ confirma (sin lanzar) que no existe. Distinto
+      // de la rama de error de arriba: aqui si es seguro actuar.
       try {
         await this.builderRunsQueue.add(
           BUILDER_RUN_JOB_NAME,

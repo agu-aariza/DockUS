@@ -1,6 +1,5 @@
 import { rm } from 'fs/promises';
 import { Logger } from '@nestjs/common';
-import { OptimisticLockVersionMismatchError } from 'typeorm';
 
 import { BuilderRunLifecycleService } from './builder-run-lifecycle.service';
 import { BuilderAccessService } from '../workspace/builder-access.service';
@@ -34,7 +33,8 @@ describe('BuilderRunLifecycleService', () => {
 
   const buildRunRepository = {
     findById: jest.fn(),
-    save: jest.fn((run) => Promise.resolve({ ...run, id: runId } as BuildRun)),
+    claimQueuedRun: jest.fn(),
+    completeRunningRun: jest.fn(),
   };
 
   const builderAccessService = {
@@ -119,6 +119,8 @@ describe('BuilderRunLifecycleService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     buildRunRepository.findById.mockResolvedValue(buildRun());
+    buildRunRepository.claimQueuedRun.mockResolvedValue(true);
+    buildRunRepository.completeRunningRun.mockResolvedValue(true);
     builderAccessService.findDeliveryOrThrow.mockResolvedValue(buildDelivery());
 
     service = new BuilderRunLifecycleService(
@@ -204,48 +206,48 @@ describe('BuilderRunLifecycleService', () => {
         deliveryId,
       });
 
-      const savedRunCall = buildRunRepository.save.mock.calls.find(
-        ([run]) => (run as BuildRun).status === BuildRunStatus.SUCCESS,
+      expect(buildRunRepository.claimQueuedRun).toHaveBeenCalledWith(
+        runId,
+        expect.any(Date),
       );
-      expect(savedRunCall).toBeTruthy();
-      const savedRun = savedRunCall![0] as BuildRun;
-      expect(savedRun.llmReasoning).toContain('planner thought');
-      expect(savedRun.llmReasoning).toContain('auditor thought');
-      expect(savedRun.report).toEqual({ summary: 'final report' });
+      expect(buildRunRepository.completeRunningRun).toHaveBeenCalledTimes(1);
+      const [completedId, patch] =
+        buildRunRepository.completeRunningRun.mock.calls[0];
+      expect(completedId).toBe(runId);
+      expect(patch.llmReasoning).toContain('planner thought');
+      expect(patch.llmReasoning).toContain('auditor thought');
+      expect(patch.report).toEqual({ summary: 'final report' });
 
       expect(deliveryStatusService.updateStatusInternal).toHaveBeenCalledWith(
         deliveryId,
         DeliveryStatus.EVALUATED,
       );
+      expect(builderRunSupportService.emitEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'RUN_COMPLETED' }),
+      );
     });
 
-    it('HIGH-06: descarta el resultado calculado si el run fue cancelado mientras el pipeline corria', async () => {
+    it('ORC-001: descarta el resultado calculado si el run ya no seguia RUNNING al completarlo (p.ej. cancelado)', async () => {
       builderPipelineOrchestrator.runPipeline.mockResolvedValue(
         buildPipelineResult(),
       );
-      // Primera llamada a findById: carga inicial del run (QUEUED). Segunda
-      // llamada: re-chequeo justo antes de guardar el resultado — simula
-      // que cancelRun ya lo marco CANCELLED de forma atomica mientras tanto.
-      buildRunRepository.findById
-        .mockResolvedValueOnce(buildRun())
-        .mockResolvedValueOnce({
-          ...buildRun(),
-          status: BuildRunStatus.CANCELLED,
-        });
+      buildRunRepository.completeRunningRun.mockResolvedValue(false);
 
       await service.processBuildRunJob({
         buildRunId: runId,
         deliveryId,
       });
 
-      // save() se invoca una unica vez (la transicion a RUNNING, antes del
-      // pipeline). El guard debe impedir la segunda llamada que persistiria
-      // el resultado SUCCESS calculado, pisando la cancelacion. Nota: no se
-      // puede distinguir esto inspeccionando `mock.calls[n][0].status`
-      // despues del hecho, porque `run` es el mismo objeto mutado in-place
-      // en ambas llamadas — jest solo guarda la referencia, no una copia; el
-      // conteo de llamadas es la unica senal fiable aqui.
-      expect(buildRunRepository.save).toHaveBeenCalledTimes(1);
+      // completeRunningRun se invoca una unica vez (sin reintento: el UPDATE
+      // condicionado ya es atomico) y, al devolver 0 filas afectadas, no se
+      // marca la entrega como EVALUATED ni se emite RUN_COMPLETED.
+      expect(buildRunRepository.completeRunningRun).toHaveBeenCalledTimes(1);
+      expect(
+        deliveryStatusService.updateStatusInternal,
+      ).not.toHaveBeenCalledWith(deliveryId, DeliveryStatus.EVALUATED);
+      expect(builderRunSupportService.emitEvent).not.toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'RUN_COMPLETED' }),
+      );
     });
 
     it('ignora el job cuando el run ya no esta en QUEUED (posible reprocesado duplicado)', async () => {
@@ -263,8 +265,8 @@ describe('BuilderRunLifecycleService', () => {
         deliveryId,
       });
 
+      expect(buildRunRepository.claimQueuedRun).not.toHaveBeenCalled();
       expect(builderPipelineOrchestrator.runPipeline).not.toHaveBeenCalled();
-      expect(buildRunRepository.save).not.toHaveBeenCalled();
       expect(deliveryStatusService.updateStatusInternal).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining(runId));
     });
@@ -280,18 +282,16 @@ describe('BuilderRunLifecycleService', () => {
         deliveryId,
       });
 
+      expect(buildRunRepository.claimQueuedRun).not.toHaveBeenCalled();
       expect(builderPipelineOrchestrator.runPipeline).not.toHaveBeenCalled();
-      expect(buildRunRepository.save).not.toHaveBeenCalled();
     });
 
-    it('ARQ-013: un conflicto de lock optimista al pasar a RUNNING descarta el job sin arrancar el pipeline', async () => {
-      buildRunRepository.save.mockRejectedValueOnce(
-        new OptimisticLockVersionMismatchError('BuildRun', 0, 1),
-      );
+    it('ORC-001: un claim que afecta 0 filas (otro escritor gano la carrera) descarta el job sin arrancar el pipeline', async () => {
+      buildRunRepository.claimQueuedRun.mockResolvedValue(false);
 
       await service.processBuildRunJob({ buildRunId: runId, deliveryId });
 
-      expect(buildRunRepository.save).toHaveBeenCalledTimes(1);
+      expect(buildRunRepository.claimQueuedRun).toHaveBeenCalledTimes(1);
       expect(builderPipelineOrchestrator.runPipeline).not.toHaveBeenCalled();
       expect(deliveryStatusService.updateStatusInternal).toHaveBeenCalledTimes(
         1,
@@ -302,8 +302,8 @@ describe('BuilderRunLifecycleService', () => {
       );
     });
 
-    it('propaga cualquier otro error de save() al pasar a RUNNING (no lo confunde con un conflicto de version)', async () => {
-      buildRunRepository.save.mockRejectedValueOnce(
+    it('propaga cualquier error de claimQueuedRun al pasar a RUNNING', async () => {
+      buildRunRepository.claimQueuedRun.mockRejectedValue(
         new Error('Postgres caido'),
       );
 
@@ -312,67 +312,6 @@ describe('BuilderRunLifecycleService', () => {
       ).rejects.toThrow('Postgres caido');
 
       expect(builderPipelineOrchestrator.runPipeline).not.toHaveBeenCalled();
-    });
-
-    it('ARQ-013: un conflicto de lock optimista al guardar el resultado final se descarta si la relectura muestra CANCELLED', async () => {
-      builderPipelineOrchestrator.runPipeline.mockResolvedValue(
-        buildPipelineResult(),
-      );
-      // 1a: carga inicial (QUEUED). 2a: guarda pre-resultado, no cancelado
-      // todavia. 3a: relectura tras el conflicto de version -> ya cancelado.
-      buildRunRepository.findById
-        .mockResolvedValueOnce(buildRun())
-        .mockResolvedValueOnce(buildRun())
-        .mockResolvedValueOnce({
-          ...buildRun(),
-          status: BuildRunStatus.CANCELLED,
-        });
-      buildRunRepository.save
-        .mockResolvedValueOnce({ ...buildRun(), status: BuildRunStatus.RUNNING } as BuildRun)
-        .mockRejectedValueOnce(
-          new OptimisticLockVersionMismatchError('BuildRun', 1, 2),
-        );
-
-      await service.processBuildRunJob({ buildRunId: runId, deliveryId });
-
-      // save() se invoca dos veces: RUNNING, y el intento fallido del
-      // resultado final. No hay un tercer intento porque la relectura tras
-      // el conflicto encontro CANCELLED.
-      expect(buildRunRepository.save).toHaveBeenCalledTimes(2);
-      expect(deliveryStatusService.updateStatusInternal).toHaveBeenCalledTimes(
-        1,
-      );
-    });
-
-    it('ARQ-013: un conflicto de lock optimista al guardar el resultado final reintenta sobre la version releida si no esta cancelado', async () => {
-      builderPipelineOrchestrator.runPipeline.mockResolvedValue(
-        buildPipelineResult({
-          report: { summary: 'final report' },
-        }),
-      );
-      const rereadRun = { ...buildRun(), status: BuildRunStatus.RUNNING };
-      buildRunRepository.findById
-        .mockResolvedValueOnce(buildRun())
-        .mockResolvedValueOnce(buildRun())
-        .mockResolvedValueOnce(rereadRun);
-      buildRunRepository.save
-        .mockResolvedValueOnce({ ...buildRun(), status: BuildRunStatus.RUNNING } as BuildRun)
-        .mockRejectedValueOnce(
-          new OptimisticLockVersionMismatchError('BuildRun', 1, 2),
-        )
-        .mockResolvedValueOnce(rereadRun as BuildRun);
-
-      await service.processBuildRunJob({ buildRunId: runId, deliveryId });
-
-      // 3 saves: RUNNING, el intento que choca con el lock, y el reintento
-      // sobre la entidad releida.
-      expect(buildRunRepository.save).toHaveBeenCalledTimes(3);
-      const retriedSave = buildRunRepository.save.mock.calls[2][0] as BuildRun;
-      expect(retriedSave.report).toEqual({ summary: 'final report' });
-      expect(deliveryStatusService.updateStatusInternal).toHaveBeenCalledWith(
-        deliveryId,
-        DeliveryStatus.EVALUATED,
-      );
     });
   });
 });
