@@ -10,10 +10,6 @@ interface DockerLabelledTimeoutOptions {
   labels?: Record<string, string>;
 }
 
-export interface DockerCreateNetworkOptions extends DockerLabelledTimeoutOptions {
-  internal?: boolean;
-}
-
 export interface DockerListOptions {
   timeoutMs: number;
   maxBufferedChars?: number;
@@ -53,10 +49,6 @@ export interface DockerContainerRunOptions extends DockerLabelledTimeoutOptions 
 export type DockerRunOptions = Omit<
   DockerContainerRunOptions,
   'runtime' | 'timeoutMs' | 'maxBufferedChars'
->;
-export type DockerCreateNetworkInfo = Omit<
-  DockerCreateNetworkOptions,
-  'timeoutMs' | 'maxBufferedChars'
 >;
 
 export interface DockerImageBuildOptions extends DockerLabelledTimeoutOptions {

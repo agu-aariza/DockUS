@@ -67,15 +67,6 @@ function buildNetworkArgs(options: DockerContainerRunOptions): string[] {
 export class DockerContainerService {
   private readonly logger = new Logger(DockerContainerService.name);
 
-  async runContainer(options: DockerContainerRunOptions): Promise<string> {
-    const containerId = await this.createContainer(options);
-    await this.startContainer(containerId, {
-      timeoutMs: options.timeoutMs,
-      maxBufferedChars: options.maxBufferedChars,
-    });
-    return containerId;
-  }
-
   async runEphemeralContainer(
     options: DockerContainerRunOptions,
   ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
@@ -184,12 +175,6 @@ export class DockerContainerService {
       stdout: result.stdout,
       stderr: result.stderr,
     };
-  }
-
-  async runDaemonContainer(
-    options: DockerContainerRunOptions,
-  ): Promise<string> {
-    return this.runContainer(options);
   }
 
   async waitContainer(
@@ -315,83 +300,6 @@ export class DockerContainerService {
     if (!options.user) {
       this.logger.warn(
         `Contenedor ${options.containerName} creado sin --user: el proceso correra como root dentro del contenedor.`,
-      );
-    }
-  }
-
-  private async createContainer(
-    options: DockerContainerRunOptions,
-  ): Promise<string> {
-    const networkArgs = buildNetworkArgs(options);
-    this.warnIfUnconfinedUser(options);
-    const bindArgs = (options.binds ?? []).flatMap((bind) => ['-v', bind]);
-    const workdirArgs = options.workingDir ? ['-w', options.workingDir] : [];
-    const environmentArgs = Object.entries(options.environment ?? {}).flatMap(
-      ([key, value]) => ['-e', `${key}=${value}`],
-    );
-    const args = [
-      'container',
-      'create',
-      '--name',
-      options.containerName,
-      ...networkArgs,
-      ...(options.networkAlias
-        ? ['--network-alias', options.networkAlias]
-        : []),
-      '--runtime',
-      options.runtime,
-      '--read-only',
-      '--security-opt',
-      'no-new-privileges',
-      '--cap-drop',
-      'ALL',
-      // `createContainer` no aplicaba ni límite de procesos ni usuario, a
-      // diferencia de la ruta efímera: un contenedor de servicio quedaba sin
-      // cota de PIDs y como root dentro del contenedor.
-      '--pids-limit',
-      String(options.pidsLimit ?? SANDBOX_DEFAULTS.pidsLimit),
-      ...(options.user ? ['--user', options.user] : []),
-      '--tmpfs',
-      '/tmp',
-      ...buildDockerLabelArgs(options.labels),
-      '--cpus',
-      options.cpus ?? SANDBOX_DEFAULTS.cpus,
-      '--memory',
-      options.memory ?? SANDBOX_DEFAULTS.memory,
-      ...this.toPortArgs(options.ports),
-      ...bindArgs,
-      ...workdirArgs,
-      ...environmentArgs,
-      options.imageTag,
-      ...options.command,
-    ];
-    const result = await runCommand('docker', args, {
-      timeoutMs: options.timeoutMs,
-      maxBufferedChars: options.maxBufferedChars ?? 250000,
-    });
-    if (result.timedOut || result.exitCode !== 0 || !result.stdout.trim()) {
-      throw new ServiceUnavailableException(
-        `No se pudo crear el contenedor ${options.containerName}: ${normalizeDockerCommandError(result)}`,
-      );
-    }
-    return result.stdout.trim();
-  }
-
-  private async startContainer(
-    containerId: string,
-    options: { timeoutMs: number; maxBufferedChars?: number },
-  ): Promise<void> {
-    const result = await runCommand(
-      'docker',
-      ['container', 'start', containerId],
-      {
-        timeoutMs: options.timeoutMs,
-        maxBufferedChars: options.maxBufferedChars ?? 50000,
-      },
-    );
-    if (result.timedOut || result.exitCode !== 0) {
-      throw new ServiceUnavailableException(
-        `No se pudo arrancar el contenedor ${containerId}: ${normalizeDockerCommandError(result)}`,
       );
     }
   }

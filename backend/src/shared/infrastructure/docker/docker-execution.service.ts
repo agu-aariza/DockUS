@@ -8,9 +8,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DockerContainerService } from './docker-container.service';
 import { DockerImageService } from './docker-image.service';
-import { DockerNetworkService } from './docker-network.service';
 import {
-  DockerCreateNetworkInfo,
   DockerRunOptions,
   DEFAULT_DOCKER_BUILD_TIMEOUT_MS,
   DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
@@ -26,9 +24,13 @@ import {
  * modules/ (no-shared-to-modules en .dependency-cruiser.cjs), así que esta
  * clase satisface el puerto por tipado estructural — el `useExisting` en
  * `builder.module.ts` es lo que conecta ambos, no una relación de herencia
- * declarada aquí. El resto de métodos públicos de esta clase (redes,
- * contenedores daemon, inspect...) no forman parte del puerto porque no
- * tienen ningún llamador fuera de la propia infraestructura Docker hoy.
+ * declarada aquí. El resto de métodos públicos de esta clase (`waitContainer`,
+ * `getContainerLogs`, `inspectContainer`) no forman parte del puerto porque no
+ * tienen ningún llamador fuera de la propia infraestructura Docker hoy
+ * (INF-003: `DockerNetworkService` y la ruta de contenedor no-efímero
+ * `runContainer`/`createContainer`/`startContainer`/`runDaemonContainer`,
+ * que sí estaban en esta situación sin ningún llamador en absoluto, se
+ * eliminaron).
  */
 @Injectable()
 export class DockerExecutionService {
@@ -37,7 +39,6 @@ export class DockerExecutionService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly dockerNetworkService: DockerNetworkService,
     private readonly dockerContainerService: DockerContainerService,
     private readonly dockerImageService: DockerImageService,
   ) {
@@ -68,55 +69,6 @@ export class DockerExecutionService {
       ...options,
       timeoutMs: this.imageBuildTimeoutMs,
       maxBufferedChars: 1_000_000,
-    });
-  }
-
-  async createNetwork(
-    networkName: string,
-    options: DockerCreateNetworkInfo = {},
-  ): Promise<void> {
-    await this.dockerNetworkService.createNetwork(networkName, {
-      internal: options.internal,
-      labels: options.labels,
-      timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
-      maxBufferedChars: 50000,
-    });
-  }
-
-  async removeNetwork(networkName: string): Promise<boolean> {
-    return this.dockerNetworkService.removeNetwork(networkName, {
-      timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
-      maxBufferedChars: 50000,
-    });
-  }
-
-  async inspectNetwork(
-    networkName: string,
-  ): Promise<Record<string, unknown> | null> {
-    return this.dockerNetworkService.inspectNetwork<Record<string, unknown>>(
-      networkName,
-      {
-        timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
-        maxBufferedChars: 500000,
-      },
-    );
-  }
-
-  async runContainer(options: DockerRunOptions): Promise<string> {
-    return this.dockerContainerService.runContainer({
-      ...options,
-      runtime: this.dockerRuntime,
-      timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
-      maxBufferedChars: 250000,
-    });
-  }
-
-  async runDaemonContainer(options: DockerRunOptions): Promise<string> {
-    return this.dockerContainerService.runDaemonContainer({
-      ...options,
-      runtime: this.dockerRuntime,
-      timeoutMs: DEFAULT_DOCKER_CHECK_TIMEOUT_MS,
-      maxBufferedChars: 250000,
     });
   }
 

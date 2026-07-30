@@ -21,71 +21,6 @@ describe('DockerContainerService', () => {
     service = new DockerContainerService();
   });
 
-  it('crea y arranca un contenedor con runtime, red y hardening base', async () => {
-    mockedRunCommand
-      .mockResolvedValueOnce({
-        exitCode: 0,
-        stdout: 'container-123\n',
-        stderr: '',
-        timedOut: false,
-      })
-      .mockResolvedValueOnce({
-        exitCode: 0,
-        stdout: 'container-123\n',
-        stderr: '',
-        timedOut: false,
-      });
-
-    const containerId = await service.runDaemonContainer({
-      containerName: 'svc-run-123',
-      imageTag: 'dockus:test',
-      command: ['python', '-m', 'http.server', '8000'],
-      networkName: 'dockus-run-123',
-      networkAlias: 'svc-run-123',
-      runtime: 'runsc',
-      labels: {
-        'dockus.managed': 'true',
-        'dockus.role': 'service',
-      },
-      cpus: '0.7',
-      memory: '768m',
-      timeoutMs: 15_000,
-    });
-
-    expect(containerId).toBe('container-123');
-    expect(mockedRunCommand).toHaveBeenNthCalledWith(
-      1,
-      'docker',
-      expect.arrayContaining([
-        'container',
-        'create',
-        '--name',
-        'svc-run-123',
-        '--network',
-        'dockus-run-123',
-        '--network-alias',
-        'svc-run-123',
-        '--runtime',
-        'runsc',
-        '--read-only',
-        '--security-opt',
-        'no-new-privileges',
-        '--cap-drop',
-        'ALL',
-        '--tmpfs',
-        '/tmp',
-        '--cpus',
-        '0.7',
-        '--memory',
-        '768m',
-        'dockus:test',
-      ]),
-      expect.objectContaining({
-        timeoutMs: 15_000,
-      }),
-    );
-  });
-
   it('endurece los contenedores efimeros que ejecutan codigo del alumno', async () => {
     mockedRunCommand.mockResolvedValueOnce({
       exitCode: 0,
@@ -303,36 +238,6 @@ describe('DockerContainerService', () => {
       expect(valueAfter(args, '--network')).toBe('dockus-workspace-1');
     });
 
-    it('aplica limite de procesos tambien en la ruta de contenedor de servicio, que antes no lo tenia', async () => {
-      mockedRunCommand
-        .mockResolvedValueOnce({
-          exitCode: 0,
-          stdout: 'container-abc\n',
-          stderr: '',
-          timedOut: false,
-        } as any)
-        .mockResolvedValueOnce({
-          exitCode: 0,
-          stdout: '',
-          stderr: '',
-          timedOut: false,
-        } as any);
-
-      await service.runContainer({
-        containerName: 'servicio',
-        imageTag: 'python:3.11-slim',
-        command: ['python', 'app.py'],
-        runtime: 'runc',
-        timeoutMs: 1000,
-      });
-
-      const args = argsOf(0);
-      expect(args).toContain('container');
-      expect(args).toContain('create');
-      expect(valueAfter(args, '--pids-limit')).toBe('256');
-      expect(valueAfter(args, '--network')).toBe('none');
-    });
-
     it('registra un aviso cuando no se pasa --user, porque no admite un valor por defecto seguro', async () => {
       const warnSpy = jest
         .spyOn((service as any).logger, 'warn')
@@ -372,7 +277,6 @@ describe('DockerExecutionService', () => {
       {
         get: jest.fn((_key: string, fallback?: unknown) => fallback),
       } as any,
-      {} as any,
       {
         runEphemeralContainer,
       } as any,

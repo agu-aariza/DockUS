@@ -8,7 +8,6 @@ import { Module } from '@nestjs/common';
 import { DockerContainerService } from './docker-container.service';
 import { DockerHostService } from './docker-host.service';
 import { DockerImageService } from './docker-image.service';
-import { DockerNetworkService } from './docker-network.service';
 import { DockerExecutionService } from './docker-execution.service';
 import { DockerDaemonStatusPublisherService } from './docker-daemon-status-publisher.service';
 import { CacheModule } from '../cache/cache.module';
@@ -17,7 +16,6 @@ import { CacheModule } from '../cache/cache.module';
   imports: [CacheModule],
   providers: [
     DockerHostService,
-    DockerNetworkService,
     DockerContainerService,
     DockerImageService,
     DockerExecutionService,
