@@ -16,13 +16,12 @@ Permitir a los profesores organizar la docencia en grupos y asignar estudiantes.
 ```text
 .
 ├── academic.module.ts # Módulo NestJS que registra la infraestructura académica
-├── application/      # Casos de uso de la gestión académica
-├── controllers/      # Controladores HTTP para grupos y estudiantes
+├── application/      # Servicios de aplicación y casos de uso
+├── presentation/     # Controladores HTTP para grupos y estudiantes
 ├── domain/           # Entidades y reglas puras del dominio académico
 ├── dto/              # DTOs para creación y edición de grupos y matrículas
 ├── entities/         # Entidades TypeORM de Grupo, Asignatura y Matrícula
-├── infrastructure/   # Repositorios concretos de base de datos
-└── services/         # Servicios de aplicación (GroupsService, etc.)
+└── infrastructure/   # Repositorios concretos de base de datos
 ```
 
 ---
@@ -30,7 +29,7 @@ Permitir a los profesores organizar la docencia en grupos y asignar estudiantes.
 ## Flujo de Trabajo / Arquitectura
 
 ```text
-[ Profesor UI ] ──> HTTP API ──> [ AcademicControllers ] ──> [ GroupsService ] ──> [ PostgreSQL ]
+[ Profesor UI ] ──> HTTP API ──> [ GroupsController ] ──> [ GroupsService ] ──> [ PostgreSQL ]
 ```
 
 ---

@@ -17,7 +17,7 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { GroupsService } from '../services/groups.service';
+import { GroupsService } from '../application/groups.service';
 import { CreateGroupDto } from '../dto/create-group.dto';
 import { BulkEnrollDto } from '../dto/bulk-enroll.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';

@@ -8,7 +8,7 @@
 import { CourseGroup } from '../../entities/course-group.entity';
 
 /**
- * Puerto real (audit/areas/arquitectura/plan_accion.md P2-7): sin puerto
+ * Puerto real (ARQ-007 P2-7): sin puerto
  * previo, único consumidor real (`GroupsService`, dueño de `CourseGroup`).
  * Mismo criterio que ARQ-007: sin tipos de TypeORM en la firma.
  */

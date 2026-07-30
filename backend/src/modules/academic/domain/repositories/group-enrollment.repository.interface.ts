@@ -8,7 +8,7 @@
 import { GroupEnrollment } from '../../entities/group-enrollment.entity';
 
 /**
- * Puerto real (audit/areas/arquitectura/plan_accion.md P2-7): sin puerto
+ * Puerto real (ARQ-007 P2-7): sin puerto
  * previo, único consumidor real (`GroupsService`). Mismo criterio que
  * ARQ-007: sin tipos de TypeORM en la firma. `bulkEnroll` absorbe la
  * transacción completa (lectura + reactivación + inserción con `orIgnore`)
