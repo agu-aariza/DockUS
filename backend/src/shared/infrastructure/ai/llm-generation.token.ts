@@ -12,7 +12,7 @@ export interface ILlmGenerationService {
 
 /**
  * Plan de arquitectura hexagonal, Fase 1 (P1-3, ver
- * audit/areas/arquitectura/plan_accion.md). Este puerto ya existía como
+ * ARQ-007). Este puerto ya existía como
  * interfaz — las 5 clases de proveedor y `LlmGenerationRouter` ya declaraban
  * `implements ILlmGenerationService` — pero ningún consumidor lo inyectaba a
  * través de un token: `BuilderLlmDispatcherService` y

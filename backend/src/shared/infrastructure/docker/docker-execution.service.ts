@@ -21,7 +21,7 @@ import {
 /**
  * Adaptador del puerto `IContainerRuntime`
  * (`modules/projects/builder/domain/ports/container-runtime.port.ts`, Fase 1
- * P1-1, ver audit/areas/arquitectura/plan_accion.md). Deliberadamente NO
+ * P1-1, ver ARQ-007). Deliberadamente NO
  * declara `implements IContainerRuntime`: shared/ no puede importar de
  * modules/ (no-shared-to-modules en .dependency-cruiser.cjs), así que esta
  * clase satisface el puerto por tipado estructural — el `useExisting` en
