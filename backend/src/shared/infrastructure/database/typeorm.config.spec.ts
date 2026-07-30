@@ -62,4 +62,20 @@ describe('buildTypeOrmConfig — ESC-C01: configuración del pool', () => {
     expect((prod as { synchronize: boolean }).synchronize).toBe(false);
     expect((dev as { synchronize: boolean }).synchronize).toBe(true);
   });
+
+  it('permite desactivarlo en un proceso secundario de desarrollo', () => {
+    const worker = buildTypeOrmConfig(
+      configWith({ NODE_ENV: 'development', DB_SYNCHRONIZE: false }),
+    );
+
+    expect((worker as { synchronize: boolean }).synchronize).toBe(false);
+  });
+
+  it('no permite reactivarlo explícitamente en producción', () => {
+    const prod = buildTypeOrmConfig(
+      configWith({ NODE_ENV: 'production', DB_SYNCHRONIZE: true }),
+    );
+
+    expect((prod as { synchronize: boolean }).synchronize).toBe(false);
+  });
 });

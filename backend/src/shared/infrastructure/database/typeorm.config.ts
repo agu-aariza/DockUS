@@ -42,6 +42,15 @@ export function buildTypeOrmConfig(
   configService: ConfigService,
 ): TypeOrmModuleOptions {
   const nodeEnv = configService.get<string>('NODE_ENV');
+  const configuredSynchronize = configService.get<boolean | string>(
+    'DB_SYNCHRONIZE',
+  );
+  const synchronize =
+    nodeEnv === 'production'
+      ? false
+      : configuredSynchronize === undefined
+        ? nodeEnv === 'development' || nodeEnv === 'test'
+        : configuredSynchronize === true || configuredSynchronize === 'true';
 
   return {
     type: 'postgres',
@@ -51,7 +60,7 @@ export function buildTypeOrmConfig(
     password: configService.get<string>('DB_PASSWORD', 'postgres'),
     database: configService.get<string>('DB_NAME', 'dockus'),
     autoLoadEntities: true,
-    synchronize: nodeEnv === 'development' || nodeEnv === 'test',
+    synchronize,
     migrationsTableName: 'dockus_migrations',
     migrations: [join(__dirname, 'migrations', `*.${migrationExtension()}`)],
     // Desactivado por defecto y opt-in explícito (`DB_RUN_MIGRATIONS=true`).

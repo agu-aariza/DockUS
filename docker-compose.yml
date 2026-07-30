@@ -73,6 +73,34 @@ services:
     networks:
       - dockus-network
 
+  minio-init:
+    image: quay.io/minio/minio:RELEASE.2024-08-29T01-40-52Z
+    container_name: dockus-minio-init
+    restart: "no"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-dockus_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-dockus_secret_key}
+      STORAGE_EVIDENCE_RETENTION_DAYS: ${STORAGE_EVIDENCE_RETENTION_DAYS:-90}
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu;
+        mc alias set dockus http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null;
+        lifecycle_rules_file=/tmp/dockus-lifecycle-rules.json;
+        lifecycle_rule_found=false;
+        mc ilm rule ls --json dockus/dockus-storage >"$$lifecycle_rules_file" 2>/dev/null || true;
+        while IFS= read -r lifecycle_rule; do
+          case "$$lifecycle_rule" in *runs/*Enabled*) lifecycle_rule_found=true ;; esac
+        done <"$$lifecycle_rules_file";
+        if [ "$$lifecycle_rule_found" != "true" ]; then
+          mc ilm rule add dockus/dockus-storage --prefix "runs/" --expire-days "$$STORAGE_EVIDENCE_RETENTION_DAYS";
+        fi
+    networks:
+      - dockus-network
+
   backend:
     build:
       context: .
@@ -89,6 +117,7 @@ services:
       - .env
     environment:
       NODE_ENV: development
+      DB_SYNCHRONIZE: "false"
       PORT: ${PORT:-3000}
       DB_HOST: postgres
       REDIS_HOST: redis
@@ -105,6 +134,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
@@ -163,6 +194,7 @@ services:
       - .env
     environment:
       NODE_ENV: development
+      DB_SYNCHRONIZE: "false"
       DB_HOST: postgres
       REDIS_HOST: redis
       MINIO_ENDPOINT: minio
@@ -190,6 +222,10 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      backend:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
@@ -261,6 +297,7 @@ services:
       - .env
     environment:
       NODE_ENV: production
+      DB_SYNCHRONIZE: "false"
       PORT: ${PORT:-3000}
       DB_HOST: postgres
       REDIS_HOST: redis
@@ -282,6 +319,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     # La API en producción no requiere socket de Docker directo; la salud del daemon
     # se consulta a través del estado publicado en Redis por el worker.
     healthcheck:
@@ -307,6 +346,7 @@ services:
       - .env
     environment:
       NODE_ENV: production
+      DB_SYNCHRONIZE: "false"
       DB_HOST: postgres
       REDIS_HOST: redis
       MINIO_ENDPOINT: minio
@@ -327,6 +367,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /dockus-workspaces:/dockus-workspaces

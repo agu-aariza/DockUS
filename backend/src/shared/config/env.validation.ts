@@ -76,6 +76,10 @@ export const envValidationSchema = Joi.object({
   DB_POOL_IDLE_TIMEOUT_MS: Joi.number().integer().min(1000).default(30000),
   DB_POOL_CONNECTION_TIMEOUT_MS: Joi.number().integer().min(1000).default(5000),
   DB_STATEMENT_TIMEOUT_MS: Joi.number().integer().min(1000).default(15000),
+  // El worker de desarrollo debe dejar la sincronización de esquema a la API;
+  // así no compiten dos procesos alterando el mismo catálogo de PostgreSQL.
+  // En producción se fuerza a `false` desde `typeorm.config.ts`.
+  DB_SYNCHRONIZE: Joi.boolean().optional(),
   // Opt-in explícito para aplicar migraciones al arrancar (ESC-CRIT-03). Debe
   // quedarse en `false` si hay varias réplicas de API: en ese caso se ejecuta
   // `npm run migration:run` como paso previo del despliegue.
