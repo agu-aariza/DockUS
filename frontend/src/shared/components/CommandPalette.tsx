@@ -15,6 +15,7 @@ import {
   RiLayoutGridFill
 } from 'react-icons/ri';
 import { useNavigate } from 'react-router-dom';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useWorkspaceSelection } from '../workspace/WorkspaceContext';
 import { projectsApi, assignmentsApi } from '../api/services';
 import type { ProjectAssignmentEntity } from '../../features/projects/types';
@@ -36,6 +37,7 @@ export function CommandPalette(): JSX.Element | null {
   const { selection, setProject, setAssignment } = useWorkspaceSelection();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, inputRef);
   const dialogTitleId = 'command-palette-title';
   const listboxId = 'command-palette-listbox';
 
@@ -211,7 +213,13 @@ export function CommandPalette(): JSX.Element | null {
   const selectedCommand = filteredCommands[selectedIndex];
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[15vh] px-4" role="dialog" aria-modal="true" aria-labelledby={dialogTitleId}>
+    <div
+      ref={dialogRef}
+      className="fixed inset-0 z-[200] flex items-start justify-center pt-[15vh] px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={dialogTitleId}
+    >
       <div 
         className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" 
         onClick={closePalette}

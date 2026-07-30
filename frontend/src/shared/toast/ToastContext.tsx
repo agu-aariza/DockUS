@@ -135,50 +135,61 @@ export function ToastProvider({ children }: PropsWithChildren): JSX.Element {
     [dismissToast, pushToast],
   );
 
+  const renderToast = (toast: ToastRecord) => {
+    const config = TOAST_CONFIG[toast.tone];
+    const Icon = config.icon;
+
+    return (
+      <section
+        key={toast.id}
+        role={toast.tone === "error" ? "alert" : "status"}
+        className={`pointer-events-auto overflow-hidden rounded-2xl border shadow-xl shadow-slate-900/10 backdrop-blur animate-in fade-in slide-in-from-top-2 duration-200 ${config.panel}`}
+      >
+        <div className="flex items-start gap-3 px-4 py-4">
+          <div
+            className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${config.iconWrap}`}
+          >
+            <Icon className="text-lg" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="text-sm font-semibold tracking-tight">
+              {toast.title ?? config.fallbackTitle}
+            </h4>
+            <p className="mt-1 text-sm leading-5 text-current/80">
+              {toast.description}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="rounded-full p-1 text-current/50 transition hover:bg-white/60 hover:text-current"
+            onClick={() => dismissToast(toast.id)}
+            aria-label="Cerrar aviso"
+          >
+            <RiCloseLine className="text-lg" />
+          </button>
+        </div>
+      </section>
+    );
+  };
+
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div
-        className="pointer-events-none fixed right-4 top-4 z-[140] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3"
-        aria-live="assertive"
-        aria-relevant="additions text"
-      >
-        {toasts.map((toast) => {
-          const config = TOAST_CONFIG[toast.tone];
-          const Icon = config.icon;
-
-          return (
-            <section
-              key={toast.id}
-              role={toast.tone === "error" ? "alert" : "status"}
-              className={`pointer-events-auto overflow-hidden rounded-2xl border shadow-xl shadow-slate-900/10 backdrop-blur animate-in fade-in slide-in-from-top-2 duration-200 ${config.panel}`}
-            >
-              <div className="flex items-start gap-3 px-4 py-4">
-                <div
-                  className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${config.iconWrap}`}
-                >
-                  <Icon className="text-lg" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-semibold tracking-tight">
-                    {toast.title ?? config.fallbackTitle}
-                  </h4>
-                  <p className="mt-1 text-sm leading-5 text-current/80">
-                    {toast.description}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-full p-1 text-current/50 transition hover:bg-white/60 hover:text-current"
-                  onClick={() => dismissToast(toast.id)}
-                  aria-label="Cerrar aviso"
-                >
-                  <RiCloseLine className="text-lg" />
-                </button>
-              </div>
-            </section>
-          );
-        })}
+      <div className="pointer-events-none fixed right-4 top-4 z-[140] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3">
+        {/*
+          Dos regiones live persistentes en vez de una sola con
+          aria-live="assertive" fijo (FE-004): antes, un toast de éxito
+          interrumpía a un lector de pantalla con la misma urgencia que un
+          error real, porque el aria-live del contenedor padre pisaba el
+          role="status"/"alert" de cada hijo. `display: contents` mantiene el
+          layout como si ambos grupos vivieran en el flex de arriba.
+        */}
+        <div className="contents" aria-live="polite" aria-relevant="additions text">
+          {toasts.filter((toast) => toast.tone !== "error").map(renderToast)}
+        </div>
+        <div className="contents" aria-live="assertive" aria-relevant="additions text">
+          {toasts.filter((toast) => toast.tone === "error").map(renderToast)}
+        </div>
       </div>
     </ToastContext.Provider>
   );

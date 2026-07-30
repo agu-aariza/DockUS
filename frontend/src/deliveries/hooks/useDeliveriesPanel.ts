@@ -14,6 +14,7 @@ import { useNoticeToasts } from "../../shared/toast/useNoticeToasts";
 import { useDeliveryManagement } from "./useDeliveryManagement";
 import { normalizeTeacherDeliveryTab } from "../teacherReviewNavigation";
 import { DeliveryEntity } from "../../shared/types";
+import { isLowConfidenceVerdict } from "../../shared/data/builderTaxonomy";
 
 export type DetailTab = "overview" | "grading" | "report";
 
@@ -39,7 +40,7 @@ export function useDeliveriesPanel() {
   );
   const [deliverySearch, setDeliverySearch] = useState("");
   const deferredDeliverySearch = useDeferredValue(deliverySearch);
-  const [quickFilterKey, setQuickFilterKey] = useState<"all" | "late" | "ungraded" | "fail" | "pass">("all");
+  const [quickFilterKey, setQuickFilterKey] = useState<"all" | "late" | "ungraded" | "fail" | "pass" | "needs-review">("all");
   const { pushToast } = useToast();
 
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -75,6 +76,10 @@ export function useDeliveriesPanel() {
     if (quickFilterKey === "ungraded") return delivery.grade === null && delivery.status === "EVALUATED";
     if (quickFilterKey === "fail") return delivery.grade !== null && delivery.grade < 5;
     if (quickFilterKey === "pass") return delivery.grade !== null && delivery.grade >= 5;
+    if (quickFilterKey === "needs-review") {
+      const assessment = dc.latestRunByDeliveryId[delivery.id]?.llmAssessment;
+      return isLowConfidenceVerdict(assessment?.evaluativeState, assessment?.confidence);
+    }
     return true;
   };
 

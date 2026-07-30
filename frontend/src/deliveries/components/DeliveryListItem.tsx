@@ -5,9 +5,11 @@
  */
 
 import { useState } from "react";
-import { RiTimeLine, RiFileChartLine, RiStackLine, RiFileTextLine } from "react-icons/ri";
-import { DeliveryEntity } from "../../shared/types";
+import { RiTimeLine, RiFileChartLine, RiStackLine, RiFileTextLine, RiAlertLine } from "react-icons/ri";
+import { BuildRunEntity, DeliveryEntity } from "../../shared/types";
 import { DeliveryStatusBadge } from "../../features/deliveries/components/DeliveryStatusBadge";
+import { StatusBadge } from "../../shared/components/ui/StatusBadge";
+import { isLowConfidenceVerdict } from "../../shared/data/builderTaxonomy";
 import { formatDateTime } from "../utils";
 
 const STATUS_TEXT: Record<DeliveryEntity["status"], string> = {
@@ -19,12 +21,14 @@ const STATUS_TEXT: Record<DeliveryEntity["status"], string> = {
 
 export function DeliveryListItem({
   delivery,
+  latestRun,
   active,
   onSelect,
   onOpenReport,
   onQuickGrade,
 }: {
   delivery: DeliveryEntity;
+  latestRun?: BuildRunEntity | null;
   active: boolean;
   onSelect: () => void;
   onOpenReport: () => void;
@@ -35,6 +39,8 @@ export function DeliveryListItem({
   );
   const canInlineGrade =
     delivery.status === "IN_REVIEW" || delivery.status === "EVALUATED";
+  const assessment = latestRun?.llmAssessment;
+  const needsReview = isLowConfidenceVerdict(assessment?.evaluativeState, assessment?.confidence);
 
   const commitGrade = () => {
     const parsed = parseFloat(inlineGrade);
@@ -61,13 +67,24 @@ export function DeliveryListItem({
               {delivery.studentName}
             </div>
           </div>
-          {active ? (
-            <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs font-medium text-white shadow-inner">
-              {STATUS_TEXT[delivery.status]}
-            </span>
-          ) : (
-            <DeliveryStatusBadge status={delivery.status} />
-          )}
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            {active ? (
+              <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs font-medium text-white shadow-inner">
+                {STATUS_TEXT[delivery.status]}
+              </span>
+            ) : (
+              <DeliveryStatusBadge status={delivery.status} />
+            )}
+            {needsReview && (
+              <StatusBadge
+                tone="danger"
+                icon={<RiAlertLine aria-hidden="true" />}
+                className={active ? "border-white/30 bg-white/10 text-white" : undefined}
+              >
+                Necesita revisión
+              </StatusBadge>
+            )}
+          </div>
         </div>
 
         <div className={`mt-3 space-y-1 text-xs font-medium leading-tight ${active ? "text-primary-100/90" : "text-slate-500"}`}>

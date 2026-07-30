@@ -32,10 +32,13 @@ export class ErrorBoundary extends Component<
     console.error('[ErrorBoundary]', error, errorInfo);
   }
 
+  // `.hash` es un no-op bajo BrowserRouter; `assign` cambia el pathname de
+  // verdad, así que un error reproducible en la ruta actual deja de ser un
+  // bucle. Navegación real (no remount local) porque las dos instancias de
+  // este boundary envuelven <App/> y <Routes> enteros, no una vista puntual.
   private handleReset = (): void => {
     this.setState({ hasError: false, error: null });
-    window.location.hash = "/";
-    window.location.reload();
+    window.location.assign("/");
   };
 
   render() {

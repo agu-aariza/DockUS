@@ -85,7 +85,11 @@ export function TeacherGradingStudio({
   );
 
   return (
-    <FilePreviewShell theme="light" header={header}>
+    <FilePreviewShell
+      theme="light"
+      header={header}
+      ariaLabel={`Estudio de calificación docente — v${delivery.version} · ${delivery.studentName}`}
+    >
       <section className="flex flex-1 overflow-hidden border-r border-app-border bg-white">
         <FileExplorer
           theme="light"

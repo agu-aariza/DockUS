@@ -105,6 +105,7 @@ export function TeacherDeliveriesPanel(): JSX.Element {
           deliverySearch={panel.deliverySearch}
           quickFilterKey={panel.quickFilterKey}
           visibleDeliveries={panel.visibleDeliveries}
+          latestRunByDeliveryId={panel.dc.latestRunByDeliveryId}
           submittedCount={panel.submittedCount}
           reviewCount={panel.reviewCount}
           evaluatedCount={panel.evaluatedCount}

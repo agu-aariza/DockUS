@@ -5,7 +5,7 @@
  */
 
 import { RiRefreshLine, RiInboxArchiveLine, RiPulseLine, RiCheckFill } from "react-icons/ri";
-import { DeliveryEntity, ProjectAssignmentEntity } from "../../shared/types";
+import { BuildRunEntity, DeliveryEntity, ProjectAssignmentEntity } from "../../shared/types";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { Button } from "../../shared/components/ui/Button";
 import { VisualPicker, VisualPickerOption } from "../../shared/components/ui/VisualPicker";
@@ -15,12 +15,15 @@ import { SkeletonTable } from "../../shared/components/Skeleton";
 import { DeliveryListItem } from "./DeliveryListItem";
 import { AssignmentLabel } from "./AssignmentLabel";
 
-const QUICK_FILTERS: { key: "all" | "late" | "ungraded" | "fail" | "pass"; label: string }[] = [
+export type DeliveryQuickFilterKey = "all" | "late" | "ungraded" | "fail" | "pass" | "needs-review";
+
+const QUICK_FILTERS: { key: DeliveryQuickFilterKey; label: string }[] = [
   { key: "all", label: "Todas" },
   { key: "late", label: "Tardías" },
   { key: "ungraded", label: "Sin nota" },
   { key: "fail", label: "Suspensas" },
   { key: "pass", label: "Aprobadas" },
+  { key: "needs-review", label: "Necesita revisión" },
 ];
 
 export function DeliveriesSidebar({
@@ -29,6 +32,7 @@ export function DeliveriesSidebar({
   deliverySearch,
   quickFilterKey,
   visibleDeliveries,
+  latestRunByDeliveryId,
   submittedCount,
   reviewCount,
   evaluatedCount,
@@ -46,8 +50,9 @@ export function DeliveriesSidebar({
   projectOptions: VisualPickerOption[];
   assignmentOptions: VisualPickerOption[];
   deliverySearch: string;
-  quickFilterKey: "all" | "late" | "ungraded" | "fail" | "pass";
+  quickFilterKey: DeliveryQuickFilterKey;
   visibleDeliveries: DeliveryEntity[];
+  latestRunByDeliveryId: Record<string, BuildRunEntity | null>;
   submittedCount: number;
   reviewCount: number;
   evaluatedCount: number;
@@ -57,7 +62,7 @@ export function DeliveriesSidebar({
   onProjectSelect: (_id: string) => void;
   onAssignmentSelect: (_id: string, _label: string) => void;
   onDeliverySearchChange: (_value: string) => void;
-  onQuickFilterChange: (_key: "all" | "late" | "ungraded" | "fail" | "pass") => void;
+  onQuickFilterChange: (_key: DeliveryQuickFilterKey) => void;
   openDelivery: (_id: string, _tab: "overview" | "grading" | "report") => void;
   handleViewReport: (_id: string) => void;
   handleQuickGrade: (_id: string, _grade: number) => void;
@@ -187,6 +192,7 @@ export function DeliveriesSidebar({
               <DeliveryListItem
                 key={delivery.id}
                 delivery={delivery}
+                latestRun={latestRunByDeliveryId[delivery.id]}
                 active={selectedDeliveryId === delivery.id}
                 onSelect={() => openDelivery(delivery.id, "overview")}
                 onOpenReport={() => {

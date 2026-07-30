@@ -84,7 +84,7 @@ export function CodePreviewModal({
   );
 
   return (
-    <FilePreviewShell theme="dark" header={header}>
+    <FilePreviewShell theme="dark" header={header} ariaLabel={`${title} — ${subtitle}`}>
       <FileExplorer
         theme="dark"
         files={files}

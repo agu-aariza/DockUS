@@ -116,3 +116,20 @@ export function confidenceLabel(confidence?: string | null): string {
   if (!confidence) return "n/d";
   return CONFIDENCE_LABELS[confidence] ?? confidence;
 }
+
+/**
+ * Un veredicto necesita revisión prioritaria del profesor cuando el estado
+ * evaluativo está degradado (E3/E4, ver arriba) o la confianza del evaluador
+ * es baja — en ambos casos la nota calculada es menos fiable de lo habitual.
+ * Se usa para señalizar la cola de entregas sin obligar a abrir cada una.
+ */
+export function isLowConfidenceVerdict(
+  evaluativeState?: string | null,
+  confidence?: string | null,
+): boolean {
+  const stateCode = evaluativeState ? extractCode(evaluativeState) : null;
+  if (stateCode === "E3" || stateCode === "E4") {
+    return true;
+  }
+  return (confidence?.trim().toLowerCase() ?? "") === "low";
+}

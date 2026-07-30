@@ -8,7 +8,7 @@
  * @module BuilderLiveRunPane
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   BuildRunEntity,
   BuildRunEvent,
@@ -101,9 +101,16 @@ export function BuilderLiveRunPane({
   busyAction,
 }: BuilderLiveRunPaneProps): JSX.Element {
   const [activeTab, setActiveTab] = useState<LiveRunTab>("live");
-  const consoleOutput = buildConsoleOutput(liveEvents);
-  const timelineEvents = liveEvents.filter(
-    (event) => event.eventType !== "LOG_CHUNK",
+  // liveEvents crece con cada frame SSE (mergeEvents reordena el array
+  // entero); sin memoizar, cada render no relacionado con la consola volvía
+  // a recorrerlo completo dos veces (FE-005).
+  const consoleOutput = useMemo(
+    () => buildConsoleOutput(liveEvents),
+    [liveEvents],
+  );
+  const timelineEvents = useMemo(
+    () => liveEvents.filter((event) => event.eventType !== "LOG_CHUNK"),
+    [liveEvents],
   );
 
   // Al cambiar de run se vuelve a la vista en vivo: si no, quedarías mirando la pestaña

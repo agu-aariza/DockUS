@@ -72,6 +72,9 @@ export function useDeliveryManagement(
   const [reportRun, setReportRun] = useState<BuildRunEntity | null>(null);
   const [reportDelivery, setReportDelivery] = useState<DeliveryEntity | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [latestRunByDeliveryId, setLatestRunByDeliveryId] = useState<
+    Record<string, BuildRunEntity | null>
+  >({});
 
   const reportAbortRef = useRef<AbortController | null>(null);
   const lastReportDeliveryIdRef = useRef<string | null>(null);
@@ -106,7 +109,10 @@ export function useDeliveryManagement(
     [selectedDelivery?.graderNotes],
   );
 
-  const refreshDeliveries = async (assignmentId = selectedAssignmentId) => {
+  const refreshDeliveries = async (
+    assignmentId = selectedAssignmentId,
+    refreshOptions?: { silent?: boolean },
+  ) => {
     if (!assignmentId || !canRead) return;
     const response = await deliveriesCrud.refresh(undefined, {
       assignmentId,
@@ -118,7 +124,9 @@ export function useDeliveryManagement(
     if (!response) return;
 
     lastFetchedAssignmentId.current = assignmentId;
-    setWorkspaceNotice({ text: "Entregas actualizadas.", tone: "info" });
+    if (!refreshOptions?.silent) {
+      setWorkspaceNotice({ text: "Entregas actualizadas.", tone: "info" });
+    }
     lastReportDeliveryIdRef.current = null;
 
     const activeId = selectedDeliveryId || options?.initialDeliveryId;
@@ -300,8 +308,33 @@ export function useDeliveryManagement(
     }
 
     setCreateForm(prev => ({ ...prev, assignmentId: selectedAssignmentId }));
-    void refreshDeliveries(selectedAssignmentId);
+    void refreshDeliveries(selectedAssignmentId, { silent: true });
   }, [canRead, selectedAssignmentId]);
+
+  useEffect(() => {
+    const evaluatedIds = (deliveries?.data ?? [])
+      .filter((d) => d.status === "EVALUATED")
+      .map((d) => d.id);
+
+    if (evaluatedIds.length === 0) {
+      setLatestRunByDeliveryId({});
+      return;
+    }
+
+    let active = true;
+    builderApi
+      .listLatestRunsByDeliveries(evaluatedIds)
+      .then((runsById) => {
+        if (active) setLatestRunByDeliveryId(runsById);
+      })
+      .catch(() => {
+        if (active) setLatestRunByDeliveryId({});
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [deliveries]);
 
   useEffect(() => {
     if (!selectedDeliveryId) return;
@@ -331,6 +364,7 @@ export function useDeliveryManagement(
     workspaceNotice, editorNotice, reportNotice,
     debugPayload, setDebugPayload,
     reportRun, reportDelivery, reportLoading, loadingDeliveries: deliveriesCrud.loading,
+    latestRunByDeliveryId,
     canRead, canWrite, canAdmin,
     refreshDeliveries, handleCreate, handleUpdate, handleStatusUpdate, handleViewReport, handleGradingUpdate,
     navigate

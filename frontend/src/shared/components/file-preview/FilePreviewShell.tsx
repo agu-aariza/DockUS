@@ -5,22 +5,40 @@
  */
 
 import type { ReactNode } from "react";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 import { SHELL_THEME, type FilePreviewTheme } from "./filePreviewTheme";
 
 interface FilePreviewShellProps {
   theme: FilePreviewTheme;
   header: ReactNode;
   children: ReactNode;
+  ariaLabel: string;
 }
 
-/** Full-screen overlay shared by the read-only previewer and the grading studio. */
+/**
+ * Full-screen overlay shared by the read-only previewer and the grading
+ * studio. Ambos consumidores solo montan este shell mientras están abiertos
+ * (`if (!isOpen) return null`), así que "montado" y "abierto" coinciden:
+ * `useFocusTrap` puede recibir `true` de forma fija (UX-MED-01, ver el propio
+ * hook — antes esta superficie no tenía ninguna trampa de foco).
+ */
 export function FilePreviewShell({
   theme,
   header,
   children,
+  ariaLabel,
 }: FilePreviewShellProps): JSX.Element {
+  const dialogRef = useFocusTrap<HTMLDivElement>(true);
+
   return (
-    <div className={SHELL_THEME[theme]}>
+    <div
+      ref={dialogRef}
+      className={SHELL_THEME[theme]}
+      role="dialog"
+      aria-modal="true"
+      aria-label={ariaLabel}
+      tabIndex={-1}
+    >
       {header}
       {/*
         overflow-x-auto, no overflow-hidden (UX-MED-03): FileExplorer (w-64/72)
