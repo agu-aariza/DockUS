@@ -14,7 +14,7 @@
  */
 
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 
 import { useToast } from "../shared/toast/ToastContext";
 import { useSession } from "../shared/session/SessionContext";

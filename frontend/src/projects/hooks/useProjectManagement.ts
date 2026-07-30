@@ -5,22 +5,19 @@
  */
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  assignmentsApi,
   projectsApi,
   usersApi,
 } from "../../shared/api/services";
 import type {
-  PaginatedResponse,
-  ProjectEntity,
   ProjectStatus,
   RubricCriterion,
-  UserEntity,
 } from "../../shared/types";
 import { useSession } from "../../shared/session/SessionContext";
 import { useManagementPermissions } from "../../shared/session/useManagementPermissions";
 import { getErrorMessage } from "../../shared/utils/errors";
-import { useCrudResource } from "../../shared/hooks/useCrudResource";
+import { queryKeys } from "../../shared/query/queryKeys";
 import type { NoticeState } from "./projectManagement.types";
 import {
   normalizeOptionalDateTime,
@@ -70,11 +67,6 @@ function useAutoDismissNotice(
 
 export function useProjectManagement() {
   const { activeSession: session } = useSession();
-  const [students, setStudents] = useState<UserEntity[]>([]);
-  // Total real de alumnos en la plataforma (meta.total), no el tamaño de la
-  // página cargada (limit: 100) — la métrica "Total Alumnos" usaba
-  // students.length, que se quedaba fija en 100 pasado ese umbral (FE-MED-01).
-  const [totalStudentsCount, setTotalStudentsCount] = useState(0);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [createForm, setCreateForm] = useState({
     title: "",
@@ -107,34 +99,19 @@ export function useProjectManagement() {
   const [projectNotice, setProjectNotice] = useState<NoticeState | null>(null);
   const [editorNotice, setEditorNotice] = useState<NoticeState | null>(null);
   const [debugPayload, setDebugPayload] = useState<unknown>(null);
-  const [loadingProjects, setLoadingProjects] = useState(false);
-  const [loadingStudents, setLoadingStudents] = useState(false);
-  const [allTeachers, setAllTeachers] = useState<UserEntity[]>([]);
-  const [loadingTeachers, setLoadingTeachers] = useState(false);
 
   const { canRead, canWrite, canAdmin } = useManagementPermissions(session);
 
   type CreateProjectPayload = Parameters<typeof projectsApi.create>[0];
   type UpdateProjectPayload = Parameters<typeof projectsApi.update>[1];
 
-  const projectCrud = useCrudResource<ProjectEntity, CreateProjectPayload, UpdateProjectPayload>({
-    api: {
-      list: projectsApi.list,
-      create: projectsApi.create,
-      update: projectsApi.update,
-      remove: projectsApi.remove,
-      restore: projectsApi.restore,
-    },
-    canRead,
-    initialQuery: {
-      page: 1,
-      limit: 50,
-      sortBy: "updatedAt",
-      sortOrder: "DESC",
-    },
+  const projectsQuery = useQuery({
+    queryKey: queryKeys.projects.list(),
+    queryFn: ({ signal }) =>
+      projectsApi.list({ page: 1, limit: 50, sortBy: "updatedAt", sortOrder: "DESC" }, signal),
+    enabled: canRead,
   });
-
-  const projects = projectCrud.listResponse;
+  const projects = projectsQuery.data ?? null;
 
   const selectedProject =
     projects?.data.find((project) => project.id === selectedProjectId) ?? null;
@@ -145,24 +122,23 @@ export function useProjectManagement() {
     setDebugPayload,
   });
 
+  // Único punto que muestra un aviso de "listado actualizado": una acción
+  // explícita (botón, o tras confirmar una mutación con su propio texto). El
+  // efecto de montaje/canRead llama a esto sin noticeText, así que no muestra
+  // ningún aviso — igual que el comportamiento original.
   const refreshProjects = async (noticeText?: string) => {
     if (!canRead) return;
-    setLoadingProjects(true);
-    try {
-      const response = await projectCrud.refresh();
-      if (response) {
-        setDebugPayload(response);
-        setProjectNotice(noticeText ? { text: noticeText, tone: "info" } : null);
-        setSelectedProjectId((current) =>
-          current && response.data.some((project) => project.id === current)
-            ? current
-            : "",
-        );
-      }
-    } catch (error) {
-      setProjectNotice({ text: getErrorMessage(error), tone: "warning" });
-    } finally {
-      setLoadingProjects(false);
+    const result = await projectsQuery.refetch();
+    if (result.data) {
+      setDebugPayload(result.data);
+      setProjectNotice(noticeText ? { text: noticeText, tone: "info" } : null);
+      setSelectedProjectId((current) =>
+        current && result.data.data.some((project) => project.id === current)
+          ? current
+          : "",
+      );
+    } else if (result.error) {
+      setProjectNotice({ text: getErrorMessage(result.error), tone: "warning" });
     }
   };
 
@@ -171,9 +147,23 @@ export function useProjectManagement() {
     selectedProjectId,
   });
 
+  const createMutation = useMutation({
+    mutationFn: (payload: CreateProjectPayload) => projectsApi.create(payload),
+  });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateProjectPayload }) =>
+      projectsApi.update(id, payload),
+  });
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => projectsApi.remove(id),
+  });
+  const restoreMutation = useMutation({
+    mutationFn: (id: string) => projectsApi.restore(id),
+  });
+
   const handleRestore = async (id: string) => {
     try {
-      await projectCrud.restore(id);
+      await restoreMutation.mutateAsync(id);
       await refreshProjects();
     } catch (err) {
       console.error("Error al restaurar proyecto:", err);
@@ -220,7 +210,7 @@ export function useProjectManagement() {
     }
 
     try {
-      const response = await projectCrud.create({
+      const response = await createMutation.mutateAsync({
         title: createForm.title,
         contextAcademico: normalizeOptionalText(createForm.contextAcademico),
         status: createForm.status,
@@ -233,8 +223,6 @@ export function useProjectManagement() {
         closesAt: normalizeOptionalDateTime(createForm.closesAt),
         assignedGroupIds: createForm.assignedGroupIds,
       });
-
-      if (!response) return;
 
       if (createForm.suiteFile) {
         await projectsApi.uploadTestSuite(response.id, createForm.suiteFile);
@@ -277,19 +265,21 @@ export function useProjectManagement() {
     }
 
     try {
-      const response = await projectCrud.update(selectedProject.id, {
-        title: editForm.title,
-        contextAcademico: normalizeOptionalText(editForm.contextAcademico),
-        status: editForm.status,
-        maxDeliveriesPerStudent: Number(editForm.maxDeliveriesPerStudent) || 1,
-        expectedType: normalizeOptionalText(editForm.expectedType),
-        expectedOutput: normalizeOptionalText(editForm.expectedOutput),
-        rubricInstructions: normalizeOptionalText(editForm.rubricInstructions),
-        rubricCriteria: rubricCriteria ?? [],
-        opensAt: normalizeOptionalDateTime(editForm.opensAt),
-        closesAt: normalizeOptionalDateTime(editForm.closesAt),
+      const response = await updateMutation.mutateAsync({
+        id: selectedProject.id,
+        payload: {
+          title: editForm.title,
+          contextAcademico: normalizeOptionalText(editForm.contextAcademico),
+          status: editForm.status,
+          maxDeliveriesPerStudent: Number(editForm.maxDeliveriesPerStudent) || 1,
+          expectedType: normalizeOptionalText(editForm.expectedType),
+          expectedOutput: normalizeOptionalText(editForm.expectedOutput),
+          rubricInstructions: normalizeOptionalText(editForm.rubricInstructions),
+          rubricCriteria: rubricCriteria ?? [],
+          opensAt: normalizeOptionalDateTime(editForm.opensAt),
+          closesAt: normalizeOptionalDateTime(editForm.closesAt),
+        },
       });
-      if (!response) return;
       setDebugPayload(response);
       setEditorNotice({
         text: "Proyecto actualizado correctamente.",
@@ -304,7 +294,7 @@ export function useProjectManagement() {
   const executeDelete = async () => {
     if (!canAdmin || !deleteId.trim()) return;
     try {
-      await projectCrud.remove(deleteId.trim());
+      await removeMutation.mutateAsync(deleteId.trim());
       setEditorNotice({
         text: `Proyecto ${deleteId.trim()} eliminado.`,
         tone: "info",
@@ -317,49 +307,48 @@ export function useProjectManagement() {
     }
   };
 
-  useEffect(() => {
-    if (canRead) {
-      void refreshProjects();
-    }
-  }, [canRead]);
+  const studentsQuery = useQuery({
+    queryKey: queryKeys.users.list({ page: 1, limit: 100, role: "STUDENT" }),
+    queryFn: () => usersApi.list({ page: 1, limit: 100, role: "STUDENT" }),
+    enabled: canWrite,
+  });
+  const students = studentsQuery.data?.data ?? [];
+  // Total real de alumnos en la plataforma (meta.total), no el tamaño de la
+  // página cargada (limit: 100) — la métrica "Total Alumnos" usaba
+  // students.length, que se quedaba fija en 100 pasado ese umbral (FE-MED-01).
+  const totalStudentsCount = studentsQuery.data?.meta.total ?? 0;
 
   useEffect(() => {
-    if (!canWrite) return;
-    setLoadingStudents(true);
-    usersApi
-      .list({ page: 1, limit: 100, role: "STUDENT" })
-      .then((response) => {
-        setStudents(response.data);
-        setTotalStudentsCount(response.meta.total);
-      })
-      .catch((error) =>
-        assignmentManagement.setAssignmentNotice({
-          text: getErrorMessage(error),
-          tone: "warning",
-        }),
-      )
-      .finally(() => setLoadingStudents(false));
-  }, [canWrite]);
+    if (studentsQuery.isError) {
+      assignmentManagement.setAssignmentNotice({
+        text: getErrorMessage(studentsQuery.error),
+        tone: "warning",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentsQuery.isError, studentsQuery.error]);
 
   // Búsqueda server-side de profesores (FE-MED-01): con más de 100 docentes,
   // el fetch fijo de la primera página los dejaba invisibles para el picker
   // de colaboradores de ProjectTeachersSection sin importar qué se tecleara.
-  const searchTeachers = useCallback(
-    (query?: string) => {
-      if (!canWrite) return;
-      setLoadingTeachers(true);
-      usersApi
-        .list({ page: 1, limit: 100, role: "TEACHER", search: query?.trim() || undefined })
-        .then((response) => setAllTeachers(response.data))
-        .catch((error) => console.error("Error al cargar profesores:", error))
-        .finally(() => setLoadingTeachers(false));
-    },
-    [canWrite],
-  );
+  const [teacherSearch, setTeacherSearch] = useState<string | undefined>(undefined);
+  const teachersQuery = useQuery({
+    queryKey: queryKeys.users.list({ page: 1, limit: 100, role: "TEACHER", search: teacherSearch }),
+    queryFn: () =>
+      usersApi.list({ page: 1, limit: 100, role: "TEACHER", search: teacherSearch }),
+    enabled: canWrite,
+  });
+  const allTeachers = teachersQuery.data?.data ?? [];
+
+  const searchTeachers = useCallback((query?: string) => {
+    setTeacherSearch(query?.trim() || undefined);
+  }, []);
 
   useEffect(() => {
-    searchTeachers();
-  }, [searchTeachers]);
+    if (teachersQuery.isError) {
+      console.error("Error al cargar profesores:", teachersQuery.error);
+    }
+  }, [teachersQuery.isError, teachersQuery.error]);
 
   useEffect(() => {
     if (!canWrite || !selectedProject) return;
@@ -384,13 +373,10 @@ export function useProjectManagement() {
 
   return {
     projects,
-    setProjects: () => {}, // preserved for API compatibility; list is managed by CRUD hook
     students,
-    setStudents,
     totalStudentsCount,
     searchTeachers,
     groups: assignmentManagement.groups,
-    setGroups: assignmentManagement.setGroups,
     selectedProjectId,
     setSelectedProjectId,
     selectedProject,
@@ -429,8 +415,8 @@ export function useProjectManagement() {
     suiteNotice: testSuiteManagement.suiteNotice,
     editorNotice,
     debugPayload,
-    loadingProjects,
-    loadingStudents,
+    loadingProjects: projectsQuery.isFetching,
+    loadingStudents: studentsQuery.isFetching,
     loadingGroups: assignmentManagement.loadingGroups,
     assignmentBusy: assignmentManagement.assignmentBusy,
     canRead,
@@ -458,7 +444,7 @@ export function useProjectManagement() {
     handleAddTeacher,
     handleRemoveTeacher,
     allTeachers,
-    loadingTeachers,
+    loadingTeachers: teachersQuery.isFetching,
     executeDelete,
     handleRestore,
   };

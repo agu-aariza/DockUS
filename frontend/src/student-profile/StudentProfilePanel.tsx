@@ -4,8 +4,8 @@
  * @module StudentProfilePanel
  */
 
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import { RiArrowLeftLine, RiUser3Line } from "react-icons/ri";
 import { PageHeader } from "../shared/components/ui/PageHeader";
 import { Button } from "../shared/components/ui/Button";
@@ -13,9 +13,9 @@ import { SkeletonCard } from "../shared/components/Skeleton";
 import { EmptyState } from "../shared/components/EmptyState";
 import { studentsApi } from "../shared/api/services";
 import { getErrorMessage } from "../shared/utils/errors";
+import { queryKeys } from "../shared/query/queryKeys";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import { StudentProfileView } from "./components/StudentProfileView";
-import type { StudentProfileResponse } from "../features/students/types";
 
 /** Expediente de un alumno visto por el profesor. Ruta: `/students/:studentId`. */
 export function StudentProfilePanel(): JSX.Element {
@@ -23,31 +23,14 @@ export function StudentProfilePanel(): JSX.Element {
   const navigate = useNavigate();
   const { setDelivery } = useWorkspaceSelection();
 
-  const [profile, setProfile] = useState<StudentProfileResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!studentId) return;
-    let active = true;
-
-    void (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await studentsApi.profile(studentId);
-        if (active) setProfile(data);
-      } catch (err) {
-        if (active) setError(getErrorMessage(err));
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [studentId]);
+  const profileQuery = useQuery({
+    queryKey: queryKeys.studentProfile.byId(studentId ?? ""),
+    queryFn: () => studentsApi.profile(studentId!),
+    enabled: !!studentId,
+  });
+  const profile = profileQuery.data ?? null;
+  const loading = profileQuery.isPending;
+  const error = profileQuery.isError ? getErrorMessage(profileQuery.error) : null;
 
   // Abrir una entrega desde el expediente lleva al panel de entregas con esa
   // entrega ya seleccionada, en vez de duplicar aquí el estudio de corrección.

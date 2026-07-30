@@ -17,7 +17,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
-} from "react-router-dom";
+} from "react-router";
 import React, { useEffect, useState, Suspense, lazy } from "react";
 import { AuthPanel } from "./auth/AuthPanel";
 import { AppShell } from "./shared/components/ui/AppShell";

@@ -4,12 +4,12 @@
  * @module RuntimeStatusBar
  */
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { healthApi } from "../../shared/api/services";
+import { queryKeys } from "../../shared/query/queryKeys";
 import {
   DEPENDENCY_LABEL,
   type ReadinessDependency,
-  type ReadinessReport,
 } from "../../features/health/types";
 import type { StreamState } from "../../builder/hooks/useBuilderRunStream";
 
@@ -36,35 +36,18 @@ export function RuntimeStatusBar({
   streamState,
   latestSequence,
 }: RuntimeStatusBarProps): JSX.Element {
-  const [report, setReport] = useState<ReadinessReport | null>(null);
-  const [unreachable, setUnreachable] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    const poll = async () => {
-      try {
-        const next = await healthApi.readiness(controller.signal);
-        setReport(next);
-        setUnreachable(false);
-      } catch {
-        if (!controller.signal.aborted) {
-          setUnreachable(true);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          timer = setTimeout(() => void poll(), POLL_INTERVAL_MS);
-        }
-      }
-    };
-
-    void poll();
-    return () => {
-      controller.abort();
-      if (timer) clearTimeout(timer);
-    };
-  }, []);
+  // El default de v5 refetchIntervalInBackground:false pausa el sondeo con la
+  // pestaña oculta (antes sondeaba igual en segundo plano) — mejora, no
+  // regresión, sin efecto visible porque esta barra no se renderiza si la
+  // pestaña no tiene foco.
+  const readinessQuery = useQuery({
+    queryKey: queryKeys.health.readiness(),
+    queryFn: ({ signal }) => healthApi.readiness(signal),
+    refetchInterval: POLL_INTERVAL_MS,
+    retry: false,
+  });
+  const report = readinessQuery.data ?? null;
+  const unreachable = readinessQuery.isError;
 
   const healthy = report?.status === "ok";
   const streaming = streamState === "streaming";

@@ -5,7 +5,8 @@
  */
 
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   assignmentsApi,
   builderApi,
@@ -17,13 +18,11 @@ import type {
   BuildRunEntity,
   DeliveryEntity,
   DeliveryStatus,
-  ProjectAssignmentEntity,
-  ProjectEntity,
 } from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useSession } from "../../shared/session/SessionContext";
 import { useManagementPermissions } from "../../shared/session/useManagementPermissions";
-import { useCrudResource } from "../../shared/hooks/useCrudResource";
+import { queryKeys } from "../../shared/query/queryKeys";
 import {
   extractLegacyAiEvidence,
   mergeManualAndLegacyNotes,
@@ -40,22 +39,18 @@ export function useDeliveryManagement(
 ) {
   const { activeSession: session } = useSession();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<ProjectEntity[]>([]);
-  const [assignments, setAssignments] = useState<ProjectAssignmentEntity[]>([]);
-  const [myAssignments, setMyAssignments] = useState<ProjectAssignmentEntity[]>([]);
+  const queryClient = useQueryClient();
   const { selection, setAssignment, setDelivery } = useWorkspaceSelection();
   const selectedProjectId = selection.projectId || "";
   const selectedAssignmentId = selection.assignmentId || "";
   const selectedDeliveryId = selection.deliveryId || "";
-  
-  const lastFetchedAssignmentId = useRef<string | null>(null);
 
   const [createForm, setCreateForm] = useState({
     assignmentId: "",
     status: "DRAFT" as DeliveryStatus,
     notes: "",
   });
-  
+
   const [updateForm, setUpdateForm] = useState({ id: "", status: "", notes: "" });
   const [statusForm, setStatusForm] = useState({ id: "", status: "SUBMITTED" as DeliveryStatus });
   const [gradingForm, setGradingForm] = useState({
@@ -63,18 +58,15 @@ export function useDeliveryManagement(
     grade: "",
     graderNotes: "",
   });
-  
+
   const [workspaceNotice, setWorkspaceNotice] = useState<NoticeState | null>(null);
   const [editorNotice, setEditorNotice] = useState<NoticeState | null>(null);
   const [reportNotice, setReportNotice] = useState<NoticeState | null>(null);
   const [debugPayload, setDebugPayload] = useState<unknown>(null);
-  
+
   const [reportRun, setReportRun] = useState<BuildRunEntity | null>(null);
   const [reportDelivery, setReportDelivery] = useState<DeliveryEntity | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
-  const [latestRunByDeliveryId, setLatestRunByDeliveryId] = useState<
-    Record<string, BuildRunEntity | null>
-  >({});
 
   const reportAbortRef = useRef<AbortController | null>(null);
   const lastReportDeliveryIdRef = useRef<string | null>(null);
@@ -84,24 +76,89 @@ export function useDeliveryManagement(
 
   type CreateDeliveryPayload = Parameters<typeof deliveriesApi.create>[0];
   type UpdateDeliveryPayload = Parameters<typeof deliveriesApi.update>[1];
+  type GradingPayload = Parameters<typeof deliveriesApi.updateGrading>[1];
 
-  const deliveriesCrud = useCrudResource<DeliveryEntity, CreateDeliveryPayload, UpdateDeliveryPayload>({
-    api: {
-      list: deliveriesApi.list,
-      create: deliveriesApi.create,
-      update: deliveriesApi.update,
-    },
-    canRead,
-    initialQuery: {
-      assignmentId: selectedAssignmentId,
-      page: 1,
-      limit: 50,
-      sortBy: "createdAt",
-      sortOrder: "DESC",
-    },
+  const deliveriesQuery = useQuery({
+    queryKey: queryKeys.deliveries.list(selectedAssignmentId),
+    queryFn: ({ signal }) =>
+      deliveriesApi.list(
+        {
+          assignmentId: selectedAssignmentId,
+          page: 1,
+          limit: 50,
+          sortBy: "createdAt",
+          sortOrder: "DESC",
+        },
+        signal,
+      ),
+    enabled: canRead && !!selectedAssignmentId,
+  });
+  const deliveries = deliveriesQuery.data ?? null;
+
+  const evaluatedIds = useMemo(
+    () => (deliveries?.data ?? []).filter((d) => d.status === "EVALUATED").map((d) => d.id),
+    [deliveries],
+  );
+  const latestRunsQuery = useQuery({
+    queryKey: queryKeys.deliveries.latestRuns(evaluatedIds),
+    queryFn: () => builderApi.listLatestRunsByDeliveries(evaluatedIds),
+    enabled: evaluatedIds.length > 0,
+  });
+  const latestRunByDeliveryId = latestRunsQuery.data ?? {};
+
+  const projectsQuery = useQuery({
+    queryKey: queryKeys.projects.list(),
+    queryFn: ({ signal }) =>
+      projectsApi.list({ page: 1, limit: 50, sortBy: "updatedAt", sortOrder: "DESC" }, signal),
+    enabled: canRead,
+  });
+  const projects = projectsQuery.data?.data ?? [];
+
+  const myAssignmentsQuery = useQuery({
+    queryKey: queryKeys.assignments.mine(),
+    queryFn: () => assignmentsApi.listMine(),
+    enabled: !!session && session.role === "STUDENT",
+  });
+  const myAssignments = myAssignmentsQuery.data ?? [];
+
+  const assignmentsByProjectQuery = useQuery({
+    queryKey: queryKeys.assignments.byProject(selectedProjectId),
+    queryFn: ({ signal }) => assignmentsApi.listByProject(selectedProjectId, signal),
+    enabled: canRead && canWrite && !!selectedProjectId,
   });
 
-  const deliveries = deliveriesCrud.listResponse;
+  const assignments = useMemo(() => {
+    if (!selectedProjectId || !canRead) return [];
+    if (canWrite) return assignmentsByProjectQuery.data ?? [];
+    return myAssignments.filter((a) => a.projectId === selectedProjectId);
+  }, [canRead, canWrite, assignmentsByProjectQuery.data, myAssignments, selectedProjectId]);
+
+  // Cada una de estas cargas de fondo ya mostraba su propio aviso de error en
+  // workspaceNotice antes de esta migración; useQuery v5 no tiene onError, así
+  // que se reproduce con un efecto explícito por query.
+  useEffect(() => {
+    if (deliveriesQuery.isError) {
+      setWorkspaceNotice({ text: getErrorMessage(deliveriesQuery.error), tone: "warning" });
+    }
+  }, [deliveriesQuery.isError, deliveriesQuery.error]);
+
+  useEffect(() => {
+    if (projectsQuery.isError) {
+      setWorkspaceNotice({ text: getErrorMessage(projectsQuery.error), tone: "warning" });
+    }
+  }, [projectsQuery.isError, projectsQuery.error]);
+
+  useEffect(() => {
+    if (myAssignmentsQuery.isError) {
+      setWorkspaceNotice({ text: getErrorMessage(myAssignmentsQuery.error), tone: "warning" });
+    }
+  }, [myAssignmentsQuery.isError, myAssignmentsQuery.error]);
+
+  useEffect(() => {
+    if (assignmentsByProjectQuery.isError) {
+      setWorkspaceNotice({ text: getErrorMessage(assignmentsByProjectQuery.error), tone: "warning" });
+    }
+  }, [assignmentsByProjectQuery.isError, assignmentsByProjectQuery.error]);
 
   const selectedDelivery = deliveries?.data.find(d => d.id === selectedDeliveryId) ?? null;
   const selectedDeliveryReviewNotes = useMemo(
@@ -109,69 +166,77 @@ export function useDeliveryManagement(
     [selectedDelivery?.graderNotes],
   );
 
-  const refreshDeliveries = async (
-    assignmentId = selectedAssignmentId,
-    refreshOptions?: { silent?: boolean },
-  ) => {
-    if (!assignmentId || !canRead) return;
-    const response = await deliveriesCrud.refresh(undefined, {
-      assignmentId,
-      page: 1,
-      limit: 50,
-      sortBy: "createdAt",
-      sortOrder: "DESC",
-    });
-    if (!response) return;
+  const invalidateDeliveries = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.deliveries.all });
 
-    lastFetchedAssignmentId.current = assignmentId;
-    if (!refreshOptions?.silent) {
+  const createMutation = useMutation({
+    mutationFn: (payload: CreateDeliveryPayload) => deliveriesApi.create(payload),
+    onSuccess: invalidateDeliveries,
+  });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateDeliveryPayload }) =>
+      deliveriesApi.update(id, payload),
+    onSuccess: invalidateDeliveries,
+  });
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: DeliveryStatus }) =>
+      deliveriesApi.updateStatus(id, status),
+    onSuccess: invalidateDeliveries,
+  });
+  const gradingMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: GradingPayload }) =>
+      deliveriesApi.updateGrading(id, payload),
+    onSuccess: invalidateDeliveries,
+  });
+
+  // Wrapper expuesto para los sitios que hoy llaman a deliveriesApi.updateGrading
+  // directamente (calificación rápida desde la sidebar, grading studio) y luego
+  // forzaban un refresh manual: al pasar por la mutación, la invalidación en
+  // onSuccess ya dispara ese refetch, así que esos sitios dejan de necesitar
+  // ninguna llamada de refresh propia.
+  const updateGrading = (id: string, payload: GradingPayload) =>
+    gradingMutation.mutateAsync({ id, payload });
+
+  // Único punto donde se muestra "Entregas actualizadas.": una acción de
+  // refresco manual explícita (botón), nunca una carga/refetch automático.
+  const refreshDeliveries = async () => {
+    const result = await deliveriesQuery.refetch();
+    if (result.data) {
       setWorkspaceNotice({ text: "Entregas actualizadas.", tone: "info" });
-    }
-    lastReportDeliveryIdRef.current = null;
-
-    const activeId = selectedDeliveryId || options?.initialDeliveryId;
-
-    if (!activeId || !response.data.some(d => d.id === activeId)) {
-      const firstId = response.data[0]?.id;
-      if (firstId) {
-        setDelivery(firstId, `v${response.data[0].version} - ${response.data[0].studentEmail}`);
-      }
-    } else if (activeId && !selectedDeliveryId) {
-      const match = response.data.find(d => d.id === activeId);
-      if (match) {
-        setDelivery(activeId, `v${match.version} - ${match.studentEmail}`);
-      }
+    } else if (result.error) {
+      setWorkspaceNotice({ text: getErrorMessage(result.error), tone: "warning" });
     }
   };
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canRead || !createForm.assignmentId.trim()) return;
-    const response = await deliveriesCrud.create({
-      ...createForm,
-      notes: createForm.notes || undefined,
-    });
-    if (response) {
+    try {
+      const response = await createMutation.mutateAsync({
+        ...createForm,
+        notes: createForm.notes || undefined,
+      });
       setEditorNotice({ text: "Entrega creada correctamente.", tone: "info" });
-      await refreshDeliveries(createForm.assignmentId);
       setDelivery(response.id);
-    } else if (deliveriesCrud.notice) {
-      setEditorNotice({ text: deliveriesCrud.notice.text, tone: "warning" });
+    } catch (e) {
+      setEditorNotice({ text: getErrorMessage(e), tone: "warning" });
     }
   };
 
   const handleUpdate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canWrite || !updateForm.id.trim()) return;
-    const response = await deliveriesCrud.update(updateForm.id.trim(), {
-      status: updateForm.status ? (updateForm.status as DeliveryStatus) : undefined,
-      notes: updateForm.notes || undefined,
-    });
-    if (response) {
+    try {
+      await updateMutation.mutateAsync({
+        id: updateForm.id.trim(),
+        payload: {
+          status: updateForm.status ? (updateForm.status as DeliveryStatus) : undefined,
+          notes: updateForm.notes || undefined,
+        },
+      });
       setEditorNotice({ text: "Entrega actualizada.", tone: "info" });
-      await refreshDeliveries();
-    } else if (deliveriesCrud.notice) {
-      setEditorNotice({ text: deliveriesCrud.notice.text, tone: "warning" });
+    } catch (e) {
+      setEditorNotice({ text: getErrorMessage(e), tone: "warning" });
     }
   };
 
@@ -179,9 +244,8 @@ export function useDeliveryManagement(
     event.preventDefault();
     if (!canWrite || !statusForm.id.trim()) return;
     try {
-      await deliveriesApi.updateStatus(statusForm.id.trim(), statusForm.status);
+      await statusMutation.mutateAsync({ id: statusForm.id.trim(), status: statusForm.status });
       setEditorNotice({ text: "Estado actualizado.", tone: "info" });
-      await refreshDeliveries();
     } catch (e) {
       setEditorNotice({ text: getErrorMessage(e), tone: "warning" });
     }
@@ -240,7 +304,7 @@ export function useDeliveryManagement(
     event.preventDefault();
     if (!canWrite || !gradingForm.id.trim()) return;
     try {
-      const response = await deliveriesApi.updateGrading(gradingForm.id.trim(), {
+      const response = await updateGrading(gradingForm.id.trim(), {
         grade: gradingForm.grade.trim() ? Number(gradingForm.grade) : null,
         graderNotes: mergeManualAndLegacyNotes(
           gradingForm.graderNotes,
@@ -249,92 +313,47 @@ export function useDeliveryManagement(
       });
       setEditorNotice({ text: "Calificación actualizada.", tone: "info" });
       setDelivery(response.id);
-      await refreshDeliveries();
     } catch (e) {
       setEditorNotice({ text: getErrorMessage(e), tone: "warning" });
     }
   };
 
-  useEffect(() => {
-    if (!canRead) return;
-    projectsApi.list({ page: 1, limit: 50, sortBy: "updatedAt", sortOrder: "DESC" })
-      .then(r => {
-        setProjects(r.data);
-      })
-      .catch(e => setWorkspaceNotice({ text: getErrorMessage(e), tone: "warning" }));
-  }, [canRead]);
-
-  useEffect(() => {
-    if (!session || session.role !== "STUDENT") return;
-    assignmentsApi.listMine()
-      .then(r => {
-        setMyAssignments(r);
-      })
-      .catch(e => setWorkspaceNotice({ text: getErrorMessage(e), tone: "warning" }));
-  }, [session]);
-
-  useEffect(() => {
-    if (!selectedProjectId || !canRead) return;
-    const loadAssignments = async () => {
-      try {
-        const response = canWrite 
-          ? await assignmentsApi.listByProject(selectedProjectId) 
-          : myAssignments.filter(a => a.projectId === selectedProjectId);
-        setAssignments(response);
-      } catch (e) {
-        setWorkspaceNotice({ text: getErrorMessage(e), tone: "warning" });
-      }
-    };
-    void loadAssignments();
-  }, [canRead, canWrite, myAssignments, selectedProjectId]);
-
+  // Al perder la asignación seleccionada se limpia el estado de reporte y el
+  // formulario de creación; con asignación seleccionada, la carga de la lista
+  // ya la gestiona deliveriesQuery vía su queryKey/enabled, sin efecto propio.
   useEffect(() => {
     if (!selectedAssignmentId) {
-      deliveriesCrud.setListResponse(null);
       setReportRun(null);
       setReportDelivery(null);
-      lastFetchedAssignmentId.current = null;
       lastReportDeliveryIdRef.current = null;
       reportAbortRef.current?.abort();
       reportInFlightRef.current = false;
       setCreateForm(prev => ({ ...prev, assignmentId: "" }));
       return;
     }
-    
     if (!canRead) return;
-    
-    if (lastFetchedAssignmentId.current === selectedAssignmentId && deliveries) {
-      return;
-    }
-
     setCreateForm(prev => ({ ...prev, assignmentId: selectedAssignmentId }));
-    void refreshDeliveries(selectedAssignmentId, { silent: true });
-  }, [canRead, selectedAssignmentId]);
+  }, [selectedAssignmentId, canRead]);
 
+  // Sincroniza la selección de workspace con los datos frescos del servidor
+  // (equivalente a lo que antes hacía refreshDeliveries() de forma imperativa).
   useEffect(() => {
-    const evaluatedIds = (deliveries?.data ?? [])
-      .filter((d) => d.status === "EVALUATED")
-      .map((d) => d.id);
-
-    if (evaluatedIds.length === 0) {
-      setLatestRunByDeliveryId({});
-      return;
+    const response = deliveriesQuery.data;
+    if (!response) return;
+    const activeId = selectedDeliveryId || options?.initialDeliveryId;
+    if (!activeId || !response.data.some(d => d.id === activeId)) {
+      const first = response.data[0];
+      if (first) setDelivery(first.id, `v${first.version} - ${first.studentEmail}`);
+    } else if (activeId && !selectedDeliveryId) {
+      const match = response.data.find(d => d.id === activeId);
+      if (match) setDelivery(activeId, `v${match.version} - ${match.studentEmail}`);
     }
-
-    let active = true;
-    builderApi
-      .listLatestRunsByDeliveries(evaluatedIds)
-      .then((runsById) => {
-        if (active) setLatestRunByDeliveryId(runsById);
-      })
-      .catch(() => {
-        if (active) setLatestRunByDeliveryId({});
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [deliveries]);
+    // setDelivery no es estable entre renders (no está memoizado en el
+    // contexto); se omite deliberadamente de las deps para no reejecutar este
+    // efecto por cada render del workspace, solo cuando cambian los datos o la
+    // selección relevante.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveriesQuery.data, selectedDeliveryId, options?.initialDeliveryId]);
 
   useEffect(() => {
     if (!selectedDeliveryId) return;
@@ -363,10 +382,11 @@ export function useDeliveryManagement(
     gradingForm, setGradingForm,
     workspaceNotice, editorNotice, reportNotice,
     debugPayload, setDebugPayload,
-    reportRun, reportDelivery, reportLoading, loadingDeliveries: deliveriesCrud.loading,
+    reportRun, reportDelivery, reportLoading, loadingDeliveries: deliveriesQuery.isFetching,
     latestRunByDeliveryId,
     canRead, canWrite, canAdmin,
     refreshDeliveries, handleCreate, handleUpdate, handleStatusUpdate, handleViewReport, handleGradingUpdate,
+    updateGrading,
     navigate
   };
 }

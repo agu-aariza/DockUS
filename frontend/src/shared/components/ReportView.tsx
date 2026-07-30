@@ -5,7 +5,9 @@
  */
 
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { builderApi } from "../api/builderApi";
+import { queryKeys } from "../query/queryKeys";
 import type { BuilderReportEntity, BuilderRuntimeFamily, BuildRunEntity, TechnicalFeedbackItem } from "../../features/builder/types";
 import {
   RiAlarmWarningLine,
@@ -142,62 +144,47 @@ export function ReportView({
   const report: BuilderReportEntity = run.report ?? {};
   const [techOpen, setTechOpen] = useState(mode === "teacher");
   const [activeTab, setActiveTab] = useState<"overview" | "coaching" | "technical" | "logs">("overview");
-  const [logs, setLogs] = useState<string>("");
-  const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
   const [printOpen, setPrintOpen] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (report.readableText) {
-      setLogs(report.readableText);
-      return;
-    }
+  // Reconstruye el log completo drenando todas las páginas de eventos: es una
+  // única operación de cara a la UI (no hay "cargar más"), así que el paginado
+  // vive dentro del queryFn de un useQuery normal, no en useInfiniteQuery.
+  const logsQuery = useQuery({
+    queryKey: queryKeys.builderRuns.logs(run.id),
+    queryFn: async () => {
+      let allEvents: any[] = [];
+      let afterSequence = 0;
+      let hasMore = true;
 
-    let active = true;
-    async function fetchLogs() {
-      setLoadingLogs(true);
-      try {
-        let allEvents: any[] = [];
-        let afterSequence = 0;
-        let hasMore = true;
+      while (hasMore) {
+        const response = await builderApi.listEvents({
+          buildRunId: run.id,
+          afterSequence,
+          limit: 500,
+        });
 
-        while (hasMore && active) {
-          const response = await builderApi.listEvents({
-            buildRunId: run.id,
-            afterSequence,
-            limit: 500,
-          });
-
-          allEvents = [...allEvents, ...response.events];
-          afterSequence = response.latestSequence;
-          hasMore = response.hasMore && response.events.length > 0;
-        }
-
-        if (!active) return;
-
-        const reconstructed = allEvents
-          .filter((event) => event.eventType === "LOG_CHUNK")
-          .map((event) =>
-            typeof event.payload?.text === "string" ? event.payload.text : ""
-          )
-          .filter(Boolean)
-          .join("");
-
-        setLogs(reconstructed);
-      } catch (err) {
-        console.error("Error loading execution logs:", err);
-      } finally {
-        if (active) {
-          setLoadingLogs(false);
-        }
+        allEvents = [...allEvents, ...response.events];
+        afterSequence = response.latestSequence;
+        hasMore = response.hasMore && response.events.length > 0;
       }
-    }
 
-    void fetchLogs();
+      return allEvents
+        .filter((event) => event.eventType === "LOG_CHUNK")
+        .map((event) =>
+          typeof event.payload?.text === "string" ? event.payload.text : ""
+        )
+        .filter(Boolean)
+        .join("");
+    },
+    enabled: !report.readableText,
+  });
 
-    return () => {
-      active = false;
-    };
-  }, [run.id, report.readableText]);
+  useEffect(() => {
+    if (logsQuery.isError) console.error("Error loading execution logs:", logsQuery.error);
+  }, [logsQuery.isError, logsQuery.error]);
+
+  const logs = report.readableText || (logsQuery.data ?? "");
+  const loadingLogs = !report.readableText && logsQuery.isPending;
 
   const coaching = report.coaching ?? null;
   const runtimeFamily = run.llmAssessment?.runtime?.family;

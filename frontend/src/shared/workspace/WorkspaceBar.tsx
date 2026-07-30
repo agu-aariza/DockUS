@@ -5,7 +5,8 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   RiStackFill,
   RiLayoutGridFill,
@@ -21,6 +22,7 @@ import {
 } from "react-icons/ri";
 import { useWorkspaceSelection, useWorkspaceUI } from "./WorkspaceContext";
 import { projectsApi, assignmentsApi, deliveriesApi, builderApi } from "../api/services";
+import { queryKeys } from "../query/queryKeys";
 import type { ProjectEntity, ProjectAssignmentEntity } from "../../features/projects/types";
 import type { DeliveryEntity } from "../../features/deliveries/types";
 import type { BuildRunEntity } from "../../features/builder/types";
@@ -54,11 +56,6 @@ export function WorkspaceBar(): JSX.Element | null {
   };
 
   const [openPicker, setOpenPicker] = useState<PickerType>(null);
-  const [projects, setProjects] = useState<ProjectEntity[]>([]);
-  const [assignments, setAssignments] = useState<ProjectAssignmentEntity[]>([]);
-  const [deliveries, setDeliveries] = useState<DeliveryEntity[]>([]);
-  const [runs, setRuns] = useState<BuildRunEntity[]>([]);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
 
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -96,38 +93,53 @@ export function WorkspaceBar(): JSX.Element | null {
     }
   }, [openPicker]);
 
-  // Fetch Data
+  // Una query por picker, cada una habilitada solo mientras ese picker está
+  // abierto (y los ids de padres necesarios existen) — React Query solo
+  // pide red para la que está realmente activa, y si se reabre el mismo
+  // picker dentro de la ventana de staleTime reutiliza caché sin red.
+  const projectPickerQuery = useQuery({
+    queryKey: queryKeys.projects.picker(),
+    queryFn: () => projectsApi.list({ page: 1, limit: 50 }),
+    enabled: openPicker === 'project',
+  });
+  const assignmentPickerQuery = useQuery({
+    queryKey: queryKeys.assignments.byProject(selection.projectId ?? ""),
+    queryFn: ({ signal }) => assignmentsApi.listByProject(selection.projectId!, signal),
+    enabled: openPicker === 'assignment' && !!selection.projectId,
+  });
+  const deliveryPickerQuery = useQuery({
+    queryKey: queryKeys.workspaceBar.deliveryPicker(selection.projectId ?? "", selection.assignmentId ?? ""),
+    queryFn: () =>
+      deliveriesApi.list({
+        projectId: selection.projectId!,
+        assignmentId: selection.assignmentId || undefined,
+      }),
+    enabled: openPicker === 'delivery' && !!selection.projectId,
+  });
+  const runPickerQuery = useQuery({
+    queryKey: queryKeys.workspaceBar.runPicker(selection.deliveryId ?? ""),
+    queryFn: () => builderApi.listByDelivery({ deliveryId: selection.deliveryId! }),
+    enabled: openPicker === 'run' && !!selection.deliveryId,
+  });
+
+  const projects = projectPickerQuery.data?.data ?? [];
+  const assignments = assignmentPickerQuery.data ?? [];
+  const deliveries = deliveryPickerQuery.data?.data ?? [];
+  const runs = runPickerQuery.data?.data ?? [];
+  const loading =
+    projectPickerQuery.isFetching ||
+    assignmentPickerQuery.isFetching ||
+    deliveryPickerQuery.isFetching ||
+    runPickerQuery.isFetching;
+
   useEffect(() => {
-    if (!openPicker) return;
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        if (openPicker === 'project') {
-          const res = await projectsApi.list({ page: 1, limit: 50 });
-          setProjects(res.data);
-        } else if (openPicker === 'assignment' && selection.projectId) {
-          const res = await assignmentsApi.listByProject(selection.projectId);
-          setAssignments(res);
-        } else if (openPicker === 'delivery' && selection.projectId) {
-          const res = await deliveriesApi.list({
-            projectId: selection.projectId,
-            assignmentId: selection.assignmentId || undefined
-          });
-          setDeliveries(res.data);
-        } else if (openPicker === 'run' && selection.deliveryId) {
-          const res = await builderApi.listByDelivery({ deliveryId: selection.deliveryId });
-          setRuns(res.data);
-        }
-      } catch (err) {
-        console.error("Error fetching island data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [openPicker, selection.projectId, selection.assignmentId]);
+    const error =
+      projectPickerQuery.error ??
+      assignmentPickerQuery.error ??
+      deliveryPickerQuery.error ??
+      runPickerQuery.error;
+    if (error) console.error("Error fetching island data:", error);
+  }, [projectPickerQuery.error, assignmentPickerQuery.error, deliveryPickerQuery.error, runPickerQuery.error]);
 
   const filteredOptions = useMemo((): PickerOption[] => {
     const q = search.toLowerCase().trim();

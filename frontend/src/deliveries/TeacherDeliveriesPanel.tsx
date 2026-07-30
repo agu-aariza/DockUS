@@ -15,7 +15,6 @@ import { CodePreviewModal } from "../shared/components/CodePreviewModal";
 import { TeacherGradingStudio } from "../shared/components/TeacherGradingStudio";
 import { VisualPickerOption } from "../shared/components/ui/VisualPicker";
 import { ProjectSelectionHub, type ProjectHubOption } from "../shared/components/ui/ProjectSelectionHub";
-import { deliveriesApi } from "../shared/api/services";
 import { getErrorMessage } from "../shared/utils/errors";
 import { useToast } from "../shared/toast/ToastContext";
 import { PageHeader } from "../shared/components/ui/PageHeader";
@@ -209,7 +208,7 @@ export function TeacherDeliveriesPanel(): JSX.Element {
           onSubmitGrading={async (grade, graderNotes) => {
             try {
               if (!panel.selectedDelivery) return;
-              await deliveriesApi.updateGrading(panel.selectedDelivery.id, {
+              await panel.dc.updateGrading(panel.selectedDelivery.id, {
                 grade: grade.trim() ? Number(grade) : null,
                 graderNotes: graderNotes,
               });
@@ -219,7 +218,6 @@ export function TeacherDeliveriesPanel(): JSX.Element {
                 tone: "success",
               });
               panel.setIsPreviewModalOpen(false);
-              await panel.dc.refreshDeliveries();
             } catch (error) {
               pushToast({
                 title: "Error al calificar",

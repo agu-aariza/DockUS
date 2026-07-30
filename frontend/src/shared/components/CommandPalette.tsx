@@ -5,19 +5,21 @@
  */
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { 
-  RiSearch2Line, 
-  RiStackFill, 
-  RiPulseFill, 
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  RiSearch2Line,
+  RiStackFill,
+  RiPulseFill,
   RiCommandFill,
   RiArrowRightLine,
   RiGlobalLine,
   RiLayoutGridFill
 } from 'react-icons/ri';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useWorkspaceSelection } from '../workspace/WorkspaceContext';
 import { projectsApi, assignmentsApi } from '../api/services';
+import { queryKeys } from '../query/queryKeys';
 import type { ProjectAssignmentEntity } from '../../features/projects/types';
 
 interface CommandItem {
@@ -33,7 +35,6 @@ export function CommandPalette(): JSX.Element | null {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [assignments, setAssignments] = useState<ProjectAssignmentEntity[]>([]);
   const { selection, setProject, setAssignment } = useWorkspaceSelection();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -63,29 +64,42 @@ export function CommandPalette(): JSX.Element | null {
     };
   }, []);
 
+  const queryClient = useQueryClient();
+
+  // Pre-carga en cuanto el componente monta (queda montado toda la sesión,
+  // solo oculto tras `isOpen`), así el listado ya está listo la primera vez
+  // que el usuario abre la paleta. El resultado aplanado+enriquecido vive
+  // bajo su propia key, pero cada sub-fetch pasa por queryClient.fetchQuery
+  // con la key que comparten WorkspaceBar (proyectos) y
+  // Deliveries/Proyectos/WorkspaceBar (asignaciones por proyecto), así que
+  // reutiliza esa caché en vez de pedirla de nuevo.
+  const assignmentsQuery = useQuery({
+    queryKey: queryKeys.commandPalette.assignments(),
+    queryFn: async (): Promise<ProjectAssignmentEntity[]> => {
+      const projectsRes = await queryClient.fetchQuery({
+        queryKey: queryKeys.projects.picker(),
+        queryFn: () => projectsApi.list({ page: 1, limit: 50 }),
+      });
+      const perProject = await Promise.all(
+        projectsRes.data.map((p) =>
+          queryClient
+            .fetchQuery({
+              queryKey: queryKeys.assignments.byProject(p.id),
+              queryFn: () => assignmentsApi.listByProject(p.id),
+            })
+            .then((asgs) => asgs.map((a) => ({ ...a, projectId: p.id, projectTitle: p.title }))),
+        ),
+      );
+      return perProject.flat();
+    },
+  });
+  const assignments = assignmentsQuery.data ?? [];
+
   useEffect(() => {
-    let active = true;
-    const loadAllAssignments = async () => {
-      try {
-        const projectsRes = await projectsApi.list({ page: 1, limit: 50 });
-        if (!active) return;
-        const promises = projectsRes.data.map(p => 
-          assignmentsApi.listByProject(p.id)
-            .then(asgs => asgs.map(a => ({ ...a, projectId: p.id, projectTitle: p.title })))
-        );
-        const allResults = await Promise.all(promises);
-        if (active) {
-          setAssignments(allResults.flat());
-        }
-      } catch (err) {
-        console.error("Error loading assignments for command palette:", err);
-      }
-    };
-    loadAllAssignments();
-    return () => {
-      active = false;
-    };
-  }, []);
+    if (assignmentsQuery.isError) {
+      console.error("Error loading assignments for command palette:", assignmentsQuery.error);
+    }
+  }, [assignmentsQuery.isError, assignmentsQuery.error]);
 
   useEffect(() => {
     if (isOpen) {

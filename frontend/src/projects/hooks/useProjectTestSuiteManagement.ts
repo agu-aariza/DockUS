@@ -4,10 +4,11 @@
  * @module useProjectTestSuiteManagement
  */
 
-import { type FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectsApi } from "../../shared/api/services";
-import type { StorageObjectEntity } from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
+import { queryKeys } from "../../shared/query/queryKeys";
 import type { NoticeState } from "./projectManagement.types";
 
 interface UseProjectTestSuiteManagementInput {
@@ -19,62 +20,62 @@ export function useProjectTestSuiteManagement({
   canWrite,
   selectedProjectId,
 }: UseProjectTestSuiteManagementInput) {
+  const queryClient = useQueryClient();
   const [testSuiteFile, setTestSuiteFile] = useState<File | null>(null);
-  const [testSuiteResult, setTestSuiteResult] =
-    useState<StorageObjectEntity | { message: string } | null>(null);
   const [suiteNotice, setSuiteNotice] = useState<NoticeState | null>(null);
+
+  // Carga automática al cambiar de proyecto: silenciosa (sin notice), y la
+  // caché por queryKey ya resuelve lo que antes hacía el AbortController
+  // manual al cambiar rápido de proyecto (React Query aborta la petición
+  // obsoleta por su cuenta cuando la key cambia antes de resolver).
+  const testSuiteQuery = useQuery({
+    queryKey: queryKeys.projects.testSuite(selectedProjectId),
+    queryFn: ({ signal }) => projectsApi.getTestSuite(selectedProjectId, signal),
+    enabled: canWrite && !!selectedProjectId,
+  });
+  const testSuiteResult = testSuiteQuery.data ?? null;
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => projectsApi.uploadTestSuite(selectedProjectId, file),
+  });
+  const removeMutation = useMutation({
+    mutationFn: () => projectsApi.removeTestSuite(selectedProjectId),
+  });
 
   const handleUploadTestSuite = async (file: File) => {
     if (!canWrite || !selectedProjectId || !file) return;
     try {
-      const response = await projectsApi.uploadTestSuite(
-        selectedProjectId,
-        file,
-      );
-      setTestSuiteResult(response);
+      const response = await uploadMutation.mutateAsync(file);
+      queryClient.setQueryData(queryKeys.projects.testSuite(selectedProjectId), response);
       setSuiteNotice({ text: "Suite docente subida correctamente.", tone: "info" });
     } catch (error) {
       setSuiteNotice({ text: getErrorMessage(error), tone: "warning" });
     }
   };
 
-  const handleFetchTestSuite = async (silent = false, signal?: AbortSignal) => {
+  // Único punto que muestra un aviso de fetch de suite: la acción manual
+  // explícita (botón "Comprobar suite"); la carga automática de arriba nunca
+  // notifica.
+  const handleFetchTestSuite = async () => {
     if (!canWrite || !selectedProjectId) return;
-    try {
-      const response = await projectsApi.getTestSuite(selectedProjectId, signal);
-      if (signal?.aborted) return;
-      setTestSuiteResult(response);
-      if (!silent) {
-        setSuiteNotice({ text: "Suite docente recuperada.", tone: "info" });
-      }
-    } catch (error) {
-      if (signal?.aborted) return;
-      if (!silent) {
-        setSuiteNotice({ text: getErrorMessage(error), tone: "warning" });
-      }
+    const result = await testSuiteQuery.refetch();
+    if (result.data !== undefined) {
+      setSuiteNotice({ text: "Suite docente recuperada.", tone: "info" });
+    } else if (result.error) {
+      setSuiteNotice({ text: getErrorMessage(result.error), tone: "warning" });
     }
   };
 
   const handleRemoveTestSuite = async () => {
     if (!canWrite || !selectedProjectId) return;
     try {
-      await projectsApi.removeTestSuite(selectedProjectId);
-      setTestSuiteResult(null);
+      await removeMutation.mutateAsync();
+      queryClient.setQueryData(queryKeys.projects.testSuite(selectedProjectId), null);
       setSuiteNotice({ text: "Suite docente eliminada correctamente.", tone: "info" });
     } catch (error) {
       setSuiteNotice({ text: getErrorMessage(error), tone: "warning" });
     }
   };
-
-  useEffect(() => {
-    if (!selectedProjectId) {
-      setTestSuiteResult(null);
-      return;
-    }
-    const controller = new AbortController();
-    void handleFetchTestSuite(true, controller.signal);
-    return () => controller.abort();
-  }, [selectedProjectId]);
 
   useEffect(() => {
     if (!suiteNotice) return;

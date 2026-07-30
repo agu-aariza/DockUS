@@ -5,16 +5,13 @@
  */
 
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   assignmentsApi,
   groupsApi,
 } from "../../shared/api/services";
-import type {
-  CourseGroupEntity,
-  GroupEnrollmentEntity,
-  ProjectAssignmentEntity,
-} from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
+import { queryKeys } from "../../shared/query/queryKeys";
 import type { NoticeState } from "./projectManagement.types";
 import { normalizeOptionalText } from "./projectManagement.utils";
 
@@ -29,7 +26,7 @@ export function useProjectAssignmentManagement({
   selectedProjectId,
   setDebugPayload,
 }: UseProjectAssignmentManagementInput) {
-  const [groups, setGroups] = useState<CourseGroupEntity[]>([]);
+  const queryClient = useQueryClient();
   const [focusedGroupId, setFocusedGroupId] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [bulkStudentEmails, setBulkStudentEmails] = useState("");
@@ -37,10 +34,6 @@ export function useProjectAssignmentManagement({
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [selectedGroupStudentIds, setSelectedGroupStudentIds] = useState<string[]>([]);
   const [bulkGroupStudentEmails, setBulkGroupStudentEmails] = useState("");
-  const [assignmentsResult, setAssignmentsResult] =
-    useState<ProjectAssignmentEntity[] | null>(null);
-  const [groupEnrollments, setGroupEnrollments] =
-    useState<GroupEnrollmentEntity[] | null>(null);
   const [groupForm, setGroupForm] = useState({
     name: "",
     code: "",
@@ -48,85 +41,102 @@ export function useProjectAssignmentManagement({
   });
   const [assignmentNotice, setAssignmentNotice] =
     useState<NoticeState | null>(null);
-  const [loadingGroups, setLoadingGroups] = useState(false);
   const [assignmentBusy, setAssignmentBusy] = useState<string | null>(null);
 
-  const refreshAssignments = async (
-    projectId = selectedProjectId,
-    options?: { silent?: boolean; noticeText?: string },
-    signal?: AbortSignal,
-  ) => {
-    if (!canWrite || !projectId) return;
-    try {
-      const response = await assignmentsApi.listByProject(projectId, signal);
-      if (signal?.aborted) return;
-      setAssignmentsResult(response);
-      if (!options?.silent) {
-        setAssignmentNotice({
-          text: options?.noticeText ?? "Asignaciones actualizadas.",
-          tone: "info",
-        });
-      }
-      setDebugPayload(response);
-    } catch (error) {
-      if (signal?.aborted) return;
-      setAssignmentNotice({ text: getErrorMessage(error), tone: "warning" });
+  const groupsQuery = useQuery({
+    queryKey: queryKeys.groups.list(),
+    queryFn: ({ signal }) => groupsApi.list(signal),
+    enabled: canWrite,
+  });
+  const groups = groupsQuery.data ?? [];
+  const loadingGroups = groupsQuery.isFetching;
+
+  // Reusa la misma key que useDeliveryManagement/useDeliveriesPanel para el
+  // mismo proyecto: es literalmente la misma llamada (assignmentsApi.listByProject),
+  // así que comparten caché al navegar entre Entregas y Proyectos.
+  const assignmentsQuery = useQuery({
+    queryKey: queryKeys.assignments.byProject(selectedProjectId),
+    queryFn: ({ signal }) => assignmentsApi.listByProject(selectedProjectId, signal),
+    enabled: canWrite && !!selectedProjectId,
+  });
+  const assignmentsResult = assignmentsQuery.data ?? null;
+
+  const groupEnrollmentsQuery = useQuery({
+    queryKey: queryKeys.groups.enrollments(focusedGroupId),
+    queryFn: () => groupsApi.listEnrollments(focusedGroupId),
+    enabled: canWrite && !!focusedGroupId,
+  });
+  const groupEnrollments = groupEnrollmentsQuery.data ?? null;
+
+  // Mantiene el grupo enfocado válido cuando cambia el listado (mismo patrón
+  // que la selección de proyecto/entrega en los otros hooks de dominio).
+  useEffect(() => {
+    const data = groupsQuery.data;
+    if (!data) return;
+    setFocusedGroupId((current) =>
+      current && data.some((group) => group.id === current) ? current : data[0]?.id ?? "",
+    );
+  }, [groupsQuery.data]);
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    setSelectedStudentIds([]);
+    setSelectedGroupIds([]);
+    setBulkStudentEmails("");
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (!focusedGroupId) return;
+    setGroupStudentSearch("");
+    setSelectedGroupStudentIds([]);
+    setBulkGroupStudentEmails("");
+  }, [focusedGroupId]);
+
+  useEffect(() => {
+    if (!assignmentNotice) return;
+    const timer = setTimeout(() => setAssignmentNotice(null), 15_000);
+    return () => clearTimeout(timer);
+  }, [assignmentNotice]);
+
+  // Las tres funciones de refresh de abajo son la única vía que muestra un
+  // aviso "actualizado": botones de refresco manual explícitos. Las mutaciones
+  // más abajo invalidan/escriben caché directamente y nunca llaman a estas.
+  const refreshAssignments = async (options?: { noticeText?: string }) => {
+    if (!canWrite || !selectedProjectId) return;
+    const result = await assignmentsQuery.refetch();
+    if (result.data) {
+      setDebugPayload(result.data);
+      setAssignmentNotice({ text: options?.noticeText ?? "Asignaciones actualizadas.", tone: "info" });
+    } else if (result.error) {
+      setAssignmentNotice({ text: getErrorMessage(result.error), tone: "warning" });
     }
   };
 
-  const refreshGroups = async (
-    options?: { silent?: boolean; noticeText?: string },
-    signal?: AbortSignal,
-  ) => {
+  const refreshGroups = async (options?: { noticeText?: string }) => {
     if (!canWrite) return;
-    setLoadingGroups(true);
-    try {
-      const response = await groupsApi.list(signal);
-      if (signal?.aborted) return;
-      setGroups(response);
-      setDebugPayload(response);
-      setFocusedGroupId((current) =>
-        current && response.some((group) => group.id === current)
-          ? current
-          : response[0]?.id ?? "",
-      );
-      if (!options?.silent) {
-        setAssignmentNotice({
-          text: options?.noticeText ?? "Grupos docentes actualizados.",
-          tone: "info",
-        });
-      }
-    } catch (error) {
-      if (signal?.aborted) return;
-      setAssignmentNotice({ text: getErrorMessage(error), tone: "warning" });
-    } finally {
-      setLoadingGroups(false);
+    const result = await groupsQuery.refetch();
+    if (result.data) {
+      setDebugPayload(result.data);
+      setAssignmentNotice({ text: options?.noticeText ?? "Grupos docentes actualizados.", tone: "info" });
+    } else if (result.error) {
+      setAssignmentNotice({ text: getErrorMessage(result.error), tone: "warning" });
     }
   };
 
-  const refreshGroupEnrollments = async (
-    groupId = focusedGroupId,
-    options?: { silent?: boolean; noticeText?: string },
-  ) => {
-    if (!canWrite || !groupId) return;
-    try {
-      const response = await groupsApi.listEnrollments(groupId);
-      setGroupEnrollments(response);
-      setDebugPayload(response);
-      if (!options?.silent) {
-        setAssignmentNotice({
-          text: options?.noticeText ?? "Matrículas del grupo actualizadas.",
-          tone: "info",
-        });
-      }
-    } catch (error) {
-      setAssignmentNotice({ text: getErrorMessage(error), tone: "warning" });
+  const refreshGroupEnrollments = async (options?: { noticeText?: string }) => {
+    if (!canWrite || !focusedGroupId) return;
+    const result = await groupEnrollmentsQuery.refetch();
+    if (result.data) {
+      setDebugPayload(result.data);
+      setAssignmentNotice({ text: options?.noticeText ?? "Matrículas del grupo actualizadas.", tone: "info" });
+    } else if (result.error) {
+      setAssignmentNotice({ text: getErrorMessage(result.error), tone: "warning" });
     }
   };
 
   const handleAssignStudents = async () => {
     if (!canWrite || !selectedProjectId) return;
-    
+
     const payload: { studentIds?: string[]; rawInput?: string } = {
       studentIds: selectedStudentIds.length > 0 ? selectedStudentIds : undefined,
     };
@@ -140,7 +150,7 @@ export function useProjectAssignmentManagement({
     setAssignmentBusy("assign");
     try {
       const response = await assignmentsApi.bulkAssign(selectedProjectId, payload);
-      setAssignmentsResult(response.assignments);
+      queryClient.setQueryData(queryKeys.assignments.byProject(selectedProjectId), response.assignments);
       setSelectedStudentIds([]);
       setBulkStudentEmails("");
       const importedCount =
@@ -168,7 +178,7 @@ export function useProjectAssignmentManagement({
       const response = await assignmentsApi.bulkAssign(selectedProjectId, {
         groupIds: selectedGroupIds,
       });
-      setAssignmentsResult(response.assignments);
+      queryClient.setQueryData(queryKeys.assignments.byProject(selectedProjectId), response.assignments);
       setSelectedGroupIds([]);
       setAssignmentNotice({
         text: `Asignación por grupo completada: ${response.summary.requestedGroupIds.length} grupos procesados, ${response.summary.assignedCount} altas nuevas, ${response.summary.reactivatedCount} reactivadas y ${response.summary.alreadyActiveCount} ya activas.`,
@@ -228,7 +238,7 @@ export function useProjectAssignmentManagement({
         description: normalizeOptionalText(groupForm.description),
       });
       setGroupForm({ name: "", code: "", description: "" });
-      await refreshGroups({ silent: true });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.groups.list() });
       setFocusedGroupId(response.id);
       setSelectedGroupIds((current) =>
         current.includes(response.id) ? current : [...current, response.id],
@@ -247,7 +257,7 @@ export function useProjectAssignmentManagement({
 
   const handleEnrollGroupStudents = async () => {
     if (!canWrite || !focusedGroupId) return;
-    
+
     const payload: { studentIds?: string[]; rawInput?: string } = {
       studentIds: selectedGroupStudentIds.length > 0 ? selectedGroupStudentIds : undefined,
     };
@@ -261,10 +271,12 @@ export function useProjectAssignmentManagement({
     setAssignmentBusy("group:enroll");
     try {
       const response = await groupsApi.bulkEnroll(focusedGroupId, payload);
-      setGroupEnrollments(response.enrollments);
+      queryClient.setQueryData(queryKeys.groups.enrollments(focusedGroupId), response.enrollments);
       setSelectedGroupStudentIds([]);
       setBulkGroupStudentEmails("");
-      await refreshGroups({ silent: true });
+      // Los contadores de matrícula que muestra el listado de grupos pueden
+      // haber cambiado; las matrículas en sí ya se escribieron arriba.
+      await queryClient.invalidateQueries({ queryKey: queryKeys.groups.list() });
       const enrolledCount =
         response.summary.enrolledCount + response.summary.reactivatedCount;
       const unresolvedCount = (response.summary.unresolvedEmails.length || 0) + (response.summary.unresolvedNames?.length || 0);
@@ -288,8 +300,10 @@ export function useProjectAssignmentManagement({
     setAssignmentBusy(`group:revoke:${enrollmentId}`);
     try {
       await groupsApi.revokeEnrollment(enrollmentId.trim());
-      await refreshGroupEnrollments(focusedGroupId, { silent: true });
-      await refreshGroups({ silent: true });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.groups.enrollments(focusedGroupId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.groups.list() }),
+      ]);
       setAssignmentNotice({
         text: "Alumno retirado del grupo.",
         tone: "info",
@@ -309,7 +323,7 @@ export function useProjectAssignmentManagement({
     setAssignmentBusy(`revoke:${assignmentId}`);
     try {
       await assignmentsApi.revoke(assignmentId.trim());
-      await refreshAssignments(selectedProjectId, { silent: true });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.assignments.byProject(selectedProjectId) });
       if (studentId) {
         setSelectedStudentIds((current) =>
           current.filter((candidateId) => candidateId !== studentId),
@@ -326,51 +340,8 @@ export function useProjectAssignmentManagement({
     }
   };
 
-  useEffect(() => {
-    if (!canWrite) return;
-    const controller = new AbortController();
-    void refreshGroups({ silent: true }, controller.signal);
-    return () => controller.abort();
-  }, [canWrite]);
-
-  useEffect(() => {
-    if (!selectedProjectId) {
-      setAssignmentsResult(null);
-      return;
-    }
-    setSelectedStudentIds([]);
-    setSelectedGroupIds([]);
-    setBulkStudentEmails("");
-    if (canWrite) {
-      const controller = new AbortController();
-      void refreshAssignments(selectedProjectId, { silent: true }, controller.signal);
-      return () => controller.abort();
-    }
-  }, [canWrite, selectedProjectId]);
-
-  useEffect(() => {
-    if (!focusedGroupId) {
-      setGroupEnrollments(null);
-      return;
-    }
-
-    setGroupStudentSearch("");
-    setSelectedGroupStudentIds([]);
-    setBulkGroupStudentEmails("");
-    if (canWrite) {
-      void refreshGroupEnrollments(focusedGroupId, { silent: true });
-    }
-  }, [focusedGroupId, canWrite]);
-
-  useEffect(() => {
-    if (!assignmentNotice) return;
-    const timer = setTimeout(() => setAssignmentNotice(null), 15_000);
-    return () => clearTimeout(timer);
-  }, [assignmentNotice]);
-
   return {
     groups,
-    setGroups,
     focusedGroupId,
     setFocusedGroupId,
     selectedStudentIds,

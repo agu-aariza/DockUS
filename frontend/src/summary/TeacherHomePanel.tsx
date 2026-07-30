@@ -4,8 +4,9 @@
  * @module TeacherHomePanel
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   RiPulseLine,
   RiFolderOpenLine,
@@ -15,11 +16,11 @@ import {
 import type {
   ProjectEntity,
   ProjectOperationalIssuesReconcileResult as ProjectOperationalIssuesSyncResult,
-  ProjectOperationalIssuesSummary,
 } from "../features/projects/types";
 import type { DeliveryEntity } from "../features/deliveries/types";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import { projectsApi, deliveriesApi, usersApi } from "../shared/api/services";
+import { queryKeys } from "../shared/query/queryKeys";
 import { CohortAnalyticsDashboard } from "./components/CohortAnalyticsDashboard";
 import { CourseStatusStrip, CourseStatusStripSkeleton } from "./components/CourseStatusStrip";
 import { ReviewQueue } from "./components/ReviewQueue";
@@ -37,46 +38,62 @@ export function TeacherHomePanel(): JSX.Element {
   const navigate = useNavigate();
   const { pushToast } = useToast();
 
-  const [recentProjects, setRecentProjects] = useState<ProjectEntity[]>([]);
-  const [pendingDeliveries, setPendingDeliveries] = useState<DeliveryEntity[]>([]);
-  const [recentEvaluated, setRecentEvaluated] = useState<DeliveryEntity[]>([]);
-  const [metrics, setMetrics] = useState({ projects: 0, pending: 0, evaluated: 0, students: 0 });
-  const [operationalIssues, setOperationalIssues] = useState<ProjectOperationalIssuesSummary | null>(null);
+  const queryClient = useQueryClient();
   const [syncPreview, setSyncPreview] = useState<ProjectOperationalIssuesSyncResult | null>(null);
   const [syncing, setSyncing] = useState<"dry-run" | "apply" | null>(null);
   const [confirmSyncOpen, setConfirmSyncOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      const [projRes, delivSubmitted, delivReview, usersRes, issuesRes] = await Promise.all([
-        projectsApi.list({ limit: 4, sortOrder: 'DESC' }),
-        deliveriesApi.list({ limit: 5, status: 'SUBMITTED', sortOrder: 'DESC' }).catch(() => ({ data: [], meta: { total: 0 } })),
-        deliveriesApi.list({ limit: 5, status: 'EVALUATED', sortOrder: 'DESC' }).catch(() => ({ data: [], meta: { total: 0 } })),
-        usersApi.list({ role: 'STUDENT', limit: 1 }).catch(() => ({ meta: { total: 0 } })),
-        projectsApi.getOperationalIssues().catch(() => null),
-      ]);
+  // 5 queries independientes en vez de un Promise.all: cada una falla o carga
+  // por su cuenta (antes, 4 de las 5 llevaban su propio .catch() para lograr
+  // justo esto; con React Query es el comportamiento natural, no hace falta
+  // simularlo). Son previews de dashboard con params fijos y bajos (limit 4/5),
+  // distintos de las listas paginadas de sus dominios — de ahí keys propias.
+  const recentProjectsQuery = useQuery({
+    queryKey: queryKeys.summary.recentProjects(),
+    queryFn: () => projectsApi.list({ limit: 4, sortOrder: "DESC" }),
+  });
+  const pendingDeliveriesQuery = useQuery({
+    queryKey: queryKeys.summary.pendingDeliveries(),
+    queryFn: () => deliveriesApi.list({ limit: 5, status: "SUBMITTED", sortOrder: "DESC" }),
+  });
+  const recentEvaluatedQuery = useQuery({
+    queryKey: queryKeys.summary.recentEvaluated(),
+    queryFn: () => deliveriesApi.list({ limit: 5, status: "EVALUATED", sortOrder: "DESC" }),
+  });
+  const studentsCountQuery = useQuery({
+    queryKey: queryKeys.summary.studentsCount(),
+    queryFn: () => usersApi.list({ role: "STUDENT", limit: 1 }),
+  });
+  const operationalIssuesQuery = useQuery({
+    queryKey: queryKeys.summary.operationalIssues(),
+    queryFn: () => projectsApi.getOperationalIssues(),
+  });
 
-      setRecentProjects(projRes.data);
-      setPendingDeliveries(delivSubmitted.data);
-      setRecentEvaluated(delivReview.data);
-      setMetrics({
-        projects: projRes.meta.total,
-        pending: delivSubmitted.meta.total,
-        evaluated: delivReview.meta.total,
-        students: usersRes.meta.total,
-      });
-      setOperationalIssues(issuesRes);
-    } catch (err) {
-      console.error("Error loading dashboard", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const recentProjects: ProjectEntity[] = recentProjectsQuery.data?.data ?? [];
+  const pendingDeliveries: DeliveryEntity[] = pendingDeliveriesQuery.data?.data ?? [];
+  const recentEvaluated: DeliveryEntity[] = recentEvaluatedQuery.data?.data ?? [];
+  const metrics = {
+    projects: recentProjectsQuery.data?.meta.total ?? 0,
+    pending: pendingDeliveriesQuery.data?.meta.total ?? 0,
+    evaluated: recentEvaluatedQuery.data?.meta.total ?? 0,
+    students: studentsCountQuery.data?.meta.total ?? 0,
+  };
+  const operationalIssues = operationalIssuesQuery.data ?? null;
+  const loading =
+    recentProjectsQuery.isPending ||
+    pendingDeliveriesQuery.isPending ||
+    recentEvaluatedQuery.isPending ||
+    studentsCountQuery.isPending ||
+    operationalIssuesQuery.isPending;
 
-  useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
+  const refreshDashboard = () =>
+    Promise.all([
+      recentProjectsQuery.refetch(),
+      pendingDeliveriesQuery.refetch(),
+      recentEvaluatedQuery.refetch(),
+      studentsCountQuery.refetch(),
+      operationalIssuesQuery.refetch(),
+    ]);
 
   const handleProjectClick = (p: ProjectEntity) => {
     setProject(p.id, p.title);
@@ -117,7 +134,15 @@ export function TeacherHomePanel(): JSX.Element {
     try {
       const result = await projectsApi.reconcileOperationalIssues({ mode: "apply" });
       setSyncPreview(result);
-      await loadDashboard();
+      // La reconciliación puede archivar asignaciones/entregas huérfanas y
+      // limpiar storage sin padre válido: invalida ampliamente los dominios
+      // afectados, no solo las previews de este dashboard.
+      await Promise.all([
+        refreshDashboard(),
+        queryClient.invalidateQueries({ queryKey: queryKeys.deliveries.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.storage.all }),
+      ]);
       pushToast({
         title: "Sincronización aplicada",
         description: `Se aplicaron ${(Object.values(result.applied) as number[]).reduce((sum, value) => sum + value, 0)} acción(es).`,

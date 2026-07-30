@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
 
 vi.mock("../../shared/api/services", () => ({
   assignmentsApi: { listMine: vi.fn() },
@@ -11,7 +11,12 @@ vi.mock("../../shared/api/builderApi", () => ({
 
 import { assignmentsApi, deliveriesApi } from "../../shared/api/services";
 import { builderApi } from "../../shared/api/builderApi";
+import { renderHookWithProviders } from "../../test/renderWithProviders";
 import { useStudentWorkspaceData } from "./useStudentWorkspaceData";
+
+function renderHook(hook: () => ReturnType<typeof useStudentWorkspaceData>) {
+  return renderHookWithProviders(hook, { withWorkspace: false });
+}
 
 describe("useStudentWorkspaceData", () => {
   beforeEach(() => {

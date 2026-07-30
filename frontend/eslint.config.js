@@ -2,12 +2,14 @@ import eslint from '@eslint/js';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import tsParser from '@typescript-eslint/parser';
 import globals from 'globals';
+import queryPlugin from '@tanstack/eslint-plugin-query';
 
 export default [
   {
     ignores: ['.tmp-test-dist', 'dist', 'node_modules', 'eslint.config.js'],
   },
   eslint.configs.recommended,
+  ...queryPlugin.configs['flat/recommended'],
   {
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {

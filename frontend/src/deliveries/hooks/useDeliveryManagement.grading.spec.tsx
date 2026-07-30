@@ -1,11 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
-import type { PropsWithChildren } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { act, waitFor } from "@testing-library/react";
 
 vi.mock("../../shared/api/services", () => ({
   assignmentsApi: { listMine: vi.fn(), listByProject: vi.fn() },
-  builderApi: { listByDelivery: vi.fn(), detail: vi.fn() },
+  builderApi: { listByDelivery: vi.fn(), detail: vi.fn(), listLatestRunsByDeliveries: vi.fn() },
   deliveriesApi: {
     list: vi.fn(),
     create: vi.fn(),
@@ -28,20 +26,14 @@ vi.mock("../../shared/session/SessionContext", () => ({
 }));
 
 import { deliveriesApi, projectsApi } from "../../shared/api/services";
-import { WorkspaceProvider } from "../../shared/workspace/WorkspaceContext";
+import { DEFAULT_SELECTION } from "../../shared/workspace/WorkspaceSelectionContext";
+import { createTestQueryClient, renderHookWithProviders } from "../../test/renderWithProviders";
 import { useDeliveryManagement } from "./useDeliveryManagement";
-
-function wrapper({ children }: PropsWithChildren) {
-  return (
-    <MemoryRouter>
-      <WorkspaceProvider>{children}</WorkspaceProvider>
-    </MemoryRouter>
-  );
-}
 
 describe("useDeliveryManagement — flujo de calificación del profesor (FE-ALTO-01)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     vi.mocked(projectsApi.list).mockResolvedValue({
       data: [],
       meta: {} as any,
@@ -49,7 +41,7 @@ describe("useDeliveryManagement — flujo de calificación del profesor (FE-ALTO
   });
 
   it("does not call updateGrading when gradingForm has no delivery id selected", async () => {
-    const { result } = renderHook(() => useDeliveryManagement(), { wrapper });
+    const { result } = renderHookWithProviders(() => useDeliveryManagement());
 
     await waitFor(() => expect(projectsApi.list).toHaveBeenCalled());
 
@@ -77,7 +69,7 @@ describe("useDeliveryManagement — flujo de calificación del profesor (FE-ALTO
       meta: {} as any,
     });
 
-    const { result } = renderHook(() => useDeliveryManagement(), { wrapper });
+    const { result } = renderHookWithProviders(() => useDeliveryManagement());
 
     await waitFor(() => expect(projectsApi.list).toHaveBeenCalled());
 
@@ -114,7 +106,7 @@ describe("useDeliveryManagement — flujo de calificación del profesor (FE-ALTO
       meta: {} as any,
     });
 
-    const { result } = renderHook(() => useDeliveryManagement(), { wrapper });
+    const { result } = renderHookWithProviders(() => useDeliveryManagement());
     await waitFor(() => expect(projectsApi.list).toHaveBeenCalled());
 
     act(() => {
@@ -142,7 +134,7 @@ describe("useDeliveryManagement — flujo de calificación del profesor (FE-ALTO
       message: "La entrega ya fue archivada.",
     });
 
-    const { result } = renderHook(() => useDeliveryManagement(), { wrapper });
+    const { result } = renderHookWithProviders(() => useDeliveryManagement());
     await waitFor(() => expect(projectsApi.list).toHaveBeenCalled());
 
     act(() => {
@@ -163,5 +155,41 @@ describe("useDeliveryManagement — flujo de calificación del profesor (FE-ALTO
       text: "La entrega ya fue archivada.",
       tone: "warning",
     });
+  });
+});
+
+describe("useDeliveryManagement — caché de la lista de entregas entre remounts", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    vi.mocked(projectsApi.list).mockResolvedValue({ data: [], meta: {} as any });
+  });
+
+  it("reentrar a la pestaña con la misma asignación dentro de la ventana de staleTime no vuelve a pedir la lista al servidor", async () => {
+    localStorage.setItem(
+      "dockus_workspace_session-1",
+      JSON.stringify({
+        ...DEFAULT_SELECTION,
+        assignmentId: "assignment-1",
+        assignmentLabel: "Asignación 1",
+      }),
+    );
+    vi.mocked(deliveriesApi.list).mockResolvedValue({ data: [], meta: {} as any });
+
+    // Mismo QueryClient reutilizado entre el primer render y el remount: es lo
+    // que persiste la caché a través de un desmontaje, tal como ocurre en la
+    // app real al navegar de pestaña y volver (el QueryClient vive en
+    // main.tsx, por encima del router; el componente de la pestaña sí se
+    // desmonta).
+    const queryClient = createTestQueryClient();
+
+    const first = renderHookWithProviders(() => useDeliveryManagement(), { queryClient });
+    await waitFor(() => expect(deliveriesApi.list).toHaveBeenCalledTimes(1));
+    first.unmount();
+
+    const second = renderHookWithProviders(() => useDeliveryManagement(), { queryClient });
+    await waitFor(() => expect(second.result.current.deliveries).not.toBeNull());
+
+    expect(deliveriesApi.list).toHaveBeenCalledTimes(1);
   });
 });

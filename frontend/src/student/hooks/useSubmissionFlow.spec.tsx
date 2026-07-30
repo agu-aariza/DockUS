@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
 
 vi.mock("../../shared/api/services", () => ({
@@ -17,6 +18,7 @@ import { deliveriesApi, storageApi } from "../../shared/api/services";
 import { builderApi } from "../../shared/api/builderApi";
 import { SessionProvider } from "../../shared/session/SessionContext";
 import { WorkspaceProvider } from "../../shared/workspace/WorkspaceContext";
+import { createTestQueryClient } from "../../test/renderWithProviders";
 import { useSubmissionFlow } from "./useSubmissionFlow";
 import type { StudentWorkspaceData } from "./useStudentWorkspaceData";
 import type { ProjectAssignmentEntity } from "../../shared/types";
@@ -64,10 +66,13 @@ function buildWorkspaceData(
 }
 
 function wrapper({ children }: PropsWithChildren) {
+  const queryClient = createTestQueryClient();
   return (
-    <SessionProvider>
-      <WorkspaceProvider>{children}</WorkspaceProvider>
-    </SessionProvider>
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider>
+        <WorkspaceProvider>{children}</WorkspaceProvider>
+      </SessionProvider>
+    </QueryClientProvider>
   );
 }
 

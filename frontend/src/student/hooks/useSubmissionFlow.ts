@@ -5,11 +5,13 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { builderApi } from "../../shared/api/builderApi";
 import { deliveriesApi, storageApi } from "../../shared/api/services";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { computeSha256Hex } from "../../shared/utils/hash";
+import { queryKeys } from "../../shared/query/queryKeys";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { describeAssignmentTimeline, pickPrimaryAssignment } from "../deadlineUtils";
 import { deriveStudentWorkflowState, describeStudentWorkflowState } from "../studentWorkflowState";
@@ -112,12 +114,6 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
   const [previewFiles, setPreviewFiles] = useState<SubmissionPreviewFile[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [previousPreviewFiles, setPreviousPreviewFiles] = useState<
-    Array<{ path: string; content: string }>
-  >([]);
-  const [previousPreviewError, setPreviousPreviewError] = useState<string | null>(
-    null,
-  );
 
   const activeAssignment =
     assignments.find((assignment) => assignment.id === selectedAssignmentId) ?? null;
@@ -127,6 +123,17 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
   const latestAssignmentRun = latestAssignmentDelivery
     ? latestRunByDeliveryId[latestAssignmentDelivery.id] ?? null
     : null;
+
+  const previousPreviewQuery = useQuery({
+    queryKey: queryKeys.deliveries.preview(latestAssignmentDelivery?.id ?? ""),
+    queryFn: () => deliveriesApi.preview(latestAssignmentDelivery!.id),
+    enabled: !!latestAssignmentDelivery,
+  });
+  const previousPreviewFiles = previousPreviewQuery.data ?? [];
+  const previousPreviewError = previousPreviewQuery.isError
+    ? getErrorMessage(previousPreviewQuery.error)
+    : null;
+
   const noAssignments = assignments.length === 0;
   const noRemainingDeliveries =
     activeAssignment !== null && activeAssignment.remainingDeliveries <= 0;
@@ -250,37 +257,6 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
       cancelled = true;
     };
   }, [file]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!latestAssignmentDelivery) {
-      setPreviousPreviewFiles([]);
-      setPreviousPreviewError(null);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    void deliveriesApi
-      .preview(latestAssignmentDelivery.id)
-      .then((files) => {
-        if (!cancelled) {
-          setPreviousPreviewFiles(files);
-          setPreviousPreviewError(null);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setPreviousPreviewFiles([]);
-          setPreviousPreviewError(getErrorMessage(error));
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [latestAssignmentDelivery?.id]);
 
   const handleNextStep = () => {
     if (step === 1 && canContinueFromStep1) {

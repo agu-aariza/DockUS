@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   RiArrowRightUpLine,
   RiBarChartFill,
@@ -19,6 +20,7 @@ import {
 } from "react-icons/ri";
 
 import { projectsApi } from "../../shared/api/services";
+import { queryKeys } from "../../shared/query/queryKeys";
 import { Card } from "../../shared/components/ui/Layout";
 import { Skeleton } from "../../shared/components/Skeleton";
 import { StatusBadge, type StatusTone } from "../../shared/components/ui/StatusBadge";
@@ -124,17 +126,11 @@ export function QualityInsightsDashboard({
   onOpenStudentReview,
 }: QualityInsightsDashboardProps) {
   const [category, setCategory] = useState<"all" | QualityInsightCategory>("all");
-  const [summary, setSummary] = useState<ProjectQualityInsightsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedStudentId, setSelectedStudentId] = useState("");
-  const [studentDetails, setStudentDetails] =
-    useState<ProjectStudentQualityInsightsResponse | null>(null);
-  const [studentLoading, setStudentLoading] = useState(false);
 
   useEffect(() => {
     if (!students.length) {
       setSelectedStudentId("");
-      setStudentDetails(null);
       return;
     }
 
@@ -145,77 +141,39 @@ export function QualityInsightsDashboard({
     );
   }, [students]);
 
-  useEffect(() => {
-    if (!projectId.trim()) {
-      setSummary(null);
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-
-    const request =
+  const summaryQuery = useQuery({
+    queryKey:
+      category === "all"
+        ? queryKeys.projects.qualityInsights(projectId)
+        : queryKeys.projects.qualityInsightsByCategory(projectId, category),
+    queryFn: () =>
       category === "all"
         ? api.getQualityInsights(projectId)
-        : api.getQualityInsightsByCategory(projectId, category);
-
-    request
-      .then((data) => {
-        if (!cancelled) {
-          setSummary(data);
-        }
-      })
-      .catch((error) => {
-        console.error("quality insights summary", error);
-        if (!cancelled) {
-          setSummary(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [api, category, projectId]);
+        : api.getQualityInsightsByCategory(projectId, category),
+    enabled: !!projectId.trim(),
+  });
+  const summary = summaryQuery.data ?? null;
+  // Guardado con !!projectId.trim(): una query enabled:false se queda en
+  // "pending" para siempre, y el original mostraba loading:false (no
+  // skeleton) cuando aún no hay proyecto.
+  const loading = !!projectId.trim() && summaryQuery.isPending;
 
   useEffect(() => {
-    if (!projectId.trim() || !selectedStudentId) {
-      setStudentDetails(null);
-      setStudentLoading(false);
-      return;
-    }
+    if (summaryQuery.isError) console.error("quality insights summary", summaryQuery.error);
+  }, [summaryQuery.isError, summaryQuery.error]);
 
-    let cancelled = false;
-    setStudentLoading(true);
+  const studentDetailsQuery = useQuery({
+    queryKey: queryKeys.projects.qualityInsightsForStudent(projectId, selectedStudentId),
+    queryFn: () => api.getQualityInsightsForStudent(projectId, selectedStudentId),
+    enabled: !!projectId.trim() && !!selectedStudentId,
+  });
+  const studentDetails = studentDetailsQuery.data ?? null;
+  const studentLoading =
+    !!projectId.trim() && !!selectedStudentId && studentDetailsQuery.isPending;
 
-    api
-      .getQualityInsightsForStudent(projectId, selectedStudentId)
-      .then((data) => {
-        if (!cancelled) {
-          setStudentDetails(data);
-        }
-      })
-      .catch((error) => {
-        console.error("quality insights student", error);
-        if (!cancelled) {
-          setStudentDetails(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setStudentLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [api, projectId, selectedStudentId]);
+  useEffect(() => {
+    if (studentDetailsQuery.isError) console.error("quality insights student", studentDetailsQuery.error);
+  }, [studentDetailsQuery.isError, studentDetailsQuery.error]);
 
   const selectedStudent = useMemo(
     () => students.find((student) => student.studentId === selectedStudentId) ?? null,

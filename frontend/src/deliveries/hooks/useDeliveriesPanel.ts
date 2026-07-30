@@ -5,7 +5,7 @@
  */
 
 import { useState, useDeferredValue, useMemo, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { deliveriesApi } from "../../shared/api/services";
 import { getErrorMessage } from "../../shared/utils/errors";
@@ -96,9 +96,8 @@ export function useDeliveriesPanel() {
 
   const handleQuickGrade = async (deliveryId: string, grade: number) => {
     try {
-      await deliveriesApi.updateGrading(deliveryId, { grade, graderNotes: undefined });
+      await dc.updateGrading(deliveryId, { grade, graderNotes: undefined });
       pushToast({ title: "Nota guardada", description: `${grade.toFixed(2)} / 10`, tone: "success" });
-      await dc.refreshDeliveries();
     } catch (error) {
       pushToast({ title: "Error al guardar la nota", description: getErrorMessage(error), tone: "error" });
     }

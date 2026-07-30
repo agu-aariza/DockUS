@@ -5,9 +5,11 @@
  */
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RiBarChartFill, RiDownload2Line, RiTeamLine } from "react-icons/ri";
 import { builderApi, deliveriesApi, projectsApi } from "../shared/api/services";
+import { queryKeys } from "../shared/query/queryKeys";
 import { useManagementPermissions } from "../shared/session/useManagementPermissions";
 import { QualityInsightsDashboard } from "../builder/components/QualityInsightsDashboard";
 import {
@@ -20,7 +22,6 @@ import type { DeliveryEntity, DeliveryStatus } from "../features/deliveries/type
 import type {
   ProjectEntity,
   ProjectGradebookRow,
-  ProjectProgressSummary,
 } from "../features/projects/types";
 import { useSession } from "../shared/session/SessionContext";
 import { useToast } from "../shared/toast/ToastContext";
@@ -70,12 +71,10 @@ export function ProgressDashboard({
   const navigate = useNavigate();
   const { pushToast } = useToast();
   const { canWrite } = useManagementPermissions(session);
+  const queryClient = useQueryClient();
 
   const [projectId, setProjectId] = useState(selectedProjectId);
-  const [summary, setSummary] = useState<ProjectProgressSummary | null>(null);
-  const [gradebook, setGradebook] = useState<ProjectGradebookRow[]>([]);
   const [availableGroups, setAvailableGroups] = useState<GroupOption[]>([]);
-  const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<"gradebook" | "insights">("gradebook");
 
@@ -104,44 +103,77 @@ export function ProgressDashboard({
     }
   }, [selectedProjectId]);
 
-  const fetchDashboard = async (
-    targetProjectId: string,
-    targetGroupId = groupFilter,
-  ) => {
-    if (!targetProjectId.trim() || !session) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const groupId = targetGroupId === "ALL" ? undefined : targetGroupId;
-      const [summaryData, gradebookData] = await Promise.all([
-        projectsApi.progressSummary(targetProjectId.trim(), { groupId }),
-        projectsApi.gradebook(targetProjectId.trim(), { groupId }),
-      ]);
-      setSummary(summaryData);
-      setGradebook(gradebookData);
-      if (groupId === undefined || availableGroups.length === 0) {
-        setAvailableGroups(toGroupOptions(gradebookData));
-      }
-    } catch (error) {
-      pushToast({
-        title: "Seguimiento",
-        description: getErrorMessage(error),
-        tone: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // En modo embedded, la query se dispara sola al cambiar proyecto/filtro de
+  // grupo (reactiva); en modo standalone, ProjectSelector exige un clic
+  // explícito en "Cargar" (ver onLoad más abajo) — mismo patrón de "envío
+  // explícito" que Storage/Users, solo que aquí basta con actualizar la key
+  // (el useQuery de abajo reacciona solo, sin necesitar fetchQuery) porque
+  // nadie necesita el valor resuelto de forma síncrona en el propio handler.
+  const [submittedQuery, setSubmittedQuery] = useState<{ projectId: string; groupId?: string } | null>(null);
 
   useEffect(() => {
-    if (!embedded || !selectedProjectId || !session) {
-      return;
-    }
-
-    void fetchDashboard(selectedProjectId.trim(), groupFilter);
+    if (!embedded || !selectedProjectId || !session) return;
+    const groupId = groupFilter === "ALL" ? undefined : groupFilter;
+    setSubmittedQuery({ projectId: selectedProjectId.trim(), groupId });
   }, [embedded, groupFilter, selectedProjectId, session]);
+
+  const summaryQuery = useQuery({
+    queryKey: queryKeys.projects.progressSummary(submittedQuery?.projectId ?? "", submittedQuery?.groupId),
+    queryFn: () => projectsApi.progressSummary(submittedQuery!.projectId, { groupId: submittedQuery!.groupId }),
+    enabled: submittedQuery !== null,
+  });
+  const gradebookQuery = useQuery({
+    queryKey: queryKeys.projects.gradebook(submittedQuery?.projectId ?? "", submittedQuery?.groupId),
+    queryFn: () => projectsApi.gradebook(submittedQuery!.projectId, { groupId: submittedQuery!.groupId }),
+    enabled: submittedQuery !== null,
+  });
+  const summary = summaryQuery.data ?? null;
+  const gradebook = gradebookQuery.data ?? [];
+  const loading = submittedQuery !== null && (summaryQuery.isFetching || gradebookQuery.isFetching);
+
+  useEffect(() => {
+    const rows = gradebookQuery.data;
+    if (!rows) return;
+    if (submittedQuery?.groupId === undefined || availableGroups.length === 0) {
+      setAvailableGroups(toGroupOptions(rows));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gradebookQuery.data]);
+
+  useEffect(() => {
+    const error = summaryQuery.error ?? gradebookQuery.error;
+    if (error) {
+      pushToast({ title: "Seguimiento", description: getErrorMessage(error), tone: "error" });
+    }
+  }, [summaryQuery.error, gradebookQuery.error, pushToast]);
+
+  const refetchDashboard = () => Promise.all([summaryQuery.refetch(), gradebookQuery.refetch()]);
+
+  // Botón "Cargar" del selector standalone: un clic explícito debe golpear
+  // red siempre, incluso repitiendo el mismo proyecto/grupo dentro de la
+  // ventana de staleTime — igual que el patrón fetchQuery+staleTime:0 usado
+  // en Storage/Users para "Buscar". setSubmittedQuery por sí solo no basta
+  // aquí: si la key no cambia, useQuery serviría caché sin ir a red. El error,
+  // si lo hay, ya lo muestra el efecto de arriba (fetchQuery escribe en la
+  // misma caché que observan summaryQuery/gradebookQuery) — no duplicar aviso.
+  const handleLoadClick = async () => {
+    const targetProjectId = projectId.trim();
+    if (!targetProjectId || !session) return;
+    const groupId = groupFilter === "ALL" ? undefined : groupFilter;
+    setSubmittedQuery({ projectId: targetProjectId, groupId });
+    await Promise.allSettled([
+      queryClient.fetchQuery({
+        queryKey: queryKeys.projects.progressSummary(targetProjectId, groupId),
+        queryFn: () => projectsApi.progressSummary(targetProjectId, { groupId }),
+        staleTime: 0,
+      }),
+      queryClient.fetchQuery({
+        queryKey: queryKeys.projects.gradebook(targetProjectId, groupId),
+        queryFn: () => projectsApi.gradebook(targetProjectId, { groupId }),
+        staleTime: 0,
+      }),
+    ]);
+  };
 
   const handlePreview = async (deliveryId: string) => {
     setIsLoadingPreview(true);
@@ -236,7 +268,9 @@ export function ProgressDashboard({
       });
       setIsPreviewModalOpen(false);
       if (projectId.trim()) {
-        await fetchDashboard(projectId.trim(), groupFilter);
+        // La key de la query no cambia (mismo proyecto/grupo): hace falta un
+        // refetch explícito, no basta con re-enviar la misma key.
+        await refetchDashboard();
       }
     } catch (error) {
       pushToast({
@@ -250,7 +284,7 @@ export function ProgressDashboard({
   const handleGroupChange = async (nextGroupId: string) => {
     setGroupFilter(nextGroupId);
     if (projectId.trim() && session) {
-      await fetchDashboard(projectId.trim(), nextGroupId);
+      setSubmittedQuery({ projectId: projectId.trim(), groupId: nextGroupId === "ALL" ? undefined : nextGroupId });
     }
   };
 
@@ -326,7 +360,7 @@ export function ProgressDashboard({
             setProjectId(nextProjectId);
             setGroupFilter("ALL");
           }}
-          onLoad={() => void fetchDashboard(projectId.trim(), groupFilter)}
+          onLoad={() => void handleLoadClick()}
         />
       ) : null}
 

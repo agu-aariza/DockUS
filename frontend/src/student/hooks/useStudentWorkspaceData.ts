@@ -4,7 +4,8 @@
  * @module useStudentWorkspaceData
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { assignmentsApi, deliveriesApi } from "../../shared/api/services";
 import { builderApi } from "../../shared/api/builderApi";
 import type {
@@ -13,6 +14,7 @@ import type {
   DeliveryEntity,
 } from "../../shared/types";
 import { getErrorMessage } from "../../shared/utils/errors";
+import { queryKeys } from "../../shared/query/queryKeys";
 
 export interface StudentWorkspaceData {
   assignments: ProjectAssignmentEntity[];
@@ -25,44 +27,38 @@ export interface StudentWorkspaceData {
 }
 
 export function useStudentWorkspaceData(): StudentWorkspaceData {
-  const [assignments, setAssignments] = useState<ProjectAssignmentEntity[]>([]);
-  const [deliveries, setDeliveries] = useState<DeliveryEntity[]>([]);
-  const [latestRunByDeliveryId, setLatestRunByDeliveryId] = useState<
-    Record<string, BuildRunEntity | null>
-  >({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const assignmentsQuery = useQuery({
+    queryKey: queryKeys.assignments.mine(),
+    queryFn: () => assignmentsApi.listMine(),
+  });
+  const deliveriesQuery = useQuery({
+    queryKey: queryKeys.deliveries.mine(),
+    queryFn: () => deliveriesApi.list({ limit: 50, sortBy: "createdAt", sortOrder: "DESC" }),
+  });
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [asgs, dels] = await Promise.all([
-        assignmentsApi.listMine(),
-        deliveriesApi.list({ limit: 50, sortBy: "createdAt", sortOrder: "DESC" }),
-      ]);
-      setAssignments(asgs);
-      setDeliveries(dels.data);
-      try {
-        const latestRuns = await builderApi.listLatestRunsByDeliveries(
-          dels.data.map((delivery) => delivery.id),
-        );
-        setLatestRunByDeliveryId(latestRuns);
-      } catch {
-        setLatestRunByDeliveryId({});
-      }
-    } catch (e) {
-      setError(getErrorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const assignments = assignmentsQuery.data ?? [];
+  const deliveries = useMemo(() => deliveriesQuery.data?.data ?? [], [deliveriesQuery.data]);
 
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
+  const deliveryIds = useMemo(() => deliveries.map((d) => d.id), [deliveries]);
+  const latestRunsQuery = useQuery({
+    queryKey: queryKeys.deliveries.latestRuns(deliveryIds),
+    queryFn: () => builderApi.listLatestRunsByDeliveries(deliveryIds),
+    enabled: deliveryIds.length > 0,
+  });
+  const latestRunByDeliveryId = latestRunsQuery.data ?? {};
+
+  const loading = assignmentsQuery.isPending || deliveriesQuery.isPending;
+  const error = assignmentsQuery.isError
+    ? getErrorMessage(assignmentsQuery.error)
+    : deliveriesQuery.isError
+      ? getErrorMessage(deliveriesQuery.error)
+      : null;
 
   const latestDelivery = deliveries.length > 0 ? deliveries[0] : null;
+
+  const refresh = async () => {
+    await Promise.all([assignmentsQuery.refetch(), deliveriesQuery.refetch()]);
+  };
 
   return {
     assignments,
@@ -71,6 +67,6 @@ export function useStudentWorkspaceData(): StudentWorkspaceData {
     latestRunByDeliveryId,
     loading,
     error,
-    refresh: loadData,
+    refresh,
   };
 }

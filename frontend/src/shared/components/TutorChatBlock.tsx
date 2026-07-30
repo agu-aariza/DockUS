@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   RiSparklingLine,
   RiSendPlaneFill,
@@ -12,6 +13,7 @@ import {
   RiUser3Line,
 } from "react-icons/ri";
 import { builderApi } from "../api/builderApi";
+import { queryKeys } from "../query/queryKeys";
 import type { BuildRunChatMessage, BuilderReportEntity } from "../../features/builder/types";
 import { MarkdownContent } from "./MarkdownContent";
 
@@ -35,24 +37,22 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
     activeRunIdRef.current = buildRunId;
   }, [buildRunId]);
 
-  // Fetch initial history
+  // Solo la carga inicial del historial pasa por React Query; el flujo de
+  // enviar/recibir mensajes en vivo sigue siendo estado local (no es cacheable).
+  const chatHistoryQuery = useQuery({
+    queryKey: queryKeys.builderChat.messages(buildRunId),
+    queryFn: () => builderApi.getChatMessages(buildRunId),
+  });
+
   useEffect(() => {
-    let active = true;
-    const fetchHistory = async () => {
-      try {
-        const history = await builderApi.getChatMessages(buildRunId);
-        if (active) {
-          setMessages(history);
-        }
-      } catch (err) {
-        console.error("Error fetching tutor chat history:", err);
-      }
-    };
-    void fetchHistory();
-    return () => {
-      active = false;
-    };
-  }, [buildRunId]);
+    if (chatHistoryQuery.data) setMessages(chatHistoryQuery.data);
+  }, [chatHistoryQuery.data]);
+
+  useEffect(() => {
+    if (chatHistoryQuery.isError) {
+      console.error("Error fetching tutor chat history:", chatHistoryQuery.error);
+    }
+  }, [chatHistoryQuery.isError, chatHistoryQuery.error]);
 
   // Scroll to bottom
   const scrollToBottom = () => {

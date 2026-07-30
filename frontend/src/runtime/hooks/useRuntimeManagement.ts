@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   assignmentsApi,
   builderApi,
@@ -13,11 +14,9 @@ import {
   projectsApi,
 } from "../../shared/api/services";
 import type { BuildRunEntity, EvidenceArtifactDto } from "../../features/builder/types";
-import type { DeliveryEntity } from "../../features/deliveries/types";
-import type { PaginatedResponse } from "../../shared/types";
-import type { ProjectAssignmentEntity, ProjectEntity } from "../../features/projects/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useSession } from "../../shared/session/SessionContext";
+import { queryKeys } from "../../shared/query/queryKeys";
 import { useVisibilityAwareInterval } from "../../shared/hooks/useVisibilityAwareInterval";
 import { useBuilderRunStream } from "../../builder/hooks/useBuilderRunStream";
 
@@ -30,15 +29,11 @@ interface NoticeState {
 export function useRuntimeManagement() {
   const { activeSession: session } = useSession();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [projectOptions, setProjectOptions] = useState<ProjectEntity[]>([]);
-  const [assignmentOptions, setAssignmentOptions] = useState<ProjectAssignmentEntity[]>([]);
-  const [deliveryOptions, setDeliveryOptions] = useState<DeliveryEntity[]>([]);
-  
+
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedAssignmentId, setSelectedAssignmentId] = useState("");
   const [selectedDeliveryId, setSelectedDeliveryId] = useState("");
-  
-  const [runsResponse, setRunsResponse] = useState<PaginatedResponse<BuildRunEntity> | null>(null);
+
   const [selectedRunId, setSelectedRunId] = useState("");
   const [selectedRun, setSelectedRun] = useState<BuildRunEntity | null>(null);
   const [evidenceArtifacts, setEvidenceArtifacts] = useState<EvidenceArtifactDto[]>([]);
@@ -64,29 +59,48 @@ export function useRuntimeManagement() {
   const reqAssignmentId = searchParams.get("assignmentId");
   const reqDeliveryId = searchParams.get("deliveryId");
 
-  const loadProjects = async (signal?: AbortSignal) => {
-    try {
-      const response = await projectsApi.list({ page: 1, limit: 50, sortBy: "updatedAt", sortOrder: "DESC" }, signal);
-      if (signal?.aborted) return;
-      setProjectOptions(response.data);
-      setSelectedProjectId(curr => (curr && response.data.some(p => p.id === curr)) ? curr : (reqProjectId && response.data.some(p => p.id === reqProjectId) ? reqProjectId : (response.data[0]?.id ?? "")));
-    } catch (e) {
-      if (signal?.aborted) return;
-      setMessage({ text: getErrorMessage(e), tone: "warning" });
-    }
-  };
+  // Cascada proyecto→asignación→entrega→runs: cada etapa es su propia query,
+  // habilitada solo cuando el id del que depende existe. React Query aborta
+  // por su cuenta la petición obsoleta cuando la key cambia antes de resolver
+  // (lo que antes hacía el AbortController manual de cada etapa), y las keys
+  // de proyectos/asignaciones/entregas son las mismas que usan
+  // Deliveries/Proyectos/WorkspaceBar, así que comparten caché al navegar
+  // entre paneles.
+  const projectsQuery = useQuery({
+    queryKey: queryKeys.projects.list(),
+    queryFn: ({ signal }) =>
+      projectsApi.list({ page: 1, limit: 50, sortBy: "updatedAt", sortOrder: "DESC" }, signal),
+  });
+  const projectOptions = projectsQuery.data?.data ?? [];
 
-  const loadRuns = async (deliveryId = selectedDeliveryId, signal?: AbortSignal) => {
-    if (!deliveryId) return;
-    try {
-      const response = await builderApi.listByDelivery({ deliveryId, page: 1, limit: 20, sortOrder: "DESC", signal });
-      if (signal?.aborted) return;
-      setRunsResponse(response);
-      setSelectedRunId(curr => (curr && response.data.some(r => r.id === curr)) ? curr : (response.data[0]?.id ?? ""));
-    } catch (e) {
-      if (signal?.aborted) return;
-      setMessage({ text: getErrorMessage(e), tone: "warning" });
-    }
+  const assignmentsQuery = useQuery({
+    queryKey: queryKeys.assignments.byProject(selectedProjectId),
+    queryFn: ({ signal }) => assignmentsApi.listByProject(selectedProjectId, signal),
+    enabled: !!selectedProjectId,
+  });
+  const assignmentOptions = assignmentsQuery.data ?? [];
+
+  const deliveriesQuery = useQuery({
+    queryKey: queryKeys.deliveries.list(selectedAssignmentId),
+    queryFn: ({ signal }) =>
+      deliveriesApi.list(
+        { assignmentId: selectedAssignmentId, page: 1, limit: 50, sortBy: "createdAt", sortOrder: "DESC" },
+        signal,
+      ),
+    enabled: !!selectedAssignmentId,
+  });
+  const deliveryOptions = deliveriesQuery.data?.data ?? [];
+
+  const runsQuery = useQuery({
+    queryKey: queryKeys.runtime.runsByDelivery(selectedDeliveryId),
+    queryFn: ({ signal }) =>
+      builderApi.listByDelivery({ deliveryId: selectedDeliveryId, page: 1, limit: 20, sortOrder: "DESC", signal }),
+    enabled: !!selectedDeliveryId,
+  });
+  const runsResponse = runsQuery.data ?? null;
+
+  const loadRuns = async () => {
+    await runsQuery.refetch();
   };
 
   const handleStartRun = async () => {
@@ -95,7 +109,7 @@ export function useRuntimeManagement() {
     try {
       const response = await builderApi.runForDelivery(selectedDeliveryId);
       setSelectedRunId(response.buildRunId);
-      await loadRuns(selectedDeliveryId);
+      await loadRuns();
       setMessage({ text: `Run encolado: ${response.buildRunId}`, tone: "info" });
     } catch (e) { setMessage({ text: getErrorMessage(e), tone: "warning" }); }
     finally {
@@ -117,60 +131,42 @@ export function useRuntimeManagement() {
     finally { setBusyAction(null); }
   };
 
-  // Sync effects
-  // Cada etapa de la cascada proyecto→asignación→entrega→runs aborta su
-  // petición al desmontar o al re-disparar el efecto (cambio rápido de
-  // selección), para que una respuesta tardía de la selección anterior no
-  // sobreescriba el estado de la actual (FE-BAJO-03).
+  // Sincroniza la selección con los datos frescos de cada etapa, prefiriendo
+  // el id pedido por la URL si es válido en el listado recién cargado.
   useEffect(() => {
-    const controller = new AbortController();
-    void loadProjects(controller.signal);
-    return () => controller.abort();
-  }, []);
+    const data = projectsQuery.data?.data;
+    if (!data) return;
+    setSelectedProjectId(curr =>
+      (curr && data.some(p => p.id === curr)) ? curr :
+        (reqProjectId && data.some(p => p.id === reqProjectId) ? reqProjectId : (data[0]?.id ?? "")));
+  }, [projectsQuery.data, reqProjectId]);
 
   useEffect(() => {
-    if (!selectedProjectId) {
-      setAssignmentOptions([]);
-      return;
-    }
-    const controller = new AbortController();
-    const sync = async () => {
-      try {
-        const as = await assignmentsApi.listByProject(selectedProjectId, controller.signal);
-        if (controller.signal.aborted) return;
-        setAssignmentOptions(as);
-        setSelectedAssignmentId(curr => (curr && as.some(a => a.id === curr)) ? curr : (reqAssignmentId && as.some(a => a.id === reqAssignmentId) ? reqAssignmentId : (as[0]?.id ?? "")));
-      } catch (e) {
-        if (controller.signal.aborted) return;
-        setMessage({ text: getErrorMessage(e), tone: "warning" });
-      }
-    };
-    void sync();
-    return () => controller.abort();
-  }, [reqAssignmentId, selectedProjectId]);
+    const data = assignmentsQuery.data;
+    if (!selectedProjectId || !data) return;
+    setSelectedAssignmentId(curr =>
+      (curr && data.some(a => a.id === curr)) ? curr :
+        (reqAssignmentId && data.some(a => a.id === reqAssignmentId) ? reqAssignmentId : (data[0]?.id ?? "")));
+  }, [selectedProjectId, assignmentsQuery.data, reqAssignmentId]);
 
   useEffect(() => {
-    if (!selectedAssignmentId) { setDeliveryOptions([]); return; }
-    const controller = new AbortController();
-    deliveriesApi.list({ assignmentId: selectedAssignmentId, page: 1, limit: 50, sortBy: "createdAt", sortOrder: "DESC" }, controller.signal)
-      .then(r => {
-        if (controller.signal.aborted) return;
-        setDeliveryOptions(r.data);
-        setSelectedDeliveryId(curr => (curr && r.data.some(d => d.id === curr)) ? curr : (reqDeliveryId && r.data.some(d => d.id === reqDeliveryId) ? reqDeliveryId : (r.data[0]?.id ?? "")));
-      })
-      .catch((e) => {
-        if (controller.signal.aborted) return;
-        setMessage({ text: getErrorMessage(e), tone: "warning" });
-      });
-    return () => controller.abort();
-  }, [reqDeliveryId, selectedAssignmentId]);
+    const data = deliveriesQuery.data?.data;
+    if (!selectedAssignmentId || !data) return;
+    setSelectedDeliveryId(curr =>
+      (curr && data.some(d => d.id === curr)) ? curr :
+        (reqDeliveryId && data.some(d => d.id === reqDeliveryId) ? reqDeliveryId : (data[0]?.id ?? "")));
+  }, [selectedAssignmentId, deliveriesQuery.data, reqDeliveryId]);
 
   useEffect(() => {
-    if (!selectedDeliveryId) return;
-    const controller = new AbortController();
-    void loadRuns(selectedDeliveryId, controller.signal);
-    return () => controller.abort();
-  }, [selectedDeliveryId]);
+    const data = runsQuery.data?.data;
+    if (!selectedDeliveryId || !data) return;
+    setSelectedRunId(curr => (curr && data.some(r => r.id === curr)) ? curr : (data[0]?.id ?? ""));
+  }, [selectedDeliveryId, runsQuery.data]);
+
+  useEffect(() => {
+    const error = projectsQuery.error ?? assignmentsQuery.error ?? deliveriesQuery.error ?? runsQuery.error;
+    if (error) setMessage({ text: getErrorMessage(error), tone: "warning" });
+  }, [projectsQuery.error, assignmentsQuery.error, deliveriesQuery.error, runsQuery.error]);
 
   /**
    * Puente entre el efecto que construye el sincronizador de evidencia —con su

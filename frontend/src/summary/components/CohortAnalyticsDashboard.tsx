@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   RiPercentLine,
   RiFileList3Line,
@@ -16,7 +17,8 @@ import {
 import { projectsApi } from "../../shared/api/services";
 import { MetricCard } from "../../shared/components/MetricCard";
 import { Skeleton } from "../../shared/components/Skeleton";
-import type { ProjectEntity, ProjectProgressSummary, ProjectQualityInsight } from "../../features/projects/types";
+import { queryKeys } from "../../shared/query/queryKeys";
+import type { ProjectEntity } from "../../features/projects/types";
 
 interface CohortAnalyticsDashboardProps {
   initialProjectId: string | null;
@@ -30,10 +32,6 @@ export function CohortAnalyticsDashboard({
   onSelectProject,
 }: CohortAnalyticsDashboardProps): JSX.Element {
   const [selectedId, setSelectedId] = useState<string | null>(initialProjectId);
-  const [summary, setSummary] = useState<ProjectProgressSummary | null>(null);
-  const [insights, setInsights] = useState<ProjectQualityInsight[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialProjectId) {
@@ -43,44 +41,30 @@ export function CohortAnalyticsDashboard({
     }
   }, [initialProjectId, projects, selectedId]);
 
-  useEffect(() => {
-    if (!selectedId) {
-      setSummary(null);
-      setInsights([]);
-      return;
-    }
+  // Dos queries independientes en vez de un Promise.all con .catch() por
+  // rama: cada una carga o falla por su cuenta, que es justo lo que esas
+  // .catch() manuales lograban a mano.
+  const summaryQuery = useQuery({
+    queryKey: queryKeys.projects.progressSummary(selectedId ?? ""),
+    queryFn: () => projectsApi.progressSummary(selectedId!),
+    enabled: !!selectedId,
+  });
+  const insightsQuery = useQuery({
+    queryKey: queryKeys.projects.qualityInsights(selectedId ?? ""),
+    queryFn: () => projectsApi.getQualityInsights(selectedId!),
+    enabled: !!selectedId,
+  });
 
-    let active = true;
-    async function loadStats() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [sumRes, insRes] = await Promise.all([
-          projectsApi.progressSummary(selectedId!).catch(() => null),
-          selectedId ? projectsApi.getQualityInsights(selectedId).catch(() => null) : null,
-        ]);
-
-        if (!active) return;
-
-        setSummary(sumRes);
-        setInsights(insRes?.insights || []);
-      } catch (err) {
-        if (active) {
-          setError("Error al cargar los datos analíticos del proyecto.");
-          console.error(err);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadStats();
-    return () => {
-      active = false;
-    };
-  }, [selectedId]);
+  const summary = summaryQuery.data ?? null;
+  // insightsQuery se degrada a "sin hallazgos" en vez de bloquear todo el
+  // dashboard tras un error: el resumen/distribución no dependen de ella, y
+  // la tarjeta "Hallazgos de Calidad" ya tiene su propio estado vacío.
+  const insights = insightsQuery.data?.insights ?? [];
+  // Guardado con !!selectedId: una query enabled:false se queda en estado
+  // "pending" para siempre, y sin este guard se vería un skeleton perpetuo
+  // en el instante (un render) antes de que se seleccione el primer proyecto.
+  const loading = !!selectedId && (summaryQuery.isPending || insightsQuery.isPending);
+  const error = summaryQuery.isError ? "Error al cargar los datos analíticos del proyecto." : null;
 
   const handleProjectChange = (id: string) => {
     setSelectedId(id);

@@ -4,23 +4,22 @@
  * @module useStorageManagement
  */
 
-import { type FormEvent, useState, useEffect } from 'react';
-import { 
-  storageApi, 
-  projectsApi, 
-  deliveriesApi, 
-  assignmentsApi, 
-  builderApi 
+import { type FormEvent, useState, useEffect, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  storageApi,
+  projectsApi,
+  deliveriesApi,
+  assignmentsApi,
+  builderApi
 } from '../../shared/api/services';
 import type { DownloadUrlResponse, StorageObjectEntity } from "../../features/storage/types";
 import type { PaginatedResponse } from "../../shared/types";
-import type { DeliveryEntity } from "../../features/deliveries/types";
-import type { BuildRunEntity } from "../../features/builder/types";
 import { useSession } from '../../shared/session/SessionContext';
 import { useManagementPermissions } from '../../shared/session/useManagementPermissions';
 import { getErrorMessage } from '../../shared/utils/errors';
 import { computeSha256Hex } from '../../shared/utils/hash';
-import { useCrudResource } from '../../shared/hooks/useCrudResource';
+import { queryKeys } from '../../shared/query/queryKeys';
 
 interface UnifiedStorageItem {
   id: string;
@@ -41,9 +40,11 @@ interface UnifiedStorageItem {
 type DangerAction = 'DELETE' | 'PURGE';
 type StorageSortBy = 'createdAt' | 'updatedAt' | 'logicalName' | 'sizeBytes';
 type SortOrder = 'ASC' | 'DESC';
+type StorageListQuery = Parameters<typeof storageApi.list>[0];
 
 export function useStorageManagement() {
   const { activeSession: session } = useSession();
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState({
     page: '1',
     limit: '20',
@@ -57,9 +58,7 @@ export function useStorageManagement() {
     sortOrder: 'DESC' as SortOrder,
   });
   const [unifiedItems, setUnifiedItems] = useState<UnifiedStorageItem[]>([]);
-  const [projectsList, setProjectsList] = useState<Array<{ id: string; title: string }>>([]);
-  const [deliveriesList, setDeliveriesList] = useState<DeliveryEntity[]>([]);
-  const [runsList, setRunsList] = useState<BuildRunEntity[]>([]);
+  const [submittedQuery, setSubmittedQuery] = useState<StorageListQuery | null>(null);
 
   const [previewContent, setPreviewContent] = useState<Array<{ path: string; content: string }> | string | null>(null);
   const [previewTitle, setPreviewTitle] = useState('');
@@ -89,73 +88,87 @@ export function useStorageManagement() {
     useManagementPermissions(session);
   const canSoftDelete = canTeacherOrAdmin;
 
-  const storageCrud = useCrudResource<StorageObjectEntity>({
-    api: {
-      list: storageApi.list,
-      remove: storageApi.remove,
-    },
-    canRead,
+  // Query pasiva: solo muestra de forma reactiva lo que ya está "enviado"
+  // (submittedQuery). No dispara nada por sí sola en el primer render: nada se
+  // carga hasta el primer clic explícito en "Consultar" (ver handleList).
+  const storageQuery = useQuery({
+    queryKey: queryKeys.storage.list(submittedQuery ?? {}),
+    queryFn: () => storageApi.list(submittedQuery!),
+    enabled: canRead && submittedQuery !== null,
   });
+  const listResponse = storageQuery.data ?? null;
 
-  const listResponse = storageCrud.listResponse;
-
-  // 1. Fetch Projects list based on Role
-  useEffect(() => {
-    if (!canRead) return;
-    const fetchProjects = async () => {
-      try {
-        if (canTeacherOrAdmin) {
-          const res = await projectsApi.list({ limit: 100 });
-          setProjectsList(res.data.map(p => ({ id: p.id, title: p.title })));
-        } else {
-          const res = await assignmentsApi.listMine();
-          setProjectsList(res.map(a => ({ id: a.projectId, title: a.projectTitle })));
-        }
-      } catch (e) {
-        console.error('Error fetching projects for filters:', e);
-      }
-    };
-    void fetchProjects();
-  }, [canRead, canTeacherOrAdmin]);
-
-  // 2. Fetch Deliveries list when selected project changes
-  useEffect(() => {
-    if (!query.projectId) {
-      setDeliveriesList([]);
-      setRunsList([]);
-      setQuery(prev => ({ ...prev, deliveryId: '', runId: '' }));
-      return;
+  // 1. Proyectos para el filtro, según rol. Key propia (no queryKeys.projects.list()
+  // ni queryKeys.assignments.mine() con transformación): aquí se necesita el dato
+  // crudo para no pisar la forma que otros hooks esperan bajo esas keys.
+  const projectsForFilterQuery = useQuery({
+    queryKey: queryKeys.storage.projectsFilter(),
+    queryFn: () => projectsApi.list({ limit: 100 }),
+    enabled: canRead && canTeacherOrAdmin,
+  });
+  const myAssignmentsForFilterQuery = useQuery({
+    queryKey: queryKeys.assignments.mine(),
+    queryFn: () => assignmentsApi.listMine(),
+    enabled: canRead && !canTeacherOrAdmin,
+  });
+  const projectsList = useMemo(() => {
+    if (canTeacherOrAdmin) {
+      return (projectsForFilterQuery.data?.data ?? []).map(p => ({ id: p.id, title: p.title }));
     }
-    const fetchDeliveries = async () => {
-      try {
-        const res = await deliveriesApi.list({ projectId: query.projectId, limit: 100 });
-        setDeliveriesList(res.data);
-        setRunsList([]);
-        setQuery(prev => ({ ...prev, deliveryId: '', runId: '' }));
-      } catch (e) {
-        console.error('Error fetching deliveries for filters:', e);
-      }
-    };
-    void fetchDeliveries();
+    return (myAssignmentsForFilterQuery.data ?? []).map(a => ({ id: a.projectId, title: a.projectTitle }));
+  }, [canTeacherOrAdmin, projectsForFilterQuery.data, myAssignmentsForFilterQuery.data]);
+
+  useEffect(() => {
+    if (projectsForFilterQuery.isError) {
+      console.error('Error fetching projects for filters:', projectsForFilterQuery.error);
+    }
+  }, [projectsForFilterQuery.isError, projectsForFilterQuery.error]);
+
+  useEffect(() => {
+    if (myAssignmentsForFilterQuery.isError) {
+      console.error('Error fetching projects for filters:', myAssignmentsForFilterQuery.error);
+    }
+  }, [myAssignmentsForFilterQuery.isError, myAssignmentsForFilterQuery.error]);
+
+  // 2. Entregas del proyecto seleccionado (dropdown barato, auto-refetch al
+  // cambiar projectId está bien aquí — a diferencia de la lista principal).
+  const deliveriesForFilterQuery = useQuery({
+    queryKey: queryKeys.storage.deliveriesFilter(query.projectId),
+    queryFn: () => deliveriesApi.list({ projectId: query.projectId, limit: 100 }),
+    enabled: canRead && !!query.projectId,
+  });
+  const deliveriesList = deliveriesForFilterQuery.data?.data ?? [];
+
+  useEffect(() => {
+    if (deliveriesForFilterQuery.isError) {
+      console.error('Error fetching deliveries for filters:', deliveriesForFilterQuery.error);
+    }
+  }, [deliveriesForFilterQuery.isError, deliveriesForFilterQuery.error]);
+
+  // Al cambiar de proyecto, la entrega/run seleccionados dejan de ser válidos.
+  useEffect(() => {
+    setQuery(prev => ({ ...prev, deliveryId: '', runId: '' }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.projectId]);
 
-  // 3. Fetch Runs list when selected delivery changes
+  // 3. Runs de la entrega seleccionada.
+  const runsForFilterQuery = useQuery({
+    queryKey: queryKeys.storage.runsFilter(query.deliveryId),
+    queryFn: () => builderApi.listByDelivery({ deliveryId: query.deliveryId, limit: 100 }),
+    enabled: canRead && !!query.deliveryId,
+  });
+  const runsList = runsForFilterQuery.data?.data ?? [];
+
   useEffect(() => {
-    if (!query.deliveryId) {
-      setRunsList([]);
-      setQuery(prev => ({ ...prev, runId: '' }));
-      return;
+    if (runsForFilterQuery.isError) {
+      console.error('Error fetching runs for filters:', runsForFilterQuery.error);
     }
-    const fetchRuns = async () => {
-      try {
-        const res = await builderApi.listByDelivery({ deliveryId: query.deliveryId, limit: 100 });
-        setRunsList(res.data);
-        setQuery(prev => ({ ...prev, runId: '' }));
-      } catch (e) {
-        console.error('Error fetching runs for filters:', e);
-      }
-    };
-    void fetchRuns();
+  }, [runsForFilterQuery.isError, runsForFilterQuery.error]);
+
+  // Al cambiar de entrega, el run seleccionado deja de ser válido.
+  useEffect(() => {
+    setQuery(prev => ({ ...prev, runId: '' }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.deliveryId]);
 
   const buildUnifiedItems = (response: PaginatedResponse<StorageObjectEntity>) => {
@@ -203,9 +216,15 @@ export function useStorageManagement() {
       });
   };
 
+  // Envía los filtros actuales: usa queryClient.fetchQuery (key calculada
+  // in-line) en vez de depender del observer de storageQuery, porque un
+  // enabled:false + refetch() en el mismo handler operaría contra la key
+  // *anterior* (React aún no ha vuelto a renderizar entre el setState y el
+  // refetch síncrono de este mismo evento). staleTime:0 garantiza que un clic
+  // explícito en "Consultar" siempre golpea la red, igual que antes.
   const handleList = async () => {
     if (!canRead) return;
-    const response = await storageCrud.refresh(undefined, {
+    const nextQuery: StorageListQuery = {
       page: Number(query.page) || 1,
       limit: Number(query.limit) || 20,
       deliveryId: query.deliveryId || undefined,
@@ -215,13 +234,18 @@ export function useStorageManagement() {
       createdTo: query.createdTo || undefined,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
-    });
-    if (response) {
+    };
+    setSubmittedQuery(nextQuery);
+    try {
+      const response = await queryClient.fetchQuery({
+        queryKey: queryKeys.storage.list(nextQuery),
+        queryFn: () => storageApi.list(nextQuery),
+        staleTime: 0,
+      });
       setResult(response);
       buildUnifiedItems(response);
-    }
-    if (storageCrud.notice?.tone === 'warning') {
-      setMessage(storageCrud.notice.text);
+    } catch (e) {
+      setMessage(getErrorMessage(e));
     }
   };
 
@@ -295,13 +319,22 @@ export function useStorageManagement() {
     } catch (e) { setMessage(getErrorMessage(e)); }
   };
 
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => storageApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.storage.all }),
+  });
+  const purgeMutation = useMutation({
+    mutationFn: (id: string) => storageApi.purge(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.storage.all }),
+  });
+
   const executeDanger = async () => {
     if (!actionId.trim()) return;
     try {
       if (dangerAction === 'DELETE') {
-        await storageCrud.remove(actionId.trim());
+        await removeMutation.mutateAsync(actionId.trim());
       } else {
-        await storageApi.purge(actionId.trim());
+        await purgeMutation.mutateAsync(actionId.trim());
       }
       setMessage('Acción completada.');
       await handleList();

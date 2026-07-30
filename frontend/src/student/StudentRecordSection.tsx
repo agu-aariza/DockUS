@@ -4,42 +4,27 @@
  * @module StudentRecordSection
  */
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "../shared/components/ui/PageHeader";
 import { SkeletonCard } from "../shared/components/Skeleton";
 import { EmptyState } from "../shared/components/EmptyState";
 import { studentsApi } from "../shared/api/services";
 import { getErrorMessage } from "../shared/utils/errors";
+import { queryKeys } from "../shared/query/queryKeys";
 import { StudentProfileView } from "../student-profile/components/StudentProfileView";
-import type { StudentProfileResponse } from "../features/students/types";
 
 /**
  * Expediente propio del alumno. El backend lo resuelve desde el token
  * (`/students/me/profile`), así que no hay ningún id que manipular en la URL.
  */
 export function StudentRecordSection(): JSX.Element {
-  const [profile, setProfile] = useState<StudentProfileResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-
-    void (async () => {
-      try {
-        const data = await studentsApi.myProfile();
-        if (active) setProfile(data);
-      } catch (err) {
-        if (active) setError(getErrorMessage(err));
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const profileQuery = useQuery({
+    queryKey: queryKeys.studentProfile.mine(),
+    queryFn: () => studentsApi.myProfile(),
+  });
+  const profile = profileQuery.data ?? null;
+  const loading = profileQuery.isPending;
+  const error = profileQuery.isError ? getErrorMessage(profileQuery.error) : null;
 
   return (
     <div className="space-y-6">

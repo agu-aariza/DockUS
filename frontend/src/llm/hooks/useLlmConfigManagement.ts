@@ -5,7 +5,9 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { llmApi } from "../../shared/api/services";
+import { queryKeys } from "../../shared/query/queryKeys";
 import { useToast } from "../../shared/toast/ToastContext";
 import {
   LLM_PROVIDER_IDS,
@@ -53,7 +55,6 @@ export function useLlmConfigManagement() {
   const [roleMappings, setRoleMappings] = useState<LlmRoleMappings>(EMPTY_ROLE_MAPPINGS);
   const [encryptionEnabled, setEncryptionEnabled] = useState(true);
 
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -61,63 +62,62 @@ export function useLlmConfigManagement() {
   const [testLogs, setTestLogs] = useState("");
   const [testEvents, setTestEvents] = useState<ConnectionEvent[]>([]);
 
+  const configsQuery = useQuery({
+    queryKey: queryKeys.llmConfig.all(),
+    queryFn: () => llmApi.getConfigs(),
+  });
+  const isLoading = configsQuery.isPending;
+
+  // Carga inicial que se vuelve estado de formulario editable localmente: no
+  // hay forma de "aplicar los datos frescos" salvo un efecto explícito, ya que
+  // useQuery v5 no tiene onSuccess.
   useEffect(() => {
-    let active = true;
+    const data = configsQuery.data;
+    if (!data) return;
 
-    void (async () => {
-      try {
-        const data = await llmApi.getConfigs();
-        if (!active) return;
-
-        setConfigs((prev) => {
-          const merged = { ...prev };
-          for (const provider of data.providers) {
-            merged[provider.providerId] = {
-              ...DEFAULT_CONFIGS[provider.providerId],
-              awsAccessKeyId: provider.awsAccessKeyId ?? "",
-              endpoint: provider.endpoint ?? "",
-              region: provider.region ?? "",
-              modelVersion: provider.modelVersion ?? "",
-              modelId: provider.modelId,
-              temperature: provider.temperature,
-              maxTokens: provider.maxTokens,
-              inputCostPerMillion: provider.inputCostPerMillion,
-              outputCostPerMillion: provider.outputCostPerMillion,
-            };
-          }
-          return merged;
-        });
-
-        setSavedKeys((prev) => {
-          const merged = { ...prev };
-          for (const provider of data.providers) {
-            merged[provider.providerId] = {
-              hasApiKey: provider.hasApiKey,
-              last4: provider.apiKeyLast4,
-            };
-          }
-          return merged;
-        });
-
-        setRoleMappings({ ...EMPTY_ROLE_MAPPINGS, ...data.roleMappings });
-        setEncryptionEnabled(data.credentialsEncryptionEnabled);
-      } catch {
-        if (active) {
-          pushToast({
-            title: "No se pudo cargar la configuración",
-            description: "El servidor no devolvió los proveedores de IA configurados.",
-            tone: "error",
-          });
-        }
-      } finally {
-        if (active) setIsLoading(false);
+    setConfigs((prev) => {
+      const merged = { ...prev };
+      for (const provider of data.providers) {
+        merged[provider.providerId] = {
+          ...DEFAULT_CONFIGS[provider.providerId],
+          awsAccessKeyId: provider.awsAccessKeyId ?? "",
+          endpoint: provider.endpoint ?? "",
+          region: provider.region ?? "",
+          modelVersion: provider.modelVersion ?? "",
+          modelId: provider.modelId,
+          temperature: provider.temperature,
+          maxTokens: provider.maxTokens,
+          inputCostPerMillion: provider.inputCostPerMillion,
+          outputCostPerMillion: provider.outputCostPerMillion,
+        };
       }
-    })();
+      return merged;
+    });
 
-    return () => {
-      active = false;
-    };
-  }, [pushToast]);
+    setSavedKeys((prev) => {
+      const merged = { ...prev };
+      for (const provider of data.providers) {
+        merged[provider.providerId] = {
+          hasApiKey: provider.hasApiKey,
+          last4: provider.apiKeyLast4,
+        };
+      }
+      return merged;
+    });
+
+    setRoleMappings({ ...EMPTY_ROLE_MAPPINGS, ...data.roleMappings });
+    setEncryptionEnabled(data.credentialsEncryptionEnabled);
+  }, [configsQuery.data]);
+
+  useEffect(() => {
+    if (configsQuery.isError) {
+      pushToast({
+        title: "No se pudo cargar la configuración",
+        description: "El servidor no devolvió los proveedores de IA configurados.",
+        tone: "error",
+      });
+    }
+  }, [configsQuery.isError, pushToast]);
 
   const activeConfig = configs[selectedProvider];
   const activeMeta = PROVIDER_METADATA[selectedProvider];
