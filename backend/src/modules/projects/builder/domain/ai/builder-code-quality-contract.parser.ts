@@ -54,6 +54,16 @@ function normalizeThought(value: unknown): string {
   return value.trim();
 }
 
+/**
+ * AIP-008: antes, cada finding inválido se descartaba en silencio
+ * (`catch { return [] }`) y el contrato seguía "válido" — un eje entero de
+ * findings corruptos era indistinguible de un eje sin hallazgos ("código
+ * limpio"). Ahora un finding mal formado invalida el contrato completo (se
+ * propaga hasta el try/catch de `parseBuilderCodeQualityContractV2`, que ya
+ * degrada la etapa de forma visible — ver builder-code-quality.service.ts),
+ * en vez de convertirse en un `[]` indistinguible de ausencia real de
+ * problemas.
+ */
 function normalizeFindingArray(
   field: 'security' | 'architecture' | 'quality' | 'rubricCompliance',
   value: unknown,
@@ -62,13 +72,7 @@ function normalizeFindingArray(
     throw new Error(`${field} debe ser un array.`);
   }
 
-  return value.flatMap((entry, index) => {
-    try {
-      return [normalizeFinding(field, entry, index)];
-    } catch {
-      return [];
-    }
-  });
+  return value.map((entry, index) => normalizeFinding(field, entry, index));
 }
 
 function normalizeFinding(

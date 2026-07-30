@@ -28,9 +28,14 @@ import type { IObjectStorage } from '../../../domain/ports/object-storage.port';
 import { OBJECT_STORAGE } from '../../../domain/ports/object-storage.port';
 import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
 import { BuilderRunCostService } from './builder-run-cost.service';
-import { BuilderStageTokenUsage } from '../../../domain/builder.types';
+import {
+  BuilderEvaluationContractV2,
+  BuilderReportEntity,
+  BuilderStageTokenUsage,
+} from '../../../domain/builder.types';
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
 import { BuilderRunQueriesService } from '../orchestration/builder-run-queries.service';
+import { toErrorMessage } from '../../../../../../shared/utils/error-message.util';
 
 // Secciones del prompt de evaluación que contienen la clave de corrección del
 // docente. El artefacto LLM_EVAL_PROMPT se reutiliza como contexto del Tutor IA
@@ -178,7 +183,7 @@ export class BuilderLlmChatService {
       return assistantMessage;
     } catch (error) {
       this.logger.error(
-        `Error generating tutor response for run ${buildRunId}: ${error.message}`,
+        `Error generating tutor response for run ${buildRunId}: ${toErrorMessage(error)}`,
       );
       const assistantMessage = this.chatMessageRepository.create({
         buildRunId,
@@ -237,13 +242,14 @@ export class BuilderLlmChatService {
       }
     } catch (error) {
       this.logger.warn(
-        `Could not load LLM_EVAL_PROMPT artifact: ${error.message}. Using fallback.`,
+        `Could not load LLM_EVAL_PROMPT artifact: ${toErrorMessage(error)}. Using fallback.`,
       );
     }
 
     if (!evaluationContext) {
-      const report = run.report as any;
-      const llmAssessment = run.llmAssessment as any;
+      const report = run.report as BuilderReportEntity | undefined;
+      const llmAssessment = run.llmAssessment as
+        BuilderEvaluationContractV2 | undefined;
       const formatList = (items: unknown[]): string =>
         items.length > 0
           ? items

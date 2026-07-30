@@ -78,6 +78,33 @@ export function buildTrace<TContract>(
 }
 
 /**
+ * AIP-005: suma dos lecturas de `usage` de intentos distintos del mismo
+ * contrato — ambos intentos se facturan, así que ambos deben contar. Antes,
+ * el segundo intento del retry de contrato sustituía por completo el `usage`
+ * del primero en el trace final, perdiendo tokens y coste ya facturados. Si
+ * ambos lados son `null` (ningún intento declaró consumo), el resultado
+ * sigue siendo `null` — desconocido, no cero — en vez de convertirse en 0
+ * por la suma.
+ */
+export function sumUsage(
+  a: LlmUsage | undefined,
+  b: LlmUsage | undefined,
+): LlmUsage | undefined {
+  if (!a) return b;
+  if (!b) return a;
+
+  return {
+    inputTokens: sumTokenCount(a.inputTokens, b.inputTokens),
+    outputTokens: sumTokenCount(a.outputTokens, b.outputTokens),
+  };
+}
+
+function sumTokenCount(a: number | null, b: number | null): number | null {
+  if (a === null && b === null) return null;
+  return (a ?? 0) + (b ?? 0);
+}
+
+/**
  * Extrae el consumo facturable de un trace. Devuelve null si el proveedor no
  * declaró tokens (fallo antes de llegar al modelo, o respuesta sin `usage`).
  */

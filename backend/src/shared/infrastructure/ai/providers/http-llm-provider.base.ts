@@ -104,8 +104,17 @@ export abstract class HttpLlmProviderBase {
     );
   }
 
-  /** Los contadores de tokens llegan como number|undefined según el proveedor. */
+  /**
+   * Los contadores de tokens llegan como number|undefined según el proveedor.
+   * AIP-012: antes cualquier número finito contaba, incluidos negativos y
+   * fraccionarios — un proveedor defectuoso o malicioso podía reducir (o
+   * invertir el signo de) el consumo contabilizado. Un token count real es
+   * siempre un entero no negativo; cualquier otro valor se trata igual que
+   * "ausente" (null), no como cero.
+   */
   protected toTokenCount(value: unknown): number | null {
-    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0
+      ? value
+      : null;
   }
 }

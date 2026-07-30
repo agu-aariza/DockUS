@@ -26,6 +26,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 
 import { SecretCipherService } from '../../../../../../shared/infrastructure/security/secret-cipher.service';
+import {
+  assertSafeLlmEndpoint,
+  UnsafeLlmEndpointError,
+} from '../../../../../../shared/infrastructure/ai/llm-endpoint-policy.util';
 import type {
   BuilderLlmPromptStage,
   LlmModelProfile,
@@ -223,8 +227,13 @@ export class BuilderLlmConfigService {
     providerId: LlmProviderId,
     modelId: string,
   ): Promise<ModelPricing | null> {
+    // AIP-012: filtraba solo por providerId, así que un proveedor con varios
+    // modelos configurados (p.ej. dos modelos de OpenAI con tarifas
+    // distintas) podía costear el consumo de uno con la tarifa declarada
+    // para otro — la primera fila de ese proveedor en listConfigs(), sin
+    // relación con el modelo realmente usado.
     const config = (await this.listConfigs()).find(
-      (item) => item.providerId === providerId,
+      (item) => item.providerId === providerId && item.modelId === modelId,
     );
 
     const declaredInput = Number(config?.inputCostPerMillion ?? 0);
@@ -314,8 +323,42 @@ export class BuilderLlmConfigService {
         existingById.get(provider.providerId) ??
         this.configsRepository.create({ providerId: provider.providerId });
 
+      const previousHost = getEndpointHost(entity.endpoint);
+      const nextEndpoint = provider.endpoint?.trim() || null;
+
+      if (nextEndpoint) {
+        try {
+          await assertSafeLlmEndpoint(provider.providerId, nextEndpoint);
+        } catch (error) {
+          if (error instanceof UnsafeLlmEndpointError) {
+            throw new BadRequestException(error.message);
+          }
+          throw error;
+        }
+      }
+
+      // AIP-002: si el origen (host) del endpoint cambia y la fila ya tenía
+      // una clave cifrada guardada, esa clave no debe reutilizarse en
+      // silencio contra el host nuevo — una cuenta ADMIN comprometida podía
+      // redirigir el endpoint y quedarse con una key que ni siquiera puede
+      // leer en claro. Exigir clearApiKey o una key nueva explícita hace que
+      // el cambio de origen sea una decisión, no un efecto colateral.
+      const nextHost = getEndpointHost(nextEndpoint);
+      const hostChanged =
+        previousHost !== null && nextHost !== null && previousHost !== nextHost;
+      if (
+        hostChanged &&
+        entity.apiKeyEncrypted &&
+        !provider.clearApiKey &&
+        !provider.apiKey?.trim()
+      ) {
+        throw new BadRequestException(
+          `El endpoint de ${provider.providerId} cambió de origen. Vuelve a introducir la clave de API o bórrala explícitamente antes de guardar.`,
+        );
+      }
+
       entity.awsAccessKeyId = provider.awsAccessKeyId?.trim() || null;
-      entity.endpoint = provider.endpoint?.trim() || null;
+      entity.endpoint = nextEndpoint;
       entity.region = provider.region?.trim() || null;
       entity.modelVersion = provider.modelVersion?.trim() || null;
       entity.modelId = provider.modelId.trim();
@@ -481,5 +524,21 @@ export class BuilderLlmConfigService {
   private invalidateCache(): void {
     this.cache = null;
     this.cacheExpiresAt = 0;
+  }
+}
+
+/**
+ * AIP-002: host:puerto normalizado de un endpoint, o `null` si está vacío o
+ * no es una URL parseable. Se usa solo para comparar *origen* antes/después
+ * de un guardado — nunca para decidir si el endpoint es seguro (eso es
+ * `assertSafeLlmEndpoint`).
+ */
+function getEndpointHost(endpoint: string | null): string | null {
+  if (!endpoint) return null;
+  try {
+    const url = new URL(endpoint);
+    return url.host.toLowerCase();
+  } catch {
+    return null;
   }
 }

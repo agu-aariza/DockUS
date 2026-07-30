@@ -124,34 +124,29 @@ describe('parseBuilderCodeQualityContractV2', () => {
     },
   );
 
-  it('drops irreparable findings while preserving the valid ones in the same axis', () => {
-    const contract = parseBuilderCodeQualityContractV2(
-      JSON.stringify(
-        buildQualityPayload({
-          security: [
-            {
-              title: 'Uso de atoi sin validación',
-              observacion: 'atoi devuelve 0 en entradas inválidas.',
-              impacto:
-                'Puede ocultar errores de entrada y producir resultados engañosos.',
-              recomendación:
-                'Usa strtol y valida errores para distinguir números válidos de entradas corruptas.',
-            },
-            {
-              title: '',
-              detail: '',
-            },
-          ],
-        }),
+  it('AIP-008: a single irreparable finding fails the whole contract instead of silently vanishing from the axis', () => {
+    expect(() =>
+      parseBuilderCodeQualityContractV2(
+        JSON.stringify(
+          buildQualityPayload({
+            security: [
+              {
+                title: 'Uso de atoi sin validación',
+                observacion: 'atoi devuelve 0 en entradas inválidas.',
+                impacto:
+                  'Puede ocultar errores de entrada y producir resultados engañosos.',
+                recomendación:
+                  'Usa strtol y valida errores para distinguir números válidos de entradas corruptas.',
+              },
+              {
+                title: '',
+                detail: '',
+              },
+            ],
+          }),
+        ),
       ),
-    );
-
-    expect(contract.security).toHaveLength(1);
-    expect(contract.security[0]).toEqual(
-      expect.objectContaining({
-        title: 'Uso de atoi sin validación',
-      }),
-    );
+    ).toThrow('Fallo al parsear CodeQualityContract');
   });
 
   it('fails when an axis is not an array', () => {

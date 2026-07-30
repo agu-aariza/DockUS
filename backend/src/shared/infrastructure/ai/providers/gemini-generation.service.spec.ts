@@ -74,4 +74,17 @@ describe('GeminiGenerationService — MED-01: la clave de API no viaja en la URL
       expect.objectContaining({ inputTokens: 10, outputTokens: 5 }),
     );
   });
+
+  it('AIP-012: un token count negativo o fraccionario del proveedor se trata como desconocido (null), no como el valor recibido', async () => {
+    mockedPostJson.mockResolvedValue({
+      candidates: [{ content: { parts: [{ text: 'respuesta' }] } }],
+      usageMetadata: { promptTokenCount: -5, candidatesTokenCount: 2.7 },
+    });
+
+    const result = await service.generate(request);
+
+    expect(result.usage).toEqual(
+      expect.objectContaining({ inputTokens: null, outputTokens: null }),
+    );
+  });
 });

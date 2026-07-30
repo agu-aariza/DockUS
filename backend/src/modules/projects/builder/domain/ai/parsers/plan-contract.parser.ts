@@ -187,7 +187,9 @@ export function normalizeCapabilities(value: unknown): BuilderCapabilityMap {
   }
 
   // Pre-process raw capabilities if strings are provided instead of objects
-  const target = { ...value } as any;
+  const target: Record<string, unknown> = {
+    ...(value as Record<string, unknown>),
+  };
   for (const capabilityId of CAPABILITY_IDS) {
     const rawVal = target[capabilityId];
     if (rawVal === undefined) {
@@ -195,7 +197,7 @@ export function normalizeCapabilities(value: unknown): BuilderCapabilityMap {
     }
     if (typeof rawVal === 'string') {
       const status = rawVal.toLowerCase();
-      if (!ASSESSMENTS.includes(status as any)) {
+      if (!ASSESSMENTS.includes(status as (typeof ASSESSMENTS)[number])) {
         throw new Error(`Estado inválido en ${capabilityId}: ${rawVal}.`);
       }
       target[capabilityId] = {
@@ -204,22 +206,23 @@ export function normalizeCapabilities(value: unknown): BuilderCapabilityMap {
           'Autogenerado: el modelo no proporcionó justificación detallada.',
       };
     } else if (rawVal && typeof rawVal === 'object' && !Array.isArray(rawVal)) {
-      if (rawVal.status === undefined) {
+      const rawObj = rawVal as Record<string, unknown>;
+      if (rawObj.status === undefined) {
         throw new Error(
           `capabilities.${capabilityId}.status debe ser un string no vacío.`,
         );
       }
-      const status = String(rawVal.status).toLowerCase();
-      if (!ASSESSMENTS.includes(status as any)) {
+      const status = String(rawObj.status).toLowerCase();
+      if (!ASSESSMENTS.includes(status as (typeof ASSESSMENTS)[number])) {
         throw new Error(
-          `Estado inválido en ${capabilityId}: ${rawVal.status}.`,
+          `Estado inválido en ${capabilityId}: ${String(rawObj.status)}.`,
         );
       }
       target[capabilityId] = {
         status,
         rationale:
-          rawVal.rationale !== undefined && String(rawVal.rationale).trim()
-            ? String(rawVal.rationale).trim()
+          rawObj.rationale !== undefined && String(rawObj.rationale).trim()
+            ? String(rawObj.rationale).trim()
             : 'Sin justificación detallada.',
       };
     } else {
@@ -281,7 +284,7 @@ export function normalizeRecipe(
     throw new Error('recipe debe ser un objeto.');
   }
 
-  const raw = value as any;
+  const raw = value as Record<string, unknown>;
   const run =
     raw.run === null || raw.run === undefined
       ? null

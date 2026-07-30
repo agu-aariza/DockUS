@@ -13,6 +13,7 @@ import {
   PromptManifest,
   renderPromptBundle,
 } from './prompt.types';
+import { toErrorMessage } from '../../utils/error-message.util';
 
 export enum PromptId {
   PLAN = 'plan',
@@ -65,7 +66,9 @@ export class PromptRegistryService {
         `Prompt registry initialized with ${this.prompts.size} prompts from JSON.`,
       );
     } catch (error) {
-      this.logger.error(`Failed to load prompt manifest: ${error.message}`);
+      this.logger.error(
+        `Failed to load prompt manifest: ${toErrorMessage(error)}`,
+      );
     }
   }
 

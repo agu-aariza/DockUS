@@ -42,6 +42,7 @@ import {
   logStageError,
   buildTrace,
   serializeError,
+  sumUsage,
 } from './builder-llm-trace.util';
 
 interface EvaluatorInput {
@@ -325,7 +326,9 @@ export class BuilderLlmEvaluatorService {
         response.text,
         null,
         parse(response.text),
-        response.usage,
+        // AIP-005: ambos intentos se facturan; el trace final debe reflejar
+        // el consumo de los dos, no solo el del segundo.
+        sumUsage(firstAttemptUsage, response.usage),
       );
     } catch (parseError) {
       const serializedError = serializeError(parseError, 'invalid_contract');
@@ -338,7 +341,7 @@ export class BuilderLlmEvaluatorService {
         response.text,
         serializedError,
         null,
-        response.usage,
+        sumUsage(firstAttemptUsage, response.usage),
       );
     }
   }

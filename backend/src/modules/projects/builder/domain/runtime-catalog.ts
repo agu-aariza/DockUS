@@ -69,7 +69,17 @@ export interface RuntimeCatalogEntry {
   };
 }
 
-export const RUNTIME_CATALOG = {
+// Anotado con `Record<...>` (no inferido): sin esto, cada entrada conserva su
+// forma literal exacta (p. ej. `versionAliases: {}` para python/node, un tipo
+// distinto del `Record<string, string>` de la interfaz), y el acceso dinámico
+// `entry.versionAliases[version]` resuelve a `any` en vez de fallar en build
+// time contra la interfaz. Los nombres de familia se repiten aquí a propósito
+// (no `Record<string, ...>`) para que `SupportedRuntimeFamily = keyof typeof
+// RUNTIME_CATALOG` siga siendo la unión exacta, no `string`.
+export const RUNTIME_CATALOG: Record<
+  'python' | 'c' | 'node',
+  RuntimeCatalogEntry
+> = {
   python: {
     executable: true,
     defaultImage: 'python:3.11-slim',
@@ -224,7 +234,9 @@ export function selectFewShotExample(expectedType: string | null): string {
   const family = matchRuntimeFamilyFromFreeText(expectedType ?? '') ?? 'python';
   return (
     RUNTIME_CATALOG[family].fewShotExamples?.cli ??
-    RUNTIME_CATALOG.python.fewShotExamples.cli
+    // python siempre declara fewShotExamples.cli en el catálogo (ver arriba);
+    // el `?` de la interfaz cubre familias futuras, no a python.
+    RUNTIME_CATALOG.python.fewShotExamples!.cli
   );
 }
 
@@ -257,7 +269,7 @@ export function normalizeRuntimeVersion(
   if (aliased) {
     return aliased;
   }
-  if (!(entry.allowedVersions as readonly string[]).includes(version)) {
+  if (!entry.allowedVersions.includes(version)) {
     return entry.defaultVersion;
   }
   return version;

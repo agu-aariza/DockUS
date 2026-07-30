@@ -254,7 +254,12 @@ describe('BuilderLlmEvaluatorService', () => {
 
     await service.extractFacts({
       sourceCodePayload: 'B'.repeat(2000),
-      execution: { ran: true, stdout: 'C'.repeat(2000), stderr: '', exitCode: 0 },
+      execution: {
+        ran: true,
+        stdout: 'C'.repeat(2000),
+        stderr: '',
+        exitCode: 0,
+      },
       assignmentContext: {
         expectedType: 'PYTHON_FASTAPI',
         rubricInstructions: 'Evalua el proyecto.',
@@ -358,6 +363,37 @@ describe('BuilderLlmEvaluatorService', () => {
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining('Respuesta bruta: still-not-json'),
     );
+    // AIP-005: dos intentos invalidos, ambos facturados (120/40 cada uno) —
+    // el trace final debe sumar los dos, no solo reflejar el ultimo.
+    expect(trace.usage).toEqual({ inputTokens: 240, outputTokens: 80 });
+  });
+
+  it('AIP-005: el retry de contrato suma el usage de ambos intentos, no solo el del ultimo', async () => {
+    llmService.generate
+      .mockResolvedValueOnce({
+        text: 'primer-intento-invalido',
+        usage: { inputTokens: 100, outputTokens: 20 },
+      })
+      .mockResolvedValueOnce({
+        text: validEvaluationResponse,
+        usage: { inputTokens: 120, outputTokens: 40 },
+      });
+
+    const trace = await service.evaluateWithTrace({
+      projectRootDir: '/tmp/project',
+      sourceCodePayload: 'print("hello")',
+      facts: JSON.parse(validFactsResponse),
+      plannerAssessment: JSON.parse(validPlanResponse),
+      assignmentContext: {
+        expectedType: 'PYTHON_FASTAPI',
+        rubricInstructions: 'Evalua el proyecto.',
+        rubricCriteria: null,
+        expectedOutput: null,
+      },
+    });
+
+    expect(trace.parsedContract).not.toBeNull();
+    expect(trace.usage).toEqual({ inputTokens: 220, outputTokens: 60 });
   });
 
   it('serializes stage errors using prompt id and model profile metadata', async () => {

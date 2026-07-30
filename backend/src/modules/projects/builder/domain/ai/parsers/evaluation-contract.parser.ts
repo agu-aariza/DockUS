@@ -32,12 +32,34 @@ export function normalizeGrade(value: unknown): number | undefined {
   return Math.round(clamped * 100) / 100;
 }
 
+/**
+ * AIP-001: separada de `assertEvaluationSemanticConsistency` porque esta
+ * invariante no depende de `recipe`/`capabilities`/`observedEvidence` —
+ * campos que un contrato genuinamente truncado puede no haber emitido. Por
+ * eso debe exigirse siempre, incluso cuando el contrato se marca truncado y
+ * el resto de comprobaciones semánticas se omite; de lo contrario un
+ * `runtime`/`recipe` inválido (no ausente) bastaba para desactivar la única
+ * regla que impide "E3/E4 con nota aprobatoria".
+ */
+export function assertGradeStateConsistency(
+  evaluativeState: EvaluativeState,
+  recommendedGrade: number | undefined,
+): void {
+  if (
+    recommendedGrade !== undefined &&
+    (evaluativeState === 'E3' || evaluativeState === 'E4') &&
+    recommendedGrade > MAX_GRADE_FOR_FAILING_STATE
+  ) {
+    throw new Error(
+      `evaluativeState=${evaluativeState} es incompatible con recommendedGrade=${recommendedGrade} (máximo ${MAX_GRADE_FOR_FAILING_STATE}).`,
+    );
+  }
+}
+
 export function assertEvaluationSemanticConsistency(
   capabilities: BuilderCapabilityMap,
   recipe: BuilderRecipeV2,
   observedEvidence: string[],
-  evaluativeState: EvaluativeState,
-  recommendedGrade: number | undefined,
 ): void {
   if (observedEvidence.length < 1) {
     throw new Error(
@@ -54,15 +76,5 @@ export function assertEvaluationSemanticConsistency(
     recipe.service?.healthcheck === null
   ) {
     throw new Error('C5=yes requiere recipe.service.healthcheck.');
-  }
-
-  if (
-    recommendedGrade !== undefined &&
-    (evaluativeState === 'E3' || evaluativeState === 'E4') &&
-    recommendedGrade > MAX_GRADE_FOR_FAILING_STATE
-  ) {
-    throw new Error(
-      `evaluativeState=${evaluativeState} es incompatible con recommendedGrade=${recommendedGrade} (máximo ${MAX_GRADE_FOR_FAILING_STATE}).`,
-    );
   }
 }

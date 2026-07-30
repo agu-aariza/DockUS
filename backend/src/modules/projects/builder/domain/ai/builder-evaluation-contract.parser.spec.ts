@@ -188,6 +188,58 @@ describe('parseBuilderEvaluationContractV2', () => {
     expect(contract.recommendedGrade).toBe(1.5);
   });
 
+  it('AIP-001: a present-but-invalid runtime (null) does not bypass the grade/state invariant', () => {
+    // Reproduce exacta del escenario del finding: runtime:null, E4, nota 10,
+    // observedEvidence vacío. Antes, safeNormalizeRuntimeDescriptor atrapaba
+    // la excepción de normalizeRuntimeDescriptor(null, ...) y la etiquetaba
+    // como "truncamiento", lo que desactivaba assertEvaluationSemanticConsistency
+    // por completo — incluida la invariante E3/E4 ⇒ nota ≤2. Ahora un
+    // `runtime` presente pero inválido debe fallar como cualquier otro campo
+    // mal formado del contrato, no aceptarse con confidence low.
+    const raw = JSON.stringify(
+      buildEvaluationPayload({
+        runtime: null,
+        evaluativeState: 'E4',
+        recommendedGrade: 10,
+        observedEvidence: [],
+      }),
+    );
+
+    expect(() => parseBuilderEvaluationContractV2(raw)).toThrow();
+  });
+
+  it('AIP-001: a genuinely absent runtime/recipe (key missing) still enforces the grade/state invariant', () => {
+    const payload = buildEvaluationPayload({
+      evaluativeState: 'E4',
+      recommendedGrade: 9,
+    });
+    delete (payload as Record<string, unknown>).runtime;
+    delete (payload as Record<string, unknown>).recipe;
+
+    expect(() =>
+      parseBuilderEvaluationContractV2(JSON.stringify(payload)),
+    ).toThrow(
+      'evaluativeState=E4 es incompatible con recommendedGrade=9 (máximo 2).',
+    );
+  });
+
+  it('AIP-001: a genuinely truncated contract (runtime/recipe keys absent) still parses with confidence low when grade/state are consistent', () => {
+    const payload = buildEvaluationPayload({
+      evaluativeState: 'E1',
+      recommendedGrade: 5,
+    });
+    delete (payload as Record<string, unknown>).runtime;
+    delete (payload as Record<string, unknown>).recipe;
+
+    const contract = parseBuilderEvaluationContractV2(JSON.stringify(payload));
+
+    expect(contract.confidence).toBe('low');
+    expect(contract.runtime.family).toBe('unknown');
+    expect(contract.evaluationLimits).toContainEqual(
+      expect.stringContaining('TRUNCATED'),
+    );
+  });
+
   it('preserves clear parser errors for malformed payloads', () => {
     expect(() => parseBuilderEvaluationContractV2('{"stage":')).toThrow(
       'La salida del evaluador LLM no es JSON válido.',

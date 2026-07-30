@@ -234,6 +234,170 @@ describe('BuilderLlmConfigService', () => {
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
+
+    describe('AIP-002 — política de endpoints', () => {
+      it('rechaza un endpoint que apunta a loopback/red privada para un proveedor cloud', async () => {
+        const { service } = buildService([]);
+
+        await expect(
+          service.saveConfigs({
+            providers: [
+              {
+                ...providerPayload('openai'),
+                endpoint: 'http://127.0.0.1:8080/v1',
+              },
+            ],
+            roleMappings: {},
+          }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+      });
+
+      it('rechaza un endpoint que apunta a la IP de metadatos de nube', async () => {
+        const { service } = buildService([]);
+
+        await expect(
+          service.saveConfigs({
+            providers: [
+              {
+                ...providerPayload('azure'),
+                endpoint: 'https://169.254.169.254/metadata',
+              },
+            ],
+            roleMappings: {},
+          }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+      });
+
+      it('permite a Ollama apuntar a un host local o de red privada', async () => {
+        const { service, repository } = buildService([]);
+
+        await service.saveConfigs({
+          providers: [
+            {
+              providerId: 'ollama',
+              modelId: 'llama3',
+              temperature: 0.2,
+              maxTokens: 4000,
+              inputCostPerMillion: 0,
+              outputCostPerMillion: 0,
+              endpoint: 'http://127.0.0.1:11434',
+            },
+          ],
+          roleMappings: {},
+        });
+
+        const saved = repository.saveMany.mock
+          .calls[0][0] as LlmConfiguration[];
+        expect(saved[0].endpoint).toBe('http://127.0.0.1:11434');
+      });
+
+      it('exige HTTPS para un proveedor cloud aunque el host sea seguro', async () => {
+        const { service } = buildService([]);
+
+        await expect(
+          service.saveConfigs({
+            providers: [
+              {
+                ...providerPayload('openai'),
+                endpoint: 'http://api.openai.com/v1',
+              },
+            ],
+            roleMappings: {},
+          }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+      });
+
+      it('exige reintroducir o borrar la clave si el endpoint cambia de origen', async () => {
+        const cipher = buildCipher('w'.repeat(32));
+        const repository = buildRepository([
+          buildConfig({
+            apiKeyEncrypted: cipher.encrypt('sk-vieja'),
+            endpoint: 'https://8.8.8.8',
+          }),
+        ]);
+        const service = new BuilderLlmConfigService(
+          repository,
+          configService,
+          cipher,
+        );
+
+        await expect(
+          service.saveConfigs({
+            providers: [
+              {
+                ...providerPayload('openai'),
+                endpoint: 'https://8.8.4.4',
+              },
+            ],
+            roleMappings: {},
+          }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+      });
+
+      it('permite el cambio de origen si se borra la clave explícitamente', async () => {
+        const cipher = buildCipher('w'.repeat(32));
+        const repository = buildRepository([
+          buildConfig({
+            apiKeyEncrypted: cipher.encrypt('sk-vieja'),
+            endpoint: 'https://8.8.8.8',
+          }),
+        ]);
+        const service = new BuilderLlmConfigService(
+          repository,
+          configService,
+          cipher,
+        );
+
+        await service.saveConfigs({
+          providers: [
+            {
+              ...providerPayload('openai'),
+              endpoint: 'https://8.8.4.4',
+              clearApiKey: true,
+            },
+          ],
+          roleMappings: {},
+        });
+
+        const saved = repository.saveMany.mock
+          .calls[0][0] as LlmConfiguration[];
+        expect(saved[0].apiKeyEncrypted).toBeNull();
+        expect(saved[0].endpoint).toBe('https://8.8.4.4');
+      });
+
+      it('permite el cambio de origen si se aporta una clave nueva', async () => {
+        const cipher = buildCipher('w'.repeat(32));
+        const repository = buildRepository([
+          buildConfig({
+            apiKeyEncrypted: cipher.encrypt('sk-vieja'),
+            endpoint: 'https://8.8.8.8',
+          }),
+        ]);
+        const service = new BuilderLlmConfigService(
+          repository,
+          configService,
+          cipher,
+        );
+
+        await service.saveConfigs({
+          providers: [
+            {
+              ...providerPayload('openai'),
+              endpoint: 'https://8.8.4.4',
+              apiKey: 'sk-nueva-para-el-host-nuevo',
+            },
+          ],
+          roleMappings: {},
+        });
+
+        const saved = repository.saveMany.mock
+          .calls[0][0] as LlmConfiguration[];
+        expect(cipher.decrypt(saved[0].apiKeyEncrypted!)).toBe(
+          'sk-nueva-para-el-host-nuevo',
+        );
+        expect(saved[0].endpoint).toBe('https://8.8.4.4');
+      });
+    });
   });
 
   describe('resolvePricing', () => {
@@ -254,6 +418,31 @@ describe('BuilderLlmConfigService', () => {
 
       await expect(service.resolvePricing('openai', 'gpt-4o')).resolves.toEqual(
         { inputCostPerMillion: 2.5, outputCostPerMillion: 10 },
+      );
+    });
+
+    it('AIP-012: no aplica la tarifa de otro modelo del mismo proveedor', async () => {
+      const { service } = buildService([
+        buildConfig({
+          modelId: 'gpt-4o',
+          inputCostPerMillion: 7,
+          outputCostPerMillion: 21,
+        }),
+        buildConfig({
+          modelId: 'gpt-4o-mini',
+          inputCostPerMillion: 0.3,
+          outputCostPerMillion: 1.2,
+        }),
+      ]);
+
+      await expect(
+        service.resolvePricing('openai', 'gpt-4o-mini'),
+      ).resolves.toEqual({
+        inputCostPerMillion: 0.3,
+        outputCostPerMillion: 1.2,
+      });
+      await expect(service.resolvePricing('openai', 'gpt-4o')).resolves.toEqual(
+        { inputCostPerMillion: 7, outputCostPerMillion: 21 },
       );
     });
   });

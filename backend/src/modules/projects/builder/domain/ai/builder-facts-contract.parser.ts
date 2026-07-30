@@ -41,7 +41,7 @@ export function parseBuilderFactsContractV2(
     ),
     exitCode: normalizeExitCode(object.exitCode),
     compilationStatus,
-    matchesOracle: Boolean(object.matchesOracle),
+    matchesOracle: normalizeMatchesOracle(object.matchesOracle, sourceName),
     discrepancies: normalizeStringArray(object.discrepancies, 'discrepancies'),
     filesPresent: normalizeStringArray(object.filesPresent, 'filesPresent'),
     executionSummary: normalizeOptionalString(
@@ -75,6 +75,27 @@ function normalizeCompilationStatus(
 
   throw new Error(
     `compilationStatus debe ser 'success', 'failure' o 'not_applicable' en ${sourceName}.`,
+  );
+}
+
+/**
+ * AIP-007: `Boolean(value)` convertía cualquier string no vacío —incluida la
+ * cadena literal `"false"`— en `true`, invirtiendo silenciosamente el hecho
+ * que esta fase declara como "verdad primaria". Solo se acepta un boolean
+ * real o el literal string `"true"`/`"false"` (insensible a mayúsculas);
+ * cualquier otro valor es un contrato inválido, no un default.
+ */
+function normalizeMatchesOracle(value: unknown, sourceName: string): boolean {
+  if (typeof value === 'boolean') return value;
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') return true;
+    if (normalized === 'false') return false;
+  }
+
+  throw new Error(
+    `matchesOracle debe ser boolean ('true'/'false') en ${sourceName}.`,
   );
 }
 

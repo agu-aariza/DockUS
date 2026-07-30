@@ -30,6 +30,7 @@ import {
 import {
   normalizeGrade,
   assertEvaluationSemanticConsistency,
+  assertGradeStateConsistency,
 } from './parsers/evaluation-contract.parser';
 
 export function parseBuilderEvaluationContractV2(
@@ -88,13 +89,20 @@ export function parseBuilderEvaluationContractV2(
     ),
   };
 
-  // Detect truncation: if runtime or recipe fell back to defaults,
-  // mark the contract so downstream code knows the eval was partial.
+  // AIP-001: la señal de truncamiento es que la clave falte por completo del
+  // JSON parseado (el LLM se quedó sin tokens antes de emitirla) — no que
+  // safeNormalizeRuntimeDescriptor/safeNormalizeRecipe hayan atrapado una
+  // excepción. Antes ambas condiciones colapsaban en el mismo catch-all, así
+  // que un `runtime`/`recipe` presente pero inválido (p.ej. `null`, o un
+  // objeto sin forma) se etiquetaba igual que uno genuinamente truncado, y
+  // eso bastaba para desactivar assertEvaluationSemanticConsistency más abajo.
+  // Con la comprobación movida a "¿existe la clave?", un valor presente pero
+  // inválido ya no se confunde con truncamiento: normalizeRuntimeDescriptor/
+  // normalizeRecipe lo rechazan de verdad (ver safeNormalizeRuntimeDescriptor/
+  // safeNormalizeRecipe más abajo), como cualquier otro campo mal formado del
+  // contrato.
   const wasTruncated =
-    contract.runtime.reason?.includes('truncamiento') ||
-    (contract.recipe.run === null &&
-      contract.recipe.install.length === 0 &&
-      object.recipe === undefined);
+    object.runtime === undefined || object.recipe === undefined;
 
   if (wasTruncated) {
     contract.evaluationLimits = [
@@ -149,15 +157,24 @@ export function parseBuilderEvaluationContractV2(
     contract.recipe,
   );
 
-  // Skip strict semantic consistency check if the response was truncated,
-  // since missing fields would cause false assertion failures.
+  // AIP-001: esta invariante (E3/E4 ⇒ nota ≤2) no depende de recipe/
+  // capabilities/observedEvidence, así que se exige siempre — incluso si el
+  // contrato se marcó truncado. Es la única defensa real contra que un
+  // veredicto de "no apto" conviva con una nota aprobatoria.
+  assertGradeStateConsistency(
+    contract.evaluativeState,
+    contract.recommendedGrade,
+  );
+
+  // El resto de comprobaciones semánticas (evidencia mínima, coherencia
+  // capability↔recipe) sí puede omitirse si el contrato está genuinamente
+  // truncado: exigirlas produciría falsos rechazos sobre campos que el LLM
+  // nunca llegó a emitir.
   if (!wasTruncated) {
     assertEvaluationSemanticConsistency(
       contract.capabilities,
       contract.recipe,
       contract.observedEvidence,
-      contract.evaluativeState,
-      contract.recommendedGrade,
     );
   }
 
@@ -174,13 +191,20 @@ function roundToTwoDecimals(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+/**
+ * AIP-001: solo aplica el valor por defecto ("ausente por truncamiento")
+ * cuando la clave falta de verdad (`value === undefined`). Antes se atrapaba
+ * cualquier excepción de `normalizeRuntimeDescriptor` — incluida la que
+ * lanza para un `runtime` presente pero inválido (`null`, objeto sin forma,
+ * familia desconocida) — y se le daba el mismo tratamiento que a un campo
+ * genuinamente truncado. Un valor presente pero mal formado ahora propaga su
+ * error real, igual que cualquier otro campo del contrato.
+ */
 function safeNormalizeRuntimeDescriptor(
   value: unknown,
   sourceName: string,
 ): BuilderRuntimeDescriptorV2 {
-  try {
-    return normalizeRuntimeDescriptor(value, sourceName);
-  } catch {
+  if (value === undefined) {
     return {
       family: 'unknown',
       version: null,
@@ -189,15 +213,16 @@ function safeNormalizeRuntimeDescriptor(
         'runtime ausente en respuesta del evaluador (posible truncamiento por agotamiento de tokens).',
     };
   }
+
+  return normalizeRuntimeDescriptor(value, sourceName);
 }
 
+/** AIP-001: mismo criterio que safeNormalizeRuntimeDescriptor. */
 function safeNormalizeRecipe(
   value: unknown,
   sourceName: string,
 ): BuilderRecipeV2 {
-  try {
-    return normalizeRecipe(value, sourceName);
-  } catch {
+  if (value === undefined) {
     return {
       install: [],
       run: null,
@@ -208,6 +233,8 @@ function safeNormalizeRecipe(
       service: null,
     };
   }
+
+  return normalizeRecipe(value, sourceName);
 }
 
 function normalizeGradeBreakdown(value: unknown): RubricGradeItem[] {
