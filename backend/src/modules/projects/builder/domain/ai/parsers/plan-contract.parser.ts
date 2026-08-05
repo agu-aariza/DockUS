@@ -5,6 +5,7 @@
  */
 
 const BUILD_SYSTEM_EXECUTABLES = new Set(['make', 'cmake', 'gcc', 'g++', 'cc']);
+const MAKE_EXECUTION_TARGETS = new Set(['run', 'start', 'serve']);
 import 'reflect-metadata';
 import {
   IsString,
@@ -343,6 +344,12 @@ export function assertPlanSemanticConsistency(
 export function detectBuildSystemInRun(recipe: BuilderRecipeV2): string | null {
   if (!recipe.run || recipe.run.length === 0) return null;
   const runExecutable = recipe.run[0];
+  const invokesMakeExecutionTarget =
+    runExecutable === 'make' &&
+    recipe.run.slice(1).some((token) => MAKE_EXECUTION_TARGETS.has(token));
+  if (invokesMakeExecutionTarget) {
+    return null;
+  }
   if (BUILD_SYSTEM_EXECUTABLES.has(runExecutable)) {
     return `recipe.run[0] es '${runExecutable}', que es un compilador/build-system, no un ejecutable de programa.`;
   }
