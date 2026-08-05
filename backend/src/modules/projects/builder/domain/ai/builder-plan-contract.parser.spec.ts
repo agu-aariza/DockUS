@@ -380,6 +380,40 @@ describe('parseBuilderPlanContractV2', () => {
     );
   });
 
+  it('preserves a Makefile run target because it may choose a non-main binary path', () => {
+    const raw = JSON.stringify(
+      buildPlanPayload({
+        structuralType: 'T2',
+        capabilities: {
+          C1: { status: 'yes', rationale: 'Makefile presente.' },
+          C2: { status: 'yes', rationale: 'El target run ejecuta el binario.' },
+          C3: { status: 'no', rationale: 'CLI sin servidor.' },
+          C4: { status: 'yes', rationale: 'El target test ejecuta la suite.' },
+          C5: { status: 'no', rationale: 'Sin healthcheck.' },
+          C6: { status: 'unknown', rationale: 'Sin config.' },
+        },
+        runtime: {
+          family: 'c',
+          version: 'c11',
+        },
+        recipe: {
+          install: [['make']],
+          run: ['make', 'run'],
+          test: [['make', 'test']],
+          systemPackages: [],
+          cwd: '/app',
+          environment: null,
+          service: null,
+        },
+      }),
+    );
+
+    const contract = parseBuilderPlanContractV2(raw);
+
+    expect(contract.recipe.run).toEqual(['make', 'run']);
+    expect(contract.recipe.test).toEqual([['make', 'test']]);
+    expect(contract.evaluationLimits).toEqual([]);
+  });
   it('auto-corrects recipe.run when it starts with a build system executable', () => {
     const raw = JSON.stringify(
       buildPlanPayload({
