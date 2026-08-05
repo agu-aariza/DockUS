@@ -1,4 +1,4 @@
-# DockUS - Plataforma de Evaluación Automatizada y Asistida por IA
+# EduCodeAI - Plataforma de Evaluación Automatizada y Asistida por IA
 
 > **Resumen rápido:** Plataforma de evaluación de código y proyectos docentes basada en arquitectura hexagonal, aislamiento dinámico mediante contenedores Docker, procesamiento asíncrono de colas y retroalimentación asistida por modelos de lenguaje (LLM).
 
@@ -6,7 +6,7 @@
 
 ## Propósito y Responsabilidades
 
-DockUS es un ecosistema de software diseñado para automatizar, escalar y supervisar el proceso de evaluación de entregas prácticas de programación en entornos académicos y técnicos. La plataforma resuelve el problema de la ejecución no confiable de código de estudiantes garantizando el aislamiento absoluto en tiempo de ejecución, la resiliencia ante picos de carga y la generación de análisis cualitativos de calidad mediante IA.
+EduCodeAI es un ecosistema de software diseñado para automatizar, escalar y supervisar el proceso de evaluación de entregas prácticas de programación en entornos académicos y técnicos. La plataforma resuelve el problema de la ejecución no confiable de código de estudiantes garantizando el aislamiento absoluto en tiempo de ejecución, la resiliencia ante picos de carga y la generación de análisis cualitativos de calidad mediante IA.
 
 ### Responsabilidades Clave del Sistema:
 - **Ejecución Segura en Sandbox:** Aislar la compilación y ejecución del código no confiable entregado por los alumnos mediante contenedores efímeros de Docker con restricciones de recursos (CPU, memoria, tiempo de ejecución y red).

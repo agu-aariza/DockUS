@@ -1,5 +1,5 @@
 /**
- * @fileoverview Paquete de contratos y DTOs compartidos entre el backend y frontend (@dockus/contracts).
+ * @fileoverview Paquete de contratos y DTOs compartidos entre el backend y frontend (@educodeai/contracts).
  *
  * @description
  * Define interfaces y tipos puramente estáticos para garantizar el Type-Safety

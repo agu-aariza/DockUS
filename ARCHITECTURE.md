@@ -1,6 +1,6 @@
-# System Architecture — DockUS
+# System Architecture — EduCodeAI
 
-DockUS is an academic platform for the automated evaluation of programming assignments. Teachers configure projects, course groups, and grading guidelines; students submit source code archives; the system executes each submission in an isolated, network-less Docker container, performs static quality analysis, and evaluates code logic with LLM assistance, producing structured pedagogical feedback that a teacher reviews before finalizing marks.
+EduCodeAI is an academic platform for the automated evaluation of programming assignments. Teachers configure projects, course groups, and grading guidelines; students submit source code archives; the system executes each submission in an isolated, network-less Docker container, performs static quality analysis, and evaluates code logic with LLM assistance, producing structured pedagogical feedback that a teacher reviews before finalizing marks.
 
 This document serves as the authoritative architectural blueprint for developers and maintainers working on the codebase.
 
@@ -8,7 +8,7 @@ This document serves as the authoritative architectural blueprint for developers
 
 ## 1. Core Architectural Paradigm
 
-DockUS is built as a **modular monolith in the codebase that deploys as a distributed system of specialized processes**.
+EduCodeAI is built as a **modular monolith in the codebase that deploys as a distributed system of specialized processes**.
 
 The API and the evaluation worker share a single codebase, a single node environment, and a single container image. They differ strictly by their process entry point and dynamic module loading:
 
@@ -29,7 +29,7 @@ flowchart TB
     end
 
     subgraph Contracts["Shared Contracts"]
-        CONTRACTS["@dockus/contracts<br/>(Types, DTOs & Interfaces)"]
+        CONTRACTS["@educodeai/contracts<br/>(Types, DTOs & Interfaces)"]
     end
 
     subgraph App["Application Layer (Unified Codebase)"]
@@ -118,7 +118,7 @@ sequenceDiagram
 .
 ├── backend/                  # NestJS API & Worker codebase
 ├── frontend/                 # React 19 SPA client
-├── shared/contracts/         # @dockus/contracts (Shared types-only package)
+├── shared/contracts/         # @educodeai/contracts (Shared types-only package)
 ├── audit/                    # Technical audit reports (Phases 01 to 04)
 ├── prompts/                  # AI System Prompts and evaluation templates
 ├── docker-compose.yml        # Development & production container orchestration

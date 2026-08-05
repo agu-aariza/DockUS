@@ -1,8 +1,8 @@
 {
-  "name": "@dockus/contracts",
+  "name": "@educodeai/contracts",
   "version": "0.0.0",
   "private": true,
-  "description": "Contratos de tipos compartidos entre backend y frontend de DockUS. Solo tipos puros (sin runtime).",
+  "description": "Contratos de tipos compartidos entre backend y frontend de EduCodeAI. Solo tipos puros (sin runtime).",
   "type": "module",
   "types": "./index.ts",
   "exports": {
