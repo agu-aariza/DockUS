@@ -29,7 +29,7 @@ export class BuilderRunSupportService {
     errorMessage: string,
   ): Promise<void> {
     // UPDATE condicionado al estado (no lectura-modificacion-escritura,
-    // ORC-002): FAILED solo es una transicion valida desde QUEUED/RUNNING —
+    // ): FAILED solo es una transicion valida desde QUEUED/RUNNING —
     // SUCCESS, FAILED y CANCELLED son absorbentes, así que un fallo tardío
     // (p.ej. al persistir RUN_COMPLETED) nunca degrada un resultado ya
     // terminal.

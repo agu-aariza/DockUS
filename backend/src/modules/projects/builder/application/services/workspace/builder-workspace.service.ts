@@ -64,7 +64,7 @@ export interface StageWorkspaceResult {
 }
 
 /** Ruta lógica bajo la que la suite docente se presenta dentro del contenedor. */
-const TEACHER_TESTS_RELATIVE_PREFIX = '.dockus/teacher-tests';
+const TEACHER_TESTS_RELATIVE_PREFIX = '.educodeai/teacher-tests';
 
 @Injectable()
 export class BuilderWorkspaceService {
@@ -150,7 +150,7 @@ export class BuilderWorkspaceService {
     }
 
     const workspaceRoot = await mkdtemp(
-      path.join(os.tmpdir(), 'dockus-builder-'),
+      path.join(os.tmpdir(), 'educodeai-builder-'),
     );
     const projectRootDir = path.join(workspaceRoot, 'project');
     await mkdir(projectRootDir, { recursive: true });

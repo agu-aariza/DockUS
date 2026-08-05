@@ -55,14 +55,12 @@ export function resolveWorkerConcurrency(): number {
 }
 
 /**
- * Umbral de detección de runs huérfanos, leído del entorno (ESC-BAJO-03).
+ * Umbral de detección de runs huérfanos, leído del entorno.
  *
  * Debe coincidir con lo que `BuilderConfigProvider.staleRunThresholdMs` resuelve
- * vía `ConfigService`. Antes esto no podía cumplirse: el decorador `@Processor`
- * se evalúa al importar la clase, antes de que exista el contenedor de DI, así
- * que `lockDuration` solo podía leer la constante por defecto. Fijar
- * `BUILDER_STALE_RUN_THRESHOLD_MS` movía el barrido pero **no** el cerrojo de
- * BullMQ, y ambos quedaban desincronizados en silencio.
+ * vía `ConfigService`. El decorador `@Processor` se evalúa al importar la clase,
+ * antes de que exista el contenedor de DI; por eso `lockDuration` debe leer
+ * directamente el mismo valor de entorno que usa el barrido de runs huérfanos.
  *
  * Se lee `process.env` directamente por el mismo motivo que en
  * `resolveWorkerConcurrency`: es la única vía para un valor consumido en tiempo

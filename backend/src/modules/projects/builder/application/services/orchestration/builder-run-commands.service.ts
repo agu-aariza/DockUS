@@ -79,7 +79,7 @@ export class BuilderRunCommandsService {
       await this.builderAccessService.findDeliveryOrThrow(deliveryId);
     await this.builderAccessService.assertCanTriggerDelivery(delivery, actor);
 
-    // Cuota de gasto (ESC-ALTO-02). Se comprueba aquí y no dentro del pipeline
+    // Cuota de gasto. Se comprueba aquí y no dentro del pipeline
     // porque este es el único punto donde negarse ahorra dinero: una vez
     // lanzado el run, sus llamadas de inferencia ya están comprometidas y
     // abortarlo a mitad gastaría igual dejando además al alumno sin evaluar.
@@ -87,18 +87,16 @@ export class BuilderRunCommandsService {
       delivery.assignment.projectId,
     );
 
-    // ESC-MED-03. El encolado a Redis estaba DENTRO de la transacción, lo que
+    // El encolado a Redis estaba dentro de la transacción, lo que
     // tenía dos costes: retenía una conexión del pool —recurso escaso— durante
     // una llamada de red ajena a la base de datos, y acoplaba dos sistemas que
     // no comparten transacción, de modo que un `COMMIT` fallido tras un
     // encolado correcto dejaba un job apuntando a una fila revertida.
     //
-    // Ahora se confirma primero y se encola después. La ventana que eso abre
-    // —run `QUEUED` sin job— es exactamente el caso que
-    // `BuilderStaleRunRecoveryService.reconcileStaleQueuedRuns` reconcilia, y
-    // que la fase 4 (T4.3) verificó contra infraestructura real: diez runs
-    // huérfanos reencolados, ninguno perdido. La red de seguridad ya existía;
-    // lo que faltaba era dejar de pagar por no usarla.
+    // Se confirma primero y se encola después. La ventana de un run `QUEUED`
+    // sin job se reconcilia mediante
+    // `BuilderStaleRunRecoveryService.reconcileStaleQueuedRuns`, de modo que
+    // un fallo de Redis no deja la ejecución perdida.
     let savedRun: BuildRun;
     try {
       savedRun = await this.buildRunsRepository.createQueuedRun({
@@ -172,7 +170,7 @@ export class BuilderRunCommandsService {
 
     // UPDATE condicionado al estado, no lectura-modificacion-escritura: el
     // worker puede estar terminando (o fallando) este mismo run en paralelo.
-    // Sigue siendo mas barato que un save() de la entidad completa (ARQ-013),
+    // Sigue siendo mas barato que un save de la entidad completa,
     // pero incrementa "version" igualmente (dentro de cancelIfActive): es lo
     // que hace que un save() en vuelo en BuilderRunLifecycleService detecte,
     // via lock optimista, que este UPDATE gano la carrera en vez de pisarlo
@@ -183,13 +181,13 @@ export class BuilderRunCommandsService {
       throw new ConflictException('El run finalizo antes de poder cancelarse.');
     }
 
-    // El UPDATE de arriba ya es la fuente de verdad; esto (ARQ-004) es lo que
+    // El UPDATE de arriba ya es la fuente de verdad; esto es lo que
     // permite que el pipeline en curso se entere sin volver a consultar
     // Postgres entre etapas. Si Redis falla, el chequeo de resguardo del
     // servicio cae a BD, así que no perder este publish no es fatal.
     await this.builderRunCancellationService.markCancelled(buildRunId);
 
-    // ORC-004: antes, cancelar dejaba `Delivery` en IN_REVIEW para siempre
+    // antes, cancelar dejaba `Delivery` en IN_REVIEW para siempre
     // (nadie la sacaba de ahi) y nunca se publicaba RUN_CANCELLED, asi que ni
     // la entrega ni el timeline reflejaban el terminal real. Mismo criterio
     // que el catch de fallo en BuilderRunLifecycleService: sacar la entrega
@@ -251,7 +249,7 @@ export class BuilderRunCommandsService {
       // habría que recorrer la cola entera. Cada run tiene un UUID propio, de
       // modo que no puede colisionar con reejecuciones de la misma entrega.
       jobId: buildRunId,
-      // ESC-BAJO-02: una avalancha de entregas no debe retrasar por igual la
+      // una avalancha de entregas no debe retrasar por igual la
       // reejecución que un docente lanza con la pantalla delante. Dentro de
       // cada prioridad se conserva el orden de llegada, de modo que ninguna
       // entrega de alumno adelanta a otra.

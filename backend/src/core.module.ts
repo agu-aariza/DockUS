@@ -2,7 +2,7 @@
  * @fileoverview Grafo de módulos de dominio e infraestructura compartido por ambos procesos.
  *
  * @description
- * Agrupa y orquesta todos los módulos de dominio de negocio de DockUS:
+ * Agrupa y orquesta todos los módulos de dominio de negocio de EduCodeAI:
  * 1. `InfrastructureModule` (Persistencia PostgreSQL, Redis, S3/MinIO, AI Router).
  * 2. `UsersModule` (Gestión de identidades y usuarios).
  * 3. `AuthModule` (Autenticación JWT y estrategias de acceso).

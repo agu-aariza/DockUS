@@ -32,8 +32,8 @@ import { BuilderQualityAggregationService } from '../evaluation/builder-quality-
  * eventos por página). Cubre runs con historial extenso sin permitir que el
  * bucle gire para siempre sobre un run que aún está produciendo eventos.
  *
- * Reducido de 50 a 10 (ESC-ALTO-06). Con 50, **cada** conexión podía disparar
- * hasta 50 consultas secuenciales a Postgres antes de llegar al `subscribe()`,
+ * Reducido de 50 a 10. Con 50, **cada** conexión podía disparar
+ * hasta 50 consultas secuenciales a Postgres antes de llegar al `subscribe`,
  * de modo que una reconexión masiva —un redespliegue, la caída del balanceador—
  * multiplicaba ese coste por el número de clientes y se convertía en una
  * denegación de servicio provocada por el propio sistema.
@@ -110,8 +110,8 @@ export class BuilderRunQueriesService {
 
   /**
    * Ultimo BuildRun por entrega, en una unica consulta (DISTINCT ON), para
-   * las entregas indicadas. Sustituye el fan-out N+1 que hacia el frontend
-   * (una peticion GET por entrega) por una unica llamada batch (HIGH-09).
+   * las entregas indicadas. Resuelve todas las entregas en una única llamada
+   * batch en vez de una petición GET por entrega.
    *
    * El scoping de acceso se resuelve en la propia consulta SQL, no por
    * entrega vía `assertCanAccessDelivery` en un bucle (eso solo trasladaria
@@ -262,7 +262,7 @@ export class BuilderRunQueriesService {
   }
 
   /**
-   * ARQ-005: delega en `BuilderQualityAggregationService`, que agrega con SQL
+   * delega en `BuilderQualityAggregationService`, que agrega con SQL
    * sobre `code_quality_findings` (la proyeccion consultable) en vez de cargar
    * en memoria todos los runs con findings y recorrer su jsonb con `as any`
    * sin cota. El jsonb (`run.codeQualityFindings`) sigue siendo la fuente

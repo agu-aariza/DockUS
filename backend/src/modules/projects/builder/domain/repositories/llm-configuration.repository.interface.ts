@@ -9,9 +9,9 @@ import { LlmConfiguration } from '../entities/llm-configuration.entity';
 import type { LlmProviderId } from '../../../../../shared/infrastructure/ai/llm.types';
 
 /**
- * Puerto real (ARQ-007 P2-7): sin puerto
+ * Puerto real: sin puerto
  * previo, único consumidor real (`BuilderLlmConfigService`). Mismo criterio
- * que ARQ-007: sin tipos de TypeORM en la firma.
+ * que: sin tipos de TypeORM en la firma.
  */
 export const LLM_CONFIGURATION_REPOSITORY = Symbol(
   'ILlmConfigurationRepository',

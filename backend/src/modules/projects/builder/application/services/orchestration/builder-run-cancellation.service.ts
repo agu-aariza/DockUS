@@ -1,15 +1,15 @@
 /**
- * @fileoverview Cancelación cooperativa de un `BuildRun` en curso (ARQ-004).
+ * @fileoverview Cancelación cooperativa de un `BuildRun` en curso.
  *
  * Contexto:
  * - `cancelRun` en `BuilderRunCommandsService` sigue siendo la fuente de
- *   verdad: un UPDATE condicionado en Postgres que nada aquí sustituye.
+ * verdad: un UPDATE condicionado en Postgres que nada aquí sustituye.
  * - Este servicio añade una vía rápida para que el pipeline, que no vuelve a
- *   tocar la base de datos entre etapas, se entere sin re-consultarla cada
- *   vez: una clave Redis con TTL que expira sola si algo queda huérfano.
+ * tocar la base de datos entre etapas, se entere sin re-consultarla cada
+ * vez: una clave Redis con TTL que expira sola si algo queda huérfano.
  * - Si Redis no responde, se cae a Postgres (más lento, pero es la fuente de
- *   verdad) en vez de tratar el error como "no cancelado": una cancelación
- *   real nunca debe leerse como negativa solo porque Redis esté caído.
+ * verdad) en vez de tratar el error como "no cancelado": una cancelación
+ * real nunca debe leerse como negativa solo porque Redis esté caído.
  *
  * @module BuilderRunCancellationService
  */

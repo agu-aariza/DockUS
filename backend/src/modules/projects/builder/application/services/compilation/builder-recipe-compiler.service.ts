@@ -17,7 +17,7 @@ import {
  * ejecutarse junto al código del alumno. El resto de comandos de `install`
  * —típicamente `gcc`, `make` o `cmake`— son pasos de compilación: necesitan el
  * código fuente y se quedan en el contenedor de ejecución. Derivado del
- * catálogo (ARQ-010) en vez de mantenerse como lista aparte.
+ * catálogo en vez de mantenerse como lista aparte.
  */
 const DEPENDENCY_MANAGERS = new Set<string>(
   Object.values(RUNTIME_CATALOG).flatMap((entry) => entry.dependencyManagers),

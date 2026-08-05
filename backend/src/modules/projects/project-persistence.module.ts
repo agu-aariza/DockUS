@@ -1,12 +1,12 @@
 /**
- * @fileoverview Módulo hoja para el puerto de persistencia de `Project` (ARQ-022).
+ * @fileoverview Módulo hoja para el puerto de persistencia de `Project`.
  *
  * Contexto:
  * - `ProjectsModule`, `BuilderModule` y `StorageModule` necesitan
- *   `PROJECT_REPOSITORY`, y `ProjectsModule` ya importa a los otros dos: un
- *   `Project` accesible desde los tres sin crear un ciclo de módulos necesita
- *   vivir en un módulo hoja que los tres puedan importar de forma
- *   independiente (mismo patrón que `DeliveryStatusModule`).
+ * `PROJECT_REPOSITORY`, y `ProjectsModule` ya importa a los otros dos: un
+ * `Project` accesible desde los tres sin crear un ciclo de módulos necesita
+ * vivir en un módulo hoja que los tres puedan importar de forma
+ * independiente (mismo patrón que `DeliveryStatusModule`).
  *
  * @module ProjectPersistenceModule
  */

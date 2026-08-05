@@ -2,15 +2,15 @@
  * @fileoverview Despacho de una llamada de inferencia con conmutación entre
  * proveedores.
  *
- * Contexto (ESC-ALTO-02):
+ * Contexto:
  * - El sistema ya soportaba seis proveedores (Bedrock, OpenAI, Azure, Ollama,
- *   Anthropic y Gemini) con asignación por rol, pero esa capacidad **no se
- *   aprovechaba ante un fallo**: la etapa se resolvía contra el proveedor
- *   asignado y, si ese empezaba a rechazar por tasa, el run fallaba con otros
- *   cinco proveedores configurados y ociosos.
+ * Anthropic y Gemini) con asignación por rol, pero esa capacidad **no se
+ * aprovechaba ante un fallo** la etapa se resolvía contra el proveedor
+ * asignado y, si ese empezaba a rechazar por tasa, el run fallaba con otros
+ * cinco proveedores configurados y ociosos.
  * - Este servicio no cambia quién sirve cada rol. Intenta primero el proveedor
- *   asignado por el docente y solo recurre a los demás cuando el titular está
- *   indisponible.
+ * asignado por el docente y solo recurre a los demás cuando el titular está
+ * indisponible.
  *
  * Vive en `application/services/ai/` porque necesita `BuilderLlmConfigService`
  * para resolver la cadena — una dependencia de infraestructura del propio

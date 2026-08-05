@@ -14,13 +14,9 @@ import type { StorageSortField } from '../../storage/dto/list-storage-objects-qu
 import type { SortOrder } from '../../../../shared/dto/paginated-query.dto';
 
 /**
- * Puerto real (ARQ-007 P2-6): sin puerto
- * previo — diseñado desde cero auditando los 5 consumidores reales que
- * inyectaban el repositorio TypeORM crudo fuera de
- * `project-operational-issues.service.ts` (excepción documentada, misma
- * herramienta de diagnóstico admin que ya excepciona `Project`/`Delivery`/
- * `ProjectAssignment`). Mismo criterio que ARQ-007: sin tipos de TypeORM en
- * la firma.
+ * Puerto de persistencia consumido por la aplicación sin exponer tipos de
+ * TypeORM. El servicio operativo de proyectos puede usar el repositorio
+ * concreto para sus diagnósticos administrativos.
  */
 export const STORAGE_OBJECT_REPOSITORY = Symbol('IStorageObjectRepository');
 

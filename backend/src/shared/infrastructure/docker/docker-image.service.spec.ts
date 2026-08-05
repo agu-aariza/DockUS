@@ -7,7 +7,7 @@ jest.mock('./command-runner.util', () => ({
 
 const runCommand = realRunCommand as jest.MockedFunction<typeof realRunCommand>;
 
-describe('DockerImageService.pruneEnvironmentImages — ESC-CRIT-06', () => {
+describe('DockerImageService.pruneEnvironmentImages', () => {
   let service: DockerImageService;
 
   beforeEach(() => {
@@ -24,11 +24,9 @@ describe('DockerImageService.pruneEnvironmentImages — ESC-CRIT-06', () => {
   const args = (): string[] => runCommand.mock.calls[0][1];
 
   /**
-   * El defecto que la fase 4 (T4.6) destapó: sin `--all`, `docker image prune`
-   * solo mira imágenes **colgantes**, y las de entorno siempre llevan etiqueta
-   * `dockus-env-<hash>:latest`. El comando recuperaba 0 B dejando intacta una
-   * imagen de nueve días y 1,39 GB que cumplía ambos filtros, de modo que la
-   * poda existía y no podaba nada.
+   * La poda debe usar `--all`: las imágenes de entorno siempre llevan etiqueta
+   * `educodeai-env-<hash>:latest`, por lo que el modo predeterminado de Docker
+   * no las considera aunque cumplan la antigüedad y el prefijo configurados.
    */
   it('usa --all, sin el cual no alcanza a las imágenes etiquetadas', async () => {
     await service.pruneEnvironmentImages({
@@ -46,7 +44,7 @@ describe('DockerImageService.pruneEnvironmentImages — ESC-CRIT-06', () => {
     });
 
     // Es lo que impide que `--all` alcance imágenes ajenas al sistema.
-    expect(args()).toContain('label=dockus.role=environment');
+    expect(args()).toContain('label=educodeai.role=environment');
   });
 
   it('traduce el tiempo de vida a un filtro de antigüedad en horas', async () => {
@@ -71,7 +69,7 @@ describe('DockerImageService.pruneEnvironmentImages — ESC-CRIT-06', () => {
   it('cuenta las imágenes realmente eliminadas', async () => {
     runCommand.mockResolvedValue({
       stdout:
-        'Deleted Images:\nuntagged: dockus-env-abc:latest\ndeleted: sha256:1\ndeleted: sha256:2\n',
+        'Deleted Images:\nuntagged: educodeai-env-abc:latest\ndeleted: sha256:1\ndeleted: sha256:2\n',
       stderr: '',
       exitCode: 0,
       timedOut: false,

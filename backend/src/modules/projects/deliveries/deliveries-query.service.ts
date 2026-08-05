@@ -20,8 +20,8 @@ import type { IDeliveryRepository } from '../domain/repositories/delivery.reposi
 import { DELIVERY_REPOSITORY } from '../domain/repositories/delivery.repository.interface';
 import { StorageService } from '../storage/storage.service';
 
-export type { DeliveryResponse } from '@dockus/contracts';
-import type { DeliveryResponse } from '@dockus/contracts';
+export type { DeliveryResponse } from '@educodeai/contracts';
+import type { DeliveryResponse } from '@educodeai/contracts';
 
 export type DeliveriesPaginationMeta = PaginationMeta;
 

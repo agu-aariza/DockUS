@@ -13,8 +13,8 @@ import type { DeliverySortField } from '../../deliveries/dto/list-deliveries-que
 import type { SortOrder } from '../../../../shared/dto/paginated-query.dto';
 
 /**
- * Puerto real (ARQ-007 P2-1): mismo criterio
- * que ARQ-007 aplicó a `IProjectRepository`/`IBuildRunRepository` — sin tipos
+ * Puerto real: mismo criterio
+ * que aplicó a `IProjectRepository`/`IBuildRunRepository` — sin tipos
  * de TypeORM en la firma (nada de `SelectQueryBuilder`/`FindOneOptions`/
  * `Repository`).
  *
@@ -56,7 +56,7 @@ export interface DeliveryListPage {
 }
 
 export interface IDeliveryRepository {
-  /** Búsqueda plana, sin relaciones — para mutación interna de estado (ARQ-003). */
+  /** Búsqueda plana, sin relaciones — para mutación interna de estado. */
   findById(
     id: string,
     options?: { includeDeleted?: boolean },

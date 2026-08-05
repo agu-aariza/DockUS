@@ -1,49 +1,55 @@
-# Servicios de Orquestación del Builder (builder/application/services/orchestration)
+# Orquestación del Builder (`.../services/orchestration/`)
 
-> **Resumen rápido:** Servicios de control del ciclo de vida de ejecuciones, recuperación de construcciones estancadas, cuotas de gasto y limpieza de imágenes Docker.
-
----
-
-## Propósito y Responsabilidades
-Garantizar la orquestación segura, concurrente y resiliente de los pipelines de evaluación del builder.
-- **Ciclo de Vida:** `builder-run-lifecycle.service.ts` y `builder-pipeline-orchestrator.service.ts`.
-- **Control de Recursos:** `builder-spend-quota.service.ts`, `builder-image-retention.service.ts` y `builder-stale-run-recovery.service.ts`.
-- **Cancelaciones y Métricas:** `builder-run-cancellation.service.ts` y `builder-run-metrics.service.ts`.
+> **Resumen rápido:** El "cerebro" del motor de evaluación — decide cuándo arranca, avanza, se cancela o falla un `BuildRun`, controla cuánto se gasta en LLM, y recupera runs que quedaron colgados si el Worker murió a mitad de ejecución.
 
 ---
 
-## Estructura Interna
+## Los diez ficheros
+
+| Fichero | Qué hace |
+| --- | --- |
+| `builder-run-commands.service.ts` | Punto de entrada para **encolar** un run nuevo (`POST /builder/deliveries/:id/run`). Descrito en `CLAUDE.md` como "todavía el nodo de mayor grado del backend" — es el que más otros servicios conoce. Usa `throwIfUniqueViolation` para convertir el índice único `UQ_build_runs_delivery_active` en un `409` limpio si ya hay un run activo para esa entrega. |
+| `builder-pipeline-orchestrator.service.ts` | Compone las seis etapas del pipeline (`../stages/`) en orden y **es la única pieza autorizada a marcar un run como `FAILED`** — cada etapa debe lanzar, no capturar, sus errores. |
+| `builder-run-lifecycle.service.ts` | Las transiciones de estado válidas de `BuildRunStatus` (`QUEUED → RUNNING → SUCCESS/FAILED/CANCELLED`). |
+| `builder-run-cancellation.service.ts` | Cancelación **cooperativa**: no mata el proceso Docker a la fuerza, marca una señal (vía el puerto `distributed-cache.port.ts`) que las etapas comprueban en puntos seguros. |
+| `run-cancelled.error.ts` | El error tipado que las etapas lanzan cuando detectan la señal de cancelación — así el orquestador distingue "cancelado a propósito" de "fallo real". |
+| `builder-run-queries.service.ts` | Lecturas para la API: estado de un run, lista por entrega, últimos runs por lote de entregas. |
+| `builder-run-support.service.ts` | Utilidades compartidas entre los servicios de esta carpeta que no encajan en ninguno concreto (evita duplicar helpers pequeños entre lifecycle/commands/queries). |
+| `builder-run-metrics.service.ts` | Recoge métricas de la ejecución (duración por etapa, etc.) para observabilidad. |
+| `builder-spend-quota.service.ts` | Corta la ejecución si un proyecto supera `BUILDER_PROJECT_SPEND_QUOTA_USD` (0 = sin límite) — protección contra un LLM desbocado consumiendo presupuesto. |
+| `builder-stale-run-recovery.service.ts` | Al arrancar el Worker, busca runs que quedaron en `RUNNING`/`QUEUED` sin resolver (el proceso murió a mitad) y los marca como fallidos o los reencola, según el umbral `DEFAULT_STALE_RUN_THRESHOLD_MS`. |
+| `builder-image-retention.service.ts` | Poda periódica de imágenes Docker de entorno ya no usadas (`BUILDER_CLEANUP_IMAGES`/`BUILDER_IMAGE_TTL_MS`). |
+
+## El ciclo de vida completo
 
 ```text
-.
-├── builder-image-retention.service.ts    # Limpieza periódica de imágenes Docker huérfanas
-├── builder-pipeline-orchestrator.service.ts # Orquestador secuencial del pipeline de fases
-├── builder-run-cancellation.service.ts   # Manejo de solicitudes de cancelación de ejecuciones
-├── builder-run-commands.service.ts       # Ejecución de comandos del sistema dentro del contenedor
-├── builder-run-lifecycle.service.ts      # Transiciones de estado del ciclo de vida de la run
-├── builder-run-metrics.service.ts        # Recopilación de métricas de ejecución (tiempo, memoria)
-├── builder-run-queries.service.ts        # Consultas de estado de ejecuciones para la API
-├── builder-spend-quota.service.ts        # Control de cuota de gasto y límites de cómputo
-└── builder-stale-run-recovery.service.ts # Recuperación automática de runs colgadas o interrumpidas
+POST /builder/deliveries/:id/run
+        │
+        ▼
+BuilderRunCommandsService.enqueue()
+  · valida que no haya un run activo ya (índice único → 409 si lo hay)
+  · crea el BuildRun en estado QUEUED
+  · encola el job en BullMQ con prioridad INTERACTIVE o BATCH
+        │
+        ▼ (en el proceso Worker, ver builder.processor.ts)
+BuilderPipelineOrchestrator.run(buildRunId)
+  · BuilderRunLifecycleService transiciona QUEUED → RUNNING
+  · ejecuta las 6 etapas de ../stages/ en orden
+  · si cualquier etapa lanza (incluida RunCancelledError) → FAILED o CANCELLED
+  · si todo va bien → SUCCESS
 ```
 
----
+En paralelo, `builder-stale-run-recovery.service.ts` corre al arrancar el Worker (y `builder-image-retention.service.ts` periódicamente) para que el sistema se auto-repare tras un reinicio o caída inesperada.
 
-## Flujo de Trabajo / Arquitectura
+## Cómo trabajar aquí
 
-```text
-[ Queue Task ] ──> [ BuilderPipelineOrchestrator ]
-                            │
-            ┌───────────────┼───────────────┐
-            ▼               ▼               ▼
-    [ RunLifecycle ] [ SpendQuota ] [ StaleRunRecovery ]
-```
-
----
-
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests de orquestación del builder:
 ```bash
 npm run test -- src/modules/projects/builder/application/services/orchestration
 ```
+
+Si tu cambio afecta a **cuándo** algo pasa (no a qué pasa dentro de una etapa concreta), casi seguro pertenece aquí. Si necesitas marcar un run como fallido desde una etapa, lanza el error — no llames a `builder-run-lifecycle.service.ts` directamente desde dentro de un `*-stage.handler.ts`; deja que `BuilderPipelineOrchestrator` decida.
+
+## Ver también
+
+- [`../stages/README.md`](../stages/README.md) — lo que se ejecuta dentro de cada transición.
+- [`../../../README.md`](../../../README.md) — visión general del Builder y el ciclo QUEUED→RUNNING→SUCCESS/FAILED/CANCELLED.

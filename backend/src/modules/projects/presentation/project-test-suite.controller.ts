@@ -72,7 +72,7 @@ export class ProjectTestSuiteController {
   // bufferizado la parte multipart completa en RAM del proceso API. Sin
   // `limits.fileSize` aqui, un TEACHER/ADMIN puede enviar varios GB en una
   // sola peticion y agotar esa memoria antes de que la validacion tenga
-  // oportunidad de rechazarla (HIGH-11, misma clase de bug que en
+  // oportunidad de rechazarla, igual que en
   // storage.controller.ts).
   @UseInterceptors(FileInterceptor('file', UPLOAD_MULTER_OPTIONS))
   async uploadTestSuite(

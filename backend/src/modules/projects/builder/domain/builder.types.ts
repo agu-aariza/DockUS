@@ -16,7 +16,7 @@ import type { RubricCriterion } from '../../entities/project.entity';
 import type { BuilderRuntimeFamily } from './runtime-catalog';
 
 export type { RubricCriterion };
-// audit/04 ARQ-010: BuilderRuntimeFamily se deriva de las claves de
+// BuilderRuntimeFamily se deriva de las claves de
 // RUNTIME_CATALOG (más 'unknown') en runtime-catalog.ts — no se duplica aquí.
 export type { BuilderRuntimeFamily };
 
@@ -72,7 +72,7 @@ export const BUILD_RUN_EVENT_TYPES = [
 ] as const;
 export type BuildRunEventType = (typeof BUILD_RUN_EVENT_TYPES)[number];
 
-// audit/04 ARQ-012: fase de cara al alumno, antes repetida como literal suelto
+// fase de cara al alumno, antes repetida como literal suelto
 // en cada emitEvent (y replicada a mano en el frontend). Un `payload.studentStage`
 // que no está en esta lista es un typo, no una fase nueva legítima.
 export const BUILDER_STUDENT_STAGES = [
@@ -86,7 +86,7 @@ export const BUILDER_STUDENT_STAGES = [
 export type BuilderStudentStage = (typeof BUILDER_STUDENT_STAGES)[number];
 
 /**
- * Resultado de la etapa de ejecución (audit/04 ARQ-012), tipado en vez de
+ * Resultado de la etapa de ejecución, tipado en vez de
  * viajar como el blob `STDOUT:\n...\nSTDERR:\n...\nEXIT CODE: n` que cada
  * consumidor aguas abajo (guard de alucinaciones, fallback del evaluador)
  * tenía que re-parsear con regex. `ran: false` cubre el caso "el planner no

@@ -20,7 +20,7 @@ import { OpenAiCompatibleGenerationService } from './providers/openai-compatible
 @Module({
   // `CacheModule` da el cliente Redis que respalda el cortacircuitos por
   // proveedor: su estado se comparte entre workers para que el primero que
-  // detecta la indisponibilidad proteja a los demás (ESC-ALTO-02).
+  // detecta la indisponibilidad proteja a los demás.
   imports: [CacheModule],
   providers: [
     LlmCircuitBreakerService,

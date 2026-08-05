@@ -27,3 +27,6 @@ describe('FileExtensionValidator', () => {
     expect(validator.buildErrorMessage()).toContain('.tar.gz');
   });
 });
+/**
+ * Pruebas de validación de tamaño, nombre, tipo y contenido de ficheros subidos.
+ */

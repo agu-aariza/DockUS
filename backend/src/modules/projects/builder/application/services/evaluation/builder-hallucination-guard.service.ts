@@ -17,7 +17,7 @@ export class BuilderHallucinationGuard {
    * Checks if execution logs only contain build artifacts (gcc, make)
    * with no actual program output, yet the assessment claims success.
    *
-   * ARQ-012: opera sobre el `BuilderExecutionResult` estructurado, no sobre
+   * opera sobre el `BuilderExecutionResult` estructurado, no sobre
    * el blob de texto `STDOUT:/STDERR:/EXIT CODE`. Antes esta clase tenía que
    * re-parsear ese formato con regex (incluida una extracción de stdout que
    * dependía de que nadie cambiara el formato del blob); con el resultado
@@ -87,7 +87,7 @@ export class BuilderHallucinationGuard {
 
       // Parse "Salida exacta esperada" section from expectedOutput
       const oracleSalidaMatch = expectedOutput.match(
-        /[Ss]alida\s+exacta\s+esperada[^:]*:\s*\n([\s\S]+?)(?:\n\n|$)/,
+        /[Ss]alida\s+exacta\s+esperada[^\n]*\n([\s\S]+?)(?:\n\n|$)/,
       );
       const oracleSalida = oracleSalidaMatch?.[1]?.trim();
 

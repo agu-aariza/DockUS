@@ -5,7 +5,7 @@ import {
 
 const GB = 1024 ** 3;
 
-describe('worker-capacity — ESC-MED-04', () => {
+describe('worker-capacity', () => {
   describe('parseDockerMemoryLimit', () => {
     it.each([
       ['512m', 512 * 1024 ** 2],

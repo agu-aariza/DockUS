@@ -19,11 +19,8 @@
  * gestiona el valor real (arranca en 1) en cada save() posterior desde la
  * aplicación.
  *
- * Nota: `npm run migration:generate` propuso además borrar
- * `IDX_users_search_trgm` (ver la trampa documentada en CLAUDE.md — su down()
- * la recrearía sin el operator class `gin_trgm_ops`, degradándola en
- * silencio). Se descartó esa parte del diff a mano; esta migración solo toca
- * `build_runs`.
+ * La migración conserva `IDX_users_search_trgm` y su operator class
+ * `gin_trgm_ops`; solo modifica `build_runs`.
  */
 import { MigrationInterface, QueryRunner } from 'typeorm';
 

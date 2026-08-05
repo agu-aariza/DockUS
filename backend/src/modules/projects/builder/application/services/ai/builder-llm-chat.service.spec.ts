@@ -257,7 +257,7 @@ describe('BuilderLlmChatService', () => {
       );
     });
 
-    it('CRIT-05: should redact EXPECTED OUTPUT ORACLE from the raw eval prompt before sending it to the tutor LLM', async () => {
+    it('should redact EXPECTED OUTPUT ORACLE from the raw eval prompt before sending it to the tutor LLM', async () => {
       const run = { id: 'run-id', status: 'SUCCESS' };
       mockBuilderRunQueriesService.getRunById.mockResolvedValue(run as any);
       mockChatMessageRepo.findAllByBuildRun.mockResolvedValue([]);
@@ -306,7 +306,7 @@ describe('BuilderLlmChatService', () => {
       expect(sentPrompt).toContain('def main(): print("hi")');
     });
 
-    it('HIGH-04: should reject new messages once the per-run turn cap is reached, without calling the LLM', async () => {
+    it('should reject new messages once the per-run turn cap is reached, without calling the LLM', async () => {
       const run = { id: 'run-id', status: 'SUCCESS' };
       mockBuilderRunQueriesService.getRunById.mockResolvedValue(run as any);
       const maxedOutHistory = Array.from({ length: 80 }, (_, i) => ({
@@ -326,10 +326,10 @@ describe('BuilderLlmChatService', () => {
       expect(mockLlmService.generate).not.toHaveBeenCalled();
     });
 
-    it('MED-02: should cap the conversation history embedded in the prompt instead of concatenating every turn', async () => {
+    it('should cap the conversation history embedded in the prompt instead of concatenating every turn', async () => {
       const run = { id: 'run-id', status: 'SUCCESS' };
       mockBuilderRunQueriesService.getRunById.mockResolvedValue(run as any);
-      // Por debajo del tope de turnos (HIGH-04) pero muy por encima de lo que
+      // Por debajo del tope de turnos () pero muy por encima de lo que
       // debe incrustarse en el prompt.
       const longHistory = Array.from({ length: 60 }, (_, i) => ({
         id: `msg-${i}`,
@@ -358,7 +358,7 @@ describe('BuilderLlmChatService', () => {
       expect(prompt).toContain('Se omiten 40 mensajes anteriores');
     });
 
-    it('MED-02: should truncate an oversized evaluation context before embedding it in the prompt', async () => {
+    it('should truncate an oversized evaluation context before embedding it in the prompt', async () => {
       const run = { id: 'run-id', status: 'SUCCESS' };
       mockBuilderRunQueriesService.getRunById.mockResolvedValue(run as any);
       mockChatMessageRepo.findAllByBuildRun.mockResolvedValue([]);

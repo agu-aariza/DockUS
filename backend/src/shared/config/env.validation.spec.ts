@@ -3,9 +3,9 @@ import { envValidationSchema } from './env.validation';
 const baseEnv = {
   NODE_ENV: 'development',
   DB_HOST: 'postgres',
-  DB_USERNAME: 'dockus',
-  DB_PASSWORD: 'dockus_pass',
-  DB_NAME: 'dockus_db',
+  DB_USERNAME: 'educodeai',
+  DB_PASSWORD: 'educodeai_pass',
+  DB_NAME: 'educodeai_db',
   JWT_SECRET: '12345678901234567890123456789012',
   REDIS_HOST: 'redis',
 };
@@ -27,7 +27,7 @@ describe('envValidationSchema', () => {
     expect(value.BUILDER_LLM_QUALITY_MAX_INPUT_CHARS).toBe(30000);
   });
 
-  it('derives BUILDER_BEDROCK_FACTS_MODEL_ID from the stage list instead of leaving it undefined (ARQ-030)', () => {
+  it('derives BUILDER_BEDROCK_FACTS_MODEL_ID from the stage list instead of leaving it undefined', () => {
     const { error, value } = envValidationSchema.validate(baseEnv, {
       abortEarly: false,
     });
@@ -64,3 +64,6 @@ describe('envValidationSchema', () => {
     );
   });
 });
+/**
+ * Pruebas de validación de variables de entorno, valores por defecto y límites operativos.
+ */

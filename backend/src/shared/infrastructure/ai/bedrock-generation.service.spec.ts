@@ -129,3 +129,6 @@ describe('BedrockGenerationService', () => {
     expect(BedrockRuntimeClient).toHaveBeenCalledTimes(2);
   });
 });
+/**
+ * Pruebas del adaptador de generación para Bedrock y de sus respuestas de error.
+ */

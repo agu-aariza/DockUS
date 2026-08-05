@@ -3,10 +3,8 @@
  * actor (vista desde un alumno concreto).
  *
  * Contexto:
- * - Extraído de `student-profile.service.spec.ts` (plan_accion.md P2-3): la
- *   lógica que estas pruebas cubrían vivía antes en `StudentProfileService`,
- *   ahora vive en `ProjectAssignmentRepository` a través de este util — las
- *   pruebas se mueven con el código, mismo comportamiento.
+ * - Comprueba las reglas de visibilidad de asignaciones para alumnos y
+ *   docentes, incluyendo los filtros por proyecto y grupo.
  *
  * @module ProjectAssignmentActorScopeUtilSpec
  */

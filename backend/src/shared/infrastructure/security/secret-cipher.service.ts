@@ -24,7 +24,7 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_BYTES = 12;
 const KEY_BYTES = 32;
 /** Sal fija: la clave maestra ya es un secreto de alta entropía por validación. */
-const KEY_SALT = 'dockus/llm-credentials/v1';
+const KEY_SALT = 'educodeai/llm-credentials/v1';
 const ENVELOPE_PREFIX = 'v1';
 
 @Injectable()

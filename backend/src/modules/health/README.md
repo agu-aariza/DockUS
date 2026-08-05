@@ -1,39 +1,38 @@
-# Módulo de Salud y Diagnóstico (modules/health)
+# Módulo de salud (`health/`)
 
-> **Resumen rápido:** Endpoints de salud técnica de la aplicación (`/health/live` y `/health/readiness`) para la verificación de liveness y readiness del servidor NestJS e infraestructura.
-
----
-
-## Propósito y Responsabilidades
-Exponer la disponibilidad operativa del backend y la conectividad con sus dependencias críticas (PostgreSQL, Redis, Docker, Amazon Bedrock).
-- **Liveness Check (`/health/live`):** Confirma que el proceso HTTP de la API está vivo y respondiendo solicitudes.
-- **Readiness Check (`/health/readiness`):** Comprueba conectividad real con PostgreSQL, Redis, Docker y Bedrock antes de recibir tráfico de usuarios u orquestadores.
+> **Resumen rápido:** Dos endpoints, `/health/live` y `/health/readiness`, usados por Docker/orquestadores para saber si el proceso API está vivo y si sus dependencias críticas (Postgres, Redis, Docker, Bedrock) responden. No tiene persistencia propia ni lógica de negocio.
 
 ---
 
-## Estructura Interna
+## Liveness vs. readiness: por qué son dos endpoints distintos
+
+Son preguntas diferentes y confundirlas rompe despliegues:
+
+- **`GET /health/live`** (`getLiveness()`): "¿el proceso Node sigue vivo y respondiendo?" No comprueba nada externo — si esto responde `200`, el proceso no está colgado ni en deadlock. Un healthcheck de Docker/Kubernetes que falla aquí debería **reiniciar el contenedor**.
+- **`GET /health/readiness`** (`getReadiness()`): "¿puede este proceso atender tráfico de verdad ahora mismo?" Comprueba en paralelo (`Promise.all`) cuatro dependencias reales: PostgreSQL (`SELECT 1`), Redis (`PING`), el daemon Docker y AWS Bedrock. Si cualquiera falla, devuelve `status: 'error'` (los detalles por dependencia van en `checks.*`). Un balanceador de carga que falla aquí debería **sacar la instancia del pool sin reiniciarla** — puede que solo esté esperando a que Postgres vuelva.
+
+## Un detalle no obvio: cómo se comprueba Docker
+
+El proceso **API** no habla con el daemon Docker directamente para el healthcheck (`checkDocker()` en `health.service.ts`). En su lugar, lee una clave en Redis (`DOCKER_DAEMON_STATUS_REDIS_KEY`) que el proceso **Worker** publica periódicamente (`shared/infrastructure/docker/docker-daemon-status-publisher.service.ts`). Esto evita que el proceso API necesite acceso al socket de Docker solo para reportar salud, y refleja el estado del daemon tal como lo ve quien realmente lo usa (el Worker). Si esa clave está ausente o expirada en Redis, `readiness` reporta Docker como `down` — incluso si el daemon está perfectamente sano — porque significa que el Worker lleva un rato sin publicar.
+
+## Estructura interna
 
 ```text
-.
-├── health.controller.ts # Endpoints /health/live y /health/readiness
-├── health.service.ts    # Lógica de comprobación de conectividad con servicios
-└── health.module.ts     # Módulo NestJS que registra el servicio y controlador de salud
+health/
+├── health.module.ts        # Registra HealthController y HealthService
+├── health.controller.ts     # GET /health/live, GET /health/readiness
+└── health.service.ts         # Las cuatro comprobaciones + agregación del estado global
 ```
 
----
+## Cómo trabajar aquí
 
-## Flujo de Trabajo / Arquitectura
-
-```text
-[ Docker Healthcheck / Orquestador ] ──> GET /health/live ──> [ HealthController ] ──> HTTP 200 OK
-[ Load Balancer / Readiness Probe ] ──> GET /health/readiness ──> [ HealthService ] ──> HTTP 200 OK / 503
-```
-
----
-
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests de salud:
 ```bash
 npm run test -- src/modules/health
 ```
+
+Si añades una dependencia externa nueva al sistema (otro servicio que el backend necesite para funcionar), considera si `readiness` debería comprobarla también — sigue el patrón de `checkDatabase`/`checkRedis`/`checkDocker`/`checkBedrock`: mide latencia, captura el error sin dejarlo propagar, y añade la entrada a `ReadinessReport.checks`.
+
+## Ver también
+
+- [`../../shared/infrastructure/docker/README.md`](../../shared/infrastructure/docker/README.md) — quién publica el estado del daemon que este módulo lee.
+- [`../../shared/infrastructure/cache/README.md`](../../shared/infrastructure/cache/README.md) — el cliente Redis usado para el `PING` y para leer el estado de Docker.

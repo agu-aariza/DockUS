@@ -26,16 +26,16 @@ import { ProjectAssignment } from './entities/project-assignment.entity';
 import { GROUP_ROSTER_READER } from '../../../shared/application/group-roster-reader.port';
 import type { GroupRosterReader } from '../../../shared/application/group-roster-reader.port';
 
-// Shapes compartidas con el frontend: fuente única en @dockus/contracts.
+// Shapes compartidas con el frontend: fuente única en @educodeai/contracts.
 export type {
   ProjectAssignmentResponse,
   BulkAssignSummary,
   BulkAssignResponse,
-} from '@dockus/contracts';
+} from '@educodeai/contracts';
 import type {
   ProjectAssignmentResponse,
   BulkAssignResponse,
-} from '@dockus/contracts';
+} from '@educodeai/contracts';
 
 @Injectable()
 export class ProjectAssignmentsService {
@@ -341,7 +341,7 @@ export class ProjectAssignmentsService {
 
     if (actor.role !== UserRole.ADMIN) {
       // Un co-docente asignado (no solo el creador original) debe poder
-      // revocar asignaciones del mismo proyecto (HIGH-10): misma politica
+      // revocar asignaciones del mismo proyecto (): misma politica
       // que ProjectAccessService/BuilderAccessService.
       const isAssignedTeacher =
         actor.role === UserRole.TEACHER &&
@@ -378,7 +378,7 @@ export class ProjectAssignmentsService {
     }
 
     if (actor.role === UserRole.TEACHER) {
-      // Idem: co-docente asignado, no solo creatorId (HIGH-10).
+      // Idem: co-docente asignado, no solo creatorId ().
       const isAssignedTeacher =
         await this.projectsRepository.isTeacherAssignedToProject(
           assignment.project.id,

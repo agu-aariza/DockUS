@@ -1,15 +1,12 @@
 /**
- * @fileoverview Ciclo de vida de un `BuildRun` en ejecución (ARQ-003).
+ * @fileoverview Ciclo de vida de un `BuildRun` en ejecución.
  *
  * Contexto:
- * - Extraído de `BuilderRunCommandsService`: CLAUDE.md/ARCHITECTURE.md
- *   documentaban al orquestador como único dueño de las transiciones de
- *   estado, pero el código las hacía aquí. Este servicio es ahora el único
- *   punto que muta `run.status`, invocado solo por `BuilderProcessor`;
+ * - Es el único punto que muta `run.status`, invocado por `BuilderProcessor`;
  *   `BuilderRunCommandsService` queda con enqueue/cancel únicamente.
  * - Las escrituras de `DeliveryStatus` pasan por `DeliveryStatusService` en
- *   vez de mutar el repositorio de `Delivery` a mano: builder ya no
- *   reimplementa el estado de otro sub-contexto.
+ * vez de mutar el repositorio de `Delivery` a mano: builder ya no
+ * reimplementa el estado de otro sub-contexto.
  *
  * @module BuilderRunLifecycleService
  */
@@ -61,7 +58,7 @@ export class BuilderRunLifecycleService {
     // Idempotencia: si este job llega aquí una segunda vez (reencolado por
     // BullMQ tras un "stalled", redrive manual, etc.) el estado ya no será
     // QUEUED. Esta comprobación es la primera línea de defensa; el UPDATE
-    // atómico condicionado de más abajo (claimQueuedRun, ORC-001) cubre
+    // atómico condicionado de más abajo (claimQueuedRun, ) cubre
     // además la ventana residual entre esta lectura y esa transición.
     if (run.status !== BuildRunStatus.QUEUED) {
       this.logger.warn(
@@ -79,7 +76,7 @@ export class BuilderRunLifecycleService {
       DeliveryStatus.IN_REVIEW,
     );
 
-    // ORC-001: UPDATE atómico condicionado a QUEUED, no lectura-modificación-
+    // UPDATE atómico condicionado a QUEUED, no lectura-modificación-
     // escritura. Reemplaza el antiguo `run.status = RUNNING; save(run)`, que
     // dependía de que `repository.save()` de TypeORM aplicara el optimistic
     // lock del `@VersionColumn` de forma atómica — una sonda directa contra
@@ -140,7 +137,7 @@ export class BuilderRunLifecycleService {
       // Guarda frente a la carrera con cancelRun: el orquestador ya comprueba
       // la cancelacion entre etapas y durante la ejecucion Docker, pero queda
       // esta ultima ventana entre ese chequeo y la persistencia del
-      // resultado. El UPDATE atomico condicionado a RUNNING (ORC-001) es lo
+      // resultado. El UPDATE atómico condicionado a RUNNING es lo
       // que cierra esa ventana: si un docente cancelo el run justo antes,
       // completeRunningRun afecta 0 filas y no pisa la cancelacion con el
       // resultado calculado en memoria.
@@ -194,18 +191,15 @@ export class BuilderRunLifecycleService {
 
   /**
    * Persiste el resultado calculado en `run` mediante un único UPDATE
-   * atómico condicionado a que el run siga RUNNING (ORC-001). Devuelve
+   * atómico condicionado a que el run siga RUNNING. Devuelve
    * `false` si ya no lo estaba — cancelado por `cancelRun`, o marcado FAILED
    * por otra vía (p. ej. el sweep de huérfanos) mientras el pipeline seguía
    * en curso — y en ese caso el resultado calculado se descarta sin
    * reintentar: sea cual sea el motivo, esa transición ya la decidió otro
    * escritor y no debe pisarse.
    *
-   * Antes esto era un findById + comprobación en memoria + `save()` con
-   * captura de `OptimisticLockVersionMismatchError` y reintento manual sobre
-   * una relectura. El único UPDATE condicionado de aquí cubre exactamente el
-   * mismo caso sin la ventana de lectura-modificación-escritura que ese
-   * patrón dejaba abierta.
+   * El UPDATE condicionado cubre exactamente el mismo caso sin exponer una
+   * ventana de lectura-modificación-escritura.
    */
   private async saveRunResultUnlessCancelled(run: BuildRun): Promise<boolean> {
     const patch: BuildRunResultPatch = {

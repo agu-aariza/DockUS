@@ -220,7 +220,7 @@ function tryRepairJson(raw: string): unknown | null {
 
     const lines = attempt.split('\n');
     const fixedLines = lines.map((line) => {
-      const kvMatch = line.match(/^(\s*"[^"]+"\s*:\s*)"(.*)("(?:,?\s*)?)$/);
+      const kvMatch = line.match(/^(\s*"[^"]+"\s*\s*)"(.*)("(?:,?\s*)?)$/);
       if (!kvMatch) return line;
 
       const prefix = kvMatch[1];

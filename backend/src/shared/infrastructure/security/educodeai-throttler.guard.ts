@@ -5,7 +5,7 @@
  * Extiende `ThrottlerGuard` de NestJS para agrupar y contar peticiones por la identidad del usuario (`userId`)
  * en lugar de por la dirección IP cuando la petición incluye un token JWT válido. Cae a IP para peticiones anónimas.
  *
- * @module DockusThrottlerGuard
+ * @module EduCodeAIThrottlerGuard
  */
 
 import { Injectable } from '@nestjs/common';
@@ -20,7 +20,7 @@ import { verify } from 'jsonwebtoken';
 import { resolveClientIp } from './throttler.config';
 
 @Injectable()
-export class DockusThrottlerGuard extends ThrottlerGuard {
+export class EduCodeAIThrottlerGuard extends ThrottlerGuard {
   private readonly jwtSecret: string;
 
   constructor(

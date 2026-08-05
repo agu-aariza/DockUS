@@ -25,7 +25,7 @@ describe('StudentProfileService', () => {
     id: STUDENT_ID,
     firstName: 'Alumno',
     lastName: 'Ariza',
-    email: 'alumno1@dockus.com',
+    email: 'alumno1@educodeai.com',
     role: UserRole.STUDENT,
     status: UserStatus.ACTIVE,
   } as User;
@@ -132,7 +132,7 @@ describe('StudentProfileService', () => {
   const actor = (role: UserRole, userId = 'actor-1'): AuthenticatedUser => ({
     userId,
     role,
-    email: 'actor@dockus.com',
+    email: 'actor@educodeai.com',
   });
 
   it('cuenta los runs a través de las entregas del alumno, no por triggeredById', async () => {

@@ -298,7 +298,7 @@ export class ProjectGradebookService {
     // `codeQualityFindings` —columnas jsonb de decenas de kB por fila— de
     // TODAS las ejecuciones del proyecto, para descartarlas acto seguido en
     // memoria: 170 MB medidos para producir una respuesta de 159 kB
-    // (ESC-CRIT-05). Se extrae el campo en SQL y `DISTINCT ON` deja que
+    // Se extrae el campo en SQL y `DISTINCT ON` deja que
     // PostgreSQL elija la última ejecución por entrega, en lugar de traerlas
     // todas y filtrarlas aquí.
     // El filtro va por proyecto y no por una lista de identificadores: con
@@ -353,7 +353,7 @@ export class ProjectGradebookService {
 
   /**
    * Recibe el valor ya extraído en SQL, no la entidad: cargar `BuildRun`
-   * completo solo para leer este campo era el origen de ESC-CRIT-05.
+   * completo solo para leer este campo era el origen de.
    */
   private resolveBuilderOutcome(
     rawOutcome: string | null,

@@ -19,7 +19,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterDto {
   @ApiProperty({
-    example: 'agustin@dockus.com',
+    example: 'agustin@educodeai.com',
     description: 'Correo electrónico de acceso.',
   })
   @IsEmail({}, { message: 'Debe ser un correo electrónico válido.' })
@@ -59,7 +59,7 @@ export class RegisterDto {
 
 export class LoginDto {
   @ApiProperty({
-    example: 'agustin@dockus.com',
+    example: 'agustin@educodeai.com',
     description: 'Correo electrónico de acceso.',
   })
   @IsEmail({}, { message: 'Debe ser un correo electrónico válido.' })

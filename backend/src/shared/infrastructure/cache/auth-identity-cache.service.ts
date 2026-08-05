@@ -110,7 +110,7 @@ export class AuthIdentityCacheService {
   /**
    * Invalida la identidad tras una mutación.
    *
-   * A diferencia de la lectura y la escritura, **este fallo sí se registra**:
+   * A diferencia de la lectura y la escritura, **este fallo sí se registra**
    * significa que una cuenta modificada puede seguir operando con los datos
    * anteriores hasta que venza el TTL. Es la única vía por la que esta caché
    * puede provocar un problema de control de acceso, y tiene que ser visible.

@@ -20,7 +20,7 @@ import { USER_REPOSITORY } from './domain/repositories/user.repository.interface
 @Module({
   // `CacheModule` da acceso a la caché de identidad: toda mutación de una
   // cuenta debe invalidarla, o la sesión seguiría operando con el rol y el
-  // estado anteriores hasta que venciera el TTL (ESC-ALTO-04).
+  // estado anteriores hasta que venciera el TTL.
   imports: [TypeOrmModule.forFeature([User]), CacheModule],
   controllers: [UsersController], // Habilitamos la gestión administrativa via API
   providers: [
@@ -30,7 +30,7 @@ import { USER_REPOSITORY } from './domain/repositories/user.repository.interface
       useClass: UserRepository,
     },
   ],
-  // USER_REPOSITORY exportado para ProjectsModule/AcademicModule (ARQ-022): el
+  // USER_REPOSITORY exportado para ProjectsModule/AcademicModule: el
   // puerto se registra una vez, aquí, y los consumidores importan este módulo
   // en vez de volver a declarar el `provide`.
   exports: [UsersService, USER_REPOSITORY],

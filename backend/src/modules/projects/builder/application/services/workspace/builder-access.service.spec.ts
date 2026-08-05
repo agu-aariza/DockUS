@@ -5,7 +5,7 @@ import { ProjectStatus } from '../../../../entities/project.entity';
 import type { Delivery } from '../../../../deliveries/entities/delivery.entity';
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
 
-/** ARQ-001: el alumno debe poder lanzar la evaluacion de su propia entrega. */
+/** el alumno debe poder lanzar la evaluacion de su propia entrega. */
 describe('BuilderAccessService — assertCanTriggerDelivery', () => {
   let service: BuilderAccessService;
 

@@ -89,7 +89,7 @@ describe('DeliveriesCommandService', () => {
       id: created.id,
       assignmentId: assignment.id,
       projectId: assignment.projectId,
-      studentEmail: 'student@dockus.test',
+      studentEmail: 'student@educodeai.test',
       remainingDeliveries: 1,
     } as any);
 
@@ -115,7 +115,7 @@ describe('DeliveriesCommandService', () => {
       id: created.id,
       assignmentId: assignment.id,
       projectId: assignment.projectId,
-      studentEmail: 'student@dockus.test',
+      studentEmail: 'student@educodeai.test',
       remainingDeliveries: 1,
     });
   });
@@ -167,7 +167,7 @@ describe('DeliveriesCommandService', () => {
     expect(result.id).toBe(restored.id);
   });
 
-  describe('updateGrading (HIGH-10: co-docentes, no solo el creador del proyecto)', () => {
+  describe('updateGrading (co-docentes, no solo el creador del proyecto)', () => {
     it('permite calificar a un docente asignado al proyecto aunque no sea el creador', async () => {
       const teacher = buildActor(UserRole.TEACHER, 'teacher-2');
       const project = buildProject({ creatorId: 'teacher-1' });

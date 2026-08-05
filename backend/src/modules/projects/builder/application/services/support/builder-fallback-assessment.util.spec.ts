@@ -130,7 +130,12 @@ describe('resolveEvaluationAssessment', () => {
       buildTrace(hallucinated),
       planAssessment,
       // Solo mensajes de compilación: no hay salida de programa que respalde E1.
-      { ran: true, stdout: 'gcc -Wall main.c -o main\n', stderr: '', exitCode: 0 },
+      {
+        ran: true,
+        stdout: 'gcc -Wall main.c -o main\n',
+        stderr: '',
+        exitCode: 0,
+      },
       null,
       guard,
     );

@@ -14,7 +14,7 @@ class AuthUserResponseDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   id: string;
 
-  @ApiProperty({ example: 'agustin@dockus.com' })
+  @ApiProperty({ example: 'agustin@educodeai.com' })
   email: string;
 
   @ApiProperty({ example: 'STUDENT', enum: ['ADMIN', 'TEACHER', 'STUDENT'] })

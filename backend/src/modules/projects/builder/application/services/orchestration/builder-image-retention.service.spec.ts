@@ -1,7 +1,7 @@
 import { BuilderImageRetentionService } from './builder-image-retention.service';
 import { ProcessRole } from '../../../../../../process-role.module';
 
-describe('BuilderImageRetentionService — ESC-CRIT-06: poda de imágenes de entorno', () => {
+describe('BuilderImageRetentionService — poda de imágenes de entorno', () => {
   function buildService(
     config: { cleanupImages?: boolean; imageTtlMs?: number } = {},
     pruneImpl?: jest.Mock,

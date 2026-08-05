@@ -11,17 +11,18 @@ jest.mock('fs/promises', () => ({
 describe('SourceCodePayloadBuilder', () => {
   const builder = new SourceCodePayloadBuilder();
 
-  const buildWorkspace = (runtimeFiles: RuntimeFile[]): StageWorkspaceResult =>
-    ({
-      inputManifest: [],
-      runtimeFiles,
-      teacherTestRuntimeFiles: [],
-      hasTeacherTests: false,
-      workspaceRoot: '/tmp/dockus-builder-test-123',
-      projectRootDir: '/tmp/dockus-builder-test-123/project',
-      teacherTestsRootDir: '/tmp/dockus-builder-test-123/teacher-tests',
-      warnings: [],
-    }) as StageWorkspaceResult;
+  const buildWorkspace = (
+    runtimeFiles: RuntimeFile[],
+  ): StageWorkspaceResult => ({
+    inputManifest: [],
+    runtimeFiles,
+    teacherTestRuntimeFiles: [],
+    hasTeacherTests: false,
+    workspaceRoot: '/tmp/educodeai-builder-test-123',
+    projectRootDir: '/tmp/educodeai-builder-test-123/project',
+    teacherTestsRootDir: '/tmp/educodeai-builder-test-123/teacher-tests',
+    warnings: [],
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -31,7 +32,11 @@ describe('SourceCodePayloadBuilder', () => {
     jest.mocked(fs.readFile).mockResolvedValue('content');
 
     const workspace = buildWorkspace([
-      { relativePath: 'app.py', absolutePath: '/tmp/project/app.py', sizeBytes: 100 },
+      {
+        relativePath: 'app.py',
+        absolutePath: '/tmp/project/app.py',
+        sizeBytes: 100,
+      },
       {
         relativePath: 'node_modules/pkg/index.js',
         absolutePath: '/tmp/project/node_modules/pkg/index.js',
@@ -56,7 +61,11 @@ describe('SourceCodePayloadBuilder', () => {
     jest.mocked(fs.readFile).mockResolvedValue('FROM python:3.12');
 
     const workspace = buildWorkspace([
-      { relativePath: 'Dockerfile', absolutePath: '/tmp/project/Dockerfile', sizeBytes: 50 },
+      {
+        relativePath: 'Dockerfile',
+        absolutePath: '/tmp/project/Dockerfile',
+        sizeBytes: 50,
+      },
     ]);
 
     const payload = await builder.build(workspace);
@@ -81,8 +90,16 @@ describe('SourceCodePayloadBuilder', () => {
 
   it('omite ficheros con extensión no reconocida (binarios, imágenes)', async () => {
     const workspace = buildWorkspace([
-      { relativePath: 'logo.png', absolutePath: '/tmp/project/logo.png', sizeBytes: 100 },
-      { relativePath: 'app.bin', absolutePath: '/tmp/project/app.bin', sizeBytes: 100 },
+      {
+        relativePath: 'logo.png',
+        absolutePath: '/tmp/project/logo.png',
+        sizeBytes: 100,
+      },
+      {
+        relativePath: 'app.bin',
+        absolutePath: '/tmp/project/app.bin',
+        sizeBytes: 100,
+      },
     ]);
 
     const payload = await builder.build(workspace);
@@ -95,7 +112,11 @@ describe('SourceCodePayloadBuilder', () => {
     jest.mocked(fs.readFile).mockRejectedValue(new Error('EACCES'));
 
     const workspace = buildWorkspace([
-      { relativePath: 'app.py', absolutePath: '/tmp/project/app.py', sizeBytes: 100 },
+      {
+        relativePath: 'app.py',
+        absolutePath: '/tmp/project/app.py',
+        sizeBytes: 100,
+      },
     ]);
 
     const payload = await builder.build(workspace);
@@ -103,3 +124,6 @@ describe('SourceCodePayloadBuilder', () => {
     expect(payload).toBe('');
   });
 });
+/**
+ * Pruebas de la construcción segura del payload de código que reciben los prompts del Builder.
+ */

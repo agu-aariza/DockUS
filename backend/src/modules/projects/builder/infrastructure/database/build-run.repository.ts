@@ -258,7 +258,7 @@ export class BuildRunRepository implements IBuildRunRepository {
 
   async failIfActive(id: string, reason: string): Promise<boolean> {
     // UPDATE condicionado al estado (no lectura-modificacion-escritura):
-    // ORC-002 — el WHERE anterior era `status != CANCELLED`, que tambien
+    // el WHERE anterior era `status != CANCELLED`, que tambien
     // dejaba pasar SUCCESS/FAILED; un fallo posterior (p.ej. al persistir el
     // evento RUN_COMPLETED) degradaba en silencio un run ya SUCCESS. Solo
     // QUEUED/RUNNING son estados desde los que FAILED es una transicion

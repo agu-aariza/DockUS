@@ -9,20 +9,12 @@ import { BuildRun, BuildRunStatus } from '../entities/build-run.entity';
 import type { SortOrder } from '../../../../../shared/dto/paginated-query.dto';
 
 /**
- * Puerto real (audit/04 ARQ-007): sin tipos de TypeORM en la firma. La
- * versión anterior exponía `SelectQueryBuilder`/`FindOneOptions`/`DeepPartial`
- * directamente, así que `cancelRun`, el sweep de huérfanos y la cuota de
- * gasto escribían SQL-builder de TypeORM "contra la interfaz" en vez de
- * expresar intención. Cada método de aquí corresponde 1:1 a un UPDATE
- * condicionado o SELECT que ya existía — es una mudanza mecánica a
- * `builder/infrastructure/database/build-run.repository.ts`, no un cambio de SQL.
- *
- * Ampliado en la Fase 2 P2-4 (`ARQ-007`) para
- * cubrir los 6 consumidores reales que hasta entonces inyectaban
- * `Repository<BuildRun>` directo.
+ * Puerto de ejecuciones sin tipos de TypeORM en la firma. Expresa comandos,
+ * consultas y métricas de `BuildRun` sin filtrar detalles del adaptador a la
+ * capa de aplicación.
  */
 
-/** Proyección escalar: excluye deliberadamente `report`/`llmAssessment`/`codeQualityFindings` (jsonb pesado, ESC-CRIT-05). */
+/** Proyección escalar que excluye los jsonb pesados del run. */
 export interface BuildRunScalarSummary {
   id: string;
   deliveryId: string;
@@ -65,10 +57,7 @@ export interface BuildRunResultPatch {
   executionCostUsd: number;
 }
 
-/**
- * Token de inyección tipado (audit/areas/arquitectura ARQ-020, plan_accion.md
- * P0-2). Ver el comentario equivalente en `project.repository.interface.ts`.
- */
+/** Token de inyección tipado para el repositorio de ejecuciones. */
 export const BUILD_RUN_REPOSITORY = Symbol('IBuildRunRepository');
 
 export interface StaleQueuedRunRef {
@@ -87,25 +76,16 @@ export interface IBuildRunRepository {
   }): Promise<BuildRun>;
 
   /**
-   * UPDATE condicionado (ORC-001): reclama un run QUEUED y lo pasa a
-   * RUNNING en una única sentencia atómica — reemplaza el antiguo
-   * `findById` + mutar en memoria + `save()`, que dependía de que
-   * `repository.save()` de TypeORM aplicara el optimistic lock del
-   * `@VersionColumn` de forma atómica. Una sonda directa contra Postgres
-   * demostró que no lo hace: un escritor con una entidad obsoleta podía
-   * pisar una cancelación ya confirmada sin lanzar
-   * `OptimisticLockVersionMismatchError`. Devuelve `false` si el run ya no
-   * estaba QUEUED (cancelado, o reclamado por otro worker).
+   * Reclama un run QUEUED y lo pasa a RUNNING en una única sentencia atómica.
+   * Devuelve `false` si el run ya no estaba QUEUED porque otro escritor lo
+   * canceló o lo reclamó.
    */
   claimQueuedRun(id: string, startedAt: Date): Promise<boolean>;
 
   /**
-   * UPDATE condicionado (ORC-001): persiste el resultado final del pipeline
-   * solo si el run seguía RUNNING. Devuelve `false` si ya no lo estaba
-   * (cancelado, o marcado FAILED por otra vía) — en ese caso el resultado
-   * calculado se descarta sin reintentar: sea cual sea el motivo por el que
-   * ya no está RUNNING, esa transición ya la decidió otro escritor y no debe
-   * pisarse con un resultado calculado en memoria contra un estado viejo.
+   * Persiste el resultado final del pipeline solo si el run sigue RUNNING.
+   * Devuelve `false` si otro escritor lo canceló o marcó como FAILED mientras
+   * el pipeline estaba calculando el resultado.
    */
   completeRunningRun(id: string, patch: BuildRunResultPatch): Promise<boolean>;
 
@@ -140,15 +120,14 @@ export interface IBuildRunRepository {
   sumExecutionCostUsdByProject(projectId: string): Promise<number>;
 
   /**
-   * `overallOutcome` (extraído del jsonb `report`) del run más reciente por
-   * entrega, para todas las entregas vivas de un proyecto. ESC-CRIT-05: no
-   * carga la entidad completa, solo esta columna derivada.
+   * Devuelve `overallOutcome` del run más reciente por entrega para todas las
+   * entregas vivas de un proyecto. No carga la entidad completa ni sus jsonb.
    */
   findLatestOutcomeByProject(
     projectId: string,
   ): Promise<Array<{ deliveryId: string; overallOutcome: string | null }>>;
 
-  /** Igual que ESC-CRIT-05 en el gradebook: solo columnas escalares, sin jsonb pesado. */
+  /** Igual que en el gradebook: solo columnas escalares, sin jsonb pesado. */
   findScalarSummaryByDeliveryIds(
     deliveryIds: string[],
   ): Promise<BuildRunScalarSummary[]>;
@@ -160,13 +139,8 @@ export interface IBuildRunRepository {
   incrementUsage(id: string, delta: BuildRunUsageDelta): Promise<void>;
 
   /**
-   * UPDATE condicionado: falla el run solo si sigue en un estado activo
-   * (QUEUED o RUNNING). Antes (`failIfNotCancelled`) el WHERE era
-   * `status != CANCELLED`, que también dejaba pasar SUCCESS/FAILED — ORC-002
-   * confirmó que un fallo posterior (p. ej. al persistir el evento
-   * RUN_COMPLETED) podía degradar un run ya SUCCESS a FAILED. FAILED es
-   * ahora absorbente igual que SUCCESS y CANCELLED: nunca se sobreescribe un
-   * terminal ya escrito. Devuelve si transicionó.
+   * Falla el run solo si sigue en un estado activo (QUEUED o RUNNING).
+   * Los estados terminales SUCCESS, FAILED y CANCELLED nunca se sobreescriben.
    */
   failIfActive(id: string, reason: string): Promise<boolean>;
 

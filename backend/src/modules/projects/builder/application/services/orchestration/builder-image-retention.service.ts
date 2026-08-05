@@ -3,7 +3,7 @@
  *
  * @description
  * Realiza la poda programada (cron cada 30 min) de las imágenes de Docker generadas
- * para las evaluaciones (`dockus-env-<hash>`) según el TTL configurado, evitando el agotamiento del disco host.
+ * para las evaluaciones (`educodeai-env-<hash>`) según el TTL configurado, evitando el agotamiento del disco host.
  *
  * @module BuilderImageRetentionService
  */

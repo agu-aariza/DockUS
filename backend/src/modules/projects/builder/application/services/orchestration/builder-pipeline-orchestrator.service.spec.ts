@@ -118,9 +118,9 @@ describe('BuilderPipelineOrchestrator', () => {
     runtimeFiles,
     teacherTestRuntimeFiles: [],
     hasTeacherTests: false,
-    workspaceRoot: '/tmp/dockus-builder-test-123',
-    projectRootDir: '/tmp/dockus-builder-test-123/project',
-    teacherTestsRootDir: '/tmp/dockus-builder-test-123/teacher-tests',
+    workspaceRoot: '/tmp/educodeai-builder-test-123',
+    projectRootDir: '/tmp/educodeai-builder-test-123/project',
+    teacherTestsRootDir: '/tmp/educodeai-builder-test-123/teacher-tests',
     warnings: [],
     ...overrides,
   });
@@ -227,18 +227,22 @@ describe('BuilderPipelineOrchestrator', () => {
         buildDelivery(),
       );
 
-      // ARQ-014: expectedType ya no viaja hasta la etapa de ejecucion — el
+      // expectedType ya no viaja hasta la etapa de ejecucion — el
       // handler nunca lo leia (ver el destructuring de execution-stage.handler.ts).
       expect(executionStageHandler.handle).toHaveBeenCalledWith(
         expect.objectContaining({ runId }),
       );
       expect(
-        (executionStageHandler.handle.mock.calls[0][0] as { expectedType?: unknown }).expectedType,
+        (
+          executionStageHandler.handle.mock.calls[0][0] as {
+            expectedType?: unknown;
+          }
+        ).expectedType,
       ).toBeUndefined();
       expect(result.execution.stdout).toBe('exec logs');
     });
 
-    it('ARQ-011: delega el enriquecimiento del gradeBreakdown en BuilderReportComposer con la rúbrica del proyecto', async () => {
+    it('delega el enriquecimiento del gradeBreakdown en BuilderReportComposer con la rúbrica del proyecto', async () => {
       const assessment = { thought: 'eval ok', gradeBreakdown: [] };
       const rubricCriteria = [
         { name: 'Correctitud', weight: 60, description: 'Salida correcta.' },
@@ -288,7 +292,7 @@ describe('BuilderPipelineOrchestrator', () => {
 
       await orchestrator.runPipeline(buildRun(), delivery);
 
-      // Movido a BuilderReportComposer (ARQ-011): el orquestador ya no
+      // Movido a BuilderReportComposer: el orquestador ya no
       // conoce la lógica de emparejamiento por nombre, solo delega.
       expect(
         builderReportComposer.enrichGradeBreakdownWithRubric,
@@ -306,7 +310,7 @@ describe('BuilderPipelineOrchestrator', () => {
       ).rejects.toThrow('plan failed');
     });
 
-    it('ARQ-011: construye el payload de código fuente vía SourceCodePayloadBuilder y lo propaga a las etapas', async () => {
+    it('construye el payload de código fuente vía SourceCodePayloadBuilder y lo propaga a las etapas', async () => {
       const workspace = buildWorkspace();
 
       builderWorkspaceService.prepareWorkspace.mockResolvedValue(workspace);
@@ -335,7 +339,7 @@ describe('BuilderPipelineOrchestrator', () => {
 
       // La política de qué cuenta como código fuente (extensiones, tamaño
       // máximo, directorios excluidos) vive ahora en SourceCodePayloadBuilder
-      // (ARQ-011), no en el orquestador — este solo la invoca y propaga el
+      // no en el orquestador — este solo la invoca y propaga el
       // resultado.
       expect(sourceCodePayloadBuilder.build).toHaveBeenCalledWith(workspace);
       expect(planStageHandler.handle).toHaveBeenCalledWith(
@@ -345,7 +349,7 @@ describe('BuilderPipelineOrchestrator', () => {
       );
     });
 
-    it('ARQ-004: aborta entre etapas si detecta cancelacion, sin invocar las etapas restantes', async () => {
+    it('aborta entre etapas si detecta cancelacion, sin invocar las etapas restantes', async () => {
       builderWorkspaceService.prepareWorkspace.mockResolvedValue(
         buildWorkspace(),
       );
@@ -378,7 +382,7 @@ describe('BuilderPipelineOrchestrator', () => {
       expect(builderWorkspaceService.cleanup).toHaveBeenCalled();
     });
 
-    it('ARQ-004: abre un sondeo de cancelacion alrededor de la etapa de ejecucion y lo cierra siempre', async () => {
+    it('abre un sondeo de cancelacion alrededor de la etapa de ejecucion y lo cierra siempre', async () => {
       builderWorkspaceService.prepareWorkspace.mockResolvedValue(
         buildWorkspace(),
       );

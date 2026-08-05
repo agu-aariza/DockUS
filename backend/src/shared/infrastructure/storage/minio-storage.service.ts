@@ -69,11 +69,11 @@ export class MinioStorageService implements OnModuleInit {
     const port = this.configService.get<number>('MINIO_API_PORT', 9000);
     const minioUser = this.configService.get<string>(
       'MINIO_ROOT_USER',
-      'dockus_admin',
+      'educodeai_admin',
     );
     const minioPassword = this.configService.get<string>(
       'MINIO_ROOT_PASSWORD',
-      'dockus_secret_key',
+      'educodeai_secret_key',
     );
     const useSsl = toBoolean(
       this.configService.get<string | boolean>('MINIO_USE_SSL', false),
@@ -96,7 +96,7 @@ export class MinioStorageService implements OnModuleInit {
 
     this.bucketName = this.configService.get<string>(
       'MINIO_BUCKET_NAME',
-      'dockus-storage',
+      'educodeai-storage',
     );
     this.signedUrlTtlSeconds = this.configService.get<number>(
       'STORAGE_SIGNED_URL_TTL_SECONDS',
@@ -126,30 +126,30 @@ export class MinioStorageService implements OnModuleInit {
 
   /**
    * Comprueba —**sin escribirla**— que la regla de caducidad de evidencia esté
-   * puesta en el bucket (ESC-ALTO-09).
+   * puesta en el bucket.
    *
    * Por qué solo se comprueba y no se aplica:
    * - La versión de MinIO desplegada (`RELEASE.2024-08-29`) rechaza
-   *   `PutBucketLifecycleConfiguration` porque exige el encabezado
-   *   `Content-Md5`, que el SDK de AWS v3 no envía. Se probó también con
-   *   `requestChecksumCalculation: 'WHEN_REQUIRED'`, sin efecto. El cliente
-   *   oficial `mc` sí lo envía, de modo que la regla se fija **fuera de la
-   *   aplicación**, como paso de despliegue:
+   * `PutBucketLifecycleConfiguration` porque exige el encabezado
+   * `Content-Md5`, que el SDK de AWS v3 no envía. Se probó también con
+   * `requestChecksumCalculation: 'WHEN_REQUIRED'`, sin efecto. El cliente
+   * oficial `mc` sí lo envía, de modo que la regla se fija **fuera de la
+   * aplicación**, como paso de despliegue:
    *
-   *   ```sh
-   *   mc alias set dockus http://<host>:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
-   *   mc ilm rule add dockus/<bucket> --prefix "runs/" --expire-days 90
-   *   ```
+   * ```sh
+   * mc alias set educodeai http://<host>:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+   * mc ilm rule add educodeai/<bucket> --prefix "runs/" --expire-days 90
+   * ```
    *
    * - `GetBucketLifecycleConfiguration` **sí funciona** contra esta versión
-   *   (verificado), y es lo que permite conservar aquí una red de seguridad.
+   * (verificado), y es lo que permite conservar aquí una red de seguridad.
    *
    * Por qué la comprobación merece la pena:
    * - La versión anterior de este método *aparentaba* aplicar la política y
-   *   registraba «política aplicada» mientras filtraba por un prefijo
-   *   (`evidence/`) que **no existe en el bucket**: la evidencia vive bajo
-   *   `runs/`. Dos fallos superpuestos que se tapaban entre sí. Un aviso
-   *   explícito al arrancar es justo lo que habría delatado el segundo.
+   * registraba «política aplicada» mientras filtraba por un prefijo
+   * (`evidence/`) que **no existe en el bucket** la evidencia vive bajo
+   * `runs/`. Dos fallos superpuestos que se tapaban entre sí. Un aviso
+   * explícito al arrancar es justo lo que habría delatado el segundo.
    *
    * Nunca impide arrancar: sin regla el sistema funciona igual —es el estado
    * previo— pero el disco crece sin límite, y eso debe verse.

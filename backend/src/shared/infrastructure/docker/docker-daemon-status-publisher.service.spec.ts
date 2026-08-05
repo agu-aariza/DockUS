@@ -85,3 +85,6 @@ describe('DockerDaemonStatusPublisherService', () => {
     clearSpy.mockRestore();
   });
 });
+/**
+ * Pruebas de publicación del estado del daemon Docker para observabilidad y healthchecks.
+ */

@@ -1,7 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { BuilderSpendQuotaService } from './builder-spend-quota.service';
 
-describe('BuilderSpendQuotaService — ESC-ALTO-02: cuota de gasto', () => {
+describe('BuilderSpendQuotaService — cuota de gasto', () => {
   function build(quotaUsd: number, spentUsd = 0) {
     const buildRunsRepository = {
       sumExecutionCostUsdByProject: jest.fn().mockResolvedValue(spentUsd),
@@ -65,9 +65,9 @@ describe('BuilderSpendQuotaService — ESC-ALTO-02: cuota de gasto', () => {
 
     const spent = await service.getProjectSpendUsd('proyecto');
 
-    // Repetir aquí el defecto de ESC-CRIT-05 traería los runs de un curso
+    // Repetir aquí el defecto de traería los runs de un curso
     // entero para sumar una columna; ahora la agregación vive en
-    // BuildRunRepository.sumExecutionCostUsdByProject (ARQ-007).
+    // BuildRunRepository.sumExecutionCostUsdByProject.
     expect(
       buildRunsRepository.sumExecutionCostUsdByProject,
     ).toHaveBeenCalledWith('proyecto');

@@ -78,10 +78,9 @@ export function buildTrace<TContract>(
 }
 
 /**
- * AIP-005: suma dos lecturas de `usage` de intentos distintos del mismo
- * contrato — ambos intentos se facturan, así que ambos deben contar. Antes,
- * el segundo intento del retry de contrato sustituía por completo el `usage`
- * del primero en el trace final, perdiendo tokens y coste ya facturados. Si
+ * Suma dos lecturas de `usage` de intentos distintos del mismo contrato:
+ * ambos intentos se facturan y ambos deben contar. El trace final conserva
+ * los tokens y el coste acumulados de cada intento. Si
  * ambos lados son `null` (ningún intento declaró consumo), el resultado
  * sigue siendo `null` — desconocido, no cero — en vez de convertirse en 0
  * por la suma.

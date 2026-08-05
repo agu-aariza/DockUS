@@ -59,3 +59,6 @@ describe('StorageAccessService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
+/**
+ * Pruebas del alcance de acceso a objetos de almacenamiento según actor y contexto.
+ */

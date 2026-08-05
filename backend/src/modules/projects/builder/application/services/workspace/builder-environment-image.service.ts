@@ -54,7 +54,7 @@ interface DependencyFile {
 }
 
 /**
- * Vida del cerrojo de construcción (ESC-ALTO-08). Holgada a propósito: una
+ * Vida del cerrojo de construcción. Holgada a propósito: una
  * imagen con dependencias pesadas puede tardar cerca de diez minutos, y un
  * cerrojo que venza a mitad de construcción deja entrar a un segundo worker,
  * que es exactamente lo que se pretende impedir.
@@ -112,7 +112,7 @@ export class BuilderEnvironmentImageService {
       ? { NODE_PATH: `${NODE_DEPS_DIR}/node_modules` }
       : {};
 
-    const imageTag = `dockus-env-${this.hashEnvironment({
+    const imageTag = `educodeai-env-${this.hashEnvironment({
       baseImage,
       aptCmd,
       dependencyInstallCmd,
@@ -123,7 +123,7 @@ export class BuilderEnvironmentImageService {
       return { imageTag, environment, built: false };
     }
 
-    // A partir de aquí empieza la sección crítica de ESC-ALTO-08. La
+    // A partir de aquí empieza la sección crítica de. La
     // comprobación de arriba y la construcción no eran atómicas: en una entrega
     // con fecha límite, donde muchos alumnos comparten el mismo fichero de
     // dependencias y por tanto el mismo `imageTag`, todos los workers concluían
@@ -195,7 +195,7 @@ export class BuilderEnvironmentImageService {
     } = input;
 
     const contextDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), 'dockus-envctx-'),
+      path.join(os.tmpdir(), 'educodeai-envctx-'),
     );
     try {
       for (const file of dependencyFiles) {
@@ -215,7 +215,7 @@ export class BuilderEnvironmentImageService {
       await this.containerRuntime.buildImage({
         imageTag,
         contextDir,
-        labels: { 'dockus.role': 'environment' },
+        labels: { 'educodeai.role': 'environment' },
       });
     } finally {
       await fs.rm(contextDir, { recursive: true, force: true });

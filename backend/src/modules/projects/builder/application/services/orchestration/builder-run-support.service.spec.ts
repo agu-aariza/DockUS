@@ -25,7 +25,7 @@ describe('BuilderRunSupportService', () => {
   });
 
   describe('markRunAsFailed', () => {
-    it('HIGH-06: marca el run como FAILED mediante un UPDATE atomico condicionado a QUEUED/RUNNING', async () => {
+    it('marca el run como FAILED mediante un UPDATE atomico condicionado a QUEUED/RUNNING', async () => {
       await service.markRunAsFailed('run-1', 'boom');
 
       expect(buildRunRepository.failIfActive).toHaveBeenCalledWith(
@@ -41,7 +41,7 @@ describe('BuilderRunSupportService', () => {
       );
     });
 
-    it('HIGH-06: no emite RUN_FAILED si el run ya no esta activo (0 filas afectadas) — ORC-002, no pisa un terminal ya escrito (CANCELLED o SUCCESS)', async () => {
+    it('no emite RUN_FAILED si el run ya no esta activo (0 filas afectadas) — , no pisa un terminal ya escrito (CANCELLED o SUCCESS)', async () => {
       buildRunRepository.failIfActive.mockResolvedValue(false);
 
       await service.markRunAsFailed('run-1', 'boom');
@@ -50,3 +50,6 @@ describe('BuilderRunSupportService', () => {
     });
   });
 });
+/**
+ * Pruebas de las operaciones transversales que sostienen un BuildRun: eventos, artefactos y estado.
+ */

@@ -23,7 +23,7 @@ import { RedisClientService } from '../cache/redis-client.service';
 import { PROCESS_ROLE } from '../../../process-role.module';
 import type { ProcessRole } from '../../../process-role.module';
 
-export const DOCKER_DAEMON_STATUS_REDIS_KEY = 'dockus:docker-daemon:status';
+export const DOCKER_DAEMON_STATUS_REDIS_KEY = 'educodeai:docker-daemon:status';
 const PUBLISH_INTERVAL_MS = 30_000;
 const REDIS_KEY_TTL_SECONDS = 60;
 

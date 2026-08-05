@@ -167,7 +167,7 @@ describe('BuilderQualityAggregationService', () => {
     });
   });
 
-  /** ARQ-005: reemplaza el agregador JS de getAssignmentQualityInsights. */
+  /** reemplaza el agregador JS de getAssignmentQualityInsights. */
   describe('getInsightsForAssignment', () => {
     it('lanza NotFoundException si la asignacion no existe', async () => {
       assignmentsRepository.findById.mockResolvedValue(null);

@@ -5,7 +5,7 @@
  * - Evita acoplamiento directo con tipos globales de Multer.
  * - Expone solo los campos requeridos por reglas de negocio.
  *
- * Desde ESC-ALTO-05 las subidas usan el almacenamiento **en disco** de Multer:
+ * Desde las subidas usan el almacenamiento **en disco** de Multer:
  * el fichero llega como ruta (`path`), no como `Buffer` en memoria. El campo
  * `buffer` se conserva como opcional porque hay rutas que siguen construyendo
  * cargas pequeñas en memoria; quien consuma este contrato debe preferir `path`

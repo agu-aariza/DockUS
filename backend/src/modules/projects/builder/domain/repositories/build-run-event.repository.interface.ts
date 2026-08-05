@@ -9,10 +9,10 @@ import { BuildRunEventEntity } from '../entities/build-run-event.entity';
 import type { BuildRunEventType } from '../builder.types';
 
 /**
- * Puerto real (ARQ-007 P2-7): sin puerto
+ * Puerto real: sin puerto
  * previo, único consumidor real (`BuilderRunEventsService`). Este servicio
  * vive en `infrastructure/events/` pero se migra igualmente, mismo criterio
- * que `BuildRun` en P2-4: `BuildRunEventEntity` es un agregado de dominio (el
+ * que `BuildRun` en: `BuildRunEventEntity` es un agregado de dominio (el
  * log de eventos del run), no una librería externa envuelta.
  */
 export const BUILD_RUN_EVENT_REPOSITORY = Symbol('IBuildRunEventRepository');

@@ -2,7 +2,7 @@ import { BuilderStaleRunRecoveryService } from './builder-stale-run-recovery.ser
 import { ProcessRole } from '../../../../../../process-role.module';
 
 /**
- * Doble del puerto (ARQ-007): las tres queries de este servicio
+ * Doble del puerto: las tres queries de este servicio
  * (failStaleRunning/findStaleQueued/failIfStillQueued) ahora viven en
  * BuildRunRepository, con su propia cobertura de SQL en
  * builder/infrastructure/database/build-run.repository.spec.ts. Aquí solo se cubre
@@ -19,7 +19,7 @@ function buildRepositoryDouble(queuedCandidates: unknown[] = []) {
   return { repository };
 }
 
-describe('BuilderStaleRunRecoveryService — ESC-C04', () => {
+describe('BuilderStaleRunRecoveryService — recuperación de ejecuciones huérfanas', () => {
   const configProvider = { staleRunThresholdMs: 600_000 } as never;
 
   type JobDouble = { id: string; getState: () => Promise<string> };
@@ -119,7 +119,7 @@ describe('BuilderStaleRunRecoveryService — ESC-C04', () => {
       );
     });
 
-    it('ORC-006: un fallo al consultar la cola no muta el run (indeterminado, no "no existe")', async () => {
+    it('un fallo al consultar la cola no muta el run (indeterminado, no "no existe")', async () => {
       const { service, queue, repository } = buildService(
         [{ id: 'run-1', deliveryId: 'delivery-1' }],
         { getJob: jest.fn(() => Promise.reject(new Error('timeout'))) },
@@ -127,15 +127,14 @@ describe('BuilderStaleRunRecoveryService — ESC-C04', () => {
 
       await expect(service.failStaleRunsOnStartup()).resolves.toBeUndefined();
 
-      // Antes esto reencolaba (tratando el error como "job no encontrado"),
-      // lo que podia fallar un run sano por una caida transitoria de Redis
-      // si el reencolado tambien fallaba. Ahora un error de consulta no
-      // muta nada: se reintenta en la siguiente pasada del barrido.
+      // Un fallo de consulta en Redis es indeterminado, no evidencia de que el
+      // job no exista. El run queda intacto y se vuelve a evaluar en el
+      // siguiente barrido para evitar cambiar un estado válido por un timeout.
       expect(queue.add).not.toHaveBeenCalled();
       expect(repository.failIfStillQueued).not.toHaveBeenCalled();
     });
 
-    it('ORC-006: un job ya completed/failed en BullMQ con BuildRun QUEUED se reconcilia como perdido, no se deja colgado', async () => {
+    it('un job ya completed/failed en BullMQ con BuildRun QUEUED se reconcilia como perdido, no se deja colgado', async () => {
       const { service, queue, repository } = buildService(
         [{ id: 'run-1', deliveryId: 'delivery-1' }],
         {
@@ -158,7 +157,7 @@ describe('BuilderStaleRunRecoveryService — ESC-C04', () => {
       );
     });
 
-    it('ORC-006: un job todavia activo/en espera en BullMQ no se toca aunque el run sea candidato a stale', async () => {
+    it('un job todavia activo/en espera en BullMQ no se toca aunque el run sea candidato a stale', async () => {
       const { service, queue, repository } = buildService(
         [{ id: 'run-1', deliveryId: 'delivery-1' }],
         {

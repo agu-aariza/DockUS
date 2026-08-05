@@ -16,7 +16,7 @@ import { UsersService } from '../../users/application/users.service';
 
 const buildUser = (overrides: Partial<User> = {}): User => ({
   id: '4ff512db-c595-4076-a9c3-e7499f2d3bbf',
-  email: 'secure@dockus.com',
+  email: 'secure@educodeai.com',
   passwordHash: 'hash',
   role: UserRole.ADMIN,
   status: UserStatus.ACTIVE,
@@ -77,7 +77,7 @@ describe('JwtStrategy', () => {
 
     const result = await strategy.validate({
       sub: user.id,
-      email: 'stale-email@dockus.com',
+      email: 'stale-email@educodeai.com',
       role: 'STUDENT',
     });
 
@@ -112,7 +112,7 @@ describe('JwtStrategy', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  /** ESC-ALTO-04: caché de vida corta para la validación del JWT. */
+  /** caché de vida corta para la validación del JWT. */
   describe('caché de identidad', () => {
     it('un acierto evita por completo la consulta a base de datos', async () => {
       const user = buildUser();

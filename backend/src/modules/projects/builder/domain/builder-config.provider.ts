@@ -82,7 +82,7 @@ export class BuilderConfigProvider {
   }
 
   /**
-   * Poda de imágenes de entorno (ESC-CRIT-06). Ambas claves estaban validadas
+   * Poda de imágenes de entorno. Ambas claves estaban validadas
    * en `env.validation.ts` y sin consumidor: `BUILDER_CLEANUP_IMAGES` vale
    * `true` por defecto, de modo que la limpieza aparentaba estar activada
    * cuando no existía código alguno que la hiciera.

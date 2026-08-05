@@ -67,7 +67,7 @@ export class BuilderPipelineOrchestrator {
     const workspace = await this.prepareWorkspace(run, delivery);
 
     try {
-      // Chequeo cooperativo entre etapas (ARQ-004): cada punto de aqui abajo
+      // Chequeo cooperativo entre etapas: cada punto de aqui abajo
       // es una oportunidad barata de no seguir facturando llamadas LLM tras
       // una cancelacion. El tramo largo (la ejecucion Docker) no puede
       // esperar a su propio final: runExecutionStage abre ademas un sondeo

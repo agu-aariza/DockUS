@@ -11,7 +11,7 @@ jest.mock('../llm-request.util', () => {
 
 const mockedPostJson = postJson as jest.MockedFunction<typeof postJson>;
 
-describe('GeminiGenerationService — MED-01: la clave de API no viaja en la URL', () => {
+describe('GeminiGenerationService — la clave de API no viaja en la URL', () => {
   const service = new GeminiGenerationService();
 
   const request = {
@@ -75,7 +75,7 @@ describe('GeminiGenerationService — MED-01: la clave de API no viaja en la URL
     );
   });
 
-  it('AIP-012: un token count negativo o fraccionario del proveedor se trata como desconocido (null), no como el valor recibido', async () => {
+  it('un token count negativo o fraccionario del proveedor se trata como desconocido (null), no como el valor recibido', async () => {
     mockedPostJson.mockResolvedValue({
       candidates: [{ content: { parts: [{ text: 'respuesta' }] } }],
       usageMetadata: { promptTokenCount: -5, candidatesTokenCount: 2.7 },

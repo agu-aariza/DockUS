@@ -55,7 +55,7 @@ describe('CreateProjectDto rubricCriteria', () => {
   });
 });
 
-describe('MED-08: CreateProjectDto free-text length caps', () => {
+describe('CreateProjectDto free-text length caps', () => {
   // Ambos campos se incrustan en cada prompt LLM del proyecto: sin tope, el
   // coste de inferencia por ejecución no tiene techo.
   it('accepts rubricInstructions within the cap', () => {
@@ -93,7 +93,7 @@ describe('MED-08: CreateProjectDto free-text length caps', () => {
   });
 });
 
-describe('LOW-05: CreateProjectDto assignedGroupIds', () => {
+describe('CreateProjectDto assignedGroupIds', () => {
   const uuid = '550e8400-e29b-41d4-a716-446655440000';
 
   it('accepts an array of valid UUIDs', () => {

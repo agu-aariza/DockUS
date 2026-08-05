@@ -156,7 +156,7 @@ describe('adaptPlanToRuntimeRecipe', () => {
     expect(adapted.unsupportedReason).toContain('Python');
   });
 
-  it('node no es ejecutable aunque el plan lo marque como soportado (ARQ-010: viene del catálogo, no de una copia)', () => {
+  it('node no es ejecutable aunque el plan lo marque como soportado (: viene del catálogo, no de una copia)', () => {
     const adapted = adaptPlanToRuntimeRecipe(
       buildPlanContract({
         runtime: {
@@ -181,7 +181,7 @@ describe('adaptPlanToRuntimeRecipe', () => {
   });
 });
 
-describe('BUILDER_RUNTIME_FAMILIES (ARQ-010)', () => {
+describe('BUILDER_RUNTIME_FAMILIES', () => {
   it('se deriva de las claves del catálogo más el centinela unknown', () => {
     expect(BUILDER_RUNTIME_FAMILIES).toEqual([
       'python',
@@ -199,7 +199,7 @@ describe('BUILDER_RUNTIME_FAMILIES (ARQ-010)', () => {
   });
 });
 
-describe('normalizeRuntimeVersion (ARQ-010)', () => {
+describe('normalizeRuntimeVersion', () => {
   it('conserva una versión ya soportada', () => {
     expect(normalizeRuntimeVersion('python', '3.10')).toBe('3.10');
   });
@@ -241,7 +241,7 @@ describe('runtimeCatalogToText', () => {
   });
 });
 
-describe('matchRuntimeFamilyFromFreeText (ARQ-010 resto)', () => {
+describe('matchRuntimeFamilyFromFreeText — casos restantes', () => {
   it('detecta python por alias exacto', () => {
     expect(matchRuntimeFamilyFromFreeText('CLI Python')).toBe('python');
     expect(matchRuntimeFamilyFromFreeText('PYTHON_FASTAPI')).toBe('python');
@@ -265,7 +265,7 @@ describe('matchRuntimeFamilyFromFreeText (ARQ-010 resto)', () => {
   });
 });
 
-describe('selectFewShotExample (ARQ-010 resto)', () => {
+describe('selectFewShotExample — casos restantes', () => {
   it('prioriza el ejemplo de servicio de Python ante frameworks conocidos, sin mencionar "python"', () => {
     expect(selectFewShotExample('Flask API')).toContain('service');
     expect(selectFewShotExample('PYTHON_FASTAPI')).toContain('service');

@@ -31,3 +31,6 @@ describe('HealthController', () => {
     });
   });
 });
+/**
+ * Pruebas del endpoint de salud y de su respuesta estable para clientes y sondas de infraestructura.
+ */

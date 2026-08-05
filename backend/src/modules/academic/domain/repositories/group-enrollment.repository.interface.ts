@@ -8,13 +8,13 @@
 import { GroupEnrollment } from '../../entities/group-enrollment.entity';
 
 /**
- * Puerto real (ARQ-007 P2-7): sin puerto
+ * Puerto real: sin puerto
  * previo, único consumidor real (`GroupsService`). Mismo criterio que
- * ARQ-007: sin tipos de TypeORM en la firma. `bulkEnroll` absorbe la
+ * sin tipos de TypeORM en la firma. `bulkEnroll` absorbe la
  * transacción completa (lectura + reactivación + inserción con `orIgnore`)
  * que antes vivía en el servicio vía `manager.transaction`, mismo criterio
  * que `IBuildRunRepository.incrementUsage`/`failIfActive`: exponer
- * `EntityManager`/`QueryBuilder` en la firma del puerto habría violado ARQ-007
+ * `EntityManager`/`QueryBuilder` en la firma del puerto habría violado
  * tanto como exponerlos directamente.
  */
 export const GROUP_ENROLLMENT_REPOSITORY = Symbol('IGroupEnrollmentRepository');
@@ -31,7 +31,7 @@ export interface BulkEnrollResult {
 }
 
 export interface IGroupEnrollmentRepository {
-  /** Recuento de matriculados vigentes por grupo, en una sola agregación (ESC-MED-02). */
+  /** Recuento de matriculados vigentes por grupo, en una sola agregación. */
   countActiveByGroupIds(
     groupIds: string[],
   ): Promise<GroupEnrollmentCountByGroup[]>;

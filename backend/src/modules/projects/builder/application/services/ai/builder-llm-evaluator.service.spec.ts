@@ -363,12 +363,12 @@ describe('BuilderLlmEvaluatorService', () => {
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining('Respuesta bruta: still-not-json'),
     );
-    // AIP-005: dos intentos invalidos, ambos facturados (120/40 cada uno) —
+    // dos intentos invalidos, ambos facturados (120/40 cada uno) —
     // el trace final debe sumar los dos, no solo reflejar el ultimo.
     expect(trace.usage).toEqual({ inputTokens: 240, outputTokens: 80 });
   });
 
-  it('AIP-005: el retry de contrato suma el usage de ambos intentos, no solo el del ultimo', async () => {
+  it('el retry de contrato suma el usage de ambos intentos, no solo el del ultimo', async () => {
     llmService.generate
       .mockResolvedValueOnce({
         text: 'primer-intento-invalido',

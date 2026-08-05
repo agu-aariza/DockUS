@@ -1,12 +1,12 @@
 /**
  * @fileoverview Construye el payload de código fuente que se incluye en los
- * prompts del builder (audit/04 ARQ-011).
+ * prompts del builder.
  *
  * Contexto:
  * - Antes vivía dentro de `BuilderPipelineOrchestrator`, cuyo trabajo es
- *   componer las seis etapas, no decidir qué cuenta como "código fuente" del
- *   alumno. Aquí, junto a `BuilderWorkspaceService` (dueño natural de "qué hay
- *   en el workspace"), es reutilizable sin arrastrar el orquestador.
+ * componer las seis etapas, no decidir qué cuenta como "código fuente" del
+ * alumno. Aquí, junto a `BuilderWorkspaceService` (dueño natural de "qué hay
+ * en el workspace"), es reutilizable sin arrastrar el orquestador.
  *
  * @module SourceCodePayloadBuilder
  */

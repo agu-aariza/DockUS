@@ -5,14 +5,14 @@
  */
 
 /**
- * Retira `SELF_HEALING_TRACE` de `BuildRunArtifactType` (ARQ-014 / auto-reparación).
+ * Retira `SELF_HEALING_TRACE` de `BuildRunArtifactType` ( / auto-reparación).
  *
  * El bundle de prompt `repair` que este tipo de artefacto acompañaba nunca
  * tuvo invocador (`PromptId.REPAIR` no se llamaba desde ningún servicio), así
  * que ninguna fila usa este valor — confirmado antes de escribir la migración.
- * Postgres no soporta `ALTER TYPE ... DROP VALUE`, así que hay que recrear el
+ * Postgres no soporta `ALTER TYPE... DROP VALUE`, así que hay que recrear el
  * tipo: renombrar el actual, crear el nuevo sin el valor retirado, migrar la
- * columna con `USING ...::text::nuevo_tipo`, y borrar el tipo viejo.
+ * columna con `USING...:text:nuevo_tipo`, y borrar el tipo viejo.
  */
 import { MigrationInterface, QueryRunner } from 'typeorm';
 

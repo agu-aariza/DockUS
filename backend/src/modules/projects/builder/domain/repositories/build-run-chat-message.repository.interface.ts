@@ -8,9 +8,9 @@
 import { BuildRunChatMessage } from '../entities/build-run-chat-message.entity';
 
 /**
- * Puerto real (ARQ-007 P2-7): sin puerto
+ * Puerto real: sin puerto
  * previo, único consumidor real (`BuilderLlmChatService`). Mismo criterio que
- * ARQ-007: sin tipos de TypeORM en la firma.
+ * sin tipos de TypeORM en la firma.
  */
 export const BUILD_RUN_CHAT_MESSAGE_REPOSITORY = Symbol(
   'IBuildRunChatMessageRepository',

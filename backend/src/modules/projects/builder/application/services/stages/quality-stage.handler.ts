@@ -68,7 +68,7 @@ export class BuilderQualityStageHandler {
       await this.builderRunSupportService.emitEvent({
         buildRunId: runId,
         eventType: 'LOG_CHUNK',
-        // ARQ-012: la etapa de calidad corre con el run todavia RUNNING, no
+        // la etapa de calidad corre con el run todavia RUNNING, no
         // SUCCESS (ese estado lo asigna BuilderRunLifecycleService al final
         // del pipeline completo, no una etapa individual).
         runStatus: BuildRunStatus.RUNNING,
@@ -121,7 +121,7 @@ export class BuilderQualityStageHandler {
 
     // El jsonb resuelto arriba (`qualityFindings`, que acaba en
     // `run.codeQualityFindings`) es la fuente canonica del run; esto es solo
-    // su proyeccion consultable en `code_quality_findings` (ARQ-005). Vive en
+    // su proyeccion consultable en `code_quality_findings`. Vive en
     // un try/catch propio para que un fallo de Postgres al escribir la
     // proyeccion no destruya un analisis que ya se calculo correctamente —
     // antes, al compartir el catch de arriba, un error aqui sobreescribia

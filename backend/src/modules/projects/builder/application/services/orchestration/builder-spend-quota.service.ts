@@ -41,7 +41,7 @@ export class BuilderSpendQuotaService {
    *
    * Suma en la base de datos y no en memoria: traerse los runs de un curso
    * entero para sumar una columna repetiría el defecto que costó corregir en
-   * ESC-CRIT-05.
+   * una consulta agregada en cada lectura.
    */
   async getProjectSpendUsd(projectId: string): Promise<number> {
     return this.buildRunsRepository.sumExecutionCostUsdByProject(projectId);

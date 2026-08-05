@@ -49,7 +49,7 @@ export class DockerImageService {
   /**
    * Elimina las imágenes de entorno más antiguas que `olderThanHours`.
    *
-   * Se apoya en la etiqueta `dockus.role=environment` que ya aplica
+   * Se apoya en la etiqueta `educodeai.role=environment` que ya aplica
    * `BuilderEnvironmentImageService` al construirlas, de modo que la poda no
    * puede alcanzar imágenes ajenas al sistema. Docker no borra una imagen en
    * uso por un contenedor vivo, así que una evaluación en curso no se ve
@@ -58,9 +58,9 @@ export class DockerImageService {
    * `--all` es imprescindible y no una optimización. Sin él, `docker image
    * prune` **solo considera imágenes colgantes** (las que han perdido su
    * etiqueta), y las imágenes de entorno siempre están etiquetadas como
-   * `dockus-env-<hash>:latest`. Verificado en la fase 4 (T4.6): el comando sin
-   * `--all` recuperaba 0 B dejando intacta una imagen de entorno de nueve días
-   * y 1,39 GB que cumplía ambos filtros. El filtro por etiqueta sigue acotando
+   * `educodeai-env-<hash>:latest`. Sin `--all`, Docker no las considera y la
+   * poda no libera espacio aunque cumplan ambos filtros. El filtro por etiqueta
+   * sigue acotando
    * el alcance, de modo que `--all` no amplía lo que la poda puede tocar: solo
    * hace que llegue a tocarlo.
    *
@@ -78,7 +78,7 @@ export class DockerImageService {
         '--all',
         '--force',
         '--filter',
-        'label=dockus.role=environment',
+        'label=educodeai.role=environment',
         '--filter',
         `until=${Math.max(1, Math.floor(options.olderThanHours))}h`,
       ],

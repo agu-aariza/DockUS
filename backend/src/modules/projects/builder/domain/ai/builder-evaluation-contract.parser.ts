@@ -89,7 +89,7 @@ export function parseBuilderEvaluationContractV2(
     ),
   };
 
-  // AIP-001: la señal de truncamiento es que la clave falte por completo del
+  // la señal de truncamiento es que la clave falte por completo del
   // JSON parseado (el LLM se quedó sin tokens antes de emitirla) — no que
   // safeNormalizeRuntimeDescriptor/safeNormalizeRecipe hayan atrapado una
   // excepción. Antes ambas condiciones colapsaban en el mismo catch-all, así
@@ -112,8 +112,8 @@ export function parseBuilderEvaluationContractV2(
     contract.confidence = 'low';
   }
 
-  // gradeBreakdown is the auditable source of truth.
-  // Override recommendedGrade with its sum to correct LLM arithmetic errors.
+  // `gradeBreakdown` es la fuente de verdad verificable. El total se recalcula
+  // para corregir posibles errores aritméticos del LLM.
   if (contract.gradeBreakdown.length > 0) {
     const awarded = contract.gradeBreakdown.reduce(
       (sum, item) => sum + item.awarded,
@@ -157,7 +157,7 @@ export function parseBuilderEvaluationContractV2(
     contract.recipe,
   );
 
-  // AIP-001: esta invariante (E3/E4 ⇒ nota ≤2) no depende de recipe/
+  // esta invariante (E3/E4 ⇒ nota ≤2) no depende de recipe/
   // capabilities/observedEvidence, así que se exige siempre — incluso si el
   // contrato se marcó truncado. Es la única defensa real contra que un
   // veredicto de "no apto" conviva con una nota aprobatoria.
@@ -192,13 +192,9 @@ function roundToTwoDecimals(value: number): number {
 }
 
 /**
- * AIP-001: solo aplica el valor por defecto ("ausente por truncamiento")
- * cuando la clave falta de verdad (`value === undefined`). Antes se atrapaba
- * cualquier excepción de `normalizeRuntimeDescriptor` — incluida la que
- * lanza para un `runtime` presente pero inválido (`null`, objeto sin forma,
- * familia desconocida) — y se le daba el mismo tratamiento que a un campo
- * genuinamente truncado. Un valor presente pero mal formado ahora propaga su
- * error real, igual que cualquier otro campo del contrato.
+ * Solo aplica el valor por defecto ("ausente por truncamiento") cuando la clave
+ * falta de verdad (`value === undefined`). Un valor presente pero mal formado
+ * propaga su error real, igual que cualquier otro campo del contrato.
  */
 function safeNormalizeRuntimeDescriptor(
   value: unknown,
@@ -217,7 +213,7 @@ function safeNormalizeRuntimeDescriptor(
   return normalizeRuntimeDescriptor(value, sourceName);
 }
 
-/** AIP-001: mismo criterio que safeNormalizeRuntimeDescriptor. */
+/** mismo criterio que safeNormalizeRuntimeDescriptor. */
 function safeNormalizeRecipe(
   value: unknown,
   sourceName: string,

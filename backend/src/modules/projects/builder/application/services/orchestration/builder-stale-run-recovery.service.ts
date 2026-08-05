@@ -6,7 +6,7 @@
  *   proceso que lo ejecutaba ya no existe y nadie va a terminarlo.
  * - Un run QUEUED, en cambio, NO está huérfano por el mero hecho de llevar
  *   tiempo esperando: bajo carga, esperar en cola es el comportamiento normal.
- *   Solo lo está si la cola ya no tiene su job (ESC-C04).
+ *   Solo lo está si la cola ya no tiene su job.
  *
  * @module BuilderStaleRunRecoveryService
  */
@@ -117,19 +117,10 @@ export class BuilderStaleRunRecoveryService {
    * run nunca arrancará; en ese caso se reencola en lugar de fallarlo, porque
    * el trabajo sigue siendo válido y el alumno no ha hecho nada mal.
    *
-   * ORC-006: la version anterior convertia cualquier error de `getJob()` en
-   * "no existe" (`.catch(() => null)`), y si el job existia, hacia `continue`
-   * sin consultar `getState()`. Eso confundia tres cosas distintas:
-   *   - Redis no responde -> antes se trataba como "job perdido" y se podia
-   *     marcar FAILED un run perfectamente sano por una caida transitoria.
-   *   - El job existe pero ya esta 'completed'/'failed' en BullMQ (el
-   *     handler nunca llego a reclamarlo, p.ej. broke antes del primer
-   *     UPDATE) -> antes se dejaba QUEUED para siempre, colgando la entrega.
-   *   - El job existe y sigue activo/en espera -> unico caso en el que no
-   *     tocar nada es correcto.
-   * Ahora se distinguen explicitamente: indeterminado (no se muta, se
-   * reintenta en la siguiente pasada), terminal-sin-reconciliar (se falla,
-   * como el caso de perdida real), y activo (se deja tal cual).
+   * Se distinguen tres estados: Redis no disponible, job terminado y job
+   * todavía activo o en espera. Solo se marca FAILED cuando se confirma que el
+   * job ya no puede completar el run; un fallo transitorio de Redis se deja
+   * para la siguiente pasada.
    */
   private async reconcileStaleQueuedRuns(
     staleThresholdDate: Date,
@@ -148,7 +139,7 @@ export class BuilderStaleRunRecoveryService {
         job = await this.builderRunsQueue.getJob(run.id);
       } catch (error) {
         // Indeterminado: no sabemos si el job existe. Mutar aqui es
-        // exactamente el bug de ORC-006 (falso FAILED por Redis caido); se
+        // exactamente el bug de (falso FAILED por Redis caido); se
         // deja el candidato tal cual para la siguiente pasada del barrido.
         this.logger.warn(
           `No se pudo consultar el estado en cola del run ${run.id} huerfano candidato (se reintenta en la siguiente pasada): ${
@@ -194,7 +185,7 @@ export class BuilderStaleRunRecoveryService {
             removeOnComplete: 100,
             removeOnFail: 200,
             jobId: run.id,
-            // Prioridad de lote (ESC-BAJO-02): un run huérfano se recupera,
+            // Prioridad de lote: un run huérfano se recupera,
             // pero no debe colarse por delante de una reejecución interactiva
             // que un docente esté esperando.
             priority: BUILDER_JOB_PRIORITY.BATCH,

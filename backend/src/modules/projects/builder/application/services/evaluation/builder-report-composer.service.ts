@@ -32,7 +32,7 @@ export class BuilderReportComposer {
    * su peso (%) y descripción, para que el informe del alumno muestre la rúbrica
    * tal como la definió el profesor. No altera puntuaciones ni justificaciones.
    *
-   * Movido desde `BuilderPipelineOrchestrator` (audit/04 ARQ-011): es lógica de
+   * Movido desde `BuilderPipelineOrchestrator`: es lógica de
    * dominio de evaluación, no de composición del pipeline.
    */
   enrichGradeBreakdownWithRubric(

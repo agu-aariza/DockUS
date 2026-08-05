@@ -51,7 +51,7 @@ export class StorageUploadService {
 
   /**
    * Multer deja el fichero en disco antes de que este método se ejecute
-   * (ESC-ALTO-05), de modo que el temporal hay que borrarlo pase lo que pase:
+   * de modo que el temporal hay que borrarlo pase lo que pase:
    * por eso el cuerpo real vive en `uploadInternal` y aquí solo se envuelve en
    * un `finally`. Sin esta limpieza, cada subida rechazada por validación o por
    * permisos dejaría hasta 50 MB en el disco del contenedor de la API.
@@ -105,7 +105,7 @@ export class StorageUploadService {
     const objectKey = this.buildDeliveryObjectKey(delivery.id, dto.logicalName);
     // El hash lo sigue calculando el servidor, no se toma del cliente: es la
     // huella de integridad del objeto almacenado y no puede depender de un valor
-    // que el remitente controla. Lo que cambia con ESC-ALTO-05 es *cómo* se lee
+    // que el remitente controla. Lo que cambia con es *cómo* se lee
     // el contenido —por trozos desde disco en vez de entero en memoria—, no
     // quién lo resume ni sobre qué bytes.
     const hash = await computeUploadHash(file);

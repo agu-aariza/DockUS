@@ -1,6 +1,6 @@
 import { LlmCircuitBreakerService } from './llm-circuit-breaker.service';
 
-describe('LlmCircuitBreakerService — ESC-ALTO-02', () => {
+describe('LlmCircuitBreakerService', () => {
   function build(
     overrides: {
       threshold?: number;

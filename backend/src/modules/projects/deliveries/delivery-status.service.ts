@@ -1,15 +1,15 @@
 /**
  * @fileoverview Escritura interna del estado de una entrega, sin control de
- * acceso (ARQ-003).
+ * acceso.
  *
  * Contexto:
  * - Único punto que muta `Delivery.status` desde fuera de `deliveries/`:
- *   antes, `BuilderRunCommandsService.processBuildRunJob` reimplementaba el
- *   mismo find+save a mano, un sub-contexto escribiendo directamente el
- *   estado de otro.
+ * antes, `BuilderRunCommandsService.processBuildRunJob` reimplementaba el
+ * mismo find+save a mano, un sub-contexto escribiendo directamente el
+ * estado de otro.
  * - Sin control de acceso a propósito: quien invoca esto (el ciclo de vida
- *   del run del builder, no una petición HTTP) ya decidió la transición; la
- *   autorización ocurrió más arriba, al lanzar o cancelar el run.
+ * del run del builder, no una petición HTTP) ya decidió la transición; la
+ * autorización ocurrió más arriba, al lanzar o cancelar el run.
  *
  * @module DeliveryStatusService
  */

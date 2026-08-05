@@ -60,7 +60,7 @@ export class BuilderRunEventsService
     // La suscripcion Redis solo alimenta el fan-out SSE (`subscribe()`, usado
     // por el controller de streaming); el worker publica eventos via `emit()`
     // sin necesitarla. Antes se abria en ambos procesos sin ningun cliente
-    // que la usara del lado del worker (ARQ-006).
+    // que la usara del lado del worker.
     if (this.processRole !== 'api') {
       return;
     }

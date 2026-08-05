@@ -33,9 +33,9 @@ export function normalizeGrade(value: unknown): number | undefined {
 }
 
 /**
- * AIP-001: separada de `assertEvaluationSemanticConsistency` porque esta
- * invariante no depende de `recipe`/`capabilities`/`observedEvidence` —
- * campos que un contrato genuinamente truncado puede no haber emitido. Por
+ * La comprobación se mantiene separada de `assertEvaluationSemanticConsistency`
+ * porque esta invariante no depende de `recipe`/`capabilities`/
+ * `observedEvidence`, campos que un contrato genuinamente truncado puede no haber emitido. Por
  * eso debe exigirse siempre, incluso cuando el contrato se marca truncado y
  * el resto de comprobaciones semánticas se omite; de lo contrario un
  * `runtime`/`recipe` inválido (no ausente) bastaba para desactivar la única

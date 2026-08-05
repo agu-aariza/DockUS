@@ -2,14 +2,8 @@
  * @fileoverview Restringe una query de `Project` a lo visible por el actor.
  *
  * Contexto:
- * - Extraído de `ProjectAccessService.applyActorScope` (audit/04 ARQ-007):
- *   `ProjectRepository.findAllForActor`/`findByIdForActor` necesitan la misma
- *   lógica de scoping para dejar de exponer `SelectQueryBuilder` en el puerto,
- *   y duplicarla habría sido la alternativa a esto. `ProjectAccessService`
- *   sigue siendo el punto de entrada para sus otros tres llamadores
- *   (storage-query, deliveries-query, storage-access) — delega aquí, no al
- *   revés, para no invertir la dependencia infrastructure -> application.
- * - Cero cambio de comportamiento: es el mismo cuerpo de función, reubicado.
+ * - `ProjectRepository.findAllForActor`/`findByIdForActor` comparten esta
+ * lógica de scoping para no exponer `SelectQueryBuilder` en el puerto.
  *
  * @module ProjectActorScopeUtil
  */

@@ -26,7 +26,7 @@ interface ExecutionStageInput {
   runId: string;
   workspace: StageWorkspaceResult;
   compiled: CompiledRecipe;
-  /** Cancelacion cooperativa (ARQ-004): mata el contenedor en curso. */
+  /** Cancelacion cooperativa: mata el contenedor en curso. */
   signal?: AbortSignal;
 }
 
@@ -35,7 +35,7 @@ interface ExecutionStageOutput {
 }
 
 /** Ruta dentro del contenedor donde se monta la suite docente, en solo lectura. */
-const TEACHER_TESTS_MOUNT_PATH = '/app/.dockus/teacher-tests';
+const TEACHER_TESTS_MOUNT_PATH = '/app/.educodeai/teacher-tests';
 
 /** Usuario sin privilegios estándar (`nobody`). */
 const NOBODY_UID = 65534;
@@ -118,7 +118,7 @@ export class BuilderExecutionStageHandler {
     let evidenceBuffer = '';
 
     const execResult = await this.containerRuntime.runEphemeralContainer({
-      containerName: `dockus-run-${runId}-${randomUUID().slice(0, 8)}`,
+      containerName: `educodeai-run-${runId}-${randomUUID().slice(0, 8)}`,
       imageTag: environmentImage.imageTag,
       command: compiled.finalCommand,
       binds,

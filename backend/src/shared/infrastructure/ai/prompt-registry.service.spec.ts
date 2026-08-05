@@ -119,3 +119,6 @@ describe('prompts.json', () => {
     expect(qualityPolicy).toContain('rubricCompliance');
   });
 });
+/**
+ * Pruebas de carga, selección y resolución de prompts registrados.
+ */

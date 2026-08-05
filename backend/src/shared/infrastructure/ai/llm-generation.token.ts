@@ -11,13 +11,12 @@ export interface ILlmGenerationService {
 }
 
 /**
- * Plan de arquitectura hexagonal, Fase 1 (P1-3, ver
- * ARQ-007). Este puerto ya existía como
+ * Este puerto ya existía como
  * interfaz — las 5 clases de proveedor y `LlmGenerationRouter` ya declaraban
  * `implements ILlmGenerationService` — pero ningún consumidor lo inyectaba a
  * través de un token: `BuilderLlmDispatcherService` y
  * `BuilderLlmProviderTesterService` inyectaban `LlmGenerationRouter` directo.
  * Este símbolo es lo único que faltaba para que el puerto fuera real, no solo
- * de facto (mismo patrón que `IProjectRepository` en la Fase 0 original).
+ * de forma directa y permite sustituir el proveedor sin cambiar los servicios.
  */
 export const LLM_GENERATION_SERVICE = Symbol('ILlmGenerationService');

@@ -11,7 +11,7 @@ import type {
 
 /**
  * Shapes compartidas con el frontend. La fuente única de verdad vive en
- * `@dockus/contracts`; aquí solo se re-exportan para que los consumidores del
+ * `@educodeai/contracts`; aquí solo se re-exportan para que los consumidores del
  * backend mantengan sus imports desde `projects.types`.
  */
 export type {
@@ -28,7 +28,7 @@ export type {
   ProjectOperationalIssuesReconcileResult,
   ProjectQualityInsight,
   ProjectQualityInsightsSummary,
-} from '@dockus/contracts';
+} from '@educodeai/contracts';
 
 // ---------------------------------------------------------------------------
 // Shapes exclusivas del backend (no se comparten con el frontend)

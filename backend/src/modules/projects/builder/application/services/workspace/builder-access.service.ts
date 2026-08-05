@@ -109,7 +109,7 @@ export class BuilderAccessService {
   }
 
   /**
-   * Autoriza quién puede lanzar una ejecución de builder (ARQ-001): el
+   * Autoriza quién puede lanzar una ejecución de builder: el
    * alumno dueño de la entrega, con la asignación viva y el proyecto activo,
    * o profesorado/administración con la misma política de gestión que ya
    * aplica a cancelar/consultar. Deliberadamente distinta de

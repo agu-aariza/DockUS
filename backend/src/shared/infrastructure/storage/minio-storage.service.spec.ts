@@ -1,7 +1,7 @@
 import { MinioStorageService } from './minio-storage.service';
 
 /**
- * ESC-ALTO-09. La regla de caducidad la fija `mc ilm` como paso de despliegue
+ * La regla de caducidad la fija `mc ilm` como paso de despliegue
  * (la versión desplegada de MinIO rechaza la escritura desde el SDK); lo que el
  * backend aporta es la **comprobación** de que existe.
  *
@@ -16,7 +16,7 @@ describe('MinioStorageService — verificación de la política de retención', 
         if (key === 'STORAGE_EVIDENCE_RETENTION_DAYS') {
           return options.retentionDays ?? 90;
         }
-        if (key === 'MINIO_BUCKET_NAME') return 'dockus-storage';
+        if (key === 'MINIO_BUCKET_NAME') return 'educodeai-storage';
         if (key === 'NODE_ENV') return 'development';
         return fallback;
       }),
@@ -55,7 +55,7 @@ describe('MinioStorageService — verificación de la política de retención', 
       send: jest.fn().mockResolvedValue({ Rules: [enabledRule('runs/')] }),
     });
 
-    await verify('dockus-storage');
+    await verify('educodeai-storage');
 
     expect(logger.warn).not.toHaveBeenCalled();
     expect(logger.log).toHaveBeenCalledWith(expect.stringContaining('runs/'));
@@ -67,7 +67,7 @@ describe('MinioStorageService — verificación de la política de retención', 
       send: jest.fn().mockResolvedValue({ Rules: [enabledRule('evidence/')] }),
     });
 
-    await verify('dockus-storage');
+    await verify('educodeai-storage');
 
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('storage_retention_policy_missing'),
@@ -81,7 +81,7 @@ describe('MinioStorageService — verificación de la política de retención', 
       }),
     });
 
-    await verify('dockus-storage');
+    await verify('educodeai-storage');
 
     expect(logger.warn).toHaveBeenCalled();
   });
@@ -93,7 +93,7 @@ describe('MinioStorageService — verificación de la política de retención', 
         .mockRejectedValue(new Error('NoSuchLifecycleConfiguration')),
     });
 
-    await verify('dockus-storage');
+    await verify('educodeai-storage');
 
     // Se parsea en vez de buscar sobre la cadena: el aviso es JSON y las
     // comillas del comando van escapadas dentro de él.
@@ -114,14 +114,14 @@ describe('MinioStorageService — verificación de la política de retención', 
       send: jest.fn().mockRejectedValue(new Error('connection refused')),
     });
 
-    await expect(verify('dockus-storage')).resolves.toBeUndefined();
+    await expect(verify('educodeai-storage')).resolves.toBeUndefined();
     expect(logger.warn).toHaveBeenCalled();
   });
 
   it('con retención desactivada no consulta nada', async () => {
     const { verify, logger, send } = build({ retentionDays: 0 });
 
-    await verify('dockus-storage');
+    await verify('educodeai-storage');
 
     expect(send).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();

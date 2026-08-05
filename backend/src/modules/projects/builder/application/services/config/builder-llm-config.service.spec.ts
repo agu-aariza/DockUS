@@ -235,7 +235,7 @@ describe('BuilderLlmConfigService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    describe('AIP-002 — política de endpoints', () => {
+    describe('política de endpoints', () => {
       it('rechaza un endpoint que apunta a loopback/red privada para un proveedor cloud', async () => {
         const { service } = buildService([]);
 
@@ -421,7 +421,7 @@ describe('BuilderLlmConfigService', () => {
       );
     });
 
-    it('AIP-012: no aplica la tarifa de otro modelo del mismo proveedor', async () => {
+    it('no aplica la tarifa de otro modelo del mismo proveedor', async () => {
       const { service } = buildService([
         buildConfig({
           modelId: 'gpt-4o',
@@ -449,11 +449,10 @@ describe('BuilderLlmConfigService', () => {
 });
 
 /**
- * ESC-MED-06. La caché se invalidaba solo en `saveConfigs`, es decir solo en la
- * réplica que escribía: con varias instancias, las demás servían configuración
- * obsoleta de forma indefinida.
+ * La caché se invalida en cada mutación, para que las demás instancias no
+ * sirvan una configuración obsoleta de forma indefinida.
  */
-describe('BuilderLlmConfigService — vencimiento de la caché (ESC-MED-06)', () => {
+describe('BuilderLlmConfigService — vencimiento de la caché', () => {
   const CACHE_TTL_MS = 30_000;
 
   function build() {

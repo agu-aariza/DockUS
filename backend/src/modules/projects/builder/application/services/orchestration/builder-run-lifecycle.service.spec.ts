@@ -157,7 +157,7 @@ describe('BuilderRunLifecycleService', () => {
       );
     });
 
-    it('ARQ-004: una cancelacion cooperativa no marca el run como fallido ni actualiza la entrega', async () => {
+    it('una cancelacion cooperativa no marca el run como fallido ni actualiza la entrega', async () => {
       builderPipelineOrchestrator.runPipeline.mockRejectedValue(
         new RunCancelledError(runId),
       );
@@ -227,7 +227,7 @@ describe('BuilderRunLifecycleService', () => {
       );
     });
 
-    it('ORC-001: descarta el resultado calculado si el run ya no seguia RUNNING al completarlo (p.ej. cancelado)', async () => {
+    it('descarta el resultado calculado si el run ya no seguia RUNNING al completarlo (p.ej. cancelado)', async () => {
       builderPipelineOrchestrator.runPipeline.mockResolvedValue(
         buildPipelineResult(),
       );
@@ -286,7 +286,7 @@ describe('BuilderRunLifecycleService', () => {
       expect(builderPipelineOrchestrator.runPipeline).not.toHaveBeenCalled();
     });
 
-    it('ORC-001: un claim que afecta 0 filas (otro escritor gano la carrera) descarta el job sin arrancar el pipeline', async () => {
+    it('un claim que afecta 0 filas (otro escritor gano la carrera) descarta el job sin arrancar el pipeline', async () => {
       buildRunRepository.claimQueuedRun.mockResolvedValue(false);
 
       await service.processBuildRunJob({ buildRunId: runId, deliveryId });

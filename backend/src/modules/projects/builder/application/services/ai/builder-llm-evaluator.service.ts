@@ -206,7 +206,7 @@ export class BuilderLlmEvaluatorService {
    * conmutación entre proveedores y reintenta **una vez** si la respuesta no
    * es parseable.
    *
-   * El reintento de contrato (ESC-ALTO-02) atiende un fallo que hasta ahora
+   * El reintento de contrato atiende un fallo que hasta ahora
    * tumbaba el run entero: la generación es estocástica, de modo que una misma
    * petición que devuelve JSON mal formado suele devolverlo bien al segundo
    * intento. Se reintenta **una sola vez** a propósito: cada intento se
@@ -326,7 +326,7 @@ export class BuilderLlmEvaluatorService {
         response.text,
         null,
         parse(response.text),
-        // AIP-005: ambos intentos se facturan; el trace final debe reflejar
+        // ambos intentos se facturan; el trace final debe reflejar
         // el consumo de los dos, no solo el del segundo.
         sumUsage(firstAttemptUsage, response.usage),
       );

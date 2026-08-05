@@ -6,7 +6,7 @@
  * 1. Definir el prefijo global `/api` para todas las rutas REST.
  * 2. Configurar el registrador de logs Pino (`nestjs-pino`).
  * 3. Enforzar `ValidationPipe` global con sanitización estricta (`whitelist` y `forbidNonWhitelisted`).
- * 4. Registrar `DockusThrottlerGuard` para la protección contra abusos/rate-limiting.
+ * 4. Registrar `EduCodeAIThrottlerGuard` para la protección contra abusos/rate-limiting.
  * 5. Configurar encabezados de seguridad HTTP vía `helmet` y políticas CORS restrictivas.
  * 6. Generar la especificación y UI de Swagger/OpenAPI en `/api/docs`.
  *
@@ -16,7 +16,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { DockusThrottlerGuard } from './shared/infrastructure/security/dockus-throttler.guard';
+import { EduCodeAIThrottlerGuard } from './shared/infrastructure/security/educodeai-throttler.guard';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import type { CorsOptions } from 'cors';
@@ -93,7 +93,7 @@ export function applyAppBootstrap(
       transform: true,
     }),
   );
-  app.useGlobalGuards(app.get(DockusThrottlerGuard));
+  app.useGlobalGuards(app.get(EduCodeAIThrottlerGuard));
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -139,9 +139,9 @@ export function applyAppBootstrap(
 
   if (enableSwagger) {
     const config = new DocumentBuilder()
-      .setTitle('DockUS API')
+      .setTitle('EduCodeAI API')
       .setDescription(
-        'Especificación técnica de la API de DockUS para la gestión de entornos reproducibles.',
+        'Especificación técnica de la API de EduCodeAI para la gestión de entornos reproducibles.',
       )
       .setVersion('1.3.0')
       .addBearerAuth()

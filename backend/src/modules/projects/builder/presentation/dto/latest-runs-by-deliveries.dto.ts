@@ -2,10 +2,8 @@
  * @fileoverview DTOs para el batch de "último run por entrega".
  *
  * Contexto:
- * - Antes de este endpoint, el frontend resolvia "ultimo run por entrega"
- *   con un fan-out N+1 (una peticion GET por entrega, hasta 50 en paralelo o
- *   20 en serie en un poll cada 15s), suficiente para activar el propio
- *   rate limiter de la app en una carga de pagina legitima (HIGH-09).
+ * - Resuelve el último run de todas las entregas con una consulta batch y
+ *   devuelve las entregas sin ejecución como `null`, evitando un fan-out N+1.
  *
  * @module LatestRunsByDeliveriesDto
  */

@@ -20,7 +20,7 @@ import { WorkerModule } from './worker.module';
 
 /** Ruta por defecto del archivo de pulso (heartbeat) para la sonda de salud del contenedor worker. */
 const HEARTBEAT_PATH =
-  process.env.WORKER_HEARTBEAT_PATH ?? '/tmp/dockus-worker.heartbeat';
+  process.env.WORKER_HEARTBEAT_PATH ?? '/tmp/educodeai-worker.heartbeat';
 
 /** Intervalo de refresco del pulso de salud en milisegundos. */
 const HEARTBEAT_INTERVAL_MS = 10_000;

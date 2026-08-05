@@ -9,10 +9,8 @@ import type { AuthenticatedUser } from '../../../auth/interfaces/authenticated-u
 import { ProjectAssignment } from '../../assignments/entities/project-assignment.entity';
 
 /**
- * Puerto real (ARQ-007 P2-3): sin puerto
- * previo — diseñado desde cero auditando los 8 sitios reales que inyectaban
- * el repositorio TypeORM crudo. Mismo criterio que ARQ-007: sin tipos de
- * TypeORM en la firma.
+ * Puerto de persistencia para asignaciones, sin exponer tipos de TypeORM a la
+ * capa de aplicación.
  */
 export const PROJECT_ASSIGNMENT_REPOSITORY = Symbol(
   'IProjectAssignmentRepository',

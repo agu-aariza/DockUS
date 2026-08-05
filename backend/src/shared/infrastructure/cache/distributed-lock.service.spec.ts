@@ -1,6 +1,6 @@
 import { DistributedLockService } from './distributed-lock.service';
 
-describe('DistributedLockService — ESC-ALTO-08: exclusión mutua de construcción', () => {
+describe('DistributedLockService — exclusión mutua de construcción', () => {
   function buildService(
     overrides: {
       setIfAbsent?: jest.Mock;

@@ -90,3 +90,6 @@ describe('ProjectLifecycleService', () => {
     );
   });
 });
+/**
+ * Pruebas de las transiciones de ciclo de vida y de la limpieza asociada a proyectos.
+ */

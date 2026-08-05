@@ -3,8 +3,8 @@
  *
  * Contexto:
  * - Cubre `applyStorageActorScope`, absorbida en el adaptador desde
- *   `StorageAccessService.applyActorScope` (plan_accion.md P2-6). No existía
- *   cobertura previa de este método — se añade aquí, no se mueve.
+ * `StorageAccessService.applyActorScope`. No existía
+ * cobertura previa de este método — se añade aquí, no se mueve.
  *
  * @module StorageActorScopeUtilSpec
  */

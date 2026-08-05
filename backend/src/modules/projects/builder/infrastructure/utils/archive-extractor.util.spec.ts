@@ -260,3 +260,6 @@ function createTarGzBuffer(entries: ZipEntryInput[]): Buffer {
   tarChunks.push(Buffer.alloc(1024, 0));
   return gzipSync(Buffer.concat(tarChunks));
 }
+/**
+ * Pruebas de extracción de archivos comprimidos y de rechazo de rutas o formatos inseguros.
+ */

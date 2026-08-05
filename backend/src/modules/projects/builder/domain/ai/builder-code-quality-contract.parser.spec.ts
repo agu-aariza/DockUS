@@ -81,7 +81,7 @@ describe('parseBuilderCodeQualityContractV2', () => {
   });
 
   it.each(['High', 'HIGH', ' high ', 'Low', 'MEDIUM'])(
-    'HIGH-07: normalizes severity case/whitespace variants (%s)',
+    'normalizes severity case/whitespace variants (%s)',
     (rawSeverity) => {
       const contract = parseBuilderCodeQualityContractV2(
         JSON.stringify(
@@ -104,7 +104,7 @@ describe('parseBuilderCodeQualityContractV2', () => {
   );
 
   it.each(['critical', 'CRITICAL', 'blocker', 'Blocker'])(
-    'HIGH-07: maps unmodeled severity levels above the schema (%s) to high, not medium',
+    'maps unmodeled severity levels above the schema (%s) to high, not medium',
     (rawSeverity) => {
       const contract = parseBuilderCodeQualityContractV2(
         JSON.stringify(
@@ -124,7 +124,7 @@ describe('parseBuilderCodeQualityContractV2', () => {
     },
   );
 
-  it('AIP-008: a single irreparable finding fails the whole contract instead of silently vanishing from the axis', () => {
+  it('a single irreparable finding fails the whole contract instead of silently vanishing from the axis', () => {
     expect(() =>
       parseBuilderCodeQualityContractV2(
         JSON.stringify(
@@ -161,3 +161,6 @@ describe('parseBuilderCodeQualityContractV2', () => {
     ).toThrow('security debe ser un array.');
   });
 });
+/**
+ * Pruebas de validación del contrato estructurado de calidad de código generado por el LLM.
+ */

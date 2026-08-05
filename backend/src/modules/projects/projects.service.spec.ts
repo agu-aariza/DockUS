@@ -34,7 +34,7 @@ describe('ProjectsService', () => {
     isTeacherAssignedToProject: jest.fn().mockResolvedValue(true),
   };
 
-  // Puerto real (ARQ-007): lo que ProjectsService inyecta como
+  // Puerto real: lo que ProjectsService inyecta como
   // IProjectRepository. No comparte forma con el repositorio TypeORM de
   // arriba — findAllForActor construye toda la query dentro del puerto, así
   // que este mock no expone SelectQueryBuilder en absoluto.
@@ -111,7 +111,7 @@ describe('ProjectsService', () => {
     expect(result.creatorId).toBe(creatorId);
   });
 
-  it('debe traducir el DTO de listado al puerto (ARQ-007) y envolver el resultado en la meta de paginacion', async () => {
+  it('debe traducir el DTO de listado al puerto y envolver el resultado en la meta de paginacion', async () => {
     const actor = buildActor(UserRole.ADMIN);
     const project = buildProject();
     projectRepositoryPort.findAllForActor.mockResolvedValue({

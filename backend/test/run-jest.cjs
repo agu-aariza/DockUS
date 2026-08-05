@@ -1,3 +1,7 @@
+/**
+ * Lanza Jest con un directorio temporal estable para que las suites del
+ * backend compartan una configuración no interactiva y aislada de la caché.
+ */
 const { spawnSync } = require('node:child_process');
 const { existsSync } = require('node:fs');
 
@@ -15,7 +19,7 @@ function resolveTempDirectory() {
 }
 
 const tempDirectory = resolveTempDirectory();
-const cacheDirectory = `${tempDirectory.replace(/[\\\/]+$/, '')}/dockus-jest-cache`;
+const cacheDirectory = `${tempDirectory.replace(/[\\\/]+$/, '')}/educodeai-jest-cache`;
 const env = {
   ...process.env,
   TMPDIR: tempDirectory,

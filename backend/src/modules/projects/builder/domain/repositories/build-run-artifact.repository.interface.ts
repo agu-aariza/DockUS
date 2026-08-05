@@ -11,9 +11,9 @@ import {
 } from '../entities/build-run-artifact.entity';
 
 /**
- * Puerto real (ARQ-007 P2-7): sin puerto
+ * Puerto real: sin puerto
  * previo, 2 consumidores reales (`EvidenceService`/`BuilderLlmChatService`).
- * Mismo criterio que ARQ-007: sin tipos de TypeORM en la firma.
+ * Mismo criterio que: sin tipos de TypeORM en la firma.
  */
 export const BUILD_RUN_ARTIFACT_REPOSITORY = Symbol(
   'IBuildRunArtifactRepository',

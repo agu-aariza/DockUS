@@ -122,7 +122,7 @@ export class StudentProfileService {
           });
 
     const deliveryIds = deliveries.map((delivery) => delivery.id);
-    // Mismo patrón que en el gradebook (ESC-CRIT-05): de cada ejecución solo se
+    // Mismo patrón que en el gradebook: de cada ejecución solo se
     // usan siete columnas escalares, pero `find` traía además `report`,
     // `llmAssessment` y `codeQualityFindings` —jsonb de decenas de kB por
     // fila— para descartarlas al construir el DTO. Aquí el volumen es menor

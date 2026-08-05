@@ -26,7 +26,7 @@ export class BuilderQualityAggregationService {
   ) {}
 
   /**
-   * ARQ-005: reemplaza al agregador en memoria de `getAssignmentQualityInsights`
+   * reemplaza al agregador en memoria de `getAssignmentQualityInsights`
    * (`run.codeQualityFindings` recorrido con `as any`, sin cota). `assignmentId`
    * identifica de forma unica un `(projectId, studentId)` — el indice unico de
    * `ProjectAssignment` no permite otra cosa — asi que esto son en realidad los

@@ -9,7 +9,7 @@ const UUID_A = '550e8400-e29b-41d4-a716-446655440000';
 const UUID_B = '550e8400-e29b-41d4-a716-446655440001';
 
 describe('LatestRunsByDeliveriesQueryDto', () => {
-  it('HIGH-09: splits a comma-separated string into a deduplicated, trimmed array', async () => {
+  it('splits a comma-separated string into a deduplicated, trimmed array', async () => {
     const dto = plainToInstance(LatestRunsByDeliveriesQueryDto, {
       deliveryIds: ` ${UUID_A} , ${UUID_B} , ${UUID_A} `,
     });
@@ -40,7 +40,7 @@ describe('LatestRunsByDeliveriesQueryDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it(`HIGH-09: rejects more than ${MAX_LATEST_RUNS_DELIVERY_IDS} ids`, async () => {
+  it(`rejects more than ${MAX_LATEST_RUNS_DELIVERY_IDS} ids`, async () => {
     const tooMany = Array.from(
       { length: MAX_LATEST_RUNS_DELIVERY_IDS + 1 },
       (_, i) =>
@@ -55,3 +55,6 @@ describe('LatestRunsByDeliveriesQueryDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 });
+/**
+ * Pruebas del DTO que agrupa la última ejecución visible por entrega.
+ */

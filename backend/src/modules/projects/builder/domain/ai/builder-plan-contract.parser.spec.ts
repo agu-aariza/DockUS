@@ -320,7 +320,7 @@ describe('parseBuilderPlanContractV2', () => {
     },
   );
 
-  it('rejects the audit CRIT-03 payload (prompt injection via recipe.install)', () => {
+  it('rejects the audit payload (prompt injection via recipe.install)', () => {
     const raw = JSON.stringify(
       buildPlanPayload({
         recipe: {
@@ -458,3 +458,6 @@ describe('parseBuilderPlanContractV2', () => {
     expect(contract.runtime.reason).toContain('python');
   });
 });
+/**
+ * Pruebas de validación del plan ejecutable propuesto por el LLM y de sus límites de seguridad.
+ */

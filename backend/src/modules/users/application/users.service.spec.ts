@@ -17,12 +17,12 @@ import type { IUserRepository } from '../domain/repositories/user.repository.int
 
 const buildUser = (overrides: Partial<User> = {}): User => ({
   id: '2e141a4d-e163-43f8-87f8-75afee5e2f85',
-  email: 'user@dockus.com',
+  email: 'user@educodeai.com',
   passwordHash: 'hashed-password',
   role: UserRole.STUDENT,
   status: UserStatus.ACTIVE,
   firstName: 'User',
-  lastName: 'Dockus',
+  lastName: 'EduCodeAI',
   createdAt: new Date('2026-03-09T00:00:00.000Z'),
   updatedAt: new Date('2026-03-09T00:00:00.000Z'),
   deletedAt: undefined as unknown as Date,
@@ -59,46 +59,51 @@ describe('UsersService', () => {
   it('debe normalizar email en findByEmail antes de consultar', async () => {
     usersRepository.findByEmail.mockResolvedValue(null);
 
-    await service.findByEmail('  TeSt@DockUs.com  ', true);
+    await service.findByEmail('  TeSt@EduCodeAI.com  ', true);
 
     expect(usersRepository.findByEmail).toHaveBeenCalledWith(
-      'test@dockus.com',
+      'test@educodeai.com',
       true,
     );
   });
 
   it('debe cargar passwordHash solo en el lookup explícito de autenticación', async () => {
-    const user = buildUser({ email: 'secure@dockus.com' });
+    const user = buildUser({ email: 'secure@educodeai.com' });
     usersRepository.findByEmailWithPasswordHash.mockResolvedValue(user);
 
     const result = await service.findByEmailForAuth(
-      '  Secure@DockUs.com  ',
+      '  Secure@EduCodeAI.com  ',
       true,
     );
 
     expect(usersRepository.findByEmailWithPasswordHash).toHaveBeenCalledWith(
-      'secure@dockus.com',
+      'secure@educodeai.com',
       true,
     );
     expect(result).toBe(user);
   });
 
   it('debe normalizar email al crear usuarios internamente', async () => {
-    const savedUser = buildUser({ email: 'test@dockus.com' });
+    const savedUser = buildUser({ email: 'test@educodeai.com' });
     usersRepository.save.mockResolvedValue(savedUser);
 
-    await service.create('  TeSt@DockUs.com  ', 'password123', 'Test', 'User');
+    await service.create(
+      '  TeSt@EduCodeAI.com  ',
+      'password123',
+      'Test',
+      'User',
+    );
 
     expect(usersRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        email: 'test@dockus.com',
+        email: 'test@educodeai.com',
       }),
     );
   });
 
   it('debe traducir error de unicidad de BD a ConflictException al crear usuario', async () => {
     const dto: CreateUserDto = {
-      email: 'existing@dockus.com',
+      email: 'existing@educodeai.com',
       password: 'password123',
       firstName: 'Existing',
       lastName: 'User',
@@ -119,12 +124,12 @@ describe('UsersService', () => {
     const users = [
       buildUser({
         id: '0f4f2a18-bb0d-46df-a4f1-7220f3d63021',
-        email: 'teacher@dockus.com',
+        email: 'teacher@educodeai.com',
         role: UserRole.TEACHER,
       }),
       buildUser({
         id: 'fc0336bf-f1bf-4df7-88f8-86df0251f6ec',
-        email: 'teacher2@dockus.com',
+        email: 'teacher2@educodeai.com',
         role: UserRole.TEACHER,
       }),
     ];
@@ -147,7 +152,7 @@ describe('UsersService', () => {
       limit: 20,
     });
     expect(result.data).toHaveLength(2);
-    expect(result.data[0].email).toBe('teacher@dockus.com');
+    expect(result.data[0].email).toBe('teacher@educodeai.com');
     expect(
       (result.data[0] as { passwordHash?: string }).passwordHash,
     ).toBeUndefined();
@@ -188,11 +193,11 @@ describe('UsersService', () => {
   it('debe normalizar email en update antes de persistir', async () => {
     const existing = buildUser({
       id: '550e8400-e29b-41d4-a716-446655440000',
-      email: 'existing@dockus.com',
+      email: 'existing@educodeai.com',
     });
     const updated = buildUser({
       id: existing.id,
-      email: 'new.email@dockus.com',
+      email: 'new.email@educodeai.com',
     });
 
     usersRepository.findById.mockResolvedValue(existing);
@@ -200,20 +205,20 @@ describe('UsersService', () => {
     usersRepository.save.mockResolvedValue(updated);
 
     const result = await service.update(existing.id, {
-      email: '  New.Email@DockUs.com  ',
+      email: '  New.Email@EduCodeAI.com  ',
     });
 
     expect(usersRepository.findByEmail).toHaveBeenCalledWith(
-      'new.email@dockus.com',
+      'new.email@educodeai.com',
       true,
     );
     expect(usersRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: existing.id,
-        email: 'new.email@dockus.com',
+        email: 'new.email@educodeai.com',
       }),
     );
-    expect(result.email).toBe('new.email@dockus.com');
+    expect(result.email).toBe('new.email@educodeai.com');
   });
 
   it('debe aplicar soft delete al eliminar identidad', async () => {
@@ -293,7 +298,7 @@ describe('UsersService', () => {
   });
 
   /**
-   * ESC-ALTO-04. El riesgo de la caché de identidad no está en la caché sino en
+   * El riesgo de la caché de identidad no está en la caché sino en
    * la invalidación: un solo punto de mutación que la olvide deja operando con
    * el rol o el estado anteriores a una cuenta ya modificada, que es justo lo
    * que la recarga por petición existía para impedir.

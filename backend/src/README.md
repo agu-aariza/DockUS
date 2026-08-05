@@ -1,50 +1,63 @@
-# Directores y Código Fuente Backend (src)
+# Código fuente del backend (`src/`)
 
-> **Resumen rápido:** Código fuente de la aplicación NestJS, estructurado en módulos de dominio de negocio y componentes de infraestructura compartidos.
-
----
-
-## Propósito y Responsabilidades
-Contener la implementación completa del servidor NestJS siguiendo los principios de arquitectura limpia y segregación por procesos (API HTTP y Workers de fondo).
-- **Segregación de roles de proceso:** Permite ejecutar la API web y los procesadores asíncronos mediante `process-role.module.ts`.
-- **Estructura modular:** Organización independiente de módulos de dominio y servicios globales.
+> **Resumen rápido:** Todo el código TypeScript de la aplicación NestJS. Se organiza en módulos de dominio (`modules/`) e infraestructura transversal (`shared/`), y se compone en dos grafos de inyección de dependencias distintos según el proceso que arranque: API HTTP o Worker asíncrono.
 
 ---
 
-## Estructura Interna
+## ¿Qué hay aquí?
+
+Este directorio contiene absolutamente todo el backend: desde los controladores REST hasta el cliente de Docker que ejecuta el código de un alumno. Si acabas de llegar al repositorio, la forma más rápida de orientarte es seguir el camino que sigue una petición real:
+
+1. Una petición HTTP entra por `main.ts` → `ApiModule` → un controlador en `modules/<dominio>/presentation/`.
+2. El controlador delega en un *application service* de `modules/<dominio>/application/`, que contiene la lógica de negocio.
+3. Ese servicio habla con `domain/` (entidades e interfaces de repositorio) y, para acceder a recursos externos, con `shared/infrastructure/` (Postgres, Redis, Docker, MinIO, Bedrock/Gemini) a través de las implementaciones en `modules/<dominio>/infrastructure/`.
+4. Si la operación es pesada (evaluar una entrega), en vez de ejecutarla en el proceso API se encola un job BullMQ que recoge el proceso **Worker** (`worker.ts` → `WorkerModule`), corriendo en un contenedor/proceso separado.
+
+## Estructura interna
 
 ```text
-.
-├── modules/              # Módulos del dominio de la aplicación (auth, projects, academic, etc.)
-├── shared/               # Servicios de infraestructura y configuración reutilizables
-├── api.module.ts         # Módulo raíz para el rol de proceso API
-├── core.module.ts        # Módulo central con proveedores globales
-├── process-role.module.ts # Selector dinámico de módulos según el rol del contenedor
-├── worker.module.ts      # Módulo raíz para el rol de trabajador en segundo plano
-├── bootstrap.ts          # Configuración e inicialización común de NestJS
-├── main.ts               # Punto de entrada HTTP
-└── worker.ts             # Punto de entrada del worker BullMQ
+src/
+├── modules/               # Módulos de dominio de negocio — ver modules/README.md
+│   ├── auth/                # JWT, guards, estrategias — sin persistencia propia (módulo "plano")
+│   ├── users/                # CRUD de identidad, roles, soft delete
+│   ├── academic/              # Grupos académicos y matriculación
+│   ├── health/                 # Sondas liveness/readiness — sin persistencia propia (módulo "plano")
+│   └── projects/                 # El "hub" de dominio: proyectos, entregas, storage y el motor Builder
+├── shared/                 # Infraestructura transversal — ver shared/README.md
+│   ├── config/               # Validación Joi de variables de entorno (falla rápido al arrancar)
+│   ├── infrastructure/         # Adaptadores concretos: DB, Redis, Docker, IA, MinIO, colas, seguridad
+│   ├── database/                # Helpers TypeORM genéricos (no configuración de conexión)
+│   ├── http/                      # Filtros de excepciones y transformaciones HTTP globales
+│   └── utils/                       # Funciones puras sin dependencias de NestJS
+├── test-support/           # Fábricas de entidades de dominio para tests unitarios — ver test-support/README.md
+├── main.ts                 # Entrypoint del proceso API HTTP
+├── worker.ts                # Entrypoint del proceso Worker (sin servidor HTTP)
+├── bootstrap.ts               # CORS, Helmet, ValidationPipe global, Swagger — solo aplica al proceso API
+├── api.module.ts               # Módulo raíz: ProcessRoleModule('api') + CoreModule + HealthModule
+├── worker.module.ts             # Módulo raíz: ProcessRoleModule('worker') + CoreModule + BuilderModule + BuilderProcessor
+├── core.module.ts                 # Módulos de dominio compartidos por ambos roles (Infra, Users, Auth, Academic, Projects)
+└── process-role.module.ts           # Módulo dinámico global: inyecta el token PROCESS_ROLE ('api' | 'worker')
 ```
 
----
+## Por qué existe `process-role.module.ts`
 
-## Flujo de Trabajo / Arquitectura
+Algunos servicios necesitan comportarse distinto según si corren en el proceso API o en el Worker (por ejemplo, quién procesa activamente los jobs BullMQ). En vez de leer una variable de entorno ad-hoc desde cualquier servicio, `ProcessRoleModule.forRoot('api' | 'worker')` inyecta un token `PROCESS_ROLE` en el contenedor de NestJS, disponible vía `@Inject(PROCESS_ROLE)` en cualquier proveedor. Esto mantiene el rol como una dependencia explícita y testeable en vez de un global implícito.
 
-```text
-main.ts ──> bootstrap() ──> process-role.module ──> api.module ──> [ HTTP Controllers & Services ]
-worker.ts ──> bootstrap() ──> process-role.module ──> worker.module ──> [ BullMQ Processors ]
-```
+`main.ts` y `worker.ts` son deliberadamente finos: solo construyen la app (`NestFactory.create` vs `NestFactory.createApplicationContext`, esta última sin puerto HTTP), aplican bootstrap y arrancan. Toda la composición real de módulos vive en `*.module.ts`.
 
----
+## Cómo trabajar aquí
 
-## Cómo Usar / Probar este Módulo
-
-### Compilar el código TypeScript:
 ```bash
-npm run build
+npm run build         # tsc vía nest build → dist/
+npm run boundaries      # valida que ningún import viole las fronteras hexagonales (ver .dependency-cruiser.cjs)
+npm run typecheck         # tsc --noEmit
 ```
 
-### Ejecutar validación de arquitectura:
-```bash
-npm run boundaries
-```
+Si añades un módulo de dominio nuevo, sigue la convención `presentation/ application/ domain/ infrastructure/` (a menos que, como `auth/`/`health/`, no tenga persistencia propia) y regístralo en `core.module.ts` (o en `api.module.ts`/`worker.module.ts` directamente si solo debe vivir en un rol, como `BuilderProcessor` que solo se registra en `worker.module.ts`).
+
+## Ver también
+
+- [`modules/README.md`](modules/README.md)
+- [`shared/README.md`](shared/README.md)
+- [`test-support/README.md`](test-support/README.md)
+- [`../README.md`](../README.md) — visión general del backend.

@@ -87,14 +87,14 @@ describe('BuilderRunCommandsService', () => {
         promptVersion: '2026.07-chain-of-verification',
       } as BuilderConfigProvider,
       builderRunCancellationService as unknown as BuilderRunCancellationService,
-      // ESC-MED-03: sin cuota configurada el encolado pasa siempre; la cuota
+      // sin cuota configurada el encolado pasa siempre; la cuota
       // tiene su propia suite.
       { assertProjectWithinQuota: jest.fn() } as never,
       deliveryStatusService as never,
     );
   });
 
-  /** ESC-BAJO-02: la cola era FIFO estricta y no distinguía quién esperaba. */
+  /** la cola era FIFO estricta y no distinguía quién esperaba. */
   describe('prioridad en la cola', () => {
     beforeEach(() => {
       (builderAccessService.findDeliveryOrThrow as jest.Mock).mockResolvedValue(
@@ -125,7 +125,7 @@ describe('BuilderRunCommandsService', () => {
   });
 
   describe('enqueueDeliveryRun', () => {
-    it('ARQ-001: autoriza al alumno via assertCanTriggerDelivery, no assertCanManageDelivery', async () => {
+    it('autoriza al alumno via assertCanTriggerDelivery, no assertCanManageDelivery', async () => {
       (builderAccessService.findDeliveryOrThrow as jest.Mock).mockResolvedValue(
         {
           id: 'delivery-1',
@@ -146,7 +146,7 @@ describe('BuilderRunCommandsService', () => {
   describe('cancelRun', () => {
     const actor = { userId: 'teacher-1', role: 'TEACHER' } as any;
 
-    it('HIGH-06: cancela mediante un UPDATE atomico condicionado a QUEUED/RUNNING, no lectura-modificacion-escritura', async () => {
+    it('cancela mediante un UPDATE atomico condicionado a QUEUED/RUNNING, no lectura-modificacion-escritura', async () => {
       (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
         ...buildRun(),
         status: BuildRunStatus.RUNNING,
@@ -162,7 +162,7 @@ describe('BuilderRunCommandsService', () => {
       expect(buildRunRepository.cancelIfActive).toHaveBeenCalledWith(runId);
     });
 
-    it('HIGH-06: lanza ConflictException si el run finalizo entre la lectura y el UPDATE (0 filas afectadas)', async () => {
+    it('lanza ConflictException si el run finalizo entre la lectura y el UPDATE (0 filas afectadas)', async () => {
       (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
         ...buildRun(),
         status: BuildRunStatus.RUNNING,
@@ -186,7 +186,7 @@ describe('BuilderRunCommandsService', () => {
       expect(buildRunRepository.cancelIfActive).not.toHaveBeenCalled();
     });
 
-    it('ARQ-004: publica la cancelacion en Redis para que el pipeline en curso deje de facturar', async () => {
+    it('publica la cancelacion en Redis para que el pipeline en curso deje de facturar', async () => {
       (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
         ...buildRun(),
         status: BuildRunStatus.RUNNING,
@@ -199,7 +199,7 @@ describe('BuilderRunCommandsService', () => {
       );
     });
 
-    it('ARQ-004: retira de la cola un job QUEUED que aun no tomo ningun worker', async () => {
+    it('retira de la cola un job QUEUED que aun no tomo ningun worker', async () => {
       (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
         ...buildRun(),
         status: BuildRunStatus.QUEUED,
@@ -210,7 +210,7 @@ describe('BuilderRunCommandsService', () => {
       expect(builderRunsQueue.remove).toHaveBeenCalledWith(runId);
     });
 
-    it('ARQ-004: no intenta retirar de la cola un job que ya esta RUNNING', async () => {
+    it('no intenta retirar de la cola un job que ya esta RUNNING', async () => {
       (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
         ...buildRun(),
         status: BuildRunStatus.RUNNING,
@@ -221,7 +221,7 @@ describe('BuilderRunCommandsService', () => {
       expect(builderRunsQueue.remove).not.toHaveBeenCalled();
     });
 
-    it('ORC-004: saca la entrega de IN_REVIEW y publica RUN_CANCELLED tras cancelar', async () => {
+    it('saca la entrega de IN_REVIEW y publica RUN_CANCELLED tras cancelar', async () => {
       (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
         ...buildRun(),
         status: BuildRunStatus.RUNNING,
@@ -242,7 +242,7 @@ describe('BuilderRunCommandsService', () => {
       );
     });
 
-    it('ORC-004: no reconcilia Delivery ni publica evento si el UPDATE de cancelacion afecto 0 filas', async () => {
+    it('no reconcilia Delivery ni publica evento si el UPDATE de cancelacion afecto 0 filas', async () => {
       (builderRunQueriesService.getRunById as jest.Mock).mockResolvedValue({
         ...buildRun(),
         status: BuildRunStatus.RUNNING,

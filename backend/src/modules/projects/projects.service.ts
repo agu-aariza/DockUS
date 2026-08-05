@@ -85,7 +85,7 @@ export class ProjectsService {
       );
     }
 
-    // ARQ-007: toda la construcción de la query (scoping por actor, filtros,
+    // toda la construcción de la query (scoping por actor, filtros,
     // subquery de assignmentCount, orden, paginación) vive ahora en
     // ProjectRepository.findAllForActor — este servicio ya no toca
     // SelectQueryBuilder.

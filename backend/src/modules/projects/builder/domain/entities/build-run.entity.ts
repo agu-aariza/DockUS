@@ -116,7 +116,7 @@ export class BuildRun {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  // audit/04 ARQ-013: protege la única ventana lectura-modificación-escritura
+  // protege la única ventana lectura-modificación-escritura
   // que queda sobre esta entidad (el save() del resultado final en
   // BuilderRunLifecycleService, tras releer y comprobar cancelación). Los
   // UPDATE condicionados (cancelRun, markRunAsFailed, el sweep de huérfanos)

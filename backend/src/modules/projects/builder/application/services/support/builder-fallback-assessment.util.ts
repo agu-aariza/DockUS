@@ -36,7 +36,7 @@ function buildFallbackObservedEvidence(
   execution: BuilderExecutionResult,
   errorMessage: string,
 ): string[] {
-  // ARQ-012: opera sobre stdout/stderr estructurados en vez de re-parsear el
+  // opera sobre stdout/stderr estructurados en vez de re-parsear el
   // blob de texto — ya no hace falta filtrar las lineas "STDOUT:"/"STDERR:"/
   // "EXIT CODE: 0" porque, sin el blob, esas lineas nunca existieron.
   const lines = `${execution.stdout}\n${execution.stderr}`

@@ -10,7 +10,9 @@ import {
 } from './code-quality-finding.util';
 import type { CodeQualityFinding } from './builder.types';
 
-function finding(overrides: Partial<CodeQualityFinding> = {}): CodeQualityFinding {
+function finding(
+  overrides: Partial<CodeQualityFinding> = {},
+): CodeQualityFinding {
   return {
     title: 'Hallazgo',
     detail:
@@ -79,8 +81,8 @@ describe('extractRecommendation', () => {
   });
 
   it('cae a la primera frase cuando el formato no se respeta', () => {
-    expect(extractRecommendation('El código no compila. Falta el punto y coma.')).toBe(
-      'El código no compila',
-    );
+    expect(
+      extractRecommendation('El código no compila. Falta el punto y coma.'),
+    ).toBe('El código no compila');
   });
 });

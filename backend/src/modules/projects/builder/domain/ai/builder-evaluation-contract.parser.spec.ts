@@ -149,7 +149,7 @@ describe('parseBuilderEvaluationContractV2', () => {
     );
   });
 
-  it('HIGH-05: fails when evaluativeState=E3 (fail) is paired with a passing recommendedGrade', () => {
+  it('fails when evaluativeState=E3 (fail) is paired with a passing recommendedGrade', () => {
     const raw = JSON.stringify(
       buildEvaluationPayload({
         evaluativeState: 'E3',
@@ -162,7 +162,7 @@ describe('parseBuilderEvaluationContractV2', () => {
     );
   });
 
-  it('HIGH-05: fails when evaluativeState=E4 (fail) is paired with a passing recommendedGrade', () => {
+  it('fails when evaluativeState=E4 (fail) is paired with a passing recommendedGrade', () => {
     const raw = JSON.stringify(
       buildEvaluationPayload({
         evaluativeState: 'E4',
@@ -175,7 +175,7 @@ describe('parseBuilderEvaluationContractV2', () => {
     );
   });
 
-  it('HIGH-05: allows evaluativeState=E3/E4 when recommendedGrade stays within the failing range', () => {
+  it('allows evaluativeState=E3/E4 when recommendedGrade stays within the failing range', () => {
     const raw = JSON.stringify(
       buildEvaluationPayload({
         evaluativeState: 'E3',
@@ -188,7 +188,7 @@ describe('parseBuilderEvaluationContractV2', () => {
     expect(contract.recommendedGrade).toBe(1.5);
   });
 
-  it('AIP-001: a present-but-invalid runtime (null) does not bypass the grade/state invariant', () => {
+  it('a present-but-invalid runtime (null) does not bypass the grade/state invariant', () => {
     // Reproduce exacta del escenario del finding: runtime:null, E4, nota 10,
     // observedEvidence vacío. Antes, safeNormalizeRuntimeDescriptor atrapaba
     // la excepción de normalizeRuntimeDescriptor(null, ...) y la etiquetaba
@@ -208,7 +208,7 @@ describe('parseBuilderEvaluationContractV2', () => {
     expect(() => parseBuilderEvaluationContractV2(raw)).toThrow();
   });
 
-  it('AIP-001: a genuinely absent runtime/recipe (key missing) still enforces the grade/state invariant', () => {
+  it('a genuinely absent runtime/recipe (key missing) still enforces the grade/state invariant', () => {
     const payload = buildEvaluationPayload({
       evaluativeState: 'E4',
       recommendedGrade: 9,
@@ -223,7 +223,7 @@ describe('parseBuilderEvaluationContractV2', () => {
     );
   });
 
-  it('AIP-001: a genuinely truncated contract (runtime/recipe keys absent) still parses with confidence low when grade/state are consistent', () => {
+  it('a genuinely truncated contract (runtime/recipe keys absent) still parses with confidence low when grade/state are consistent', () => {
     const payload = buildEvaluationPayload({
       evaluativeState: 'E1',
       recommendedGrade: 5,

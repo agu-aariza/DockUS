@@ -45,3 +45,6 @@ describe('BuildRunArtifactType', () => {
     }
   });
 });
+/**
+ * Pruebas de la entidad de artefactos asociados a una ejecución del Builder.
+ */

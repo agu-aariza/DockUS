@@ -109,7 +109,7 @@ module.exports = {
     },
     // Without this, dependency-cruiser resolves imports post-type-erasure: a file whose
     // only imports are used in type position (e.g. an interface importing TypeORM types)
-    // shows zero dependencies, hiding exactly the type-surface coupling audit/04 ARQ-007
+    // shows zero dependencies, hiding exactly the type-surface coupling 
     // is about. Pre-compilation analysis keeps those edges visible.
     tsPreCompilationDeps: true,
     doNotFollow: {

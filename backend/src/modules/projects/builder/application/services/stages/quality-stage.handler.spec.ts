@@ -69,7 +69,7 @@ describe('BuilderQualityStageHandler', () => {
     ).toHaveBeenCalledWith(runId, 'project-1', 'student-1', parsedContract);
   });
 
-  it('ARQ-005: un fallo al persistir la proyeccion NO destruye el jsonb canonico ya calculado', async () => {
+  it('un fallo al persistir la proyeccion NO destruye el jsonb canonico ya calculado', async () => {
     builderCodeQualityService.analyzeWithTrace.mockResolvedValue({
       parsedContract,
       usage: undefined,

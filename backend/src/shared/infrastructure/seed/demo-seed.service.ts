@@ -60,8 +60,8 @@ export class DemoSeedService implements OnApplicationBootstrap {
       return;
     }
 
-    // INF-001: guardarraíl de producción, mismo patrón que
-    // `DockerHostService.assertDockerAvailable` — un `SEED_DEMO_DATA=true`
+    // Guardarraíl de producción, igual que
+    // `DockerHostService.assertDockerAvailable`: un `SEED_DEMO_DATA=true`
     // filtrado a producción (p. ej. por copiar un `.env` de desarrollo) no
     // debe crear usuarios con contraseña conocida en silencio.
     if (this.configService.get<string>('NODE_ENV') === 'production') {
@@ -78,7 +78,7 @@ export class DemoSeedService implements OnApplicationBootstrap {
   }
 
   private async seedDemoWorkspace(): Promise<void> {
-    const demoTeacherEmail = 'teacher@dockus.local';
+    const demoTeacherEmail = 'teacher@educodeai.local';
     const existingTeacher = await this.usersRepository.findOne({
       where: { email: demoTeacherEmail },
       withDeleted: true,
@@ -93,7 +93,7 @@ export class DemoSeedService implements OnApplicationBootstrap {
     }
 
     const demoPassword =
-      this.configService.get<string>('SEED_DEMO_PASSWORD') ?? 'Dockus1234!';
+      this.configService.get<string>('SEED_DEMO_PASSWORD') ?? 'EduCodeAI1234!';
     const passwordHash = await bcrypt.hash(demoPassword, BCRYPT_SALT_ROUNDS);
 
     const teacher = await this.usersRepository.save(
@@ -109,7 +109,7 @@ export class DemoSeedService implements OnApplicationBootstrap {
 
     const students = await this.usersRepository.save([
       this.usersRepository.create({
-        email: 'alumno1@dockus.local',
+        email: 'alumno1@educodeai.local',
         passwordHash,
         firstName: 'Lucía',
         lastName: 'Pérez',
@@ -117,7 +117,7 @@ export class DemoSeedService implements OnApplicationBootstrap {
         status: UserStatus.ACTIVE,
       }),
       this.usersRepository.create({
-        email: 'alumno2@dockus.local',
+        email: 'alumno2@educodeai.local',
         passwordHash,
         firstName: 'Mario',
         lastName: 'Ruiz',
@@ -125,7 +125,7 @@ export class DemoSeedService implements OnApplicationBootstrap {
         status: UserStatus.ACTIVE,
       }),
       this.usersRepository.create({
-        email: 'alumno3@dockus.local',
+        email: 'alumno3@educodeai.local',
         passwordHash,
         firstName: 'Sara',
         lastName: 'Gil',

@@ -1,6 +1,6 @@
 import { GroupsService } from './groups.service';
 
-/** ESC-MED-02: N+1 al listar y carrera en la matrícula masiva. */
+/** N+1 al listar y carrera en la matrícula masiva. */
 describe('GroupsService', () => {
   function build() {
     const groupsRepository = {

@@ -19,7 +19,7 @@ import { UsersService } from '../users/application/users.service';
 
 const buildUser = (overrides: Partial<User> = {}): User => ({
   id: '72cf42cc-50b4-4ef1-ae70-d6fd89f5b4ba',
-  email: 'active@dockus.com',
+  email: 'active@educodeai.com',
   passwordHash: 'hashed-password',
   role: UserRole.STUDENT,
   status: UserStatus.ACTIVE,
@@ -88,7 +88,7 @@ describe('AuthService', () => {
 
   it('debe emitir token cuando las credenciales son válidas y la cuenta está ACTIVE', async () => {
     const dto: LoginDto = {
-      email: 'active@dockus.com',
+      email: 'active@educodeai.com',
       password: 'password123',
     };
     const user = buildUser();
@@ -122,11 +122,11 @@ describe('AuthService', () => {
 
   it('debe rechazar login si la cuenta no está activa', async () => {
     const dto: LoginDto = {
-      email: 'inactive@dockus.com',
+      email: 'inactive@educodeai.com',
       password: 'password123',
     };
     const inactiveUser = buildUser({
-      email: 'inactive@dockus.com',
+      email: 'inactive@educodeai.com',
       status: UserStatus.INACTIVE,
     });
 
@@ -147,7 +147,7 @@ describe('AuthService', () => {
 
   it('debe rechazar registro si el email ya existe incluso en soft-delete', async () => {
     const dto: RegisterDto = {
-      email: 'already-used@dockus.com',
+      email: 'already-used@educodeai.com',
       password: 'password123',
       firstName: 'Used',
       lastName: 'Email',
@@ -171,7 +171,7 @@ describe('AuthService', () => {
 
   it('debe rechazar login si la contraseña es incorrecta (pero cuenta activa)', async () => {
     const dto: LoginDto = {
-      email: 'active@dockus.com',
+      email: 'active@educodeai.com',
       password: 'wrongpassword',
     };
     const user = buildUser();

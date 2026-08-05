@@ -5,16 +5,9 @@
  */
 
 /**
- * Plan de arquitectura hexagonal, Fase 1 (P1-4, ver
- * ARQ-007). `RedisClientService` tiene una
- * superficie mucho más amplia (rate-limiting, pub/sub, primitivas de lock)
- * pero solo un consumidor real fuera de `shared/infrastructure/` necesita un
- * puerto: `BuilderRunCancellationService`, y solo usa `set`/`exists` — el
- * resto de consumidores externos (`builder-run-events.service.ts`,
- * `modules/health/health.service.ts`) viven en la propia capa de
- * infraestructura o son código operativo, no lógica de dominio/aplicación
- * acoplada a "que sea Redis" — no forman parte de este puerto a propósito
- * (infra-a-infra no viola ninguna regla de capas).
+ * Contrato mínimo de caché distribuida para publicar y consultar señales de
+ * cancelación. El TTL se expresa en segundos y la ausencia de una clave se
+ * interpreta como una ejecución que no está marcada para cancelarse.
  */
 export interface IDistributedCache {
   set(key: string, value: string, ttlSeconds: number): Promise<void>;

@@ -50,7 +50,7 @@
     "@aws-sdk/client-bedrock-runtime": "^3.1081.0",
     "@aws-sdk/client-s3": "^3.1081.0",
     "@aws-sdk/s3-request-presigner": "^3.1081.0",
-    "@dockus/contracts": "file:../shared/contracts",
+    "@educodeai/contracts": "file:../shared/contracts",
     "@nest-lab/throttler-storage-redis": "^1.2.0",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.1.28",

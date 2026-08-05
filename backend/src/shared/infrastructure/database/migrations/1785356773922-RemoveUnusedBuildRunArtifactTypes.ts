@@ -5,12 +5,12 @@
  */
 
 /**
- * Retira los 12 valores de `BuildRunArtifactType` sin productor actual (ARQ-035).
+ * Retira los 12 valores de `BuildRunArtifactType` sin productor actual.
  *
  * La guardia consulta las filas antes de recrear el enum: cualquier base que
  * conserve evidencia histórica aborta sin cambiar el esquema ni perder datos.
- * Postgres no soporta `ALTER TYPE ... DROP VALUE`, así que se recrea el tipo y
- * se migra la columna mediante `USING ...::text::nuevo_tipo`.
+ * Postgres no soporta `ALTER TYPE... DROP VALUE`, así que se recrea el tipo y
+ * se migra la columna mediante `USING...:text:nuevo_tipo`.
  */
 import { MigrationInterface, QueryRunner } from 'typeorm';
 

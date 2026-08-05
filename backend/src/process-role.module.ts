@@ -17,7 +17,7 @@ import { DynamicModule, Global, Module } from '@nestjs/common';
 /** Token de inyección de dependencias para el rol del proceso. */
 export const PROCESS_ROLE = 'PROCESS_ROLE';
 
-/** Tipos de roles de proceso soportados en el sistema DockUS. */
+/** Tipos de roles de proceso soportados en el sistema EduCodeAI. */
 export type ProcessRole = 'api' | 'worker';
 
 /**

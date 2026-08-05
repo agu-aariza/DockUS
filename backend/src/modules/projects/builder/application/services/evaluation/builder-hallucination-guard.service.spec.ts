@@ -9,33 +9,40 @@ describe('BuilderHallucinationGuard', () => {
 
   const buildAssessment = (
     evaluativeState: BuilderEvaluationContractV2['evaluativeState'],
-  ): BuilderEvaluationContractV2 =>
-    ({
-      schemaVersion: 'builder-llm/v2',
-      stage: 'evaluation',
-      thought: 'ok',
-      structuralType: 'cli',
-      capabilities: {
-        C1: { status: 'yes', rationale: 'ok' },
-        C2: { status: 'yes', rationale: 'ok' },
-        C3: { status: 'no', rationale: 'ok' },
-        C4: { status: 'yes', rationale: 'ok' },
-        C5: { status: 'no', rationale: 'ok' },
-        C6: { status: 'no', rationale: 'ok' },
-      },
-      evaluativeState,
-      confidence: 'high',
-      rationale: 'ok',
-      externalRequirements: [],
-      runtime: { family: 'python', version: null, supported: true, reason: null },
-      recipe: { install: [], run: null, test: [], systemPackages: [], cwd: null, environment: null, service: null },
-      evidenceSummary: '',
-      observedEvidence: [],
-      evaluationLimits: [],
-      gradeBreakdown: [],
-      studentSummary: '',
-      teacherSummary: '',
-    }) as BuilderEvaluationContractV2;
+  ): BuilderEvaluationContractV2 => ({
+    schemaVersion: 'builder-llm/v2',
+    stage: 'evaluation',
+    thought: 'ok',
+    structuralType: 'cli',
+    capabilities: {
+      C1: { status: 'yes', rationale: 'ok' },
+      C2: { status: 'yes', rationale: 'ok' },
+      C3: { status: 'no', rationale: 'ok' },
+      C4: { status: 'yes', rationale: 'ok' },
+      C5: { status: 'no', rationale: 'ok' },
+      C6: { status: 'no', rationale: 'ok' },
+    },
+    evaluativeState,
+    confidence: 'high',
+    rationale: 'ok',
+    externalRequirements: [],
+    runtime: { family: 'python', version: null, supported: true, reason: null },
+    recipe: {
+      install: [],
+      run: null,
+      test: [],
+      systemPackages: [],
+      cwd: null,
+      environment: null,
+      service: null,
+    },
+    evidenceSummary: '',
+    observedEvidence: [],
+    evaluationLimits: [],
+    gradeBreakdown: [],
+    studentSummary: '',
+    teacherSummary: '',
+  });
 
   const buildExecution = (
     overrides: Partial<BuilderExecutionResult> = {},

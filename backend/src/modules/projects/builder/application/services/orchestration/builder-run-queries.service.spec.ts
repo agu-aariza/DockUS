@@ -124,7 +124,7 @@ describe('BuilderRunQueriesService', () => {
   });
 
   describe('listLatestRunsByDeliveryIds', () => {
-    it('HIGH-09: returns an empty map without querying the DB when no delivery ids are given', async () => {
+    it('returns an empty map without querying the DB when no delivery ids are given', async () => {
       const result = await service.listLatestRunsByDeliveryIds(
         [],
         buildActor(UserRole.STUDENT, 'student-1'),
@@ -136,7 +136,7 @@ describe('BuilderRunQueriesService', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('HIGH-09: resolves the latest run per delivery in a single call, defaulting missing deliveries to null', async () => {
+    it('resolves the latest run per delivery in a single call, defaulting missing deliveries to null', async () => {
       const runA = { id: 'run-a', deliveryId: 'delivery-a' } as BuildRun;
       const runB = { id: 'run-b', deliveryId: 'delivery-b' } as BuildRun;
       buildRunsRepository.findLatestByDeliveryIdsForActor.mockResolvedValue([
@@ -160,9 +160,9 @@ describe('BuilderRunQueriesService', () => {
       });
     });
 
-    // HIGH-09: el scoping por actor (STUDENT/TEACHER/ADMIN) vive ahora en
-    // BuildRunRepository.findLatestByDeliveryIdsForActor — ver
-    // builder/infrastructure/database/build-run-actor-scope.util.spec.ts.
+    // El scoping por actor (STUDENT/TEACHER/ADMIN) vive en
+    // BuildRunRepository.findLatestByDeliveryIdsForActor y se cubre en su
+    // suite específica.
   });
 
   describe('streamRunEvents', () => {
@@ -255,7 +255,7 @@ describe('BuilderRunQueriesService', () => {
       expect(sink.onEvent).toHaveBeenNthCalledWith(2, secondEvent);
     });
 
-    it('ESC-ALTO-06: caps backlog draining instead of looping forever against a run that keeps producing events', async () => {
+    it('caps backlog draining instead of looping forever against a run that keeps producing events', async () => {
       (builderRunEventsService.list as jest.Mock).mockResolvedValue({
         events: [firstEvent],
         latestSequence: 1,

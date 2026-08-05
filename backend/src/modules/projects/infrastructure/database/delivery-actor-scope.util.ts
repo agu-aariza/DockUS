@@ -2,10 +2,10 @@
  * @fileoverview Restringe una query de `Delivery` a lo visible por el actor.
  *
  * Contexto:
- * - Extraído de `DeliveriesQueryService.applyActorScope` (plan_accion.md
- *   P2-1), mismo motivo que `project-actor-scope.util.ts` (ARQ-007):
- *   `DeliveryRepository.findAllForActor`/`findByIdForActor` necesitan la
- *   misma lógica de scoping sin exponer `SelectQueryBuilder` en el puerto.
+ * - El helper se comparte entre las consultas de entregas, que necesitan el
+ *   mismo alcance por actor sin exponer `SelectQueryBuilder` en el puerto.
+ * `DeliveryRepository.findAllForActor`/`findByIdForActor` necesitan la
+ * misma lógica de scoping sin exponer `SelectQueryBuilder` en el puerto.
  * - Cero cambio de comportamiento: mismo cuerpo de función, reubicado.
  *
  * @module DeliveryActorScopeUtil

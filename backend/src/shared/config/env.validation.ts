@@ -22,7 +22,7 @@ const insecureJwtPlaceholders = [
  * Las cinco etapas reales del pipeline LLM del builder (ver
  * `builder-llm-roles.ts`). Fuente única para las claves
  * `BUILDER_BEDROCK_<STAGE>_MODEL_ID` — listarlas a mano aquí dejó fuera
- * `FACTS` durante un tiempo (ARQ-030), silenciosamente degradando esa etapa
+ * `FACTS` durante un tiempo, silenciosamente degradando esa etapa
  * al modelo por defecto en vez de al modelo Bedrock configurado.
  */
 const BUILDER_LLM_PROMPT_STAGES = [
@@ -70,7 +70,7 @@ export const envValidationSchema = Joi.object({
   DB_USERNAME: Joi.string().required(),
   DB_PASSWORD: Joi.string().required(),
   DB_NAME: Joi.string().required(),
-  // Pool de conexiones (ESC-C01). `max` es por proceso: con varias réplicas de
+  // Pool de conexiones. `max` es por proceso: con varias réplicas de
   // API, n × max no debe superar el max_connections del servidor.
   DB_POOL_MAX: Joi.number().integer().min(2).max(200).default(20),
   DB_POOL_IDLE_TIMEOUT_MS: Joi.number().integer().min(1000).default(30000),
@@ -80,7 +80,7 @@ export const envValidationSchema = Joi.object({
   // así no compiten dos procesos alterando el mismo catálogo de PostgreSQL.
   // En producción se fuerza a `false` desde `typeorm.config.ts`.
   DB_SYNCHRONIZE: Joi.boolean().optional(),
-  // Opt-in explícito para aplicar migraciones al arrancar (ESC-CRIT-03). Debe
+  // Opt-in explícito para aplicar migraciones al arrancar. Debe
   // quedarse en `false` si hay varias réplicas de API: en ese caso se ejecuta
   // `npm run migration:run` como paso previo del despliegue.
   DB_RUN_MIGRATIONS: Joi.boolean().default(false),
@@ -95,18 +95,18 @@ export const envValidationSchema = Joi.object({
     .optional(),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
   // Vida de la caché de identidad que evita un SELECT a `users` por petición
-  // (ESC-ALTO-04). Es la red de seguridad, no el mecanismo principal: las
+  // Es la red de seguridad, no el mecanismo principal: las
   // mutaciones de cuenta invalidan la entrada de inmediato. `0` la desactiva
   // por completo, que es el interruptor de emergencia si la invalidación
   // resultara defectuosa en producción.
   AUTH_IDENTITY_CACHE_TTL_SECONDS: Joi.number().min(0).max(300).default(30),
-  // Cuota de gasto en inferencia por proyecto, en USD (ESC-ALTO-02). Se
+  // Cuota de gasto en inferencia por proyecto, en USD. Se
   // comprueba al encolar: agotada, se rechazan las nuevas ejecuciones con la
   // cifra gastada en el mensaje. `0` desactiva el tope, que es el
   // comportamiento historico. La cuota puede rebasarse dentro de un run ya
   // aceptado; el desbordamiento esta acotado al coste de una ejecucion.
   BUILDER_PROJECT_SPEND_QUOTA_USD: Joi.number().min(0).default(0),
-  // Cortacircuitos por proveedor de LLM (ESC-ALTO-02). Solo cuentan los fallos
+  // Cortacircuitos por proveedor de LLM. Solo cuentan los fallos
   // que hablan de la salud del proveedor: rechazo por tasa, 5xx y conectividad.
   // Umbral `0` lo desactiva.
   LLM_CIRCUIT_BREAKER_THRESHOLD: Joi.number().min(0).default(5),
@@ -114,7 +114,7 @@ export const envValidationSchema = Joi.object({
   LLM_CIRCUIT_BREAKER_COOLDOWN_SECONDS: Joi.number().min(1).default(120),
   SEED_ADMIN_EMAIL: Joi.string().email().optional(),
   SEED_ADMIN_PASSWORD: Joi.string().optional(),
-  // Seed de demo (INF-001): nunca debe activarse en producción —
+  // Seed de demo: nunca debe activarse en producción —
   // `DemoSeedService` rechaza sembrar si `NODE_ENV=production` sin importar
   // este flag. Declarado aquí para que deje de ser una variable invisible al
   // esquema fail-fast, no porque el esquema por sí solo la bloquee.
@@ -129,13 +129,13 @@ export const envValidationSchema = Joi.object({
   REDIS_PASSWORD: Joi.string().allow('').optional(),
   MINIO_ENDPOINT: Joi.string().default('localhost'),
   MINIO_API_PORT: Joi.number().default(9000),
-  MINIO_ROOT_USER: Joi.string().default('dockus_admin'),
-  MINIO_ROOT_PASSWORD: Joi.string().default('dockus_secret_key'),
-  MINIO_BUCKET_NAME: Joi.string().default('dockus-storage'),
+  MINIO_ROOT_USER: Joi.string().default('educodeai_admin'),
+  MINIO_ROOT_PASSWORD: Joi.string().default('educodeai_secret_key'),
+  MINIO_BUCKET_NAME: Joi.string().default('educodeai-storage'),
   MINIO_USE_SSL: Joi.boolean().default(false),
   STORAGE_SIGNED_URL_TTL_SECONDS: Joi.number().default(600),
   STORAGE_BOOTSTRAP_ON_STARTUP: Joi.boolean().default(true),
-  // Retención de la evidencia generada por el pipeline (ESC-ALTO-09). 0 la
+  // Retención de la evidencia generada por el pipeline. 0 la
   // desactiva. Las entregas del alumno no caducan: su borrado es académico.
   STORAGE_EVIDENCE_RETENTION_DAYS: Joi.number().integer().min(0).default(90),
   AWS_REGION: Joi.string().default('us-east-1'),

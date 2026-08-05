@@ -87,7 +87,7 @@ export class AdminSeedService implements OnApplicationBootstrap {
       email: email.trim().toLowerCase(),
       passwordHash,
       firstName: 'Admin',
-      lastName: 'DockUS',
+      lastName: 'EduCodeAI',
       role: UserRole.ADMIN,
       status: UserStatus.ACTIVE,
     });

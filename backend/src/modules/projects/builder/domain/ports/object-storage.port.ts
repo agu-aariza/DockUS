@@ -7,25 +7,9 @@
 import type { Readable } from 'stream';
 
 /**
- * Plan de arquitectura hexagonal, Fase 1 (P1-2, ver
- * ARQ-007). Cubre la superficie pública
- * completa de `MinioStorageService` salvo `onModuleInit` (hook de ciclo de
- * vida, no forma parte del contrato de negocio) — auditado con grep contra
- * los 7 consumidores reales antes de diseñar: entre todos usan los 7 métodos.
- *
- * A diferencia de `IContainerRuntime` (Fase 1, P1-1), aquí se define un tipo
- * propio para `putObject` en vez de reutilizar el `PutObjectParams` de
- * `minio-storage.service.ts`: ese tipo no es un fichero puro de tipos/constantes
- * (vive en el propio fichero de la clase `@Injectable`, con imports del SDK de
- * AWS) y no calificaría para la misma excepción que `llm.types.ts`/
- * `docker.types.ts` en `.dependency-cruiser.cjs`. Al ser solo 5 campos, sobre
- * primitivas de Node (`Buffer`/`Readable`), duplicarlo aquí es más barato que
- * extraer un fichero de tipos nuevo solo para esto.
- *
- * Puertos consumidos desde 3 módulos Nest distintos (`StorageModule`,
- * `ProjectsModule`, `BuilderModule`) — cada uno registra su propio provider
- * `{ provide: OBJECT_STORAGE, useExisting: MinioStorageService }`, ya que los
- * tres importan `StorageInfrastructureModule`.
+ * Contrato de almacenamiento de objetos utilizado por proyectos, entregas y
+ * Builder. Define operaciones de lectura, escritura, borrado y generación de
+ * URLs sin exponer el cliente de MinIO ni sus hooks de inicialización.
  */
 export interface IObjectStorage {
   getBucketName(): string;

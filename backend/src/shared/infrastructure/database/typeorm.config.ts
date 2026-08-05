@@ -58,10 +58,10 @@ export function buildTypeOrmConfig(
     port: configService.get<number>('DB_PORT', 5432),
     username: configService.get<string>('DB_USERNAME', 'postgres'),
     password: configService.get<string>('DB_PASSWORD', 'postgres'),
-    database: configService.get<string>('DB_NAME', 'dockus'),
+    database: configService.get<string>('DB_NAME', 'educodeai'),
     autoLoadEntities: true,
     synchronize,
-    migrationsTableName: 'dockus_migrations',
+    migrationsTableName: 'educodeai_migrations',
     migrations: [join(__dirname, 'migrations', `*.${migrationExtension()}`)],
     // Desactivado por defecto y opt-in explícito (`DB_RUN_MIGRATIONS=true`).
     // En producciones multinodo las migraciones deben ejecutarse como paso previo (`npm run migration:run`).

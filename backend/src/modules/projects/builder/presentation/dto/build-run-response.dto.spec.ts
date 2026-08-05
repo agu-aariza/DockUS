@@ -112,3 +112,6 @@ describe('toBuildRunResponseDto', () => {
     ]);
   });
 });
+/**
+ * Pruebas de serialización y validación del DTO público de respuesta de una ejecución.
+ */

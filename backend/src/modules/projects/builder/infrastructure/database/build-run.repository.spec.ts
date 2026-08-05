@@ -2,7 +2,7 @@ import { BuildRunRepository } from './build-run.repository';
 import { BuildRunStatus } from '../../domain/entities/build-run.entity';
 
 /**
- * audit/04 ARQ-007: la lógica de query-builder que antes vivía (y se
+ * la lógica de query-builder que antes vivía (y se
  * probaba) en los servicios de aplicación se movió aquí sin cambiar una
  * línea de SQL. Esta suite es la que sustituye esa cobertura, ahora en la
  * capa donde el SQL realmente vive.
@@ -76,7 +76,7 @@ describe('BuildRunRepository', () => {
   });
 
   describe('claimQueuedRun', () => {
-    it('ORC-001: condiciona el UPDATE a QUEUED y devuelve true si afectó filas', async () => {
+    it('condiciona el UPDATE a QUEUED y devuelve true si afectó filas', async () => {
       queryBuilder.execute.mockResolvedValue({ affected: 1 });
       const startedAt = new Date('2026-01-01T00:00:00Z');
 
@@ -97,7 +97,7 @@ describe('BuildRunRepository', () => {
       });
     });
 
-    it('ORC-001: devuelve false si el run ya no estaba QUEUED (0 filas afectadas)', async () => {
+    it('devuelve false si el run ya no estaba QUEUED (0 filas afectadas)', async () => {
       queryBuilder.execute.mockResolvedValue({ affected: 0 });
 
       await expect(
@@ -119,7 +119,7 @@ describe('BuildRunRepository', () => {
       executionCostUsd: 0.01,
     };
 
-    it('ORC-001: condiciona el UPDATE a RUNNING y devuelve true si afectó filas', async () => {
+    it('condiciona el UPDATE a RUNNING y devuelve true si afectó filas', async () => {
       queryBuilder.execute.mockResolvedValue({ affected: 1 });
 
       const result = await repository.completeRunningRun('run-1', patch);
@@ -138,7 +138,7 @@ describe('BuildRunRepository', () => {
       });
     });
 
-    it('ORC-001: devuelve false si el run ya no seguia RUNNING (cancelado, o fallado por otra via)', async () => {
+    it('devuelve false si el run ya no seguia RUNNING (cancelado, o fallado por otra via)', async () => {
       queryBuilder.execute.mockResolvedValue({ affected: 0 });
 
       await expect(repository.completeRunningRun('run-1', patch)).resolves.toBe(
@@ -148,7 +148,7 @@ describe('BuildRunRepository', () => {
   });
 
   describe('failIfActive', () => {
-    it('ORC-002: condiciona el UPDATE a QUEUED/RUNNING (no a "distinto de CANCELLED")', async () => {
+    it('condiciona el UPDATE a QUEUED/RUNNING (no a "distinto de CANCELLED")', async () => {
       queryBuilder.execute.mockResolvedValue({ affected: 1 });
 
       const result = await repository.failIfActive('run-1', 'boom');
@@ -166,7 +166,7 @@ describe('BuildRunRepository', () => {
       );
     });
 
-    it('ORC-002: devuelve false si el run ya no estaba activo (p.ej. ya SUCCESS) — no lo degrada', async () => {
+    it('devuelve false si el run ya no estaba activo (p.ej. ya SUCCESS) — no lo degrada', async () => {
       queryBuilder.execute.mockResolvedValue({ affected: 0 });
 
       await expect(repository.failIfActive('run-1', 'boom')).resolves.toBe(

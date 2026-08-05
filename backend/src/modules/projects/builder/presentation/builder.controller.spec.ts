@@ -78,7 +78,7 @@ describe('BuilderController', () => {
   });
 
   describe('getLatestRunsByDeliveries', () => {
-    it('HIGH-09: maps the batch service result into role-redacted response DTOs, keyed by deliveryId', async () => {
+    it('maps the batch service result into role-redacted response DTOs, keyed by deliveryId', async () => {
       const runForA = {
         id: 'run-a',
         deliveryId: 'delivery-a',
@@ -127,7 +127,8 @@ describe('BuilderController', () => {
       ).toHaveBeenCalledWith(['delivery-a', 'delivery-b'], request.user);
       expect(response.data['delivery-b']).toBeNull();
       // El actor STUDENT nunca debe recibir llmAssessment/report.teacherHighlights
-      // (misma redaccion por rol que el resto de endpoints de BuildRun, CRIT-04).
+      // Mantiene la misma redacción por rol que el resto de endpoints de
+      // BuildRun.
       expect(response.data['delivery-a']?.llmAssessment).toBeUndefined();
       expect(
         (response.data['delivery-a']?.report as any)?.teacherHighlights,

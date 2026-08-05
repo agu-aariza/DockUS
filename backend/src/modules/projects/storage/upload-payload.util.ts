@@ -1,7 +1,7 @@
 /**
  * @fileoverview Lectura de una subida sin retenerla entera en memoria.
  *
- * Contexto (ESC-ALTO-05): con Multer en disco, un fichero subido llega como
+ * Contexto: con Multer en disco, un fichero subido llega como
  * ruta. Estas funciones permiten resumirlo y enviarlo a MinIO leyéndolo por
  * trozos, en lugar de cargar sus 50 MB en el montículo del proceso de la API.
  *

@@ -79,7 +79,7 @@ describe('ProjectAssignmentsService', () => {
     expect(result.summary.resolvedStudentIds).toEqual(['student-1']);
   });
 
-  describe('HIGH-10: co-docentes asignados, no solo el creador del proyecto', () => {
+  describe('co-docentes asignados, no solo el creador del proyecto', () => {
     const buildService = (assignmentsRepository: any) =>
       new ProjectAssignmentsService(
         assignmentsRepository,
@@ -177,3 +177,6 @@ describe('ProjectAssignmentsService', () => {
     });
   });
 });
+/**
+ * Pruebas de las reglas de creación, reactivación, revocación y consulta de asignaciones.
+ */

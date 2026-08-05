@@ -4,7 +4,7 @@ function bundleWith(role: string): PromptBundle {
   return { role, task: 'tarea', hard_rules: [role] };
 }
 
-describe('interpolatePromptBundle — LOW-02: sustitución literal de variables', () => {
+describe('interpolatePromptBundle — sustitución literal de variables', () => {
   it('sustituye un marcador por su valor', () => {
     const result = interpolatePromptBundle(bundleWith('Hola {{nombre}}.'), {
       nombre: 'Ana',

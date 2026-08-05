@@ -58,3 +58,6 @@ describe('DockerHostService', () => {
     ).resolves.toEqual(dockerInfo);
   });
 });
+/**
+ * Pruebas de detección de capacidades y disponibilidad del host Docker.
+ */

@@ -47,3 +47,6 @@ describe('ProjectAccessService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
+/**
+ * Pruebas de autorización por actor para consultar y operar sobre proyectos.
+ */

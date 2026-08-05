@@ -27,7 +27,7 @@ describe('parseBuilderFactsContractV2', () => {
     expect(contract.compilationStatus).toBe('success');
   });
 
-  it("AIP-007: the literal string 'false' is not coerced to true", () => {
+  it("the literal string 'false' is not coerced to true", () => {
     const contract = parseBuilderFactsContractV2(
       JSON.stringify(buildFactsPayload({ matchesOracle: 'false' })),
     );
@@ -35,7 +35,7 @@ describe('parseBuilderFactsContractV2', () => {
     expect(contract.matchesOracle).toBe(false);
   });
 
-  it("AIP-007: the literal string 'true' is accepted as true", () => {
+  it("the literal string 'true' is accepted as true", () => {
     const contract = parseBuilderFactsContractV2(
       JSON.stringify(buildFactsPayload({ matchesOracle: 'true' })),
     );
@@ -43,7 +43,7 @@ describe('parseBuilderFactsContractV2', () => {
     expect(contract.matchesOracle).toBe(true);
   });
 
-  it('AIP-007: case/whitespace variants of the boolean string are accepted', () => {
+  it('case/whitespace variants of the boolean string are accepted', () => {
     const contract = parseBuilderFactsContractV2(
       JSON.stringify(buildFactsPayload({ matchesOracle: ' False ' })),
     );
@@ -51,7 +51,7 @@ describe('parseBuilderFactsContractV2', () => {
     expect(contract.matchesOracle).toBe(false);
   });
 
-  it('AIP-007: an ambiguous value fails the contract instead of defaulting to true', () => {
+  it('an ambiguous value fails the contract instead of defaulting to true', () => {
     expect(() =>
       parseBuilderFactsContractV2(
         JSON.stringify(buildFactsPayload({ matchesOracle: 'maybe' })),
@@ -59,7 +59,7 @@ describe('parseBuilderFactsContractV2', () => {
     ).toThrow("matchesOracle debe ser boolean ('true'/'false')");
   });
 
-  it('AIP-007: a missing matchesOracle fails the contract instead of defaulting to false', () => {
+  it('a missing matchesOracle fails the contract instead of defaulting to false', () => {
     const payload = buildFactsPayload();
     delete (payload as Record<string, unknown>).matchesOracle;
 
@@ -78,3 +78,6 @@ describe('parseBuilderFactsContractV2', () => {
     );
   });
 });
+/**
+ * Pruebas de validación del contrato de hechos observables producido durante la evaluación.
+ */

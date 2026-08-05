@@ -8,9 +8,9 @@
 import { CourseGroup } from '../../entities/course-group.entity';
 
 /**
- * Puerto real (ARQ-007 P2-7): sin puerto
+ * Puerto real: sin puerto
  * previo, único consumidor real (`GroupsService`, dueño de `CourseGroup`).
- * Mismo criterio que ARQ-007: sin tipos de TypeORM en la firma.
+ * Mismo criterio que: sin tipos de TypeORM en la firma.
  */
 export const COURSE_GROUP_REPOSITORY = Symbol('ICourseGroupRepository');
 

@@ -11,7 +11,7 @@ import { lookup } from 'dns/promises';
 
 const mockedLookup = lookup as jest.MockedFunction<typeof lookup>;
 
-describe('assertSafeLlmEndpoint — AIP-002', () => {
+describe('assertSafeLlmEndpoint — ', () => {
   beforeEach(() => {
     mockedLookup.mockReset();
   });
@@ -103,3 +103,6 @@ describe('assertSafeLlmEndpoint — AIP-002', () => {
     ).resolves.toBeUndefined();
   });
 });
+/**
+ * Pruebas de la política que decide qué endpoint de LLM puede utilizarse.
+ */

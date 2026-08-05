@@ -87,7 +87,7 @@ export class CodeQualityFindingRepository implements ICodeQualityFindingReposito
           severity,
           COUNT(*)::int AS "studentCount"
         FROM code_quality_findings
-        WHERE project_id = $1
+        WHERE "projectId" = $1
         GROUP BY title, category, severity
         ORDER BY COUNT(*) DESC, title ASC
       `,
@@ -109,7 +109,7 @@ export class CodeQualityFindingRepository implements ICodeQualityFindingReposito
           severity,
           COUNT(*)::int AS "studentCount"
         FROM code_quality_findings
-        WHERE project_id = $1
+        WHERE "projectId" = $1
           AND category = $2
         GROUP BY title, category, severity
         ORDER BY COUNT(*) DESC, title ASC
@@ -123,9 +123,9 @@ export class CodeQualityFindingRepository implements ICodeQualityFindingReposito
   async countDistinctStudentsForProject(projectId: string): Promise<number> {
     const rows = await this.repository.query<Array<{ count: number }>>(
       `
-        SELECT COUNT(DISTINCT student_id)::int AS count
+        SELECT COUNT(DISTINCT "studentId")::int AS count
         FROM code_quality_findings
-        WHERE project_id = $1
+        WHERE "projectId" = $1
       `,
       [projectId],
     );

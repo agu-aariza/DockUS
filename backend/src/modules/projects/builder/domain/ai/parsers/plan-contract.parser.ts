@@ -256,8 +256,8 @@ export function normalizeRuntimeDescriptor(
   const family = dto.family;
   let version = dto.version ? String(dto.version).trim() : null;
 
-  // ARQ-010: la normalización de versión (incluidos los alias de C, p.ej.
-  // gcc-13 -> c17) vive en el catálogo, no como un if/else por familia aquí.
+  // La normalización de versión, incluidos los alias de C como gcc-13 -> c17,
+  // vive en el catálogo y no como un if/else por familia aquí.
   if (version !== null) {
     version = normalizeRuntimeVersion(family, version);
   }

@@ -1,26 +1,20 @@
 /**
  * @fileoverview Catálogo de runtimes soportados por el builder — fuente única
- * de verdad (audit/04 ARQ-010).
+ * de verdad.
  *
  * Contexto:
- * - Antes de esta consolidación, cada consumidor (parser de planes, prompt
- *   composer, compilador de recetas, `BuilderRuntimeFamily`) mantenía su
- *   propia copia de versiones permitidas, imagen por defecto o el flag
- *   "ejecutable" — el catálogo ya existía pero no era la única fuente. Alta
- *   de un lenguaje nuevo = una entrada aquí, no seis ficheros.
+ * - Cada runtime se declara una sola vez con sus versiones, imagen por defecto
+ *   y capacidad de ejecución. Añadir un lenguaje requiere una entrada aquí.
  * - `BuilderRuntimeFamily` se deriva de las claves de `RUNTIME_CATALOG` (más
- *   el centinela `'unknown'`, que nunca es una entrada real del catálogo —
- *   significa "el LLM no supo identificar el runtime"). `builder.types.ts`
- *   reexporta el tipo desde aquí en vez de mantenerlo por separado.
- * - Vive en `domain/`, no en `application/services/compilation/` (su
- *   ubicación original): es dato puro sin efectos. La mudanza también
- *   resuelve un import cruzado documentado como pendiente en el registro de
- *   ARQ-002: `builder-prompt-composer.ts` importaba `runtimeCatalogToText`
- *   desde `application/`, domain→application, la dirección prohibida.
+ * el centinela `'unknown'`, que nunca es una entrada real del catálogo —
+ * significa "el LLM no supo identificar el runtime"). `builder.types.ts`
+ * reexporta el tipo desde aquí en vez de mantenerlo por separado.
+ * - Vive en `domain/` porque es dato puro sin efectos. Los servicios de
+ *   aplicación lo consumen sin invertir las dependencias de las capas.
  * - Las referencias a `BuilderPlanContractV2` son `import type`: erasable en
- *   tiempo de compilación, así que el ciclo con `builder.types.ts` (que a su
- *   vez reexporta `BuilderRuntimeFamily` desde aquí) no existe en runtime,
- *   solo en el grafo de tipos — TypeScript lo resuelve sin problema.
+ * tiempo de compilación, así que el ciclo con `builder.types.ts` (que a su
+ * vez reexporta `BuilderRuntimeFamily` desde aquí) no existe en runtime,
+ * solo en el grafo de tipos — TypeScript lo resuelve sin problema.
  *
  * @module RuntimeCatalog
  */
@@ -51,7 +45,7 @@ export interface RuntimeCatalogEntry {
    * Tokens de texto libre (ya en minúsculas, sin separadores) que identifican
    * esta familia dentro de `expectedType` — un campo de texto libre que
    * escribe el docente al configurar el proyecto (ver
-   * `selectFewShotExample`/ARQ-010 resto). Coincidencia por token exacto, no
+   * `selectFewShotExample`. Coincidencia por token exacto, no
    * por substring: evita falsos positivos como que "CLI" (de "PYTHON_CLI")
    * dispare la familia `c` solo por contener la letra "c".
    */
@@ -203,12 +197,9 @@ export function matchRuntimeFamilyFromFreeText(
 
 /**
  * Selecciona el ejemplo few-shot del prompt de plan a partir de
- * `expectedType` (audit/04 ARQ-010 resto). Antes de esta consolidación vivía
- * en `builder-prompt-composer.ts` con sus propios `.includes('c')` — un
- * substring que disparaba la familia `c` con cualquier `expectedType` que
- * contuviera la letra "c" en cualquier parte (p.ej. "PYTHON_CLI"). El
- * catálogo tokeniza en su lugar, así que "PYTHON_CLI" solo coincide con el
- * token `cli`, que no es alias de ninguna familia.
+ * `expectedType`. Tokeniza el texto antes de comparar para que una letra
+ * coincidente dentro de otra palabra no seleccione una familia equivocada;
+ * por ejemplo, "PYTHON_CLI" solo coincide con el token `cli`.
  *
  * Los tokens de framework de servicio (`serviceFrameworkTokens`) se
  * comprueban antes que la familia detectada: un `expectedType` como

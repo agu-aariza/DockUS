@@ -1,15 +1,15 @@
 /**
  * @fileoverview Comprobación de capacidad del worker frente a la RAM del host.
  *
- * Contexto (ESC-MED-04):
+ * Contexto:
  * - Cada unidad de concurrencia del worker levanta un contenedor con su propio
- *   límite de memoria. El producto `concurrencia × límite` no lo acota nada, de
- *   modo que una configuración desmedida no agota la cola sino la RAM del
- *   anfitrión, y el OOM se lleva al worker entero —con todas sus evaluaciones
- *   en curso— en lugar de a un contenedor.
+ * límite de memoria. El producto `concurrencia × límite` no lo acota nada, de
+ * modo que una configuración desmedida no agota la cola sino la RAM del
+ * anfitrión, y el OOM se lleva al worker entero —con todas sus evaluaciones
+ * en curso— en lugar de a un contenedor.
  * - La parte del hallazgo que sí desapareció es la de los workspaces: desde
- *   ESC-ALTO-03 viven en un volumen de disco (`TMPDIR=/dockus-workspaces`) y ya
- *   no en el tmpfs respaldado por RAM.
+ * viven en un volumen de disco (`TMPDIR=/educodeai-workspaces`) y ya
+ * no en el tmpfs respaldado por RAM.
  *
  * Esto solo **avisa**. Negarse a arrancar por una heurística de memoria sería
  * peor que el problema: el anfitrión puede tener otras reservas, o el operador

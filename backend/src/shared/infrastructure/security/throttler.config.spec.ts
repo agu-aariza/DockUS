@@ -21,7 +21,7 @@ function contextWith(body: unknown): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
-describe('throttlerConfig — ESC-C02: conteo por identidad, no por IP', () => {
+describe('throttlerConfig — conteo por identidad, no por IP', () => {
   describe('trackByUserOrIp', () => {
     it('cuenta por usuario cuando la petición está autenticada', () => {
       // Es el cambio de fondo: un aula tras el NAT del campus comparte IP, y
@@ -106,7 +106,7 @@ describe('throttlerConfig — ESC-C02: conteo por identidad, no por IP', () => {
     });
   });
 
-  describe('cubo refresh-identity (INF-002)', () => {
+  describe('cubo refresh-identity', () => {
     it('se salta cuando la petición no lleva refreshToken', () => {
       const skipIf = bucket('refresh-identity').skipIf;
 
@@ -164,7 +164,7 @@ describe('throttlerConfig — ESC-C02: conteo por identidad, no por IP', () => {
     });
 
     it.each(['global', 'burst'])(
-      'el cubo %s delega su clave en DockusThrottlerGuard',
+      'el cubo %s delega su clave en EduCodeAIThrottlerGuard',
       (name) => {
         // Verificado empíricamente: `req.user` no existe cuando corre el guard
         // global, así que la identidad hay que resolverla verificando el token,

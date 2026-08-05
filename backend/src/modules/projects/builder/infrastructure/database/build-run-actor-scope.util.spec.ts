@@ -3,11 +3,8 @@
  * entrega) por actor.
  *
  * Contexto:
- * - Extraído de `builder-run-queries.service.spec.ts` (plan_accion.md P2-4):
- *   la lógica que estas pruebas cubrían vivía antes en
- *   `BuilderRunQueriesService`, ahora vive en `BuildRunRepository` a través
- *   de este util — las pruebas se mueven con el código, mismo comportamiento
- *   (HIGH-09).
+ * - Comprueba las reglas de visibilidad de las ejecuciones agrupadas por
+ *   entrega para cada rol y sus joins obligatorios.
  *
  * @module BuildRunActorScopeUtilSpec
  */
@@ -33,7 +30,7 @@ describe('applyBuildRunActorScope', () => {
     expect(builder.innerJoin).not.toHaveBeenCalled();
   });
 
-  it('HIGH-09: restringe a STUDENT via delivery.authorId, sin join adicional', () => {
+  it('restringe a STUDENT via delivery.authorId, sin join adicional', () => {
     const actor = buildActor(UserRole.STUDENT, 'student-1');
     const builder = buildQueryBuilder();
 
@@ -51,7 +48,7 @@ describe('applyBuildRunActorScope', () => {
     );
   });
 
-  it('HIGH-09: restringe a TEACHER via project.teachers', () => {
+  it('restringe a TEACHER via project.teachers', () => {
     const actor = buildActor(UserRole.TEACHER, 'teacher-1');
     const builder = buildQueryBuilder();
 

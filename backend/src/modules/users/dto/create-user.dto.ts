@@ -22,7 +22,7 @@ import { UserRole, UserStatus } from '../entities/user.entity';
 
 export class CreateUserDto {
   @ApiProperty({
-    example: 'admin@dockus.com',
+    example: 'admin@educodeai.com',
     description: 'Email único del usuario.',
   })
   @IsEmail({}, { message: 'Formato de email inválido.' })

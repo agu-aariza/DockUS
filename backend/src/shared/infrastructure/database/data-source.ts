@@ -37,10 +37,10 @@ export const appDataSource = new DataSource({
   port: Number(process.env.DB_PORT ?? 5432),
   username: process.env.DB_USERNAME ?? 'postgres',
   password: process.env.DB_PASSWORD ?? 'postgres',
-  database: process.env.DB_NAME ?? 'dockus',
+  database: process.env.DB_NAME ?? 'educodeai',
   entities: [join(root, '**', `*.entity.${extension}`)],
   migrations: [join(__dirname, 'migrations', `*.${extension}`)],
-  migrationsTableName: 'dockus_migrations',
+  migrationsTableName: 'educodeai_migrations',
 });
 
 // Sin `export default`: el CLI de TypeORM exige que el fichero exporte una

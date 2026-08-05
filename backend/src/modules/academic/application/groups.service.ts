@@ -104,12 +104,19 @@ export class GroupsService {
     const enrollments =
       await this.enrollmentsRepository.findByGroupWithStudent(groupId);
 
+    // `student` puede venir null: TypeORM filtra de la relación las filas con
+    // `deletedAt` seteado (borrado lógico de users.service#remove), así que
+    // una matrícula de un alumno borrado deja de resolver el JOIN aunque la
+    // fila de group_enrollments siga existiendo. Sin este fallback, un solo
+    // alumno borrado tumbaba el listado entero del grupo.
     return enrollments.map((e) => ({
       id: e.id,
       groupId: e.groupId,
       studentId: e.studentId,
-      studentEmail: e.student.email,
-      studentName: `${e.student.lastName}, ${e.student.firstName}`.trim(),
+      studentEmail: e.student?.email ?? null,
+      studentName: e.student
+        ? `${e.student.lastName}, ${e.student.firstName}`.trim()
+        : 'Alumno no disponible',
       enrolledById: e.enrolledById,
       enrolledAt: e.enrolledAt,
       revokedAt: e.revokedAt,

@@ -1,6 +1,5 @@
 /**
- * @fileoverview Política de endpoints configurables de proveedores LLM
- * (AIP-002).
+ * @fileoverview Política de endpoints configurables de proveedores LLM.
  *
  * Contexto:
  * - `endpoint` en la configuración ADMIN de un proveedor (Azure/OpenAI/

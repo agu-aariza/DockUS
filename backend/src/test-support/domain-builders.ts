@@ -1,5 +1,5 @@
 /**
- * @fileoverview Módulo del sistema DockUS (domain-builders).
+ * @fileoverview Módulo del sistema EduCodeAI (domain-builders).
  *
  * @module domain-builders
  */
@@ -28,7 +28,7 @@ export function buildActor(
 ): AuthenticatedUser {
   return {
     userId,
-    email: `${role.toLowerCase()}@dockus.test`,
+    email: `${role.toLowerCase()}@educodeai.test`,
     role,
   };
 }
@@ -66,7 +66,7 @@ export function buildAssignment(
     studentId: '44444444-4444-4444-4444-444444444444',
     student: {
       id: '44444444-4444-4444-4444-444444444444',
-      email: 'student@dockus.test',
+      email: 'student@educodeai.test',
       firstName: 'Dock',
       lastName: 'Student',
     } as ProjectAssignment['student'],
@@ -115,7 +115,7 @@ export function buildStorageObject(
     contentType: 'text/x-python',
     sizeBytes: 10,
     hash: 'abc123',
-    bucket: 'dockus-storage',
+    bucket: 'educodeai-storage',
     objectKey:
       'deliveries/55555555-5555-5555-5555-555555555555/student-source/main.py',
     uploaderId: '11111111-1111-1111-1111-111111111111',

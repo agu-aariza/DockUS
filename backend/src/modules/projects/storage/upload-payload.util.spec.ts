@@ -11,11 +11,11 @@ import {
   openUploadBody,
 } from './upload-payload.util';
 
-describe('upload-payload.util — ESC-ALTO-05: subidas sin bufferizar', () => {
+describe('upload-payload.util — subidas sin bufferizar', () => {
   let dir: string;
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'dockus-upload-spec-'));
+    dir = await mkdtemp(join(tmpdir(), 'educodeai-upload-spec-'));
   });
 
   afterEach(async () => {

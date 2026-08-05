@@ -3,16 +3,16 @@
  *
  * Contexto:
  * - Es la fuente de verdad de qué proveedor sirve cada rol del pipeline
- *   (planner, eval, quality, chatbot), con qué modelo y a qué tarifa.
+ * (planner, eval, quality, chatbot), con qué modelo y a qué tarifa.
  * - Traduce esa configuración a `LlmModelProfile` + `LlmProviderCredentials`,
- *   que es lo que consume el router de generación. Si un rol no tiene proveedor
- *   asignado, se cae al perfil de Bedrock definido por variables de entorno.
+ * que es lo que consume el router de generación. Si un rol no tiene proveedor
+ * asignado, se cae al perfil de Bedrock definido por variables de entorno.
  * - Las API keys se guardan cifradas y jamás salen del backend: la vista solo
- *   expone `hasApiKey` y los últimos 4 caracteres.
+ * expone `hasApiKey` y los últimos 4 caracteres.
  *
  * Vive en `application/` porque es un caso de uso: habla con TypeORM solo a
  * través del puerto `ILlmConfigurationRepository`, igual que cualquier otro
- * servicio de aplicación (ARQ-024).
+ * servicio de aplicación.
  *
  * @module BuilderLlmConfigService
  */
@@ -51,7 +51,7 @@ import {
 } from '../../../domain/ai/pricing.utility';
 
 /**
- * Vencimiento de la caché de configuración (ESC-MED-06). Acota cuánto puede
+ * Vencimiento de la caché de configuración. Acota cuánto puede
  * durar el desfase entre réplicas tras un cambio hecho desde otra instancia.
  */
 const CACHE_TTL_MS = 30_000;
@@ -168,9 +168,9 @@ export class BuilderLlmConfigService {
   /**
    * Cadena de proveedores para una etapa, en orden de preferencia.
    *
-   * **El primero es siempre el que el docente asignó al rol**: la conmutación
+   * **El primero es siempre el que el docente asignó al rol** la conmutación
    * no reinterpreta esa decisión, solo añade suplentes por detrás para cuando
-   * el titular está indisponible (ESC-ALTO-02). El resto de proveedores
+   * el titular está indisponible. El resto de proveedores
    * configurados —con credenciales y modelo ya declarados en la pestaña
    * "Modelos de IA"— entran como suplentes en orden estable.
    *
@@ -227,7 +227,7 @@ export class BuilderLlmConfigService {
     providerId: LlmProviderId,
     modelId: string,
   ): Promise<ModelPricing | null> {
-    // AIP-012: filtraba solo por providerId, así que un proveedor con varios
+    // filtraba solo por providerId, así que un proveedor con varios
     // modelos configurados (p.ej. dos modelos de OpenAI con tarifas
     // distintas) podía costear el consumo de uno con la tarifa declarada
     // para otro — la primera fila de ese proveedor en listConfigs(), sin
@@ -337,7 +337,7 @@ export class BuilderLlmConfigService {
         }
       }
 
-      // AIP-002: si el origen (host) del endpoint cambia y la fila ya tenía
+      // si el origen (host) del endpoint cambia y la fila ya tenía
       // una clave cifrada guardada, esa clave no debe reutilizarse en
       // silencio contra el host nuevo — una cuenta ADMIN comprometida podía
       // redirigir el endpoint y quedarse con una key que ni siquiera puede
@@ -485,12 +485,11 @@ export class BuilderLlmConfigService {
   }
 
   /**
-   * Caché de la tabla con vencimiento (ESC-MED-06).
+   * Caché de la tabla con vencimiento.
    *
-   * Antes no caducaba: se invalidaba solo en `saveConfigs`, es decir, **solo en
-   * la réplica que escribía**. Con varias instancias de API, cambiar el
-   * proveedor o rotar una credencial desde una dejaba a las demás sirviendo la
-   * configuración anterior de forma indefinida —hasta el siguiente reinicio—.
+   * La entrada se conserva en memoria durante un intervalo corto y se invalida
+   * en cada mutación. Así, cambiar el proveedor o rotar una credencial no deja
+   * a las demás instancias sirviendo una configuración obsoleta.
    *
    * Se resuelve con vencimiento y no con invalidación por Redis a propósito: un
    * cambio de configuración de modelos es una acción administrativa
@@ -528,8 +527,8 @@ export class BuilderLlmConfigService {
 }
 
 /**
- * AIP-002: host:puerto normalizado de un endpoint, o `null` si está vacío o
- * no es una URL parseable. Se usa solo para comparar *origen* antes/después
+ * Devuelve el host:puerto normalizado de un endpoint, o `null` si está vacío
+ * o no es una URL parseable. Se usa solo para comparar *origen* antes/después
  * de un guardado — nunca para decidir si el endpoint es seguro (eso es
  * `assertSafeLlmEndpoint`).
  */

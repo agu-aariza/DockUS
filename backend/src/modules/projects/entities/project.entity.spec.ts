@@ -19,3 +19,6 @@ describe('Project entity storage mapping', () => {
     expect(statusColumn).toBeDefined();
   });
 });
+/**
+ * Pruebas de las invariantes de la entidad de proyecto y de sus valores por defecto.
+ */

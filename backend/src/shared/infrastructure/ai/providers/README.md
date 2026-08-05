@@ -1,39 +1,33 @@
-# Adaptadores de Proveedores LLM (shared/infrastructure/ai/providers)
+# Adaptadores de proveedores LLM (`shared/infrastructure/ai/providers/`)
 
-> **Resumen rápido:** Implementación de clientes HTTP y adaptadores concretos para proveedores de IA (Google Gemini, Anthropic Claude, OpenAI Compatible).
-
----
-
-## Propósito y Responsabilidades
-Conectar la abstracción del disyuntor LLM con los endpoints REST/SDK específicos de cada proveedor de inteligencia artificial.
-- **Clase Base HTTP:** `http-llm-provider.base.ts` para el manejo común de cabeceras, timeouts y reintentos.
-- **Adaptadores Específicos:** `gemini-generation.service.ts`, `anthropic-generation.service.ts` y `openai-compatible-generation.service.ts`.
+> **Resumen rápido:** Tres adaptadores HTTP (Anthropic, Gemini, cualquier API compatible con el formato OpenAI) que comparten una clase base común. Bedrock **no** vive aquí — usa el SDK de AWS directamente (`../bedrock-generation.service.ts`), no HTTP genérico, así que no encaja en esta base.
 
 ---
 
-## Estructura Interna
+## `http-llm-provider.base.ts`: qué comparten los tres adaptadores
+
+Cabeceras de autenticación, timeouts, reintentos y el manejo de errores HTTP comunes viven en esta clase base abstracta — cada adaptador concreto solo implementa la forma específica de la petición/respuesta de su API (el *body* que espera Gemini no es el que espera una API compatible con OpenAI, aunque el transporte HTTP subyacente sea el mismo).
 
 ```text
-.
-├── anthropic-generation.service.ts         # Adaptador para modelos Anthropic Claude
-├── gemini-generation.service.ts            # Adaptador para modelos Google Gemini
-├── http-llm-provider.base.ts               # Clase base abstracta para proveedores HTTP
-└── openai-compatible-generation.service.ts # Adaptador para APIs compatibles con OpenAI
+HttpLlmProviderBase (abstracta: timeouts, reintentos, cabeceras comunes)
+        │
+        ├── AnthropicGenerationService          # API nativa de Anthropic
+        ├── GeminiGenerationService                # API de Google Gemini
+        └── OpenAiCompatibleGenerationService         # Cualquier endpoint que hable el formato de chat de OpenAI
 ```
 
----
+## Por qué "OpenAI-compatible" y no solo "OpenAI"
 
-## Flujo de Trabajo / Arquitectura
+Muchos proveedores (locales o de terceros) exponen una API que imita el formato de OpenAI sin ser OpenAI — este adaptador cubre esa familia entera con una sola implementación, en vez de necesitar un adaptador por cada proveedor que resulte compatible.
 
-```text
-[ LlmCircuitBreakerService ] ──> [ HttpLlmProviderBase ] ──> [ Gemini / Anthropic / OpenAI Adapter ]
-```
+## Cómo trabajar aquí
 
----
-
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests de proveedores LLM:
 ```bash
 npm run test -- src/shared/infrastructure/ai/providers
 ```
+
+Si añades un proveedor nuevo que hable HTTP simple, extiende `HttpLlmProviderBase` en vez de reimplementar timeouts/reintentos desde cero, e impleméntalo contra `ILlmGenerationService` (`../llm-generation.token.ts`) para que `LlmGenerationRouter` pueda despacharle peticiones.
+
+## Ver también
+
+- [`../README.md`](../README.md) — el router que decide cuál de estos adaptadores usar, y por qué Bedrock queda fuera de esta carpeta.

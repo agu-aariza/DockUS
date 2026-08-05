@@ -25,7 +25,7 @@ import {
   buildRedisConnectionOptions,
 } from '../config/redis.config';
 import { throttlerConfig } from './security/throttler.config';
-import { DockusThrottlerGuard } from './security/dockus-throttler.guard';
+import { EduCodeAIThrottlerGuard } from './security/educodeai-throttler.guard';
 import { AdminSeedService } from './seed/admin-seed.service';
 import { DemoSeedService } from './seed/demo-seed.service';
 import { User } from '../../modules/users/entities/user.entity';
@@ -53,7 +53,7 @@ import { AiModule } from './ai/ai.module';
       }),
     }),
 
-    // Almacenamiento compartido en Redis (ESC-A11): con el contador en memoria
+    // Almacenamiento compartido en Redis: con el contador en memoria
     // del proceso, cada réplica de API llevaba su propia cuenta y el límite
     // efectivo se multiplicaba por el número de instancias.
     //
@@ -93,12 +93,12 @@ import { AiModule } from './ai/ai.module';
     AiModule,
     CacheModule,
   ],
-  providers: [AdminSeedService, DemoSeedService, DockusThrottlerGuard],
+  providers: [AdminSeedService, DemoSeedService, EduCodeAIThrottlerGuard],
   exports: [
     CacheModule,
     DockerInfrastructureModule,
     AiModule,
-    DockusThrottlerGuard,
+    EduCodeAIThrottlerGuard,
   ],
 })
 export class InfrastructureModule {}

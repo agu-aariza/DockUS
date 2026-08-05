@@ -96,7 +96,7 @@ export class ProjectAccessService {
     queryBuilder: ReturnType<Repository<Project>['createQueryBuilder']>,
     actor: AuthenticatedUser,
   ): void {
-    // ARQ-007: la lógica vive en infrastructure/database/ para que
+    // la lógica vive en infrastructure/database/ para que
     // ProjectRepository (el nuevo puerto) pueda reutilizarla sin que
     // infrastructure dependa de este servicio de aplicación. Este método
     // sigue existiendo tal cual para storage-query/deliveries-query/

@@ -50,3 +50,6 @@ describe('ProjectAssignmentGroupEnrollmentListener', () => {
     ).not.toHaveBeenCalled();
   });
 });
+/**
+ * Pruebas de la sincronización entre matrículas de grupo y asignaciones de proyecto.
+ */

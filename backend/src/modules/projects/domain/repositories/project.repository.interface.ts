@@ -14,19 +14,12 @@ import type { ProjectSortField } from '../../dto/list-projects-query.dto';
 import type { SortOrder } from '../../../../shared/dto/paginated-query.dto';
 
 /**
- * Puerto real (audit/04 ARQ-007): sin tipos de TypeORM en la firma. La
- * versión anterior exponía `SelectQueryBuilder`/`FindOneOptions`/`DeepPartial`
- * directamente — un test-substitution seam, no una abstracción — así que
- * cualquier consumidor escribía SQL-builder de TypeORM "contra la interfaz".
+ * Puerto de proyectos sin tipos de TypeORM en la firma. Expresa las operaciones
+ * de persistencia y las consultas con alcance por actor sin filtrar detalles del
+ * adaptador a los servicios de aplicación.
  *
- * `create`/`save` se habían eliminado originalmente porque `ProjectLifecycleService`
- * —el único que crea/persiste proyectos— bypaseaba el puerto por completo. La
- * Fase 2 (P2-2, `ARQ-007`) cierra esa brecha:
- * ahora sí los declara, junto con `softRemove`/`recover`/las mutaciones de la
- * relación `teachers` y `isTeacherAssignedToProject` (la consulta más
- * reutilizada de todo `projects/` — 7 sitios reales la llamaban vía el helper
- * suelto `isTeacherAssignedToProject` de `project-access.policy.ts`, que
- * tomaba `Repository<Project>` directo).
+ * También centraliza la creación, recuperación, borrado lógico, gestión de
+ * docentes y comprobación de asignación de profesores al proyecto.
  */
 export interface NewProjectData {
   title: string;
@@ -44,13 +37,7 @@ export interface NewProjectData {
   teachers: Array<{ id: string }>;
 }
 
-/**
- * Token de inyección tipado (audit/areas/arquitectura ARQ-020, plan_accion.md
- * P0-2). Antes `provide`/`@Inject` usaban el string literal `'IProjectRepository'`
- * — sin ayuda del compilador ante un typo y sin "rename symbol" seguro del IDE.
- * Un `Symbol` exportado desde el propio fichero de la interfaz es la única
- * fuente de verdad del token.
- */
+/** Token de inyección tipado para el repositorio de proyectos. */
 export const PROJECT_REPOSITORY = Symbol('IProjectRepository');
 
 export interface ProjectListQuery {

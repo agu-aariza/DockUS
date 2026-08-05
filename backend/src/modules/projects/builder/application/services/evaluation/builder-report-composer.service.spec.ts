@@ -129,7 +129,8 @@ describe('BuilderReportComposer', () => {
       severity: 'low',
       codeSnippet: '',
       level: 'basico',
-      conceptExplanation: 'La separación cabecera/implementación permite compilar por módulos.',
+      conceptExplanation:
+        'La separación cabecera/implementación permite compilar por módulos.',
     };
 
     const report = composer.composeReport(
@@ -142,7 +143,9 @@ describe('BuilderReportComposer', () => {
       expect.objectContaining({ title: praise.title }),
     ]);
     expect(report.coaching?.shouldImprove).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ title: praise.title })]),
+      expect.arrayContaining([
+        expect.objectContaining({ title: praise.title }),
+      ]),
     );
     expect(report.coaching?.nextAttemptChecklist.join('\n')).not.toContain(
       praise.title,
@@ -150,14 +153,17 @@ describe('BuilderReportComposer', () => {
   });
 
   it('limita el checklist a lo bloqueante y a tres pasos', () => {
-    const blockers: CodeQualityFinding[] = Array.from({ length: 4 }, (_, i) => ({
-      title: `Bloqueo ${i + 1}`,
-      detail: `Observación: fallo ${i + 1}. Impacto: rompe la salida. Recomendación: corregir el caso ${i + 1}.`,
-      severity: 'high',
-      codeSnippet: '',
-      level: 'basico',
-      conceptExplanation: 'Explicación del fallo.',
-    }));
+    const blockers: CodeQualityFinding[] = Array.from(
+      { length: 4 },
+      (_, i) => ({
+        title: `Bloqueo ${i + 1}`,
+        detail: `Observación: fallo ${i + 1}. Impacto: rompe la salida. Recomendación: corregir el caso ${i + 1}.`,
+        severity: 'high',
+        codeSnippet: '',
+        level: 'basico',
+        conceptExplanation: 'Explicación del fallo.',
+      }),
+    );
 
     const report = composer.composeReport(
       buildAssessment(),
@@ -326,7 +332,7 @@ describe('BuilderReportComposer', () => {
     );
   });
 
-  describe('LOW-01: deduplicación de los hallazgos técnicos en bruto', () => {
+  describe('deduplicación de los hallazgos técnicos en bruto', () => {
     it('elimina hallazgos repetidos dentro de una misma categoría', () => {
       const report = composer.composeReport(
         buildAssessment(),
@@ -374,7 +380,7 @@ describe('BuilderReportComposer', () => {
     });
   });
 
-  describe('enrichGradeBreakdownWithRubric (ARQ-011)', () => {
+  describe('enrichGradeBreakdownWithRubric', () => {
     it('adjunta peso y descripción al criterio que hace match por nombre normalizado', () => {
       const assessment = buildAssessment({
         gradeBreakdown: [
@@ -398,7 +404,10 @@ describe('BuilderReportComposer', () => {
       ]);
 
       expect(assessment.gradeBreakdown[0]).toEqual(
-        expect.objectContaining({ weight: 60, description: 'Salida correcta.' }),
+        expect.objectContaining({
+          weight: 60,
+          description: 'Salida correcta.',
+        }),
       );
       // El criterio sin correspondencia en la rúbrica queda intacto (sin peso).
       expect(assessment.gradeBreakdown[1].weight).toBeUndefined();

@@ -2,10 +2,8 @@
  * @fileoverview Pruebas unitarias del scoping de `Delivery` por actor.
  *
  * Contexto:
- * - Extraído de `deliveries-query.service.spec.ts` (plan_accion.md P2-1):
- *   la lógica que estas pruebas cubrían vivía antes en
- *   `DeliveriesQueryService`, ahora vive en `DeliveryRepository` a través de
- *   este util — las pruebas se mueven con el código, mismo comportamiento.
+ * - Comprueba las reglas de visibilidad que aplica `DeliveryRepository` para
+ *   cada rol, incluyendo joins adicionales para docentes.
  *
  * @module DeliveryActorScopeUtilSpec
  */
@@ -46,7 +44,7 @@ describe('applyDeliveryActorScope', () => {
     );
   });
 
-  it('HIGH-10: restringe via project.teachers, no solo el creador (co-docentes)', () => {
+  it('restringe via project.teachers, no solo el creador (co-docentes)', () => {
     const actor = buildActor(
       UserRole.TEACHER,
       '55555555-5555-5555-5555-555555555555',

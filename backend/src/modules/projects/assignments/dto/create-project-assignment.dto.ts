@@ -41,7 +41,7 @@ export class CreateProjectAssignmentsBulkDto {
   @ApiPropertyOptional({
     description:
       'Listado de correos de alumnos a asignar al proyecto, útil para importación CSV.',
-    example: ['alumno1@dockus.test', 'alumno2@dockus.test'],
+    example: ['alumno1@educodeai.test', 'alumno2@educodeai.test'],
     type: [String],
   })
   @Transform(({ value }) =>

@@ -1,14 +1,14 @@
 /**
  * @fileoverview Módulo hoja para `DeliveryStatusService` y el puerto de
- * persistencia de `Delivery` (ARQ-003, ARQ-022).
+ * persistencia de `Delivery`.
  *
  * Contexto:
  * - `ProjectsModule` importa `BuilderModule` y `StorageModule`, nunca al
- *   revés: un `Delivery` escribible desde los tres sin crear un ciclo de
- *   módulos necesita vivir en un módulo hoja que los tres puedan importar de
- *   forma independiente. Exporta también `DELIVERY_REPOSITORY` por el mismo
- *   motivo — es el precedente que `ProjectPersistenceModule` y
- *   `ProjectAssignmentPersistenceModule` replican (P1-1).
+ * revés: un `Delivery` escribible desde los tres sin crear un ciclo de
+ * módulos necesita vivir en un módulo hoja que los tres puedan importar de
+ * forma independiente. Exporta también `DELIVERY_REPOSITORY` por el mismo
+ * motivo — es el precedente que `ProjectPersistenceModule` y
+ * `ProjectAssignmentPersistenceModule` replican.
  *
  * @module DeliveryStatusModule
  */

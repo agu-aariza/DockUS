@@ -3,9 +3,9 @@
  *
  * Contexto:
  * - Valida delegación en el puerto `IDeliveryRepository` y proyección de
- *   respuestas. El paginado/scoping SQL en sí vive ahora en `DeliveryRepository`
- *   (plan_accion.md P2-1) — cubierto en `delivery-actor-scope.util.spec.ts` y
- *   por inspección directa del adaptador.
+ * respuestas. El paginado/scoping SQL en sí vive ahora en `DeliveryRepository`
+ * — cubierto en `delivery-actor-scope.util.spec.ts` y
+ * por inspección directa del adaptador.
  *
  * @module DeliveriesQueryServiceSpec
  */

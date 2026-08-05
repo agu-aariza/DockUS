@@ -5,7 +5,7 @@
  */
 
 /**
- * Índices de las rutas calientes (ESC-ALTO-07).
+ * Índices de las rutas calientes.
  *
  * ⚠️ AVISO SOBRE `IDX_users_search_trgm`
  *
@@ -30,7 +30,7 @@ export class HotPathIndexes1784738476041 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "IDX_project_assignments_student" ON "project_assignments"  ("studentId") `);
         await queryRunner.query(`CREATE INDEX "IDX_deliveries_author_status_created" ON "deliveries"  ("authorId", "status", "createdAt") `);
         await queryRunner.query(`CREATE INDEX "IDX_storage_objects_delivery" ON "storage_objects"  ("deliveryId") `);
-        // ESC-ALTO-07 · búsqueda de usuarios. `users.service.ts` filtra con
+        // · búsqueda de usuarios. `users.service.ts` filtra con
         // ILIKE '%termino%': el comodín inicial impide usar un índice B-tree y
         // fuerza recorrido secuencial sobre toda la tabla. `pg_trgm` con GIN sí
         // acelera ese patrón. No se declara en la entidad porque una clase de

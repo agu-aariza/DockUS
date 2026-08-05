@@ -120,7 +120,7 @@ export class StorageController {
   // en RAM del proceso API ANTES de que `MaxFileSizeValidator` (mas abajo)
   // tenga oportunidad de rechazarla: un STUDENT/TEACHER puede enviar varios
   // GB en una sola peticion y agotar la memoria del proceso que sirve a
-  // todos los usuarios (HIGH-11). El limite en el interceptor corta la
+  // todos los usuarios (). El limite en el interceptor corta la
   // subida en el momento, no despues de bufferizarla entera.
   @UseInterceptors(FileInterceptor('file', UPLOAD_MULTER_OPTIONS))
   async upload(

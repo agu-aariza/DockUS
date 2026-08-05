@@ -45,8 +45,8 @@ import { OBJECT_STORAGE } from './builder/domain/ports/object-storage.port';
 
 @Module({
   imports: [
-    // Solo para ProjectOperationalIssuesService (excepción documentada,
-    // CLAUDE.md): inyecta Repository<T> de TypeORM crudo para SQL de
+    // Solo para ProjectOperationalIssuesService: inyecta Repository<T> de
+    // TypeORM crudo para SQL de
     // diagnóstico, no vía puerto. El resto de servicios de este módulo
     // consumen las entidades a través de los puertos importados abajo.
     TypeOrmModule.forFeature([ProjectAssignment, Delivery, StorageObject]),

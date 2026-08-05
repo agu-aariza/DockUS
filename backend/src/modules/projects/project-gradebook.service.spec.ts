@@ -1,11 +1,11 @@
 import { ProjectGradebookService } from './project-gradebook.service';
 
 /**
- * MED-07: `escapeCsv` es un helper puro y privado. Se ejercita directamente
+ * `escapeCsv` es un helper puro y privado. Se ejercita directamente
  * porque el resto del servicio exige cuatro repositorios y el servicio de
  * acceso, y ninguno interviene en la neutralización de fórmulas.
  */
-describe('ProjectGradebookService — MED-07: neutralización de fórmulas en CSV', () => {
+describe('ProjectGradebookService — neutralización de fórmulas en CSV', () => {
   const service = new ProjectGradebookService(
     {} as any,
     {} as any,
@@ -54,7 +54,7 @@ describe('ProjectGradebookService — MED-07: neutralización de fórmulas en CS
   });
 });
 
-describe('ProjectGradebookService — ESC-CRIT-05: el gradebook no carga columnas jsonb', () => {
+describe('ProjectGradebookService — el gradebook no carga columnas jsonb', () => {
   function buildService() {
     // El puerto solo expone `findLatestOutcomeByProject` (columna derivada
     // extraída en SQL, sin la entidad completa): a diferencia de la versión

@@ -4,12 +4,12 @@ import {
 } from './builder.processor';
 
 /**
- * LOW-04: la concurrencia se resuelve en tiempo de decoración de clase, antes
- * de que exista el contenedor de DI, de modo que se lee de `process.env` y no
- * de `ConfigService`. Se prueba la función de resolución directamente: recargar
- * el módulo para releer el decorador exigiría `require()` dinámico.
+ * La concurrencia se resuelve en tiempo de decoración de clase, antes de que
+ * exista el contenedor de DI, de modo que se lee de `process.env` y no de
+ * `ConfigService`. La suite prueba la función directamente para mantener el
+ * aislamiento del módulo.
  */
-describe('resolveWorkerConcurrency — LOW-04: concurrencia configurable', () => {
+describe('resolveWorkerConcurrency — concurrencia configurable', () => {
   const originalValue = process.env.BUILDER_WORKER_CONCURRENCY;
 
   function withEnv(raw: string | undefined): number {
@@ -51,7 +51,7 @@ describe('resolveWorkerConcurrency — LOW-04: concurrencia configurable', () =>
   );
 });
 
-/** ESC-BAJO-03: el umbral debe poder fijarse por entorno, no solo por defecto. */
+/** el umbral debe poder fijarse por entorno, no solo por defecto. */
 describe('resolveStaleRunThresholdMs', () => {
   const original = process.env.BUILDER_STALE_RUN_THRESHOLD_MS;
 

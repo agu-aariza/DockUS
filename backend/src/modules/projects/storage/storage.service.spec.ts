@@ -61,7 +61,7 @@ describe('StorageService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    minioStorageService.getBucketName.mockReturnValue('dockus-storage');
+    minioStorageService.getBucketName.mockReturnValue('educodeai-storage');
     minioStorageService.getSignedUrlTtlSeconds.mockReturnValue(600);
     minioStorageService.putObject.mockResolvedValue(undefined);
     minioStorageService.deleteObject.mockResolvedValue(undefined);
@@ -120,11 +120,11 @@ describe('StorageService', () => {
     );
 
     expect(minioStorageService.putObject).toHaveBeenCalledWith({
-      bucket: 'dockus-storage',
+      bucket: 'educodeai-storage',
       key: `deliveries/${delivery.id}/student-source/main.py`,
       body: file.buffer,
       contentType: 'text/x-python',
-      // ESC-ALTO-05: se envía siempre la longitud. Con un `Buffer` es
+      // se envía siempre la longitud. Con un `Buffer` es
       // redundante, pero con un flujo —el caso real desde que Multer escribe en
       // disco— es lo único que impide que el SDK lo acumule en memoria para
       // deducirla.

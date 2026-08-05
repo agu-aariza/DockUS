@@ -5,13 +5,10 @@
  */
 
 /**
- * Plan de arquitectura hexagonal, Fase 1 (P1-4, ver
- * ARQ-007). Redefine `LockOptions`/
- * `LockOutcome<T>` en vez de reutilizar los de `distributed-lock.service.ts`:
- * ese fichero no es un módulo puro de tipos (clase `@Injectable`), así que no
- * calificaría para la excepción de `.dependency-cruiser.cjs` — mismo criterio
- * que `IObjectStorage`. Son solo 5 campos sobre primitivas, sin dependencias
- * propias, así que duplicarlos es barato.
+ * Contrato mínimo para adquirir un cerrojo distribuido y ejecutar una sección
+ * crítica. El resultado siempre incluye el valor de la operación y si se obtuvo
+ * el cerrojo; una implementación puede devolver el resultado sin garantía
+ * exclusiva cuando vence la espera o Redis no está disponible.
  */
 export interface DistributedLockOptions {
   /** Vida del cerrojo — debe superar con holgura la sección crítica. */

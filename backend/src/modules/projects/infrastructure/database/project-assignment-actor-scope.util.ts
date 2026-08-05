@@ -3,14 +3,13 @@
  * alumno concreto) a lo visible por el actor.
  *
  * Contexto:
- * - Extraído de `StudentProfileService.listVisibleAssignments` (plan_accion.md
- *   P2-3), mismo motivo que `delivery-actor-scope.util.ts`/
- *   `project-actor-scope.util.ts`: `ProjectAssignmentRepository.findVisibleForStudent`
- *   necesita la misma lógica de scoping sin exponer `SelectQueryBuilder` en
- *   el puerto.
+ * - El helper se comparte con las consultas de entregas y proyectos:
+ *   `ProjectAssignmentRepository.findVisibleForStudent`
+ * necesita la misma lógica de scoping sin exponer `SelectQueryBuilder` en
+ * el puerto.
  * - A diferencia de los otros dos utils de scope, aquí no hay rama STUDENT:
- *   `studentId` ya viene fijado como parámetro — el actor solo puede ser
- *   ADMIN (sin restricción) o TEACHER (restringido a sus proyectos).
+ * `studentId` ya viene fijado como parámetro — el actor solo puede ser
+ * ADMIN (sin restricción) o TEACHER (restringido a sus proyectos).
  * - Cero cambio de comportamiento: mismo cuerpo de función, reubicado.
  *
  * @module ProjectAssignmentActorScopeUtil

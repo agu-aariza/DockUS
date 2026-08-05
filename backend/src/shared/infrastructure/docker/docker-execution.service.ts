@@ -18,19 +18,15 @@ import {
 
 /**
  * Adaptador del puerto `IContainerRuntime`
- * (`modules/projects/builder/domain/ports/container-runtime.port.ts`, Fase 1
- * P1-1, ver ARQ-007). Deliberadamente NO
+ * (`modules/projects/builder/domain/ports/container-runtime.port.ts`).
+ * Deliberadamente NO
  * declara `implements IContainerRuntime`: shared/ no puede importar de
- * modules/ (no-shared-to-modules en .dependency-cruiser.cjs), así que esta
+ * modules/ (no-shared-to-modules en.dependency-cruiser.cjs), así que esta
  * clase satisface el puerto por tipado estructural — el `useExisting` en
  * `builder.module.ts` es lo que conecta ambos, no una relación de herencia
  * declarada aquí. El resto de métodos públicos de esta clase (`waitContainer`,
- * `getContainerLogs`, `inspectContainer`) no forman parte del puerto porque no
- * tienen ningún llamador fuera de la propia infraestructura Docker hoy
- * (INF-003: `DockerNetworkService` y la ruta de contenedor no-efímero
- * `runContainer`/`createContainer`/`startContainer`/`runDaemonContainer`,
- * que sí estaban en esta situación sin ningún llamador en absoluto, se
- * eliminaron).
+ * `getContainerLogs`, `inspectContainer`) no forman parte del puerto porque
+ * solo los consume la propia infraestructura Docker.
  */
 @Injectable()
 export class DockerExecutionService {

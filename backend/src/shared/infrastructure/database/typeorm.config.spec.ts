@@ -12,7 +12,7 @@ function extraOf(config: ReturnType<typeof buildTypeOrmConfig>) {
   return (config as { extra: Record<string, number> }).extra;
 }
 
-describe('buildTypeOrmConfig — ESC-C01: configuración del pool', () => {
+describe('buildTypeOrmConfig — configuración del pool', () => {
   it('define el pool en lugar de dejar el valor por defecto del driver', () => {
     // Sin `extra`, `pg` aplica 10 conexiones por proceso sin tiempos de espera:
     // el primer cuello de botella del sistema.

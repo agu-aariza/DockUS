@@ -57,3 +57,6 @@ describe('BuilderExecutionLogBatcher', () => {
     expect(emit).not.toHaveBeenCalled();
   });
 });
+/**
+ * Pruebas del vaciado de logs pendientes al cerrar una ejecución del Builder.
+ */

@@ -1,27 +1,17 @@
 #!/usr/bin/env node
 /**
- * Impide nuevas inyecciones directas de Repository<T> para las entidades que
- * ya tienen puerto real, fuera de sus adaptadores (ARQ-017,
- * ARQ-017 y el cierre de la Fase 2).
+ * Impide que el código de aplicación inyecte repositorios TypeORM directamente
+ * cuando ya existe un puerto de dominio para esa entidad.
  *
- * Trece agregados tienen puerto real hoy: los seis de la Fase 2 principal
- * (`Project`/`Delivery`/`ProjectAssignment`/`BuildRun`/`User`/`StorageObject`,
- * P2-1 a P2-6) más los siete de la "cola larga" (P2-7):
- * `CodeQualityFindingEntity`/`BuildRunArtifact`/`BuildRunChatMessage`/
- * `BuildRunEventEntity`/`LlmConfiguration`/`CourseGroup`/`GroupEnrollment`.
- * Todos cerrados — cero bypasses reales fuera de la deuda documentada:
- * `Project`/`Delivery`/`ProjectAssignment`/`StorageObject` conservan la
- * excepción de `project-operational-issues.service.ts` (más `demo-seed` para
- * los tres primeros), `User` conserva sus dos seeders, el resto (`BuildRun` y
- * los siete de P2-7) ninguna. Este script no falla sobre deuda conocida:
- * falla solo ante un fichero NUEVO que añada el mismo patrón sin pasar por el
- * plan de migración.
+ * El script recorre solo código de producción y permite las excepciones
+ * estructurales que no pueden usar el puerto: los seeders de `shared/` y la
+ * herramienta administrativa de reconciliación, que consulta varias tablas
+ * sin pertenecer a un único agregado. Los adaptadores y los módulos que los
+ * registran también quedan fuera del chequeo.
  *
- * No usa dependency-cruiser porque esa herramienta razona sobre el grafo de
- * imports (qué fichero importa a qué fichero), no sobre el argumento de un
- * decorador — "importa Project" es legítimo en decenas de sitios (tipado,
- * DTOs); el problema es específicamente `@InjectRepository(Project)`. Un
- * script de contenido es la herramienta correcta para esta pregunta concreta.
+ * Se analiza el contenido del decorador `@InjectRepository` porque
+ * dependency-cruiser solo conoce relaciones de importación y no puede expresar
+ * esta regla sobre el argumento de un decorador.
  */
 const fs = require('fs');
 const path = require('path');
@@ -33,30 +23,27 @@ const RULES = [
     entity: 'Project',
     pattern: /@InjectRepository\(Project\)/,
     adapter: 'modules/projects/infrastructure/database/project.repository.ts',
-    // P2-2 (plan_accion.md) migró los 7 consumidores reales de ARQ-017 a
-    // PROJECT_REPOSITORY. Solo queda la excepción de seed, ya documentada
-    // (subsistema en shared/, no ARQ-017): ver CLAUDE.md y
-    // no-shared-to-modules en .dependency-cruiser.cjs.
+    // Los consumidores normales usan PROJECT_REPOSITORY. El seeder vive en
+    // shared/ y no puede importar el puerto de modules/ sin romper la frontera
+    // no-shared-to-modules.
     allowed: ['shared/infrastructure/seed/demo-seed.service.ts'],
   },
   {
     entity: 'BuildRun',
     pattern: /@InjectRepository\(BuildRun\)/,
     adapter: 'modules/projects/builder/infrastructure/database/build-run.repository.ts',
-    // P2-4 (plan_accion.md) migró los 6 consumidores reales a
-    // BUILD_RUN_REPOSITORY. Sin excepciones: ni demo-seed ni el diagnóstico
-    // admin tocan BuildRun.
+    // Los consumidores normales usan BUILD_RUN_REPOSITORY; no hay excepciones.
     allowed: [],
   },
   {
     entity: 'Delivery',
     pattern: /@InjectRepository\(Delivery\)/,
     adapter: 'modules/projects/infrastructure/database/delivery.repository.ts',
-    // P2-1 (plan_accion.md) ya migró los 12 consumidores reales a
-    // DELIVERY_REPOSITORY. Solo quedan dos excepciones documentadas, no deuda:
+    // Los consumidores normales usan DELIVERY_REPOSITORY. Solo quedan dos
+    // excepciones estructurales:
     allowed: [
       // Subsistema de seed: vive en shared/ e importa entidades de dominio
-      // directo (excepción ya documentada en CLAUDE.md); el puerto vive en
+      // directo; el puerto vive en
       // modules/, así que inyectarlo violaría no-shared-to-modules.
       'shared/infrastructure/seed/demo-seed.service.ts',
       // Herramienta de diagnóstico/reconciliación admin (huérfanos, tardías,
@@ -65,7 +52,7 @@ const RULES = [
       // detectar filas inconsistentes fuera del grafo de relaciones de
       // TypeORM — no son formas de consulta del dominio, envolverlas en el
       // puerto solo para este único consumidor lo infla sin reutilización
-      // real (mismo criterio que excluyó IEventBus en la Fase 1 P1-4).
+      // real.
       'modules/projects/project-operational-issues.service.ts',
     ],
   },
@@ -74,9 +61,8 @@ const RULES = [
     pattern: /@InjectRepository\(ProjectAssignment\)/,
     adapter:
       'modules/projects/infrastructure/database/project-assignment.repository.ts',
-    // P2-3 (plan_accion.md) migró los 6 consumidores reales a
-    // PROJECT_ASSIGNMENT_REPOSITORY. Mismas dos excepciones documentadas que
-    // Delivery/Project, mismo motivo cada una:
+    // Los consumidores normales usan PROJECT_ASSIGNMENT_REPOSITORY. Mantiene
+    // las mismas dos excepciones estructurales que Delivery y Project:
     allowed: [
       'shared/infrastructure/seed/demo-seed.service.ts',
       'modules/projects/project-operational-issues.service.ts',
@@ -86,14 +72,12 @@ const RULES = [
     entity: 'User',
     pattern: /@InjectRepository\(User\)/,
     adapter: 'modules/users/infrastructure/database/user.repository.ts',
-    // P2-5 (plan_accion.md) migró los 4 consumidores reales a
-    // USER_REPOSITORY. A diferencia de Project/Delivery/ProjectAssignment,
-    // aquí hay dos seeders en shared/ (no solo uno): admin-seed.service.ts
+    // Los consumidores normales usan USER_REPOSITORY. Aquí hay dos seeders en
+    // shared/ (admin-seed.service.ts y demo-seed.service.ts)
     // (arranque, crea el primer admin) y demo-seed.service.ts (datos de
     // demo) — ambos viven en shared/ e importan la entidad de dominio
     // directo, y el puerto vive en modules/users/, así que inyectarlo
-    // violaría no-shared-to-modules (mismo motivo documentado en CLAUDE.md
-    // para el resto de entidades).
+    // violaría no-shared-to-modules, como ocurre con el resto de entidades.
     allowed: [
       'shared/infrastructure/seed/admin-seed.service.ts',
       'shared/infrastructure/seed/demo-seed.service.ts',
@@ -104,8 +88,8 @@ const RULES = [
     pattern: /@InjectRepository\(StorageObject\)/,
     adapter:
       'modules/projects/infrastructure/database/storage-object.repository.ts',
-    // P2-6 (plan_accion.md) migró los 5 consumidores reales a
-    // STORAGE_OBJECT_REPOSITORY. Única excepción: la misma herramienta de
+    // Los consumidores normales usan STORAGE_OBJECT_REPOSITORY. La única
+    // excepción es la herramienta de
     // diagnóstico admin de siempre (createQueryBuilder con nombres de tabla
     // SQL crudos, fuera del grafo de relaciones de TypeORM) — no el seeder
     // de demo, que no toca StorageObject.
@@ -116,8 +100,7 @@ const RULES = [
     pattern: /@InjectRepository\(CodeQualityFindingEntity\)/,
     adapter:
       'modules/projects/builder/infrastructure/database/code-quality-finding.repository.ts',
-    // P2-7 (plan_accion.md) migró los 2 consumidores reales a
-    // CODE_QUALITY_FINDING_REPOSITORY. Sin excepciones.
+    // Los consumidores usan CODE_QUALITY_FINDING_REPOSITORY. Sin excepciones.
     allowed: [],
   },
   {
@@ -125,8 +108,7 @@ const RULES = [
     pattern: /@InjectRepository\(BuildRunArtifact\)/,
     adapter:
       'modules/projects/builder/infrastructure/database/build-run-artifact.repository.ts',
-    // P2-7 migró los 2 consumidores reales a BUILD_RUN_ARTIFACT_REPOSITORY.
-    // Sin excepciones.
+    // Los consumidores usan BUILD_RUN_ARTIFACT_REPOSITORY. Sin excepciones.
     allowed: [],
   },
   {
@@ -134,8 +116,8 @@ const RULES = [
     pattern: /@InjectRepository\(BuildRunChatMessage\)/,
     adapter:
       'modules/projects/builder/infrastructure/database/build-run-chat-message.repository.ts',
-    // P2-7 migró el único consumidor real a
-    // BUILD_RUN_CHAT_MESSAGE_REPOSITORY. Sin excepciones.
+    // El único consumidor usa BUILD_RUN_CHAT_MESSAGE_REPOSITORY. Sin
+    // excepciones.
     allowed: [],
   },
   {
@@ -143,9 +125,7 @@ const RULES = [
     pattern: /@InjectRepository\(BuildRunEventEntity\)/,
     adapter:
       'modules/projects/builder/infrastructure/database/build-run-event.repository.ts',
-    // P2-7 migró el único consumidor real (BuilderRunEventsService, vive en
-    // infrastructure/events/ pero es agregado de dominio, mismo criterio que
-    // BuildRun en P2-4) a BUILD_RUN_EVENT_REPOSITORY. Sin excepciones.
+    // BuilderRunEventsService usa BUILD_RUN_EVENT_REPOSITORY. Sin excepciones.
     allowed: [],
   },
   {
@@ -153,16 +133,14 @@ const RULES = [
     pattern: /@InjectRepository\(LlmConfiguration\)/,
     adapter:
       'modules/projects/builder/infrastructure/database/llm-configuration.repository.ts',
-    // P2-7 migró el único consumidor real a LLM_CONFIGURATION_REPOSITORY.
-    // Sin excepciones.
+    // El único consumidor usa LLM_CONFIGURATION_REPOSITORY. Sin excepciones.
     allowed: [],
   },
   {
     entity: 'CourseGroup',
     pattern: /@InjectRepository\(CourseGroup\)/,
     adapter: 'modules/academic/infrastructure/database/course-group.repository.ts',
-    // P2-7 migró el único consumidor real (GroupsService) a
-    // COURSE_GROUP_REPOSITORY. Sin excepciones.
+    // GroupsService usa COURSE_GROUP_REPOSITORY. Sin excepciones.
     allowed: [],
   },
   {
@@ -170,8 +148,7 @@ const RULES = [
     pattern: /@InjectRepository\(GroupEnrollment\)/,
     adapter:
       'modules/academic/infrastructure/database/group-enrollment.repository.ts',
-    // P2-7 migró el único consumidor real (GroupsService) a
-    // GROUP_ENROLLMENT_REPOSITORY. Sin excepciones.
+    // GroupsService usa GROUP_ENROLLMENT_REPOSITORY. Sin excepciones.
     allowed: [],
   },
 ];
@@ -209,7 +186,7 @@ for (const rule of RULES) {
 }
 
 if (violations.length > 0) {
-  console.error('check-repository-ports: bypass de puerto detectado (ARQ-017) en ficheros no permitidos:\n');
+  console.error('check-repository-ports: bypass de puerto detectado en ficheros no permitidos:\n');
   for (const v of violations) {
     console.error(`  [${v.entity}] ${v.file}`);
   }
@@ -219,15 +196,14 @@ if (violations.length > 0) {
       'STORAGE_OBJECT_REPOSITORY / CODE_QUALITY_FINDING_REPOSITORY / ' +
       'BUILD_RUN_ARTIFACT_REPOSITORY / BUILD_RUN_CHAT_MESSAGE_REPOSITORY / ' +
       'BUILD_RUN_EVENT_REPOSITORY / LLM_CONFIGURATION_REPOSITORY / ' +
-      'COURSE_GROUP_REPOSITORY / GROUP_ENROLLMENT_REPOSITORY, ver ' +
+      'COURSE_GROUP_REPOSITORY / GROUP_ENROLLMENT_REPOSITORY; consulta ' +
       'domain/repositories/*.repository.interface.ts) en vez de @InjectRepository directo. ' +
-      'Si el fichero ya está cubierto por el plan de migración (Fase 2 de ' +
-      'ARQ-017), añádelo a `allowed` en este script con su ID.',
+      'Si el fichero es una excepción estructural, añádelo a `allowed` en este script.',
   );
   process.exit(1);
 }
 
 console.log(
-  'check-repository-ports: OK (sin bypasses nuevos fuera de la deuda conocida).',
+  'check-repository-ports: OK (todos los consumidores respetan los puertos).',
 );
 process.exit(0);

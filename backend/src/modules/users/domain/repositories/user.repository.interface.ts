@@ -10,12 +10,9 @@ import type { UserSortField } from '../../dto/list-users-query.dto';
 import type { SortOrder } from '../../../../shared/dto/paginated-query.dto';
 
 /**
- * Puerto real (ARQ-007 P2-5): sin puerto
- * previo — diseñado desde cero auditando los 4 consumidores reales que
- * inyectaban el repositorio TypeORM crudo fuera de los dos seeders de
- * `shared/` (excepción documentada, igual que en `Project`/`Delivery`/
- * `ProjectAssignment`). Mismo criterio que ARQ-007: sin tipos de TypeORM en
- * la firma.
+ * Puerto de persistencia consumido por la aplicación sin exponer tipos de
+ * TypeORM. Los seeders de `shared/` pueden usar el repositorio concreto como
+ * excepción controlada fuera de este contrato.
  */
 export const USER_REPOSITORY = Symbol('IUserRepository');
 

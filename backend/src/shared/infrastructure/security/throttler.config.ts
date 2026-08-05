@@ -11,7 +11,7 @@
  *              realmente la fuerza bruta: un atacante que rote direcciones
  *              sigue chocando contra el mismo cubo.
  *
- * Los dos primeros cuentan **por identidad autenticada**, no por IP (ESC-C02):
+ * Los dos primeros cuentan **por identidad autenticada**, no por IP:
  * un aula entera tras el NAT del campus comparte una sola dirección, y con
  * conteo por IP el undécimo alumno del minuto no podía ni iniciar sesión.
  * La IP se conserva como respaldo para peticiones anónimas, que no tienen otra
@@ -86,7 +86,7 @@ function readRefreshToken(req: ThrottlerRequestLike): string | null {
 
 /**
  * Cuenta por el propio refresh token (hasheado, nunca en claro en la clave de
- * Redis). `/auth/refresh` no trae `email` en el body (INF-002), así que
+ * Redis). `/auth/refresh` no trae `email` en el body, así que
  * `auth-identity` nunca se activa ahí — sin este cubo, `/refresh` corría solo
  * con `global`/`burst` relajados, sin ninguna protección por identidad. No se
  * decodifica/verifica el JWT: eso añadiría una verificación de firma previa al
@@ -135,9 +135,8 @@ export const throttlerConfig = [
       readEmail(requestOf(context)) === null,
   },
   {
-    // INF-002: la protección por identidad equivalente a `auth-identity`,
-    // pero para `/auth/refresh`, que no tiene correo en el body y por tanto
-    // nunca activaba aquel cubo.
+    // Protección por identidad equivalente a `auth-identity`, pero para
+    // `/auth/refresh`, que no tiene correo en el body.
     name: 'refresh-identity',
     ttl: 60_000,
     limit: 10,

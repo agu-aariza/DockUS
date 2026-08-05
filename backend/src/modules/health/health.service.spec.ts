@@ -30,7 +30,7 @@ describe('HealthService', () => {
     };
     redisClient = {
       ping: jest.fn().mockResolvedValue('PONG'),
-      // audit/04 ARQ-016: la API ya no llama al daemon Docker directamente,
+      // la API ya no llama al daemon Docker directamente,
       // lee lo que el worker publicó en Redis.
       get: jest.fn().mockResolvedValue(
         JSON.stringify({

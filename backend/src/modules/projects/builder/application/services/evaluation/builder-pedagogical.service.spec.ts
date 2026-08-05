@@ -53,3 +53,6 @@ describe('BuilderPedagogicalService', () => {
     ]);
   });
 });
+/**
+ * Pruebas de la traducción de resultados técnicos del Builder a feedback pedagógico.
+ */

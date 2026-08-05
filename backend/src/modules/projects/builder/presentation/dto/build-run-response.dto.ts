@@ -48,7 +48,7 @@ export function toBuildRunResponseDto(
     ].includes(run.status),
     // El contrato LLM completo (thought/rationale/teacherSummary) y
     // report.teacherHighlights son material interno/docente: nunca deben
-    // cruzar al rol STUDENT (ver CLAUDE.md).
+    // cruzar al rol STUDENT.
     llmAssessment: isStaff ? run.llmAssessment : undefined,
     report: redactReportForRole(run.report, isStaff),
     failureReason: run.failureReason,

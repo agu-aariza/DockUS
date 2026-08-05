@@ -11,12 +11,12 @@ export const DEFAULT_STALE_RUN_THRESHOLD_MS = 600000;
 export const DEFAULT_MAX_EXTRACTED_FILES = 1500;
 export const DEFAULT_MAX_EXTRACTED_BYTES = 100 * 1024 * 1024;
 
-// audit/04 ARQ-010: las versiones permitidas e imágenes base por defecto
+// las versiones permitidas e imágenes base por defecto
 // vivían aquí duplicadas del catálogo de runtimes; ahora solo existen en
 // RUNTIME_CATALOG (./runtime-catalog.ts), fuente única de verdad.
 
 /**
- * Prioridades de la cola `builder-runs` (ESC-BAJO-02).
+ * Prioridades de la cola `builder-runs`.
  *
  * En BullMQ, **menor número = mayor prioridad**. La cola era FIFO estricta, de
  * modo que una avalancha de entregas de alumnos cerca de la fecha límite

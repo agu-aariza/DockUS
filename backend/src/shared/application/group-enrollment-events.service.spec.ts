@@ -59,3 +59,6 @@ describe('GroupEnrollmentEventsService', () => {
     expect(calls).toEqual(['before', 'after']);
   });
 });
+/**
+ * Pruebas de publicación de cambios de matrícula hacia los consumidores del sistema.
+ */

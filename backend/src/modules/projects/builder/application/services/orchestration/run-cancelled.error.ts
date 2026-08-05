@@ -1,12 +1,12 @@
 /**
- * @fileoverview Señal de cancelación cooperativa del pipeline (ARQ-004).
+ * @fileoverview Señal de cancelación cooperativa del pipeline.
  *
  * Contexto:
  * - `BuilderRunCancellationService` lanza este error cuando detecta, entre
- *   etapas o durante la ejecución Docker, que un docente canceló el run.
+ * etapas o durante la ejecución Docker, que un docente canceló el run.
  * - No es un fallo del pipeline: `BuilderRunLifecycleService` lo distingue de
- *   cualquier otro error y evita marcar el run como FAILED (ya quedó
- *   CANCELLED por el UPDATE atómico de `cancelRun`).
+ * cualquier otro error y evita marcar el run como FAILED (ya quedó
+ * CANCELLED por el UPDATE atómico de `cancelRun`).
  *
  * @module RunCancelledError
  */

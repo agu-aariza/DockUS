@@ -79,9 +79,7 @@ function normalizeCompilationStatus(
 }
 
 /**
- * AIP-007: `Boolean(value)` convertía cualquier string no vacío —incluida la
- * cadena literal `"false"`— en `true`, invirtiendo silenciosamente el hecho
- * que esta fase declara como "verdad primaria". Solo se acepta un boolean
+ * Solo se acepta un boolean
  * real o el literal string `"true"`/`"false"` (insensible a mayúsculas);
  * cualquier otro valor es un contrato inválido, no un default.
  */

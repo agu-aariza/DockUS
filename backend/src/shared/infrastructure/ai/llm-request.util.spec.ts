@@ -21,7 +21,7 @@ describe('postJson', () => {
     } as unknown as Response;
   }
 
-  it('HIGH-03: reintenta con backoff ante un 429 transitorio y devuelve el resultado del segundo intento', async () => {
+  it('reintenta con backoff ante un 429 transitorio y devuelve el resultado del segundo intento', async () => {
     const fetchMock = jest
       .fn()
       .mockResolvedValueOnce(jsonResponse(429, { error: 'rate limited' }))
@@ -41,7 +41,7 @@ describe('postJson', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('HIGH-03: reintenta ante un 503 y agota los intentos si el fallo persiste', async () => {
+  it('reintenta ante un 503 y agota los intentos si el fallo persiste', async () => {
     const fetchMock = jest
       .fn()
       .mockResolvedValue(jsonResponse(503, { error: 'unavailable' }));
@@ -65,7 +65,7 @@ describe('postJson', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it('HIGH-03: no reintenta ante un 401 (credenciales invalidas): falla en el primer intento', async () => {
+  it('no reintenta ante un 401 (credenciales invalidas): falla en el primer intento', async () => {
     const fetchMock = jest
       .fn()
       .mockResolvedValue(jsonResponse(401, { error: 'unauthorized' }));
@@ -101,3 +101,6 @@ describe('mapHttpStatusToLlmError', () => {
     expect(error.httpStatus).toBe(401);
   });
 });
+/**
+ * Pruebas de normalización y límites de las peticiones enviadas a proveedores LLM.
+ */

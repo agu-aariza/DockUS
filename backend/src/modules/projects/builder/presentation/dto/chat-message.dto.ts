@@ -23,7 +23,7 @@ export class PostChatMessageDto {
 }
 
 /**
- * audit/04 ARQ-008: los dos endpoints de chat devolvían la entidad TypeORM
+ * los dos endpoints de chat devolvían la entidad TypeORM
  * directamente — la única ruta del builder que saltaba la capa de DTOs
  * (`toBuildRunResponseDto` sí filtra por rol para los runs). Benigno hoy
  * porque la entidad es pequeña, pero acopla la API pública al esquema de

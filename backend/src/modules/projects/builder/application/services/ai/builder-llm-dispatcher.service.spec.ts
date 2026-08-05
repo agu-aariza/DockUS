@@ -14,7 +14,7 @@ const profileFor = (providerId: string): LlmModelProfile =>
     timeoutMs: 30_000,
   }) as LlmModelProfile;
 
-describe('BuilderLlmDispatcherService — ESC-ALTO-02: conmutación entre proveedores', () => {
+describe('BuilderLlmDispatcherService — conmutación entre proveedores', () => {
   function build(options: {
     providers?: string[];
     generate?: jest.Mock;
@@ -48,9 +48,9 @@ describe('BuilderLlmDispatcherService — ESC-ALTO-02: conmutación entre provee
 
     return {
       service: new BuilderLlmDispatcherService(
-        llmService as never,
-        llmConfigService as never,
-        circuitBreaker as never,
+        llmService,
+        llmConfigService,
+        circuitBreaker,
       ),
       llmService,
       circuitBreaker,

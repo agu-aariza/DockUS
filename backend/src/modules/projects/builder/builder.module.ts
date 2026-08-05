@@ -211,7 +211,7 @@ export class BuilderModule implements OnModuleInit {
     // El barrido de runs huérfanos solo lo dispara el worker: un reinicio de la
     // API no debe marcar FAILED un run que el worker está procesando. La
     // composición de procesos declara el rol (ver WorkerModule/ApiModule) en
-    // vez de leerlo de un env-flag global (ARQ-006).
+    // vez de leerlo de un env-flag global.
     if (this.processRole !== 'worker') {
       return;
     }
@@ -220,10 +220,9 @@ export class BuilderModule implements OnModuleInit {
   }
 
   /**
-   * Avisa si `concurrencia × límite de memoria` se acerca a la RAM del host
-   * (ESC-MED-04). No impide arrancar: es una heurística, y el operador puede
-   * saber algo que esta cuenta no. Pero un OOM del worker se lleva todas las
-   * evaluaciones en curso, así que la cifra conviene verla antes.
+   * Avisa si `concurrencia × límite de memoria` se acerca a la RAM del host.
+   * No impide arrancar: es una heurística para detectar configuraciones que
+   * podrían provocar un OOM del worker y cancelar todas las evaluaciones activas.
    */
   private warnIfCapacityExceedsHostRam(): void {
     const assessment = assessWorkerCapacity({

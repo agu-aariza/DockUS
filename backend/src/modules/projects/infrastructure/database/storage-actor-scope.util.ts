@@ -2,15 +2,15 @@
  * @fileoverview Restringe una query de `StorageObject` a lo visible por el actor.
  *
  * Contexto:
- * - Extraído de `StorageAccessService.applyActorScope` (plan_accion.md
- *   P2-6): esa lógica sólo la llamaba `StorageQueryService.findAll` sobre un
- *   `queryBuilder` que ella misma construía; al absorber esa consulta
- *   completa en `StorageObjectRepository.findPaginated`, el scoping se mueve
- *   con ella. Cero cambio de comportamiento: mismo cuerpo de función,
- *   reubicado.
+ * - La lógica se mantiene en este helper porque la consulta del repositorio
+ *   necesita aplicar el alcance del actor sin exponer el query builder al puerto.
+ * `queryBuilder` que ella misma construía; al absorber esa consulta
+ * completa en `StorageObjectRepository.findPaginated`, el scoping se mueve
+ * con ella. Cero cambio de comportamiento: mismo cuerpo de función,
+ * reubicado.
  * - Requiere que el `queryBuilder` ya tenga los joins `storage.project` como
- *   `project` y `storage.delivery` como `delivery` (los añade
- *   `findPaginated` antes de llamar a esta función).
+ * `project` y `storage.delivery` como `delivery` (los añade
+ * `findPaginated` antes de llamar a esta función).
  *
  * @module StorageActorScopeUtil
  */

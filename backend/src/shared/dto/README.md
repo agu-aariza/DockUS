@@ -1,35 +1,43 @@
-# DTOs Compartidos del Backend (shared/dto)
+# DTOs compartidos (`shared/dto/`)
 
-> **Resumen rápido:** Data Transfer Objects genéricos para paginación, ordenación y filtrado de consultas HTTP en el backend.
-
----
-
-## Propósito y Responsabilidades
-Estandarizar los parámetros de consulta recibidos en los controladores de la API.
-- **Paginación Genérica:** `paginated-query.dto.ts` para validar `page`, `limit` y parámetros de ordenación.
+> **Resumen rápido:** Una única clase base, `PaginatedQueryDto` (`page`, `limit`, `sortOrder`), que todos los listados paginados del sistema (usuarios, proyectos, entregas, storage) extienden en vez de redeclarar los mismos tres campos cada vez.
 
 ---
 
-## Estructura Interna
+## Qué provee y qué deja a cada dominio
 
-```text
-.
-└── paginated-query.dto.ts # DTO estándar de consulta paginada con class-validator
-```
-
----
-
-## Flujo de Trabajo / Arquitectura
-
-```text
-GET /endpoint?page=1&limit=20 ──> [ PaginatedQueryDto ] ──> [ Controller ]
-```
-
----
-
-## Cómo Usar / Probar este Módulo
-
-### Importar DTO en un controlador:
 ```typescript
-import { PaginatedQueryDto } from '../shared/dto/paginated-query.dto';
+export abstract class PaginatedQueryDto {
+  page = 1;          // @Min(1)
+  limit = 20;         // @Min(1) @Max(100)
+  sortOrder: SortOrder = 'DESC';  // 'ASC' | 'DESC'
+}
 ```
+
+Nótese lo que **no** está aquí: `sortBy` (por qué campo ordenar). Cada dominio tiene columnas ordenables distintas, y su DTO concreto (p. ej. `ListUsersQueryDto`, `ListDeliveriesQueryDto`) añade su propio `sortBy` con un `@IsIn([...])` que actúa como *whitelist* de columnas permitidas — nunca se pasa un nombre de columna sin validar directamente a una consulta SQL/`ORDER BY`, eso sería una inyección SQL por ordenación.
+
+## Cómo se usa
+
+```typescript
+export class ListDeliveriesQueryDto extends PaginatedQueryDto {
+  @IsIn(['createdAt', 'status', 'grade'])
+  @IsOptional()
+  sortBy: 'createdAt' | 'status' | 'grade' = 'createdAt';
+
+  // + filtros propios de deliveries
+}
+```
+
+El resultado paginado se construye con `buildPaginationMeta(page, limit, total)` de [`../utils/README.md`](../utils/README.md) — la otra mitad de este patrón: `PaginatedQueryDto` valida la entrada, `buildPaginationMeta` calcula los metadatos de la salida (`totalPages`, `hasNextPage`, `hasPrevPage`).
+
+## Cómo trabajar aquí
+
+```bash
+npm run test -- src/shared/dto
+```
+
+Si un listado nuevo necesita paginación, extiende `PaginatedQueryDto` en vez de declarar `page`/`limit`/`sortOrder` de cero — mantiene el comportamiento (límites, mensajes de validación) idéntico en toda la API.
+
+## Ver también
+
+- [`../utils/README.md`](../utils/README.md) — `buildPaginationMeta`, el complemento de salida.

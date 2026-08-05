@@ -36,7 +36,7 @@ describe('DockerContainerService', () => {
       runtime: 'runc',
       binds: [
         '/tmp/workspace:/app',
-        '/tmp/teacher-tests:/app/.dockus/teacher-tests:ro',
+        '/tmp/teacher-tests:/app/.educodeai/teacher-tests:ro',
       ],
       workingDir: '/app',
       networkMode: 'none',
@@ -74,7 +74,7 @@ describe('DockerContainerService', () => {
         '/tmp',
         // La suite docente se monta aparte y en solo lectura.
         '-v',
-        '/tmp/teacher-tests:/app/.dockus/teacher-tests:ro',
+        '/tmp/teacher-tests:/app/.educodeai/teacher-tests:ro',
         'python:3.11-slim',
       ]),
     );
@@ -116,7 +116,7 @@ describe('DockerContainerService', () => {
     );
   });
 
-  it('HIGH-02: registra un error explicito cuando la limpieza forzada tras timeout no confirma exito', async () => {
+  it('registra un error explicito cuando la limpieza forzada tras timeout no confirma exito', async () => {
     mockedRunCommand
       .mockResolvedValueOnce({
         exitCode: -1,
@@ -153,7 +153,7 @@ describe('DockerContainerService', () => {
     );
   });
 
-  it('HIGH-01: trata el exit code 125 del CLI de Docker como fallo de infraestructura, no como salida del programa del alumno', async () => {
+  it('trata el exit code 125 del CLI de Docker como fallo de infraestructura, no como salida del programa del alumno', async () => {
     mockedRunCommand.mockResolvedValueOnce({
       exitCode: 125,
       stdout: '',
@@ -173,7 +173,7 @@ describe('DockerContainerService', () => {
       }),
     ).rejects.toThrow('bad-runtime-run-123');
   });
-  describe('MED-05: confinamiento por defecto cuando el llamador omite las opciones', () => {
+  describe('confinamiento por defecto cuando el llamador omite las opciones', () => {
     function argsOf(callIndex: number): string[] {
       return mockedRunCommand.mock.calls[callIndex][1] as string[];
     }
@@ -227,7 +227,7 @@ describe('DockerContainerService', () => {
         memory: '1g',
         pidsLimit: 64,
         user: '1000:1000',
-        networkName: 'dockus-workspace-1',
+        networkName: 'educodeai-workspace-1',
       });
 
       const args = argsOf(0);
@@ -235,7 +235,7 @@ describe('DockerContainerService', () => {
       expect(valueAfter(args, '--memory')).toBe('1g');
       expect(valueAfter(args, '--pids-limit')).toBe('64');
       expect(valueAfter(args, '--user')).toBe('1000:1000');
-      expect(valueAfter(args, '--network')).toBe('dockus-workspace-1');
+      expect(valueAfter(args, '--network')).toBe('educodeai-workspace-1');
     });
 
     it('registra un aviso cuando no se pasa --user, porque no admite un valor por defecto seguro', async () => {

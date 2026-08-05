@@ -3,15 +3,13 @@
  * visible por el actor.
  *
  * Contexto:
- * - Extraído de `BuilderRunQueriesService.listLatestRunsByDeliveryIds`
- *   (plan_accion.md P2-4), mismo motivo que `delivery-actor-scope.util.ts`/
- *   `project-actor-scope.util.ts`/`project-assignment-actor-scope.util.ts`:
- *   `BuildRunRepository.findLatestByDeliveryIdsForActor` necesita la misma
- *   lógica de scoping sin exponer `SelectQueryBuilder` en el puerto.
+ * - El helper se comparte con las consultas de entregas, proyectos y
+ *   asignaciones porque el repositorio necesita el mismo alcance por actor
+ *   sin exponer `SelectQueryBuilder` en el puerto.
  * - Asume que la query ya hizo `innerJoin('run.delivery', 'delivery')` —
- *   STUDENT filtra sobre esa relación directa; TEACHER necesita además
- *   `delivery.assignment`/`assignment.project`/`project.teachers`, que este
- *   util añade solo en su rama porque ADMIN/STUDENT no los necesitan.
+ * STUDENT filtra sobre esa relación directa; TEACHER necesita además
+ * `delivery.assignment`/`assignment.project`/`project.teachers`, que este
+ * util añade solo en su rama porque ADMIN/STUDENT no los necesitan.
  * - Cero cambio de comportamiento: mismo cuerpo de función, reubicado.
  *
  * @module BuildRunActorScopeUtil

@@ -8,11 +8,11 @@
 import { CodeQualityFindingEntity } from '../entities/code-quality-finding.entity';
 
 /**
- * Puerto real (ARQ-007 P2-7): sin puerto
+ * Puerto real: sin puerto
  * previo, único consumidor real cada uno de sus dos sitios
  * (`BuilderArtifactPersister`/`BuilderQualityAggregationService`). Mismo
- * criterio que ARQ-007: sin tipos de TypeORM en la firma. Las 3 consultas que
- * en el código real usaban SQL crudo (`.query()`, no `createQueryBuilder`)
+ * criterio que: sin tipos de TypeORM en la firma. Las 3 consultas que
+ * en el código real usaban SQL crudo (`.query`, no `createQueryBuilder`)
  * conservan SQL crudo dentro del adaptador — mover el mecanismo de consulta
  * sería rediseño, no migración.
  */
