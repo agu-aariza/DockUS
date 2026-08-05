@@ -475,6 +475,71 @@ describe('parseBuilderPlanContractV2', () => {
     expect(contract.evaluationLimits).toEqual([]);
   });
 
+  it('normalizes shorthand capability statuses returned by the planner', () => {
+    const raw = JSON.stringify(
+      buildPlanPayload({
+        capabilities: {
+          C1: 'yes',
+          C2: 'yes',
+          C3: 'no',
+          C4: 'yes',
+          C5: 'no',
+          C6: 'unknown',
+        },
+      }),
+    );
+
+    const contract = parseBuilderPlanContractV2(raw);
+
+    expect(contract.capabilities.C1).toEqual({
+      status: 'yes',
+      rationale:
+        'Autogenerado: el modelo no proporcionó justificación detallada.',
+    });
+    expect(contract.capabilities.C6.status).toBe('unknown');
+  });
+
+  it('rejects a planner capability map with a missing capability', () => {
+    const base = buildPlanPayload();
+    const raw = JSON.stringify({
+      ...base,
+      capabilities: { ...base.capabilities, C6: undefined },
+    });
+
+    expect(() => parseBuilderPlanContractV2(raw)).toThrow(
+      'Falta capabilities.C6.',
+    );
+  });
+
+  it.each<[string, Record<string, unknown>, string]>([
+    [
+      'capabilities no objetuales',
+      { capabilities: null },
+      'capabilities debe ser un objeto.',
+    ],
+    [
+      'estado abreviado desconocido',
+      {
+        capabilities: {
+          ...buildPlanPayload().capabilities,
+          C6: 'invalid',
+        },
+      },
+      'Estado inválido en C6: invalid.',
+    ],
+    ['runtime no objetual', { runtime: null }, 'runtime debe ser un objeto.'],
+    [
+      'familia de runtime desconocida',
+      { runtime: { family: 'ruby', version: '3.3' } },
+      'runtime.family inválido en planner LLM.',
+    ],
+    ['recipe no objetual', { recipe: null }, 'recipe debe ser un objeto.'],
+  ])('rejects %s', (_label, overrides, expectedMessage) => {
+    const raw = JSON.stringify(buildPlanPayload(overrides));
+
+    expect(() => parseBuilderPlanContractV2(raw)).toThrow(expectedMessage);
+  });
+
   it('marks non-python runtimes as declared but unsupported', () => {
     const raw = JSON.stringify(
       buildPlanPayload({
