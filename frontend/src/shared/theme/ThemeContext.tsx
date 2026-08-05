@@ -22,7 +22,7 @@ interface ThemeContextValue {
   toggleTheme: () => void;
 }
 
-const THEME_STORAGE_KEY = "dockus.theme";
+const THEME_STORAGE_KEY = "educodeai.theme";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 

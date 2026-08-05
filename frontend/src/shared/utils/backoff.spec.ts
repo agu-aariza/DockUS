@@ -6,7 +6,7 @@ import {
   DEFAULT_MAX_DELAY_MS,
 } from "./backoff";
 
-describe("computeBackoffDelay — ESC-ALTO-06: reconexión sin oleadas", () => {
+describe("computeBackoffDelay — reconexión sin oleadas", () => {
   it("crece de forma exponencial con el número de intentos", () => {
     // Con random() = 1 se obtiene el techo de cada ventana, que es lo que
     // permite comprobar el crecimiento sin depender del azar.

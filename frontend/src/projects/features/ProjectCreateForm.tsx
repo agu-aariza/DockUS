@@ -170,7 +170,7 @@ export function ProjectCreateForm({
             <div>
               {/* Encabezado del grupo de botones de abajo, no de un control único. */}
               <span className="label-text">Asignar Grupos Académicos</span>
-              <p className="text-[11px] text-slate-400 mt-1">Los alumnos de los grupos seleccionados serán matriculados automáticamente.</p>
+              <p className="text-[11px] text-app-text-muted mt-1">Los alumnos de los grupos seleccionados serán matriculados automáticamente.</p>
             </div>
             <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1">
               {groups.map((group) => {
@@ -187,17 +187,17 @@ export function ProjectCreateForm({
                     }}
                     className={`flex items-center justify-between rounded-md border p-3 text-left transition-colors ${isSelected
                         ? "border-primary/50 bg-primary-subtle"
-                        : "border-app-border bg-white hover:border-slate-300 hover:bg-slate-50"
+                        : "border-app-border bg-app-surface hover:border-app-text-muted/40 hover:bg-app-bg-subtle"
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-9 w-9 items-center justify-center rounded-md transition-colors ${isSelected ? "bg-primary text-white" : "bg-slate-100 text-slate-500"
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-md transition-colors ${isSelected ? "bg-primary text-white" : "bg-app-bg-subtle text-app-text-muted"
                         }`}>
                         <RiGroupLine />
                       </div>
                       <div>
-                        <p className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-slate-900"}`}>{group.name}</p>
-                        <p className="text-xs text-slate-500">{group.code || 'Sin código'}</p>
+                        <p className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-app-text"}`}>{group.name}</p>
+                        <p className="data-meta">{group.code || 'Sin código'}</p>
                       </div>
                     </div>
                     {isSelected && <RiCheckFill className="text-primary text-lg" />}
@@ -205,9 +205,9 @@ export function ProjectCreateForm({
                 );
               })}
               {groups.length === 0 && (
-                <div className="rounded-md border border-dashed border-app-border bg-slate-50 p-6 text-center">
-                  <RiGroupLine className="mx-auto text-2xl text-slate-400 mb-2" />
-                  <p className="text-sm text-slate-500">No hay grupos creados todavía.</p>
+                <div className="rounded-md border border-dashed border-app-border bg-app-bg-subtle p-6 text-center">
+                  <RiGroupLine className="mx-auto text-2xl text-app-text-muted mb-2" />
+                  <p className="text-sm text-app-text-secondary">No hay grupos creados todavía.</p>
                 </div>
               )}
             </div>
@@ -216,13 +216,13 @@ export function ProjectCreateForm({
           <div className="space-y-3">
             <div>
               <label htmlFor="new-project-suite" className="label-text">Suite de Evaluación Inicial</label>
-              <p className="text-xs text-slate-500">Sube el archivo .zip con los tests docentes para este proyecto.</p>
+              <p className="text-xs text-app-text-secondary">Sube el archivo .zip con los tests docentes para este proyecto.</p>
             </div>
 
             <div
               className={`relative flex h-[300px] flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center transition-colors ${createForm.suiteFile
-                  ? "border-success-300 bg-success-50/40"
-                  : "border-app-border bg-slate-50/60 hover:border-slate-300"
+                  ? "border-success-300 bg-success-50/40 dark:border-success-800 dark:bg-success-950/40"
+                  : "border-app-border bg-app-bg-subtle/60 hover:border-app-text-muted/50"
                 }`}
             >
               <input
@@ -236,15 +236,15 @@ export function ProjectCreateForm({
                 }}
               />
 
-              <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-md transition-colors ${createForm.suiteFile ? "border border-success-200 bg-success-50 text-success-600" : "border border-app-border bg-white text-slate-400"
+              <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-md transition-colors ${createForm.suiteFile ? "border border-success-200 bg-success-50 text-success-600 dark:border-success-800 dark:bg-success-950 dark:text-success-400" : "border border-app-border bg-app-surface text-app-text-muted"
                 }`}>
                 {createForm.suiteFile ? <RiCheckFill className="text-2xl" /> : <RiFolderUploadLine className="text-2xl" />}
               </div>
 
               {createForm.suiteFile ? (
                 <>
-                  <h5 className="text-sm font-semibold text-success-900">{createForm.suiteFile.name}</h5>
-                   <p className="mt-1 text-xs text-success-700">{(createForm.suiteFile.size / 1024).toFixed(1)} KB listo para subir</p>
+                  <h5 className="text-sm font-semibold text-success-900 dark:text-success-400">{createForm.suiteFile.name}</h5>
+                   <p className="mt-1 text-xs text-success-700 dark:text-success-500">{(createForm.suiteFile.size / 1024).toFixed(1)} KB listo para subir</p>
                   <button
                     type="button"
                     className="mt-4 text-xs font-semibold text-danger-600 hover:underline"
@@ -255,8 +255,8 @@ export function ProjectCreateForm({
                 </>
               ) : (
                 <>
-                  <h5 className="text-sm font-semibold text-slate-900">Seleccionar Suite (.zip)</h5>
-                  <p className="mt-1 text-xs text-slate-500">Haz clic para buscar en tu equipo</p>
+                  <h5 className="text-sm font-semibold text-app-text">Seleccionar Suite (.zip)</h5>
+                  <p className="mt-1 text-xs text-app-text-secondary">Haz clic para buscar en tu equipo</p>
                   <Button
                     type="button"
                     variant="secondary"

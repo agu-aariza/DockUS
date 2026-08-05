@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (CommandPalette).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (CommandPalette).
  *
  * @module CommandPalette
  */

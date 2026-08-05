@@ -19,7 +19,7 @@ export function getFileIcon(path: string): JSX.Element {
 
   switch (ext) {
     case "py":
-      return <RiFileCodeLine className="text-primary-500" />;
+      return <RiFileCodeLine className="text-primary" />;
     case "md":
       return <RiMarkdownLine className="text-sky-500" />;
     case "json":

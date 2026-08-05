@@ -1,11 +1,12 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (ProjectSelectionHub).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (ProjectSelectionHub).
  *
  * @module ProjectSelectionHub
  */
 
 import React from 'react';
 import { RiStackFill, RiUser3Fill, RiArrowRightLine, RiPlayLine, RiTeamFill } from 'react-icons/ri';
+import { StatusBadge, type StatusTone } from './StatusBadge';
 import type { UserEntity } from "../../../features/auth/types";
 
 export interface ProjectHubOption {
@@ -25,32 +26,31 @@ interface ProjectSelectionHubProps {
   subtitle?: string;
 }
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<
+  ProjectHubOption['status'],
+  { text: string; iconWrap: string; tone: StatusTone }
+> = {
   READY: {
-    color: 'bg-success-500',
     text: 'Listo',
     iconWrap: 'bg-success-50 text-success-600',
-    chip: 'bg-success-100 text-success-700',
+    tone: 'success',
   },
   PROVISIONING: {
-    color: 'bg-primary-500',
     text: 'Provisionando',
-    iconWrap: 'bg-primary-50 text-primary-600',
-    chip: 'bg-primary-100 text-primary-700',
+    iconWrap: 'bg-primary-subtle text-primary',
+    tone: 'info',
   },
   ERROR: {
-    color: 'bg-rose-500',
     text: 'Error',
     iconWrap: 'bg-rose-50 text-rose-600',
-    chip: 'bg-rose-100 text-rose-700',
+    tone: 'danger',
   },
   HALTED: {
-    color: 'bg-slate-400',
     text: 'Detenido',
     iconWrap: 'bg-slate-100 text-slate-600',
-    chip: 'bg-slate-200 text-slate-700',
+    tone: 'idle',
   },
-} as const;
+};
 
 export function ProjectSelectionHub({ 
   projects, 
@@ -62,7 +62,7 @@ export function ProjectSelectionHub({
     return (
       <div className="py-12">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+          <h2 className="font-display text-4xl leading-tight text-slate-900 sm:text-5xl">
             {title}
           </h2>
           <p className="mt-4 text-lg text-slate-500 max-w-2xl mx-auto">
@@ -87,7 +87,7 @@ export function ProjectSelectionHub({
   return (
     <div className="py-12">
       <div className="text-center mb-12">
-        <h2 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+        <h2 className="font-display text-4xl leading-tight text-slate-900 sm:text-5xl">
           {title}
         </h2>
         <p className="mt-4 text-lg text-slate-500 max-w-2xl mx-auto">
@@ -110,10 +110,7 @@ export function ProjectSelectionHub({
                 <div className={`p-4 rounded-xl ${status.iconWrap} group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300 shadow-sm`}>
                   <RiStackFill className="text-3xl" />
                 </div>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${status.chip}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${status.color}`} />
-                  {status.text}
-                </span>
+                <StatusBadge tone={status.tone}>{status.text}</StatusBadge>
               </div>
 
               {/* Content */}
@@ -140,7 +137,7 @@ export function ProjectSelectionHub({
                       {project.teachers.slice(0, 3).map((teacher) => (
                         <div 
                           key={teacher.id}
-                          className="h-6 w-6 rounded-full border-2 border-white bg-gradient-to-tr from-primary to-primary-400 flex items-center justify-center text-[8px] font-bold text-white uppercase shadow-sm"
+                          className="h-6 w-6 rounded-full border-2 border-white bg-gradient-to-tr from-primary to-primary-hover flex items-center justify-center text-[8px] font-bold text-white uppercase shadow-sm"
                           title={`${teacher.firstName} ${teacher.lastName}`}
                         >
                           {teacher.firstName[0]}{teacher.lastName[0]}

@@ -54,13 +54,13 @@ export function DeliveryListItem({
       className={`group relative w-full overflow-hidden rounded-xl border p-4 text-left ${
         active
           ? "border-primary bg-primary text-white shadow-md shadow-primary/20"
-          : "card-interactive border-app-border bg-white"
+          : "card-interactive border-app-border bg-app-surface"
       }`}
     >
       <button type="button" onClick={onSelect} className="w-full text-left focus:outline-none">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className={`text-xs font-semibold ${active ? "text-primary-100 opacity-80" : "text-slate-400"}`}>
+            <div className={`text-xs font-semibold ${active ? "text-white/75" : "text-app-text-muted"}`}>
               v{delivery.version}
             </div>
             <div className="mt-0.5 truncate text-sm font-bold text-current">
@@ -87,14 +87,14 @@ export function DeliveryListItem({
           </div>
         </div>
 
-        <div className={`mt-3 space-y-1 text-xs font-medium leading-tight ${active ? "text-primary-100/90" : "text-slate-500"}`}>
+        <div className={`mt-3 space-y-1 text-xs font-medium leading-tight ${active ? "text-white/75" : "text-app-text-muted"}`}>
           <div className="flex items-center gap-1.5">
             <RiTimeLine className="text-sm opacity-60" />
             {formatDateTime(delivery.createdAt)}
           </div>
           <div className="flex items-center gap-1.5">
             <RiFileChartLine className="text-sm opacity-60" />
-            <span className={delivery.isLate ? "text-rose-500 font-bold" : "text-success-500 font-bold"}>
+            <span className={delivery.isLate ? "text-danger font-bold" : "text-success-500 font-bold"}>
               {delivery.isLate ? "Retrasada" : "En plazo"}
             </span>
           </div>
@@ -110,7 +110,7 @@ export function DeliveryListItem({
           className="mt-3 flex items-center gap-2"
           onClick={(e) => e.stopPropagation()}
         >
-          <RiFileChartLine className={`text-sm ${active ? "text-white/60" : "text-slate-400"}`} />
+          <RiFileChartLine className={`text-sm ${active ? "text-white/60" : "text-app-text-muted"}`} />
           <input
             type="number"
             min={0}
@@ -125,22 +125,22 @@ export function DeliveryListItem({
             className={`w-20 rounded-lg border px-2 py-1 text-xs font-bold focus:outline-none focus:ring-2 ${
               active
                 ? "border-white/20 bg-white/10 text-white placeholder-white/40 focus:ring-white/30"
-                : "border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:ring-primary/20"
+                : "border-app-border bg-app-bg-subtle text-app-text placeholder-app-text-muted focus:ring-primary/20"
             }`}
           />
-          <span className={`text-xs ${active ? "text-white/60" : "text-slate-400"}`}>/ 10</span>
+          <span className={`text-xs ${active ? "text-white/60" : "text-app-text-muted"}`}>/ 10</span>
         </div>
       ) : (
-        <div className={`mt-3 flex items-center gap-1.5 text-xs font-medium ${active ? "text-white" : "text-slate-500"}`}>
+        <div className={`mt-3 flex items-center gap-1.5 text-xs font-medium ${active ? "text-white" : "text-app-text-muted"}`}>
           <RiFileChartLine className="text-sm opacity-60" />
-          <span className={active ? "text-white" : "text-slate-900 font-bold"}>
+          <span className={active ? "text-white" : "text-app-text font-bold"}>
             {delivery.grade !== null ? `Nota: ${delivery.grade.toFixed(2)}` : "Nota pendiente"}
           </span>
         </div>
       )}
 
-      <div className={`mt-3 flex items-center justify-between border-t pt-3 ${active ? "border-white/10" : "border-slate-100"}`}>
-        <div className={`flex items-center gap-1 text-xs font-medium ${active ? "text-primary-100/90" : "text-slate-400"}`}>
+      <div className={`mt-3 flex items-center justify-between border-t pt-3 ${active ? "border-white/10" : "border-app-border-subtle"}`}>
+        <div className={`flex items-center gap-1 text-xs font-medium ${active ? "text-white/75" : "text-app-text-muted"}`}>
           <RiStackLine className="text-xs" />
           {delivery.remainingDeliveries} disponibles
         </div>
@@ -149,7 +149,7 @@ export function DeliveryListItem({
           className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-[0.98] ${
             active
               ? "bg-white/10 text-white hover:bg-white/20"
-              : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
+              : "bg-app-surface text-app-text-secondary hover:bg-app-bg-subtle border border-app-border"
           }`}
           onClick={(event) => {
             event.stopPropagation();

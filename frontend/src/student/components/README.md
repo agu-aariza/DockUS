@@ -1,48 +1,38 @@
-# Componentes del Flujo del Estudiante (student/components)
+# Componentes del asistente de entrega (`student/components/`)
 
-> **Resumen rápido:** Componentes de los pasos del asistente de entrega de prácticas, previsualizadores de código y pantallas de estado.
-
----
-
-## Propósito y Responsabilidades
-Construir los elementos interactivos del flujo paso a paso de entregas del alumno.
-- **Pasos del Stepper:** `SubmissionStep1`, `SubmissionStep2`, `SubmissionStep3` y `SubmissionSuccess`.
-- **Previsualización:** Árbol de ficheros (`FileTreePreview.tsx`) y tarjeta de progreso de evaluación (`EvaluationProgressCard.tsx`).
+> **Resumen rápido:** Los tres pasos del asistente de `StudentSubmissionFlow.tsx` (elegir proyecto → subir/previsualizar código → confirmar), más los estados de vacío/éxito y las piezas de la superficie del workspace.
 
 ---
 
-## Estructura Interna
+## Los tres pasos, en orden
 
 ```text
-.
-├── EvaluationProgressCard.tsx  # Tarjeta de progreso de la evaluación en vivo
-├── FileTreePreview.tsx         # Previsualizador en árbol de los archivos del ZIP subido
-├── StudentWorkspaceSurface.tsx # Superficie del área de trabajo del estudiante
-├── SubmissionEmptyState.tsx    # Estado vacío cuando no hay entregas
-├── SubmissionSidebar.tsx       # Barra lateral informativa de la entrega
-├── SubmissionStep1.tsx         # Paso 1: Selección de proyecto y verificación de requisitos
-├── SubmissionStep2.tsx         # Paso 2: Carga y previsualización de ficheros
-├── SubmissionStep3.tsx         # Paso 3: Confirmación y envío final
-├── SubmissionStepIndicator.tsx# Indicador gráfico de pasos del asistente
-└── SubmissionSuccess.tsx       # Pantalla de confirmación de entrega exitosa
+SubmissionStep1.tsx   → Selección de proyecto/asignación + verificación de requisitos (plazo, reentregas disponibles)
+SubmissionStep2.tsx   → Carga del ZIP y previsualización (usa FileTreePreview.tsx para mostrar el árbol de ficheros)
+SubmissionStep3.tsx   → Confirmación final y envío
+        │
+        ▼
+SubmissionSuccess.tsx → Pantalla de éxito, con enlace a seguir la evaluación en vivo
 ```
 
----
+`SubmissionStepIndicator.tsx` es el indicador visual de en qué paso está el alumno — distinto de `PipelineStepper.tsx` (en el directorio padre), que indica el progreso de la *evaluación en Docker*, no del *asistente de subida*. No los confundas: uno es sobre el formulario, el otro sobre la ejecución del backend.
 
-## Flujo de Trabajo / Arquitectura
+## El resto de componentes
 
-```text
-[ StudentSubmissionFlow ]
-         ├──> [ SubmissionStepIndicator ]
-         ├──> [ SubmissionStep1 ──> Step2 ──> Step3 ──> Success ]
-         └──> [ SubmissionSidebar ]
-```
+| Fichero | Qué es |
+| --- | --- |
+| `FileTreePreview.tsx` | Árbol de ficheros del ZIP subido, para que el alumno verifique que subió lo correcto antes de confirmar. |
+| `EvaluationProgressCard.tsx` | Tarjeta de progreso de la evaluación en vivo, embebida tras el envío. |
+| `StudentWorkspaceSurface.tsx` | Contenedor visual compartido por las secciones del workspace (fuera del asistente). |
+| `SubmissionEmptyState.tsx` | Estado vacío cuando no hay entregas todavía. |
+| `SubmissionSidebar.tsx` | Barra lateral informativa durante el asistente (plazos, intentos restantes). |
 
----
+## Cómo trabajar aquí
 
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests de componentes de estudiante:
 ```bash
 npm run test -- src/student/components
 ```
+
+## Ver también
+
+- [`../README.md`](../README.md) — el flujo completo y los hooks que orquestan estos pasos.

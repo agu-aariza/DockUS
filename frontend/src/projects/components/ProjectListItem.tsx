@@ -20,23 +20,23 @@ export function ProjectListItem({ project, isSelected, onClick }: ProjectListIte
       key={project.id}
       className={`group relative w-full rounded-xl border p-4 text-left ${isSelected
         ? "border-primary/50 bg-primary-subtle shadow-sm ring-1 ring-primary/10"
-        : "card-interactive border-app-border bg-white"
+        : "card-interactive border-app-border bg-app-surface"
         }`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-3 relative">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <RiFoldersLine className={`text-base transition-colors duration-200 ${isSelected ? "text-primary" : "text-slate-400 group-hover:text-slate-500"}`} />
-            <span className={`line-clamp-1 text-sm font-semibold transition-colors duration-200 ${isSelected ? "text-primary" : "text-slate-900"}`}>
+            <RiFoldersLine className={`text-base transition-colors duration-200 ${isSelected ? "text-primary" : "text-app-text-muted group-hover:text-app-text-secondary"}`} />
+            <span className={`line-clamp-1 text-sm font-semibold transition-colors duration-200 ${isSelected ? "text-primary" : "text-app-text"}`}>
               {project.title}
             </span>
           </div>
-          <div className="text-xs font-medium text-slate-400 line-clamp-1">
+          <div className="data-meta line-clamp-1">
             {project.expectedType || "Sin stack definido"}
           </div>
         </div>
-        <RiArrowRightSLine className={`text-lg transition-transform duration-200 ${isSelected ? "text-primary translate-x-0.5" : "text-slate-300 group-hover:text-slate-400 group-hover:translate-x-0.5"}`} />
+        <RiArrowRightSLine className={`text-lg transition-transform duration-200 ${isSelected ? "text-primary translate-x-0.5" : "text-app-text-muted/60 group-hover:text-app-text-muted group-hover:translate-x-0.5"}`} />
       </div>
 
       <div className="mt-4 flex items-center justify-between relative">
@@ -52,8 +52,8 @@ export function ProjectListItem({ project, isSelected, onClick }: ProjectListIte
                   key={teacher.id}
                   className={`flex h-6 w-6 items-center justify-center rounded-full border-2 text-[8px] font-semibold uppercase transition-colors ${
                     isSelected
-                      ? 'border-white bg-primary text-white'
-                      : 'border-white bg-slate-100 text-slate-600'
+                      ? 'border-primary-subtle bg-primary text-white'
+                      : 'border-app-surface bg-app-bg-subtle text-app-text-secondary'
                   }`}
                   title={`${teacher.firstName} ${teacher.lastName}`}
                 >
@@ -63,8 +63,8 @@ export function ProjectListItem({ project, isSelected, onClick }: ProjectListIte
               {project.teachers.length > 3 && (
                 <div className={`flex h-6 w-6 items-center justify-center rounded-full border-2 text-[8px] font-semibold ${
                   isSelected
-                    ? 'border-white bg-primary/80 text-white'
-                    : 'border-white bg-slate-50 text-slate-500'
+                    ? 'border-primary-subtle bg-primary/80 text-white'
+                    : 'border-app-surface bg-app-bg-subtle text-app-text-muted'
                   }`}>
                   +{project.teachers.length - 3}
                 </div>
@@ -74,8 +74,8 @@ export function ProjectListItem({ project, isSelected, onClick }: ProjectListIte
         </div>
 
         <div className="flex items-center gap-1.5">
-          <RiTeamFill className={`text-base ${isSelected ? "text-primary/40" : "text-slate-300"}`} />
-          <span className="text-xs font-medium text-slate-400">
+          <RiTeamFill className={`text-base ${isSelected ? "text-primary/40" : "text-app-text-muted/60"}`} />
+          <span className="data-meta">
             {project.maxDeliveriesPerStudent} {project.maxDeliveriesPerStudent === 1 ? 'intento' : 'intentos'}
           </span>
         </div>

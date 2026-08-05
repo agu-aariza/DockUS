@@ -44,15 +44,15 @@ export function DeliveryGrading({
 
       {canWrite ? (
         <form
-          className="rounded-lg border border-app-border bg-white p-6"
+          className="rounded-lg border border-app-border bg-app-surface p-6"
           onSubmit={onHandleGradingUpdate}
         >
           <div className="border-b border-app-border pb-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Calificación</p>
-            <h4 className="mt-1 text-base font-semibold text-slate-900">
+            <p className="ui-label">Calificación</p>
+            <h4 className="mt-1 text-base font-semibold text-app-text">
               Consolida la nota oficial
             </h4>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
+            <p className="mt-1 text-sm leading-6 text-app-text-secondary">
               La nota vive en la entrega, no en el run del builder. Usa este bloque para cerrar evaluación académica y feedback manual.
             </p>
           </div>
@@ -94,7 +94,7 @@ export function DeliveryGrading({
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-app-border pt-4">
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-app-text-muted">
               {selectedDelivery.grade === null
                 ? "Aún no existe una nota oficial publicada."
                 : "La entrega ya tenía nota; este guardado la reemplazará."}
@@ -105,9 +105,9 @@ export function DeliveryGrading({
           </div>
         </form>
       ) : (
-        <div className="rounded-lg border border-app-border bg-white p-6">
+        <div className="rounded-lg border border-app-border bg-app-surface p-6">
           <EmptyState
-            icon={<RiAlertLine className="text-3xl text-slate-400" />}
+            icon={<RiAlertLine className="text-3xl text-app-text-muted" />}
             title="Solo lectura"
             description="Tu rol actual no permite modificar la calificación oficial de esta entrega."
           />

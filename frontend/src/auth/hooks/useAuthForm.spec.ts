@@ -9,7 +9,7 @@ import { authApi } from "../../shared/api/services";
 import { useAuthForm } from "./useAuthForm";
 
 const AUTH_RESPONSE = {
-  user: { id: "user-1", email: "alumno@dockus.local", role: "STUDENT" },
+  user: { id: "user-1", email: "alumno@educodeai.local", role: "STUDENT" },
   accessToken: "access-token",
   refreshToken: "refresh-token",
 } as const;
@@ -62,7 +62,7 @@ describe("useAuthForm", () => {
     act(() => {
       result.current.setForm((prev) => ({
         ...prev,
-        email: "alumno@dockus.local",
+        email: "alumno@educodeai.local",
         password: "correcthorsebattery",
       }));
     });
@@ -72,12 +72,12 @@ describe("useAuthForm", () => {
     });
 
     expect(authApi.login).toHaveBeenCalledWith({
-      email: "alumno@dockus.local",
+      email: "alumno@educodeai.local",
       password: "correcthorsebattery",
     });
     expect(onAuthSuccess).toHaveBeenCalledWith(AUTH_RESPONSE);
     expect(result.current.isErrorMessage).toBe(false);
-    expect(result.current.message).toContain("alumno@dockus.local");
+    expect(result.current.message).toContain("alumno@educodeai.local");
     expect(result.current.loading).toBeNull();
   });
 
@@ -94,7 +94,7 @@ describe("useAuthForm", () => {
     act(() => {
       result.current.setForm((prev) => ({
         ...prev,
-        email: "alumno@dockus.local",
+        email: "alumno@educodeai.local",
         password: "wrongpassword",
       }));
     });
@@ -119,7 +119,40 @@ describe("useAuthForm", () => {
     });
     act(() => {
       result.current.setForm({
-        email: "alumno@dockus.local",
+        email: "alumno@educodeai.local",
+        // Cumple el contrato de `RegisterDto`: 8+, mayúscula, minúscula y dígito.
+        password: "Correcthorse1",
+        confirmPassword: "Correcthorse1",
+        firstName: "Ana",
+        lastName: "García",
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit(submitEvent());
+    });
+
+    expect(authApi.register).toHaveBeenCalledWith({
+      email: "alumno@educodeai.local",
+      password: "Correcthorse1",
+      firstName: "Ana",
+      lastName: "García",
+    });
+    expect(onAuthSuccess).toHaveBeenCalledWith(AUTH_RESPONSE);
+  });
+
+  it("register blocks a password the backend would reject, without calling the API", async () => {
+    const onAuthSuccess = vi.fn();
+    const { result } = renderHook(() => useAuthForm(onAuthSuccess));
+
+    act(() => {
+      result.current.handleModeSwitch("REGISTER");
+    });
+    act(() => {
+      result.current.setForm({
+        email: "alumno@educodeai.local",
+        // Larga, pero sin mayúscula ni dígito ni carácter especial: el
+        // `Matches` de `RegisterDto` la rechaza con un 400.
         password: "correcthorsebattery",
         confirmPassword: "correcthorsebattery",
         firstName: "Ana",
@@ -131,13 +164,25 @@ describe("useAuthForm", () => {
       await result.current.handleSubmit(submitEvent());
     });
 
-    expect(authApi.register).toHaveBeenCalledWith({
-      email: "alumno@dockus.local",
-      password: "correcthorsebattery",
-      firstName: "Ana",
-      lastName: "García",
+    expect(authApi.register).not.toHaveBeenCalled();
+    expect(result.current.validation.password).toMatchObject({
+      touched: true,
+      valid: false,
     });
-    expect(onAuthSuccess).toHaveBeenCalledWith(AUTH_RESPONSE);
+  });
+
+  it("login never demands password complexity", () => {
+    const { result } = renderHook(() => useAuthForm(vi.fn()));
+
+    act(() => {
+      result.current.setForm((prev) => ({ ...prev, password: "correcthorsebattery" }));
+    });
+    act(() => {
+      result.current.handleBlur("password");
+    });
+
+    // Las cuentas anteriores a la regla deben poder seguir entrando.
+    expect(result.current.validation.password).toMatchObject({ valid: true });
   });
 
   it("switching modes clears the message and resets touched validation", async () => {
@@ -188,7 +233,7 @@ describe("useAuthForm", () => {
     });
     act(() => {
       result.current.setForm({
-        email: "alumno@dockus.local",
+        email: "alumno@educodeai.local",
         password: "correcthorsebattery",
         confirmPassword: "differentpassword",
         firstName: "Ana",
@@ -220,7 +265,7 @@ describe("useAuthForm", () => {
     expect(result.current.validation.email.valid).toBe(false);
 
     act(() => {
-      result.current.updateField("email", "alumno@dockus.local");
+      result.current.updateField("email", "alumno@educodeai.local");
     });
     expect(result.current.validation.email).toMatchObject({
       touched: true,

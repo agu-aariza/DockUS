@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (ProfessionalVerdict).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (ProfessionalVerdict).
  *
  * @module ProfessionalVerdict
  */

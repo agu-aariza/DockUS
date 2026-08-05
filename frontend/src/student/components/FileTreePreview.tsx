@@ -91,11 +91,11 @@ function buildTree(files: SubmissionPreviewFile[]): TreeNode[] {
 
 function TreeBranch({ nodes }: { nodes: TreeNode[] }): JSX.Element {
   return (
-    <ul className="space-y-2 text-sm text-slate-900">
+    <ul className="space-y-2 text-sm text-app-text">
       {nodes.map((node) => (
         <li key={node.path}>
           {node.kind === "directory" ? (
-            <details open className="rounded-lg border border-app-border bg-white px-3 py-2">
+            <details open className="rounded-lg border border-app-border bg-app-surface px-3 py-2">
               <summary className="flex cursor-pointer items-center gap-2 font-medium">
                 <RiFolder3Line className="text-primary" />
                 {node.name}
@@ -107,8 +107,8 @@ function TreeBranch({ nodes }: { nodes: TreeNode[] }): JSX.Element {
               ) : null}
             </details>
           ) : (
-            <div className="flex items-center gap-2 rounded-lg border border-app-border bg-white px-3 py-2">
-              <RiFile3Line className="text-slate-400" />
+            <div className="flex items-center gap-2 rounded-lg border border-app-border bg-app-surface px-3 py-2">
+              <RiFile3Line className="text-app-text-muted" />
               <span className="truncate">{node.name}</span>
             </div>
           )}
@@ -130,16 +130,16 @@ export function FileTreePreview({
   const tree = buildTree(files);
 
   return (
-    <section className="rounded-lg border border-app-border bg-white p-5">
+    <section className="rounded-lg border border-app-border bg-app-surface p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="ui-label">
             Preview del ZIP
           </div>
-          <h4 className="mt-2 text-lg font-semibold text-slate-900">
+          <h4 className="mt-2 text-lg font-semibold text-app-text">
             Estructura detectada antes de enviar
           </h4>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-app-text-secondary">
             {files.length} archivo(s) · {formatBytes(totalSizeBytes)}
           </p>
         </div>

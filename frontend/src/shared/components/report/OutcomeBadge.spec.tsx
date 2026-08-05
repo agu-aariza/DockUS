@@ -16,3 +16,6 @@ describe('OutcomeBadge', () => {
     expect(badge.className).toContain(toneClass);
   });
 });
+/**
+ * Pruebas de las etiquetas visuales de resultado del Builder.
+ */

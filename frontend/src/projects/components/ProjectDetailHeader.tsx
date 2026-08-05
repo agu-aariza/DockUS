@@ -40,11 +40,11 @@ export function ProjectDetailHeader({
             </StatusBadge>
           </div>
 
-          <h3 className="truncate text-base font-semibold text-slate-900">
+          <h3 className="truncate text-base font-semibold text-app-text">
             {project.title}
           </h3>
 
-          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500 line-clamp-2">
+          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-app-text-secondary line-clamp-2">
             {project.contextAcademico || "Sin contexto académico definido."}
           </p>
         </div>

@@ -33,7 +33,7 @@ describe("ThemeContext", () => {
 
     expect(result.current.theme).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
-    expect(window.localStorage.getItem("dockus.theme")).toBe("dark");
+    expect(window.localStorage.getItem("educodeai.theme")).toBe("dark");
 
     act(() => {
       result.current.toggleTheme();
@@ -41,11 +41,11 @@ describe("ThemeContext", () => {
 
     expect(result.current.theme).toBe("light");
     expect(document.documentElement.classList.contains("dark")).toBe(false);
-    expect(window.localStorage.getItem("dockus.theme")).toBe("light");
+    expect(window.localStorage.getItem("educodeai.theme")).toBe("light");
   });
 
   it("resumes a previously stored theme on mount instead of defaulting to light", () => {
-    window.localStorage.setItem("dockus.theme", "dark");
+    window.localStorage.setItem("educodeai.theme", "dark");
 
     const { result } = renderHook(() => useTheme(), {
       wrapper: ThemeProvider,
@@ -61,3 +61,6 @@ describe("ThemeContext", () => {
     );
   });
 });
+/**
+ * Pruebas del contexto de tema y de la persistencia de la preferencia visual.
+ */

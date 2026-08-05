@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (PageHeader).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (PageHeader).
  *
  * @module PageHeader
  */
@@ -30,7 +30,7 @@ export function PageHeader({ title, subtitle, icon, actions, badge }: PageHeader
         <div>
           <div className="accent-rule mb-2.5" aria-hidden="true" />
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-semibold tracking-tight text-app-text">
+            <h1 className="font-display text-3xl leading-tight text-app-text">
               {title}
             </h1>
             {badge && (

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (SearchInput).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (SearchInput).
  *
  * @module SearchInput
  */
@@ -23,20 +23,20 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <div className={`relative ${className}`}>
-      <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-app-text-muted" />
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-8 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+        className="w-full rounded-md border border-slate-300 bg-app-surface py-2 pl-9 pr-8 text-sm text-app-text placeholder:text-app-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-slate-600"
         {...props}
       />
       {value && (
         <button
           type="button"
           onClick={() => onChange('')}
-          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex min-h-6 min-w-6 items-center justify-center rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex min-h-6 min-w-6 items-center justify-center rounded p-0.5 text-app-text-muted hover:bg-app-bg-subtle hover:text-app-text-secondary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
           aria-label="Limpiar búsqueda"
         >
           <RiCloseLine className="text-base" />

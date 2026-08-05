@@ -7,7 +7,7 @@
 /**
  * Intervalo que se suspende mientras la pestaña está oculta.
  *
- * Motivo (ESC-ALTO-10): los sondeos de fondo no distinguían una pestaña en uso
+ * Motivo: los sondeos de fondo no distinguían una pestaña en uso
  * de una olvidada en segundo plano. Las notificaciones de evaluación disparan
  * dos peticiones cada 15 s por alumno conectado, de modo que 10.000 sesiones
  * *sin actividad alguna* sostenían del orden de 1,3k peticiones/s contra la API

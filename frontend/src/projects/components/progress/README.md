@@ -1,47 +1,33 @@
-# Componentes del Libro de Notas y Progreso (projects/components/progress)
+# Libro de notas y progreso (`projects/components/progress/`)
 
-> **Resumen rápido:** Componentes de la vista de seguimiento docente: libro de calificaciones, gráficos de distribución de notas y modales de historial.
-
----
-
-## Propósito y Responsabilidades
-Permitir a los profesores filtrar, analizar y calificar las entregas del grupo.
-- **Libro de Notas:** `GradebookTable.tsx` con filtros por grupo/estado (`GradebookFilters.tsx`).
-- **Gráficos y Estadísticas:** `DistributionCharts.tsx`, `ProgressStatsPanel.tsx` y `ParticipationProgress.tsx`.
-- **Modales de Inspección:** `DeliveryHistoryModal.tsx` y `PreviewOrGradingModal.tsx`.
+> **Resumen rápido:** El libro de calificaciones interactivo de un proyecto: tabla filtrable, gráficos de distribución de notas, métricas de participación, y los modales de inspección/calificación de una entrega concreta.
 
 ---
 
-## Estructura Interna
+## Los ocho ficheros
 
-```text
-.
-├── DeliveryHistoryModal.tsx   # Modal de historial de versiones de entrega de un alumno
-├── DistributionCharts.tsx     # Gráficos visuales de distribución de calificaciones
-├── GradebookFilters.tsx       # Filtros de búsqueda por estudiante, grupo o nota
-├── GradebookTable.tsx         # Tabla interactiva del libro de calificaciones
-├── ParticipationProgress.tsx  # Métricas visuales de porcentaje de participación
-├── PreviewOrGradingModal.tsx  # Modal de previsualización de código o edición de nota
-├── ProgressStatsPanel.tsx     # Panel de estadísticas agregadas de la práctica
-└── ProjectSelector.tsx        # Selector contextual de proyecto docente
-```
+| Fichero | Qué hace |
+| --- | --- |
+| `ProjectSelector.tsx` | Elegir sobre qué proyecto se muestra el progreso (reutiliza el mismo patrón que `groups/components/GroupSelector.tsx`). |
+| `GradebookFilters.tsx` | Filtros de la tabla: por grupo, estado de entrega, rango de nota. |
+| `GradebookTable.tsx` | La tabla principal — una fila por alumno/entrega, con acceso rápido a calificar. |
+| `DistributionCharts.tsx` | Gráficos de distribución de notas del grupo. |
+| `ProgressStatsPanel.tsx` | Estadísticas agregadas (media, entregas pendientes, tasa de aprobado). |
+| `ParticipationProgress.tsx` | Porcentaje de alumnos que ya han entregado, sobre el total asignado. |
+| `DeliveryHistoryModal.tsx` | Historial de versiones de entrega de un alumno concreto (un alumno puede reentregar hasta `maxDeliveriesPerStudent` veces). |
+| `PreviewOrGradingModal.tsx` | Modal combinado: previsualizar el código entregado o editar la nota, sin salir del libro de notas. |
 
----
+## De dónde sale el dato que se muestra
 
-## Flujo de Trabajo / Arquitectura
+Esta vista consume el mismo endpoint agregado que expone `project-gradebook.controller.ts` en el backend (`GET /projects/:id/gradebook`) — no recalcula notas en el cliente, solo las presenta y filtra. Si una nota se edita desde `PreviewOrGradingModal.tsx`, la mutación va al mismo sitio que usa `deliveries/components/DeliveryGrading.tsx` — son dos entradas a la misma operación de negocio, no dos flujos distintos.
 
-```text
-[ ProgressDashboard ] ──> [ ProjectSelector ] ──> [ GradebookFilters + GradebookTable ]
-                                                        │
-                                                        ▼
-                                           [ DeliveryHistoryModal / PreviewModal ]
-```
+## Cómo trabajar aquí
 
----
-
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests de componentes de progreso:
 ```bash
 npm run test -- src/projects/components/progress
 ```
+
+## Ver también
+
+- [`../../../deliveries/README.md`](../../../deliveries/README.md) — la vista de detalle de una entrega individual.
+- [`../../../../../backend/src/modules/projects/README.md`](../../../../../backend/src/modules/projects/README.md) — `project-gradebook.service.ts`, la fuente de estos datos.

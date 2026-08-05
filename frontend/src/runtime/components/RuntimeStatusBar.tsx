@@ -55,7 +55,7 @@ export function RuntimeStatusBar({
   return (
     <section
       aria-label="Estado del runtime"
-      className="flex flex-col gap-3 rounded-lg border border-app-border bg-white px-5 py-3 lg:flex-row lg:items-center lg:justify-between"
+      className="flex flex-col gap-3 rounded-lg border border-app-border bg-app-surface px-5 py-3 lg:flex-row lg:items-center lg:justify-between"
     >
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <Signal
@@ -112,7 +112,7 @@ function Signal({
       ? "bg-success"
       : tone === "down"
         ? "bg-danger"
-        : "bg-slate-300";
+        : "bg-slate-300 dark:bg-slate-600";
 
   return (
     <span className="flex items-center gap-2">
@@ -121,7 +121,7 @@ function Signal({
         aria-hidden="true"
       />
       <span
-        className={`font-mono text-xs ${emphasis ? "font-medium text-slate-900" : "text-slate-600"}`}
+        className={`font-mono text-xs ${emphasis ? "font-medium text-app-text" : "text-app-text-secondary"}`}
       >
         {label}
       </span>
@@ -142,7 +142,7 @@ function DependencyChip({
     <span
       className={`data-meta rounded border px-1.5 py-0.5 ${
         up
-          ? "border-app-border bg-app-bg-subtle text-slate-500"
+          ? "border-app-border bg-app-bg-subtle text-app-text-muted"
           : "border-danger/30 bg-danger-subtle text-danger"
       }`}
       title={up && latencyMs !== undefined ? `${latencyMs} ms` : undefined}

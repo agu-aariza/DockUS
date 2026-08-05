@@ -5,21 +5,21 @@
 
 @layer base {
   /*
-   * Variables de color en RGB "espacio-separado" (sin comas, sin alfa): es el
-   * formato que exige el patrón `rgb(var(--x) / <alpha-value>)` de Tailwind
-   * para que modificadores de opacidad (`bg-primary/40`) sigan funcionando
-   * sobre un color que además cambia con el tema. Con esto, cualquier clase
-   * que ya usaba `app-*`/`primary`/`success`/`warning`/`danger` (DEFAULT o
-   * `subtle`) se vuelve compatible con modo oscuro sin tocar el componente
-   * que la usa — es la palanca real de UX-ALTO-02 sobre UX-ALTO-01.
-   *
-   * Las escalas numeradas (`danger-500`, `primary-700`, etc.) NO están aquí:
-   * se quedan en hexadecimal fijo (solo claro). Cubren los usos puntuales que
-   * antes eran `red-500`/`blue-700` sueltos; volverlas también sensibles al
-   * tema habría multiplicado esta lista por diez para un beneficio marginal
-   * frente a los slots DEFAULT/subtle/hover, que son los que de verdad se
-   * reutilizan en toda la app.
-   */
+ * Variables de color en RGB "espacio-separado" (sin comas, sin alfa): es el
+ * formato que exige el patrón `rgb(var(--x) / <alpha-value>)` de Tailwind
+ * para que modificadores de opacidad (`bg-primary/40`) sigan funcionando
+ * sobre un color que además cambia con el tema. Con esto, cualquier clase
+ * que ya usaba `app-*`/`primary`/`success`/`warning`/`danger` (DEFAULT o
+ * `subtle`) se vuelve compatible con modo oscuro sin tocar el componente
+ * que la usa — es la palanca real de sobre.
+ *
+ * Las escalas numeradas (`danger-500`, `primary-700`, etc.) NO están aquí:
+ * se quedan en hexadecimal fijo (solo claro). Cubren los usos puntuales que
+ * antes eran `red-500`/`blue-700` sueltos; volverlas también sensibles al
+ * tema habría multiplicado esta lista por diez para un beneficio marginal
+ * frente a los slots DEFAULT/subtle/hover, que son los que de verdad se
+ * reutilizan en toda la app.
+ */
   :root {
     --motion-fast: 120ms;
     --motion-standard: 180ms;
@@ -35,9 +35,18 @@
     --color-text-secondary: 71 85 105;     /* slate-600 */
     --color-text-muted: 148 163 184;       /* slate-400 */
 
-    --color-primary: 37 99 235;      /* blue-600 */
-    --color-primary-hover: 29 78 216;/* blue-700 */
-    --color-primary-subtle: 239 246 255; /* blue-50 */
+    /*
+     * La acción de la aplicación es el granate institucional, el mismo que
+     * `accent`: la landing, el acceso y los paneles hablan un solo idioma.
+     * Antes era azul (blue-600) y era lo único que no pertenecía a la marca.
+     *
+     * Los estados sí conservan su color propio (`success`/`warning`/`danger`),
+     * porque ahí el color significa algo. El botón de peligro además es
+     * contorneado, no macizo, así que no se confunde con un primario relleno.
+     */
+    --color-primary: 91 4 13;            /* #5B040D — = accent */
+    --color-primary-hover: 122 29 32;    /* #7A1D20 */
+    --color-primary-subtle: 254 242 242; /* #FEF2F2 */
 
     --color-success: 5 150 105;      /* emerald-600 */
     --color-success-subtle: 236 253 245; /* emerald-50 */
@@ -47,6 +56,17 @@
 
     --color-danger: 220 38 38;       /* red-600 */
     --color-danger-subtle: 254 242 242;  /* red-50 */
+
+    /*
+     * Granate institucional (Universidad de Sevilla). Antes era hex fijo en
+     * tailwind.config.js y por eso no tenía modo oscuro: sobre `app-bg`
+     * oscuro, #5B040D es casi invisible y `accent-subtle` (#FEF2F2) era un
+     * rojo claro sobre superficie oscura. Los valores en claro son los
+     * mismos de siempre, así que el modo claro no cambia en ningún sitio.
+     */
+    --color-accent: 91 4 13;             /* #5B040D */
+    --color-accent-hover: 122 29 32;     /* #7A1D20 */
+    --color-accent-subtle: 254 242 242;  /* #FEF2F2 */
   }
 
   :root.dark {
@@ -59,9 +79,9 @@
     --color-text-secondary: 148 163 184;   /* slate-400 */
     --color-text-muted: 100 116 139;       /* slate-500 */
 
-    --color-primary: 59 130 246;     /* blue-500: algo mas vivo sobre fondo oscuro */
-    --color-primary-hover: 96 165 250; /* blue-400 */
-    --color-primary-subtle: 23 37 84;  /* blue-950 */
+    --color-primary: 190 68 82;        /* #BE4452 — granate legible sobre oscuro */
+    --color-primary-hover: 212 108 120;/* #D46C78 */
+    --color-primary-subtle: 59 12 18;  /* #3B0C12 */
 
     --color-success: 16 185 129;     /* emerald-500 */
     --color-success-subtle: 2 44 34; /* emerald-950 */
@@ -71,6 +91,11 @@
 
     --color-danger: 239 68 68;       /* red-500 */
     --color-danger-subtle: 69 10 10; /* red-950 */
+
+    /* El granate sube para despegarse del fondo oscuro sin dejar de ser vino. */
+    --color-accent: 190 68 82;        /* #BE4452 */
+    --color-accent-hover: 212 108 120;/* #D46C78 */
+    --color-accent-subtle: 59 12 18;  /* #3B0C12 */
   }
 
   html {
@@ -82,8 +107,8 @@
   }
 
   ::selection {
-    background-color: rgb(37 99 235 / 0.12);
-    @apply text-primary-700;
+    background-color: rgb(var(--color-primary) / 0.14);
+    @apply text-primary;
   }
 
   #root {
@@ -109,7 +134,7 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary/50 active:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary/50 active:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-secondary {
@@ -148,20 +173,25 @@
     @apply flex flex-col gap-2 border-b border-app-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between;
   }
 
+  /* Titulares en la serif de la marca, como en la landing y el acceso. Solo
+     los titulares: la prosa y los datos siguen en Inter y en mono. */
   .section-heading {
-    @apply text-xl font-semibold tracking-tight text-app-text;
+    @apply font-display text-2xl text-app-text;
   }
 
   .section-copy {
     @apply text-sm leading-relaxed text-app-text-secondary;
   }
 
+  /* Versalitas mono: la misma voz institucional que `.institutional-line` en
+     las superficies públicas. Antes iban en Inter y eran lo que más separaba
+     el aspecto de los paneles del de la landing. */
   .eyebrow {
-    @apply text-xs font-medium uppercase tracking-wide text-app-text-muted;
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-app-text-muted;
   }
 
   .ui-label {
-    @apply text-[10px] font-semibold uppercase tracking-wider text-app-text-muted;
+    @apply font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-app-text-muted;
   }
 
   .status-chip {
@@ -204,6 +234,33 @@
   }
 
   /*
+   * Versalitas mono anchas: la voz institucional de las superficies públicas
+   * (membrete, pies, línea de la Universidad).
+   */
+  .institutional-line {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.18em];
+  }
+
+  /*
+   * Llamadas a la acción de las superficies públicas.
+   *
+   * No usan `.btn-primary`/`.btn-secondary` —que resuelven en azul `primary`,
+   * el color de la acción DENTRO de la aplicación— porque en la landing y el
+   * acceso el acento de todo (línea institucional, filete, numeración de las
+   * etapas) es el granate: un botón azul era lo único que no hablaba el mismo
+   * idioma. La etiqueta va en versalitas mono para rimar con
+   * `.institutional-line`, y el relleno macizo es lo que mantiene el botón
+   * legible como botón pese a las mayúsculas.
+   */
+  .cta-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-accent px-6 py-3.5 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent-hover focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .cta-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-app-border bg-transparent px-6 py-3.5 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-app-text transition-colors hover:border-accent hover:text-accent focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /*
    * Capa que flota SOBRE el contenido (banners, barras sticky). El desenfoque solo
    * se usa aquí, donde hay algo detrás que desenfocar y el efecto tiene sentido físico.
    */
@@ -214,12 +271,12 @@
 
 @layer utilities {
   .status-pulse {
-    --status-pulse-rgb: 37 99 235;
-    animation: dockus-status-pulse 2200ms var(--motion-ease-out) infinite;
+    --status-pulse-rgb: 91 4 13;
+    animation: educodeai-status-pulse 2200ms var(--motion-ease-out) infinite;
   }
 
   .status-pulse-primary {
-    --status-pulse-rgb: 37 99 235;
+    --status-pulse-rgb: 91 4 13;
   }
 
   .status-pulse-success {
@@ -227,16 +284,16 @@
   }
 
   .motion-modal-backdrop {
-    animation: dockus-fade-in var(--motion-fast) var(--motion-ease-out) both;
+    animation: educodeai-fade-in var(--motion-fast) var(--motion-ease-out) both;
   }
 
   .motion-modal-panel {
-    animation: dockus-modal-in var(--motion-standard) var(--motion-ease-out) both;
+    animation: educodeai-modal-in var(--motion-standard) var(--motion-ease-out) both;
   }
 
   /* Entrada de una sola pasada (banners, confirmación de entrega). Nunca en bucle. */
   .motion-rise-in {
-    animation: dockus-modal-in var(--motion-state) var(--motion-ease-out) both;
+    animation: educodeai-modal-in var(--motion-state) var(--motion-ease-out) both;
   }
 
   /* Barrido para skeletons: comunica "cargando" mejor que un pulse plano. */
@@ -256,12 +313,12 @@
       rgb(255 255 255 / 0.6) 50%,
       rgb(255 255 255 / 0) 100%
     );
-    animation: dockus-shimmer 1600ms var(--motion-ease-out) infinite;
+    animation: educodeai-shimmer 1600ms var(--motion-ease-out) infinite;
   }
 
   /* Progreso sin porcentaje fiable: el builder aún no reporta etapa. */
   .progress-indeterminate {
-    animation: dockus-progress-indeterminate 1400ms var(--motion-ease-out) infinite;
+    animation: educodeai-progress-indeterminate 1400ms var(--motion-ease-out) infinite;
   }
 
   /* 
@@ -297,7 +354,7 @@
   }
 }
 
-@keyframes dockus-status-pulse {
+@keyframes educodeai-status-pulse {
   0% {
     box-shadow: 0 0 0 0 rgb(var(--status-pulse-rgb) / 0.12);
   }
@@ -307,7 +364,7 @@
   }
 }
 
-@keyframes dockus-fade-in {
+@keyframes educodeai-fade-in {
   from {
     opacity: 0;
   }
@@ -316,7 +373,7 @@
   }
 }
 
-@keyframes dockus-modal-in {
+@keyframes educodeai-modal-in {
   from {
     opacity: 0;
     transform: translateY(8px) scale(0.98);
@@ -327,13 +384,13 @@
   }
 }
 
-@keyframes dockus-shimmer {
+@keyframes educodeai-shimmer {
   100% {
     transform: translateX(100%);
   }
 }
 
-@keyframes dockus-progress-indeterminate {
+@keyframes educodeai-progress-indeterminate {
   0% {
     transform: translateX(-100%);
   }
@@ -359,17 +416,12 @@
   background: #94a3b8;
 }
 
-/* ── Auth Panel Animations ──────────────────────────────────── */
+/* ── Superficies públicas (landing + acceso) ────────────────── */
 
 @keyframes auth-shake {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
   20%, 40%, 60%, 80% { transform: translateX(4px); }
-}
-
-@keyframes auth-shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
 }
 
 @keyframes auth-slide-up {
@@ -383,57 +435,10 @@
   }
 }
 
-@keyframes auth-slide-right {
-  from {
-    opacity: 0;
-    transform: translateX(-24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes auth-particle-1 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
-  25% { transform: translate(30px, -50px) scale(1.2); opacity: 0.7; }
-  50% { transform: translate(-20px, -100px) scale(0.8); opacity: 0.3; }
-  75% { transform: translate(40px, -60px) scale(1.1); opacity: 0.6; }
-}
-
-@keyframes auth-particle-2 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
-  33% { transform: translate(-40px, -70px) scale(1.3); opacity: 0.6; }
-  66% { transform: translate(20px, -40px) scale(0.9); opacity: 0.5; }
-}
-
-@keyframes auth-particle-3 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
-  20% { transform: translate(50px, -30px) scale(0.7); opacity: 0.3; }
-  40% { transform: translate(-10px, -80px) scale(1.4); opacity: 0.7; }
-  60% { transform: translate(30px, -120px) scale(0.6); opacity: 0.4; }
-  80% { transform: translate(-30px, -50px) scale(1.1); opacity: 0.6; }
-}
-
-@keyframes auth-gradient-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 @keyframes auth-check-pop {
   0% { transform: scale(0); opacity: 0; }
   50% { transform: scale(1.2); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes auth-glow-pulse {
-  0%, 100% { opacity: 0.15; }
-  50% { opacity: 0.3; }
-}
-
-@keyframes auth-tab-bounce {
-  0%, 100% { transform: scaleX(1); }
-  50% { transform: scaleX(1.08); }
 }
 
 .auth-shake {
@@ -444,16 +449,7 @@
   animation: auth-slide-up 0.7s var(--motion-ease-out) both;
 }
 
-.auth-slide-right {
-  animation: auth-slide-right 0.7s var(--motion-ease-out) both;
-}
-
-.auth-shimmer-btn {
-  background-size: 200% auto;
-  animation: auth-shimmer 3s linear infinite;
-}
-
-/* ── / Auth Panel Animations ───────────────────────────────── */
+/* ── / Superficies públicas ─────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -476,9 +472,7 @@
   .shimmer::after,
   .progress-indeterminate,
   .auth-shake,
-  .auth-slide-up,
-  .auth-slide-right,
-  .auth-shimmer-btn {
+  .auth-slide-up {
     animation: none !important;
   }
 
@@ -492,6 +486,6 @@
   }
 
   .status-pulse {
-    box-shadow: 0 0 0 2px rgb(var(--status-pulse-rgb, 37 99 235) / 0.10);
+    box-shadow: 0 0 0 2px rgb(var(--status-pulse-rgb, 91 4 13) / 0.10);
   }
 }

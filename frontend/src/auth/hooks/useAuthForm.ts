@@ -42,12 +42,14 @@ const REGISTER_FIELDS = ['firstName', 'lastName', 'email', 'password', 'confirmP
 function runValidation(
   field: string,
   values: AuthFormFields,
+  mode: AuthMode,
 ): Omit<FieldValidation, 'touched'> {
   switch (field) {
     case 'email':
       return validateEmail(values.email);
     case 'password':
-      return validatePassword(values.password);
+      // La complejidad solo se exige al crear cuenta; ver `validatePassword`.
+      return validatePassword(values.password, mode === 'REGISTER');
     case 'confirmPassword':
       return validateConfirmPassword(values.password, values.confirmPassword);
     case 'firstName':
@@ -63,11 +65,14 @@ function runValidation(
  * Todo el estado y los manejadores de AuthPanel: modo login/registro,
  * formulario, validación por campo (en blur y en vivo una vez tocado),
  * envío con pre-validación client-side y animaciones de estado.
- * Extraído de AuthPanel.tsx (FE-ALTO-03), mismo patrón panel+hook que el
- * resto de la app.
+ * Mantiene el componente de presentación separado de la lógica de formulario,
+ * igual que el resto de paneles de la aplicación.
  */
-export function useAuthForm(onAuthSuccess: (_response: AuthResponse) => void) {
-  const [mode, setMode] = useState<AuthMode>('LOGIN');
+export function useAuthForm(
+  onAuthSuccess: (_response: AuthResponse) => void,
+  initialMode: AuthMode = 'LOGIN',
+) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [form, setForm] = useState<AuthFormFields>(EMPTY_FORM);
   const [loading, setLoading] = useState<'AUTH' | null>(null);
   const [message, setMessage] = useState<string>('');
@@ -92,10 +97,10 @@ export function useAuthForm(onAuthSuccess: (_response: AuthResponse) => void) {
   const handleBlur = useCallback((field: string) => {
     setValidation(prev => ({
       ...prev,
-      [field]: { touched: true, ...runValidation(field, form) },
+      [field]: { touched: true, ...runValidation(field, form, mode) },
     }));
     setCapsLockOn(false);
-  }, [form]);
+  }, [form, mode]);
 
   /**
    * Actualiza un campo y, si ya fue tocado, revalida en vivo para que el
@@ -108,17 +113,17 @@ export function useAuthForm(onAuthSuccess: (_response: AuthResponse) => void) {
     setValidation(prev => {
       const updates: Record<string, FieldValidation> = {};
       if (prev[field]?.touched) {
-        updates[field] = { touched: true, ...runValidation(field, next) };
+        updates[field] = { touched: true, ...runValidation(field, next, mode) };
       }
       if (field === 'password' && prev.confirmPassword?.touched) {
         updates.confirmPassword = {
           touched: true,
-          ...runValidation('confirmPassword', next),
+          ...runValidation('confirmPassword', next, mode),
         };
       }
       return Object.keys(updates).length > 0 ? { ...prev, ...updates } : prev;
     });
-  }, [form]);
+  }, [form, mode]);
 
   const handlePasswordKeyEvent = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
     if (typeof event.getModifierState === 'function') {
@@ -132,7 +137,7 @@ export function useAuthForm(onAuthSuccess: (_response: AuthResponse) => void) {
     // Pre-validación client-side: no llamar a la API con campos inválidos.
     const fieldsToCheck = mode === 'REGISTER' ? REGISTER_FIELDS : LOGIN_FIELDS;
     const results = fieldsToCheck.map(
-      (field) => [field, runValidation(field, form)] as const,
+      (field) => [field, runValidation(field, form, mode)] as const,
     );
     const firstInvalid = results.find(([, result]) => !result.valid);
     if (firstInvalid) {
@@ -200,17 +205,25 @@ export function useAuthForm(onAuthSuccess: (_response: AuthResponse) => void) {
   const isErrorMessage = messageIsError;
   const passwordStrength = mode === 'REGISTER' ? getPasswordStrength(form.password) : 0;
 
-  const inputBase = "block w-full px-4 py-3 rounded-xl border text-sm text-slate-900 transition-all duration-200 placeholder:text-slate-400 focus:outline-none disabled:bg-slate-100";
-
+  /**
+   * Las clases de los inputs viven aquí y no en el JSX porque dependen del
+   * estado de validación que gestiona este hook. La base es `.input-field`,
+   * el campo estándar de la app; aquí solo se sobreescribe el borde y el
+   * anillo de foco según el estado.
+   *
+   * El estado válido no lleva relleno de color: ya lo señala el icono de
+   * check, y un lavado verde en cada campo correcto convierte el formulario
+   * en un semáforo.
+   */
   const getInputClasses = (field: string) => {
     const v = validation[field];
     if (v?.touched && !v.valid) {
-      return `${inputBase} border-danger-300 bg-danger-50/30 focus:border-danger-400 focus:ring-4 focus:ring-danger-100`;
+      return "input-field border-danger hover:border-danger focus:border-danger focus:ring-danger/30";
     }
     if (v?.touched && v.valid) {
-      return `${inputBase} border-success-300 bg-success-50/20 focus:border-success-400 focus:ring-4 focus:ring-success-100`;
+      return "input-field border-success/60 hover:border-success focus:border-success focus:ring-success/30";
     }
-    return `${inputBase} border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300`;
+    return "input-field";
   };
 
   return {

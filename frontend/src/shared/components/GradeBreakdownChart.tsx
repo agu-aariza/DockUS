@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (GradeBreakdownChart).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (GradeBreakdownChart).
  *
  * @module GradeBreakdownChart
  */

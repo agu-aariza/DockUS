@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (StatusBadge).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (StatusBadge).
  *
  * @module StatusBadge
  */
@@ -27,27 +27,31 @@ export interface StatusBadgeProps {
   className?: string;
 }
 
-// Los tonos numerados (`success-50`, `danger-200`...) no responden al tema
-// (ver el porqué en styles.css); son pastel y casi invisibles sobre una
-// superficie oscura, así que aquí sí hace falta un `dark:` explícito por tono
-// en vez de depender del token — este componente lo usan 25 ficheros.
+// Tag institucional: hairline + marca vertical, no la píldora pastel con
+// punto de cualquier dashboard genérico. El color vive en el borde, la marca
+// y el texto — nunca en un relleno saturado — y la tipografía es la misma
+// mono en versalitas que `.ui-label`/`.institutional-line` en el resto de la
+// app, para que un estado se lea como parte de esta interfaz y no de una
+// plantilla. Los tonos numerados (`success-200`, `danger-800`...) no
+// responden al tema (ver el porqué en styles.css), de ahí el `dark:`
+// explícito por tono — este componente lo usan 25 ficheros.
 const TONE_MAP: Record<StatusTone, string> = {
-  idle: 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300',
-  draft: 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300',
-  closed: 'border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-400',
-  success: 'border-success-200 bg-success-50 text-success-700 dark:border-success-800 dark:bg-success-950 dark:text-success-400',
-  active: 'border-success-200 bg-success-50 text-success-700 dark:border-success-800 dark:bg-success-950 dark:text-success-400',
-  warning: 'border-warning-200 bg-warning-50 text-warning-700 dark:border-warning-800 dark:bg-warning-950 dark:text-warning-400',
-  pending: 'border-warning-200 bg-warning-50 text-warning-700 dark:border-warning-800 dark:bg-warning-950 dark:text-warning-400',
-  danger: 'border-danger-200 bg-danger-50 text-danger-700 dark:border-danger-800 dark:bg-danger-950 dark:text-danger-400',
-  error: 'border-danger-200 bg-danger-50 text-danger-700 dark:border-danger-800 dark:bg-danger-950 dark:text-danger-400',
-  info: 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-950 dark:text-primary-400',
-  running: 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-400',
+  idle: 'border-app-border text-app-text-secondary',
+  draft: 'border-app-border text-app-text-secondary',
+  closed: 'border-app-border text-app-text-muted',
+  success: 'border-success-200 text-success-700 dark:border-success-800 dark:text-success-400',
+  active: 'border-success-200 text-success-700 dark:border-success-800 dark:text-success-400',
+  warning: 'border-warning-200 text-warning-700 dark:border-warning-800 dark:text-warning-400',
+  pending: 'border-warning-200 text-warning-700 dark:border-warning-800 dark:text-warning-400',
+  danger: 'border-danger-200 text-danger-700 dark:border-danger-800 dark:text-danger-400',
+  error: 'border-danger-200 text-danger-700 dark:border-danger-800 dark:text-danger-400',
+  info: 'border-primary/30 text-primary',
+  running: 'border-indigo-200 text-indigo-700 dark:border-indigo-800 dark:text-indigo-400',
 };
 
 const SIZE_MAP: Record<NonNullable<StatusBadgeProps['size']>, string> = {
-  sm: 'px-2 py-0.5 text-xs',
-  md: 'px-2.5 py-1 text-sm',
+  sm: 'px-2 py-1 text-[10px]',
+  md: 'px-2.5 py-1 text-[11px]',
 };
 
 export function StatusBadge({
@@ -59,12 +63,12 @@ export function StatusBadge({
 }: StatusBadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border font-medium ${TONE_MAP[tone]} ${SIZE_MAP[size]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded border bg-app-bg-subtle font-mono font-semibold uppercase tracking-[0.1em] ${TONE_MAP[tone]} ${SIZE_MAP[size]} ${className}`}
     >
       {icon ? (
-        <span className="text-sm">{icon}</span>
+        <span className="text-sm normal-case tracking-normal">{icon}</span>
       ) : (
-        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" aria-hidden="true" />
+        <span className="h-2.5 w-0.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
       )}
       {children}
     </span>

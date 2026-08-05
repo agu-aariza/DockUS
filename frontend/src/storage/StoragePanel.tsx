@@ -5,9 +5,9 @@
  */
 
 import { useEffect, useState, useMemo } from 'react';
-import { 
-  RiCloudFill, RiUploadCloud2Fill, RiFileSearchFill, RiDatabase2Fill, 
-  RiHardDrive2Fill, RiShieldCheckFill, RiFileList3Fill,
+import {
+  RiCloudFill, RiUploadCloud2Fill, RiFileSearchFill, RiDatabase2Fill,
+  RiHardDrive2Fill, RiFileList3Fill,
   RiDeleteBin7Line, RiSearch2Line
 } from 'react-icons/ri';
 import { DangerConfirmModal } from '../shared/components/DangerConfirmModal';
@@ -47,21 +47,18 @@ export function StoragePanel(): JSX.Element {
     return [
       { label: 'Artefactos', value: totalItems, icon: <RiFileList3Fill />, variant: 'info' as const },
       { label: 'Espacio ocupado', value: formattedSize, icon: <RiHardDrive2Fill />, variant: 'default' as const },
-      { label: 'SLA Subida', value: '99.9%', icon: <RiShieldCheckFill />, variant: 'success' as const },
-      { label: 'Nodos', value: 'Distribuido', icon: <RiDatabase2Fill />, variant: 'dark' as const },
     ];
   }, [sc.listResponse]);
 
   return (
     <div className="space-y-6">
-      <PageHeader 
+      <PageHeader
         title="Bóveda de Artefactos"
-        subtitle="Repositorio centralizado de objetos persistidos, binarios y evidencias de compilación del ecosistema DockUS."
+        subtitle="Repositorio centralizado de objetos persistidos, binarios y evidencias de compilación del ecosistema EduCodeAI."
         icon={<RiCloudFill />}
-        badge="Storage Service"
       />
 
-      <StatsOverview stats={stats} />
+      <StatsOverview stats={stats} columns={2} />
 
       <Tabs 
         tabs={[

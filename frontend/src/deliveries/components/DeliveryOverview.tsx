@@ -63,39 +63,39 @@ export function DeliveryOverview({
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <article className="rounded-lg border border-app-border bg-white p-6">
-          <h4 className="text-sm font-semibold text-slate-900">
+        <article className="rounded-lg border border-app-border bg-app-surface p-6">
+          <h4 className="text-sm font-semibold text-app-text">
             Contexto de revisión
           </h4>
-          <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+          <div className="mt-4 space-y-3 text-sm leading-6 text-app-text-secondary">
             <div>
-              <strong className="text-slate-900">Proyecto:</strong>{" "}
+              <strong className="text-app-text">Proyecto:</strong>{" "}
               {selectedProject?.title || selectedDelivery.projectTitle}
             </div>
             <div>
-              <strong className="text-slate-900">Asignación:</strong>{" "}
+              <strong className="text-app-text">Asignación:</strong>{" "}
               <AssignmentLabel assignment={selectedAssignment} />
             </div>
             <div>
-              <strong className="text-slate-900">Requisito mínimo:</strong>{" "}
+              <strong className="text-app-text">Requisito mínimo:</strong>{" "}
               {selectedDelivery.minimumRequirementMet
                 ? "Cumplido"
                 : "Todavía pendiente"}
             </div>
             <div>
-              <strong className="text-slate-900">Notas del alumno:</strong>{" "}
+              <strong className="text-app-text">Notas del alumno:</strong>{" "}
               {selectedDelivery.notes || "Sin observaciones del alumno."}
             </div>
             <div>
-              <strong className="text-slate-900">Observaciones docentes:</strong>{" "}
+              <strong className="text-app-text">Observaciones docentes:</strong>{" "}
               {selectedDeliveryReviewNotes.manualNotes ||
                 "Aún no hay feedback manual publicado."}
             </div>
           </div>
         </article>
 
-        <article className="rounded-lg border border-app-border bg-white p-6">
-          <h4 className="text-sm font-semibold text-slate-900">
+        <article className="rounded-lg border border-app-border bg-app-surface p-6">
+          <h4 className="text-sm font-semibold text-app-text">
             Acciones rápidas
           </h4>
           <div className="mt-4 space-y-2">
@@ -139,9 +139,9 @@ export function DeliveryOverview({
             )}
           </div>
 
-          <div className="mt-5 rounded-lg border border-app-border bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+          <div className="mt-5 rounded-lg border border-app-border bg-app-bg-subtle p-4 text-sm leading-6 text-app-text-secondary">
             <div>
-              <strong className="text-slate-900">Estado operativo:</strong>{" "}
+              <strong className="text-app-text">Estado operativo:</strong>{" "}
               {selectedDelivery.status === "SUBMITTED"
                 ? "Pendiente de corrección"
                 : selectedDelivery.status === "IN_REVIEW"
@@ -151,7 +151,7 @@ export function DeliveryOverview({
                     : "Borrador aún no entregado"}
             </div>
             <div className="mt-2">
-              <strong className="text-slate-900">Prioridad:</strong>{" "}
+              <strong className="text-app-text">Prioridad:</strong>{" "}
               {selectedDelivery.isLate
                 ? "Conviene revisar el impacto de la entrega tardía."
                 : selectedDelivery.grade === null &&

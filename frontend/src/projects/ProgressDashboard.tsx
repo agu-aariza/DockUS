@@ -137,7 +137,6 @@ export function ProgressDashboard({
     if (submittedQuery?.groupId === undefined || availableGroups.length === 0) {
       setAvailableGroups(toGroupOptions(rows));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gradebookQuery.data]);
 
   useEffect(() => {
@@ -366,17 +365,20 @@ export function ProgressDashboard({
 
       {summary ? (
         <div className="space-y-8">
-          <ProgressStatsPanel summary={summary} />
-          <ParticipationProgress rate={rate} />
-          <DistributionCharts summary={summary} total={total} />
+          <div className="space-y-5">
+            <p className="ui-label">Estado general</p>
+            <ProgressStatsPanel summary={summary} />
+            <ParticipationProgress rate={rate} delivered={delivered} total={total} />
+            <DistributionCharts summary={summary} total={total} />
+          </div>
 
-          <div className="flex items-center gap-1 border-b border-slate-200">
+          <div className="flex items-center gap-1 border-b border-app-border">
             <button
               onClick={() => setActiveTab("gradebook")}
               className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none ${
                 activeTab === "gradebook"
                   ? "border-b-2 border-primary bg-primary-subtle text-primary"
-                  : "text-slate-500 hover:text-slate-900"
+                  : "text-app-text-muted hover:text-app-text"
               }`}
             >
               <RiTeamLine />
@@ -387,7 +389,7 @@ export function ProgressDashboard({
               className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none ${
                 activeTab === "insights"
                   ? "border-b-2 border-accent bg-accent-subtle text-accent"
-                  : "text-slate-500 hover:text-slate-900"
+                  : "text-app-text-muted hover:text-app-text"
               }`}
             >
               <RiBarChartFill />
@@ -426,13 +428,13 @@ export function ProgressDashboard({
               }}
             />
           ) : (
-            <div className="overflow-hidden rounded-lg border border-app-border bg-white">
-              <div className="flex flex-col gap-4 border-b border-slate-100 p-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="overflow-hidden rounded-lg border border-app-border bg-app-surface">
+              <div className="flex flex-col gap-4 border-b border-app-border-subtle p-6 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-app-text">
                     Gradebook del proyecto
                   </h3>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <p className="mt-2 text-sm text-app-text-secondary">
                     {deferredRows.length} alumno(s) visibles tras aplicar filtros.
                   </p>
                 </div>
@@ -474,7 +476,7 @@ export function ProgressDashboard({
         </div>
       ) : (
         !embedded && (
-          <div className="rounded-lg border border-dashed border-app-border bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-app-border bg-app-bg-subtle px-6 py-10 text-center text-sm text-app-text-secondary">
             Selecciona un proyecto para cargar métricas, distribución y gradebook.
           </div>
         )

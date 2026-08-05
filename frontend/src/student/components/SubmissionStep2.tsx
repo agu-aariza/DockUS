@@ -59,11 +59,11 @@ export function SubmissionStep2({ flow }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="eyebrow text-slate-400">Paso 2 · Archivo</div>
-        <h3 className="mt-2 text-3xl font-semibold text-slate-900">
+        <div className="eyebrow">Paso 2 · Archivo</div>
+        <h3 className="mt-2 font-display text-3xl leading-tight text-app-text">
           Adjunta el código de la nueva versión
         </h3>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-app-text-secondary">
           Sube un archivo comprimido en formato <code>.zip</code> o <code>.tar.gz</code> con el contenido de{" "}
           <strong>{activeAssignment?.projectTitle}</strong>.
         </p>
@@ -71,7 +71,7 @@ export function SubmissionStep2({ flow }: Props) {
 
       <label
         htmlFor={FILE_INPUT_ID}
-        className="text-sm font-semibold text-slate-900"
+        className="text-sm font-semibold text-app-text"
       >
         Archivo comprimido de la práctica
       </label>
@@ -85,7 +85,7 @@ export function SubmissionStep2({ flow }: Props) {
             ? "scale-[1.01] border-primary bg-primary-subtle shadow-md"
             : file
               ? "border-success/50 bg-success-subtle"
-              : "border-app-border bg-slate-50 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary-subtle hover:shadow-sm"
+              : "border-app-border bg-app-bg-subtle hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary-subtle hover:shadow-sm"
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -117,18 +117,18 @@ export function SubmissionStep2({ flow }: Props) {
         <div className="mt-4">
           {file ? (
             <>
-              <div className="break-all text-lg font-semibold text-slate-900">
+              <div className="break-all text-lg font-semibold text-app-text">
                 {file.name}
               </div>
-              <div className="mt-1 text-sm text-slate-600">
+              <div className="mt-1 text-sm text-app-text-secondary">
                 {formatBytes(file.size)} · listo para revisar
               </div>
-              <div className="mt-2 text-xs text-slate-500">
+              <div className="mt-2 text-xs text-app-text-muted">
                 Haz clic de nuevo para elegir otro archivo
               </div>
             </>
           ) : (
-            <div className="text-lg font-semibold text-slate-900">
+            <div className="text-lg font-semibold text-app-text">
               {isDragging
                 ? "Suelta el archivo aquí"
                 : "Haz clic o arrastra el archivo a esta zona"}
@@ -138,7 +138,7 @@ export function SubmissionStep2({ flow }: Props) {
           {/* Siempre presente: el input lo referencia con aria-describedby. */}
           <div
             id={`${FILE_INPUT_ID}-hint`}
-            className={`text-sm text-slate-500 ${file ? "sr-only" : "mt-2"}`}
+            className={`text-sm text-app-text-muted ${file ? "sr-only" : "mt-2"}`}
           >
             Máximo 50 MB · Formatos admitidos: .zip, .tar.gz
           </div>
@@ -147,7 +147,7 @@ export function SubmissionStep2({ flow }: Props) {
 
       {fileSizeError ? (
         <div
-          className="motion-rise-in flex items-center gap-2 rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger-800"
+          className="motion-rise-in flex items-center gap-2 rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger-800 dark:text-danger-300"
           role="alert"
         >
           <RiAlertLine className="shrink-0 text-base" aria-hidden="true" />
@@ -157,7 +157,7 @@ export function SubmissionStep2({ flow }: Props) {
 
       {previewLoading ? (
         <div
-          className="flex items-center gap-3 rounded-lg border border-app-border bg-slate-50 px-4 py-3 text-sm text-slate-600"
+          className="flex items-center gap-3 rounded-lg border border-app-border bg-app-bg-subtle px-4 py-3 text-sm text-app-text-secondary"
           aria-busy="true"
           aria-live="polite"
         >
@@ -171,7 +171,7 @@ export function SubmissionStep2({ flow }: Props) {
 
       {previewError ? (
         <div
-          className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-3 text-sm text-warning-900"
+          className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-3 text-sm text-warning-900 dark:text-warning-300"
           role="alert"
         >
           {previewError}
@@ -187,13 +187,13 @@ export function SubmissionStep2({ flow }: Props) {
       ) : null}
 
       {previousPreviewError ? (
-        <div className="rounded-lg border border-app-border/30 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+        <div className="rounded-lg border border-app-border/30 bg-app-bg-subtle px-4 py-3 text-sm text-app-text-muted">
           No pudimos comparar esta versión con la entrega anterior: {previousPreviewError}
         </div>
       ) : null}
 
       {shouldWarnBeforeContinue ? (
-        <div className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-4 text-sm text-warning-900">
+        <div className="motion-rise-in rounded-lg border border-warning/30 bg-warning-subtle px-4 py-4 text-sm text-warning-900 dark:text-warning-300">
           <div className="font-semibold">
             Detectamos señales que conviene revisar antes de seguir
           </div>

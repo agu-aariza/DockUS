@@ -8,7 +8,7 @@ import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../../shared/api/services';
 import type { UserRole } from "../../shared/types";
-import type { UserStatus } from "../../features/auth/types";
+import type { UserEntity, UserStatus } from "../../features/auth/types";
 import { useSession } from '../../shared/session/SessionContext';
 import { useManagementPermissions } from '../../shared/session/useManagementPermissions';
 import { getErrorMessage } from '../../shared/utils/errors';
@@ -36,6 +36,7 @@ export function useUserManagement() {
   const [restoreId, setRestoreId] = useState('');
   const [deleteId, setDeleteId] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   const [result, setResult] = useState<unknown>(null);
   const [message, setMessage] = useState('');
@@ -127,10 +128,24 @@ export function useUserManagement() {
       });
       setResult(response);
       setMessage('Usuario actualizado.');
+      setEditModalOpen(false);
       await handleList();
     } catch (e) {
       setMessage(getErrorMessage(e));
     }
+  };
+
+  const openEditUser = (user: UserEntity) => {
+    setUpdateForm({
+      id: user.id,
+      email: user.email,
+      password: '',
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      status: user.status,
+    });
+    setEditModalOpen(true);
   };
 
   const executeDelete = async () => {
@@ -156,8 +171,10 @@ export function useUserManagement() {
     restoreId, setRestoreId,
     deleteId, setDeleteId,
     confirmOpen, setConfirmOpen,
+    editModalOpen, setEditModalOpen,
+    isUpdating: updateMutation.isPending,
     result, message, setMessage,
     canList, canAdmin,
-    handleList, handleCreate, handleUpdate, executeDelete
+    handleList, handleCreate, handleUpdate, openEditUser, executeDelete
   };
 }

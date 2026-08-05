@@ -133,7 +133,7 @@ describe("useBuilderRunStream", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("MED-06: propaga el AbortSignal del efecto a la recuperacion del historico", async () => {
+  it("propaga el AbortSignal del efecto a la recuperacion del historico", async () => {
     const listEventsSpy = vi.spyOn(builderApi, "listEvents");
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -155,7 +155,7 @@ describe("useBuilderRunStream", () => {
     expect(signal?.aborted).toBe(false);
   });
 
-  it("MED-06: no emite estado del run anterior si el historico resuelve tras desmontar", async () => {
+  it("no emite estado del run anterior si el historico resuelve tras desmontar", async () => {
     // El closure obsoleto: listEvents queda pendiente, el efecto se limpia y la
     // promesa resuelve despues. Sin la comprobacion de `disposed`, escribia
     // "connecting" del run que ya no se observa.

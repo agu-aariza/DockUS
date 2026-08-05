@@ -52,7 +52,7 @@ export function useBuilderRunStream(
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined = undefined;
     // Intentos consecutivos fallidos. Se reinicia en cuanto el stream vuelve a
     // entregar datos, de modo que una desconexión aislada no penaliza a la
-    // siguiente (ESC-ALTO-06).
+    // siguiente.
     let reconnectAttempt = 0;
 
     const updateStreamState = (next: StreamState) => {

@@ -7,6 +7,7 @@
 import { formatAssignmentDate } from "../deadlineUtils";
 import { StudentKeyValueList, StudentSurface, StudentSurfaceHeader } from "./StudentWorkspaceSurface";
 import { SubmissionCoachingPreview } from "../SubmissionCoachingPreview";
+import { StatusBadge } from "../../shared/components/ui/StatusBadge";
 import type { SubmissionFlowState } from "../hooks/useSubmissionFlow";
 
 interface Props {
@@ -43,7 +44,7 @@ export function SubmissionSidebar({ flow }: Props) {
             description={activeTimeline.detail}
             badge={
               activeTimeline.countdownLabel ? (
-                <span className="inline-flex rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-900">
+                <span className="inline-flex rounded-full border border-app-border/70 bg-app-surface/70 px-3 py-1 text-xs font-semibold text-app-text">
                   {activeTimeline.countdownLabel}
                 </span>
               ) : undefined
@@ -57,13 +58,7 @@ export function SubmissionSidebar({ flow }: Props) {
           eyebrow="Briefing de la practica"
           title={activeAssignment?.projectTitle ?? "Selecciona una práctica"}
           description="Antes de subir nada, confirma que esta es la convocatoria correcta y revisa si conviene reenviar ahora o esperar otro momento."
-          badge={
-            <span
-              className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${workflow.badgeClassName}`}
-            >
-              {workflow.label}
-            </span>
-          }
+          badge={<StatusBadge tone={workflow.tone}>{workflow.label}</StatusBadge>}
         />
         <StudentKeyValueList
           className="mt-6"
@@ -94,7 +89,7 @@ export function SubmissionSidebar({ flow }: Props) {
         />
 
         {(noRemainingDeliveries || notYetOpen || afterDeadline) && activeAssignment ? (
-          <div className="mt-6 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm leading-6 text-warning-900">
+          <div className="mt-6 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm leading-6 text-warning-900 dark:border-warning-800 dark:bg-warning-950 dark:text-warning-300">
             {noRemainingDeliveries
               ? "Esta práctica ya no tiene intentos restantes. Puedes seguir revisando el informe y el historial, pero no se habilitará otra subida."
               : notYetOpen

@@ -36,20 +36,20 @@ export function DeliveryHistoryModal({
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/40 p-4 motion-modal-backdrop">
-      <div className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-md motion-modal-panel">
+      <div className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-app-border bg-app-surface shadow-md motion-modal-panel">
         <header className="flex items-center justify-between border-b border-app-border px-5 py-4">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">
+            <h3 className="text-sm font-semibold text-app-text">
               Historial de Entregas
             </h3>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-app-text-secondary">
               Explorando versiones enviadas por {studentName}
             </p>
           </div>
           <button
             onClick={onClose}
             aria-label="Cerrar historial"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-app-text-muted transition-colors hover:bg-app-bg-subtle"
           >
             <RiCloseLine className="text-2xl" />
           </button>
@@ -59,12 +59,12 @@ export function DeliveryHistoryModal({
           {loading ? (
             // Mismo contorno que la fila real (icono + 2 líneas + botón) en
             // vez de un spinner centrado, para que la lista no cambie de
-            // forma entre el estado de carga y el cargado (FE-MED-03).
+            // forma entre el estado de carga y el cargado.
             <div className="space-y-3" aria-busy="true" aria-label="Cargando versiones">
               {Array.from({ length: 3 }).map((_, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between rounded-md border border-app-border bg-slate-50/60 p-4"
+                  className="flex items-center justify-between rounded-md border border-app-border bg-app-bg-subtle/60 p-4"
                 >
                   <div className="flex items-center gap-4">
                     <Skeleton type="rounded" className="h-9 w-9" />
@@ -79,8 +79,8 @@ export function DeliveryHistoryModal({
             </div>
           ) : deliveries.length === 0 ? (
             <div className="py-10 text-center">
-              <RiStackLine className="mx-auto mb-2 text-4xl text-slate-300" />
-              <p className="text-sm text-slate-500">
+              <RiStackLine className="mx-auto mb-2 text-4xl text-app-text-muted/40" />
+              <p className="text-sm text-app-text-muted">
                 No hay entregas registradas para este alumno.
               </p>
             </div>
@@ -89,22 +89,22 @@ export function DeliveryHistoryModal({
               {deliveries.map((delivery) => (
                 <div
                   key={delivery.id}
-                  className="flex items-center justify-between rounded-md border border-app-border bg-slate-50/60 p-4 transition-colors motion-reduce:transition-none hover:border-slate-300 hover:bg-white"
+                  className="flex items-center justify-between rounded-md border border-app-border bg-app-bg-subtle/60 p-4 transition-colors motion-reduce:transition-none hover:border-app-text-muted/40 hover:bg-app-surface"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="data-figure flex h-9 w-9 items-center justify-center rounded-md border border-app-border bg-slate-100 text-sm font-semibold text-slate-600">
+                    <div className="data-figure flex h-9 w-9 items-center justify-center rounded-md border border-app-border bg-app-bg-subtle text-sm font-semibold text-app-text-secondary">
                       v{delivery.version}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <DeliveryStatusBadge status={delivery.status} />
                         {delivery.isLate ? (
-                          <span className="rounded-full border border-warning-200 bg-warning-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-warning-700">
+                          <span className="rounded-full border border-warning-200 bg-warning-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-warning-700 dark:border-warning-800 dark:bg-warning-950 dark:text-warning-400">
                             Fuera de plazo
                           </span>
                         ) : null}
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 data-meta">
                         {new Date(delivery.createdAt).toLocaleString("es-ES")}
                       </p>
                     </div>

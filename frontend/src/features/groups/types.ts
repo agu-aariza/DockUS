@@ -20,7 +20,9 @@ export interface GroupEnrollmentEntity {
   groupId: string;
   groupName: string;
   studentId: string;
-  studentEmail: string;
+  // Puede venir null: la matrícula sigue viva pero el alumno fue borrado
+  // (borrado lógico) — ver groups.service#listEnrollments en el backend.
+  studentEmail: string | null;
   studentName: string;
   enrolledById: string;
   enrolledAt: string;

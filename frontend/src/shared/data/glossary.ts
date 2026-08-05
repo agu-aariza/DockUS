@@ -126,7 +126,7 @@ const GLOSSARY_ENTRIES: GlossaryEntry[] = [
     term: "Capacidades",
     title: "Capacidades del sistema",
     description:
-      "Señales que resumen lo que DockUS sí pudo reconocer, ejecutar o validar dentro de tu entrega.",
+      "Señales que resumen lo que EduCodeAI sí pudo reconocer, ejecutar o validar dentro de tu entrega.",
   },
 ];
 

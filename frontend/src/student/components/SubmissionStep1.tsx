@@ -32,11 +32,11 @@ export function SubmissionStep1({ flow }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="eyebrow text-slate-400">Paso 1 · Convocatoria</div>
-        <h3 className="mt-2 text-3xl font-semibold text-slate-900">
+        <div className="eyebrow">Paso 1 · Convocatoria</div>
+        <h3 className="mt-2 font-display text-3xl leading-tight text-app-text">
           Elige la practica que vas a entregar
         </h3>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-app-text-secondary">
           El asistente se queda con la practica seleccionada para reutilizar
           el contexto en entregas, informes y coaching.
         </p>
@@ -54,10 +54,10 @@ export function SubmissionStep1({ flow }: Props) {
               key={assignment.id}
               className={`flex cursor-pointer items-start gap-4 rounded-lg border p-5 shadow-sm focus-within:ring-2 focus-within:ring-primary/40 ${
                 disabled
-                  ? "cursor-not-allowed border-app-border/30 bg-slate-50/20 opacity-70 shadow-none"
+                  ? "cursor-not-allowed border-app-border/30 bg-app-bg-subtle/20 opacity-70 shadow-none"
                   : selectedAssignmentId === assignment.id
                     ? "border-primary bg-primary-subtle ring-1 ring-primary/20"
-                    : "card-interactive border-app-border bg-white"
+                    : "card-interactive border-app-border bg-app-surface"
               }`}
             >
               <input
@@ -73,24 +73,24 @@ export function SubmissionStep1({ flow }: Props) {
                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 motion-reduce:transition-none ${
                   selectedAssignmentId === assignment.id
                     ? "bg-primary text-white"
-                    : "bg-slate-50 text-primary"
+                    : "bg-app-bg-subtle text-primary"
                 }`}
               >
                 <RiFolderOpenLine className="text-xl" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="font-semibold text-slate-900">
+                  <div className="font-semibold text-app-text">
                     {assignment.projectTitle}
                   </div>
-                  <span className="inline-flex rounded-full border border-app-border bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase text-slate-500">
+                  <span className="inline-flex rounded-full border border-app-border bg-app-bg-subtle px-2.5 py-0.5 text-[11px] font-semibold uppercase text-app-text-muted">
                     {assignmentTimeline.headline}
                   </span>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
+                <p className="mt-2 text-sm leading-6 text-app-text-secondary">
                   {assignmentTimeline.detail}
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-app-text-muted">
                   <span className="rounded-full border border-app-border px-2.5 py-1">
                     {assignment.remainingDeliveries} intento(s) disponibles
                   </span>
@@ -108,16 +108,16 @@ export function SubmissionStep1({ flow }: Props) {
       </div>
 
       {activeAssignment?.rubricInstructions ? (
-        <details className="group rounded-lg border border-app-border bg-slate-50">
-          <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 text-sm font-semibold text-slate-900 select-none">
+        <details className="group rounded-lg border border-app-border bg-app-bg-subtle">
+          <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 text-sm font-semibold text-app-text select-none">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <RiBookOpenLine className="text-base" />
             </div>
             <span className="flex-1">¿Qué se evaluará? Ver criterios de la rúbrica</span>
-            <span className="text-slate-400 transition-transform group-open:rotate-180">▾</span>
+            <span className="text-app-text-muted transition-transform group-open:rotate-180">▾</span>
           </summary>
           <div className="border-t border-app-border px-5 pb-5 pt-4">
-            <p className="whitespace-pre-wrap text-sm leading-6 text-slate-500">
+            <p className="whitespace-pre-wrap text-sm leading-6 text-app-text-secondary">
               {activeAssignment.rubricInstructions}
             </p>
           </div>

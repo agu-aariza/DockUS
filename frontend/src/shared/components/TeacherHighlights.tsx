@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (TeacherHighlights).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (TeacherHighlights).
  *
  * @module TeacherHighlights
  */

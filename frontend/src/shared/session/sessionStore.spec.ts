@@ -5,9 +5,9 @@ import type { SessionRecord } from "../../features/auth/types";
 function makeSession(overrides: Partial<SessionRecord> = {}): SessionRecord {
   return {
     id: "session-1",
-    label: "alumno@dockus.local (STUDENT)",
+    label: "alumno@educodeai.local (STUDENT)",
     userId: "user-1",
-    email: "alumno@dockus.local",
+    email: "alumno@educodeai.local",
     role: "STUDENT",
     accessToken: "live-access-token",
     refreshToken: "live-refresh-token",
@@ -16,7 +16,7 @@ function makeSession(overrides: Partial<SessionRecord> = {}): SessionRecord {
   };
 }
 
-describe("sessionStore (FE-MED-04)", () => {
+describe("sessionStore", () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -24,7 +24,7 @@ describe("sessionStore (FE-MED-04)", () => {
   it("never writes accessToken to localStorage", () => {
     writeSessions([makeSession()]);
 
-    const raw = localStorage.getItem("dockus_console_sessions");
+    const raw = localStorage.getItem("educodeai_console_sessions");
     expect(raw).not.toContain("live-access-token");
   });
 
@@ -46,3 +46,6 @@ describe("sessionStore (FE-MED-04)", () => {
     expect(stored.every((session) => session.accessToken === "")).toBe(true);
   });
 });
+/**
+ * Pruebas del almacenamiento de sesiones, selección activa y persistencia local.
+ */

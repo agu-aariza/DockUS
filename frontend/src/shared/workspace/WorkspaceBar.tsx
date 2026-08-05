@@ -86,7 +86,8 @@ export function WorkspaceBar(): JSX.Element | null {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Foco en el buscador al abrir un picker (sustituye a autoFocus, UX-MED-01)
+  // Foco en el buscador al abrir un picker para mantener la navegación por
+  // teclado dentro del flujo de selección.
   useEffect(() => {
     if (openPicker) {
       searchInputRef.current?.focus();

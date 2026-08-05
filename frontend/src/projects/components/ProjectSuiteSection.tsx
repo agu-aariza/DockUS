@@ -13,7 +13,6 @@ import {
   RiLoader4Line,
 } from "react-icons/ri";
 import { Button } from "../../shared/components/ui/Button";
-import { SectionCard } from "../../shared/components/ui/Layout";
 import { formatBytes } from "../../shared/utils/format";
 import type { StorageObjectEntity } from "../../shared/types";
 
@@ -42,10 +41,7 @@ export function ProjectSuiteSection({
   };
 
   return (
-    <SectionCard
-      title="Suite de Evaluación Técnica"
-      description="Tests automáticos para validar las entregas."
-    >
+    <>
       {testSuite && 'id' in testSuite ? (
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">
@@ -53,10 +49,10 @@ export function ProjectSuiteSection({
               <RiCheckFill className="text-2xl" />
             </div>
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-slate-900">{testSuite.logicalName}</p>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
+              <p className="text-sm font-semibold text-app-text">{testSuite.logicalName}</p>
+              <div className="flex items-center gap-2 data-meta">
                 <span>{formatBytes(testSuite.sizeBytes)}</span>
-                <span className="h-1 w-1 rounded-full bg-slate-300" />
+                <span className="h-1 w-1 rounded-full bg-app-text-muted/40" />
                 <span>Subido el {new Date(testSuite.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
@@ -97,13 +93,13 @@ export function ProjectSuiteSection({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-app-border bg-slate-50/60 px-6 py-12 text-center transition-colors hover:border-slate-300">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md border border-app-border bg-white text-slate-400">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-app-border bg-app-bg-subtle/60 px-6 py-12 text-center transition-colors hover:border-app-text-muted/50">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md border border-app-border bg-app-surface text-app-text-muted">
             <RiFolderUploadLine className="text-2xl" />
           </div>
-          <h5 className="text-sm font-semibold text-slate-900">No hay suite técnica configurada</h5>
-          <p className="mt-1 mb-5 max-w-xs text-xs leading-relaxed text-slate-500">
-            Para evaluar automáticamente las entregas, sube una suite de tests compatible con <span className="font-semibold text-slate-900">pytest</span>.
+          <h5 className="text-sm font-semibold text-app-text">No hay suite técnica configurada</h5>
+          <p className="mt-1 mb-5 max-w-xs text-xs leading-relaxed text-app-text-secondary">
+            Para evaluar automáticamente las entregas, sube una suite de tests compatible con <span className="font-semibold text-app-text">pytest</span>.
           </p>
           <Button
             type="button"
@@ -129,6 +125,6 @@ export function ProjectSuiteSection({
         accept=".zip,.tar.gz"
         onChange={handleFileChange}
       />
-    </SectionCard>
+    </>
   );
 }

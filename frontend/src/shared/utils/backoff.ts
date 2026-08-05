@@ -14,7 +14,7 @@
  * que todos los clientes vuelvan **en el mismo instante**, y el pico se repite
  * intacto en cada intento porque nada rompe la alineación. Con 10.000 usuarios
  * eso convierte un corte de un segundo en una avalancha sostenida contra la API
- * y contra Postgres (ESC-ALTO-06).
+ * y contra Postgres.
  *
  * La dispersión es multiplicativa sobre la ventana completa en vez de un
  * pequeño porcentaje alrededor del valor nominal: reparte los reintentos por

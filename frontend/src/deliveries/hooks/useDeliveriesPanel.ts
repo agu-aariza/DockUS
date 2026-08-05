@@ -21,7 +21,7 @@ export type DetailTab = "overview" | "grading" | "report";
 export function useDeliveriesPanel() {
   const [searchParams, setSearchParams] = useSearchParams();
   const dc = useDeliveryManagement({ initialDeliveryId: searchParams.get("deliveryId") });
-  const { selection, setProject, setAssignment, setDelivery } = useWorkspaceSelection();
+  const { selection, setProject, setAssignment, clearAssignment, setDelivery } = useWorkspaceSelection();
   const lastSyncedRef = useRef<{
     projectId: string | null;
     assignmentId: string | null;
@@ -33,6 +33,16 @@ export function useDeliveriesPanel() {
     deliveryId: null,
     tab: null,
   });
+  // `searchParams` (react-router) y `selection` (este contexto local) son dos
+  // stores separados: un `setSearchParams` disparado en este mismo efecto no
+  // se refleja en `searchParams` hasta un render después. Sin esta guarda, el
+  // efecto de sincronización de abajo veía en ese render intermedio su propia
+  // escritura todavía pendiente como si fuera un cambio de URL "externo" y
+  // volvía a tirar de un valor que la app acababa de limpiar deliberadamente
+  // (p.ej. clearAssignmentFilter). Se ignora cualquier lectura de
+  // `searchParams` hasta que coincida con lo último que este mismo efecto
+  // escribió.
+  const pendingUrlWriteRef = useRef<string | null>(null);
 
   const deliveries = dc.deliveries?.data ?? [];
   const [detailTab, setDetailTab] = useState<DetailTab>(() => 
@@ -86,13 +96,14 @@ export function useDeliveriesPanel() {
   const visibleDeliveries = useMemo(() => {
     return deliveries
       .filter(quickFilterFn)
-      .filter(d => 
+      .filter(d => !dc.selectedAssignmentId || d.assignmentId === dc.selectedAssignmentId)
+      .filter(d =>
         !normalizedSearch ||
         d.studentEmail.toLowerCase().includes(normalizedSearch) ||
         (d.studentName?.toLowerCase().includes(normalizedSearch) ?? false) ||
         new Date(d.createdAt).toLocaleDateString().includes(normalizedSearch)
       );
-  }, [deliveries, normalizedSearch, quickFilterKey]);
+  }, [deliveries, normalizedSearch, quickFilterKey, dc.selectedAssignmentId]);
 
   const handleQuickGrade = async (deliveryId: string, grade: number) => {
     try {
@@ -129,9 +140,28 @@ export function useDeliveriesPanel() {
     }
   };
 
+  // Solo toca `selection`: el efecto de sincronización de abajo ya reacciona
+  // a que `selection.assignmentId` quede en null y limpia la URL él solo (ver
+  // su rama `workspaceChanged`). Llamar aquí también a `setSearchParams`
+  // parecía más directo, pero `searchParams` no se actualiza en el mismo
+  // render que `selection` (van por fuentes de estado distintas) — la rama
+  // `urlChanged` de ese mismo efecto todavía veía la URL vieja un render
+  // después y reimponía el assignmentId que acabábamos de limpiar.
+  const clearAssignmentFilter = () => {
+    clearAssignment();
+  };
+
   useEffect(() => {
+    if (pendingUrlWriteRef.current !== null) {
+      if (searchParams.toString() === pendingUrlWriteRef.current) {
+        pendingUrlWriteRef.current = null;
+      } else {
+        return;
+      }
+    }
+
     const lastSynced = lastSyncedRef.current;
-    const urlChanged = 
+    const urlChanged =
       requestedProjectId !== lastSynced.projectId ||
       requestedAssignmentId !== lastSynced.assignmentId ||
       requestedDeliveryId !== lastSynced.deliveryId;
@@ -220,6 +250,7 @@ export function useDeliveriesPanel() {
       };
 
       if (nextChanged) {
+        pendingUrlWriteRef.current = next.toString();
         setSearchParams(next, { replace: true });
       }
     }
@@ -249,11 +280,18 @@ export function useDeliveriesPanel() {
 
   useEffect(() => {
     if (!requestedAssignmentId) return;
+    // Solo rehidrata la etiqueta legible cuando el id YA coincide con la URL
+    // (deep-link recién sincronizado por el efecto de arriba, que solo puso
+    // el id). Sin este chequeo, este efecto reimponía el assignmentId de una
+    // URL todavía no actualizada por encima de un clearAssignmentFilter()
+    // explícito, en la ventana entre que se limpia `selection` y que
+    // `setSearchParams` termina de propagar.
+    if (selection.assignmentId !== requestedAssignmentId) return;
     const assignment = dc.assignments.find(a => a.id === requestedAssignmentId);
     if (assignment && selection.assignmentLabel !== `${assignment.studentName} · ${assignment.projectTitle}`) {
       setAssignment(assignment.id, `${assignment.studentName} · ${assignment.projectTitle}`);
     }
-  }, [dc.assignments, requestedAssignmentId, selection.assignmentLabel, setAssignment]);
+  }, [dc.assignments, requestedAssignmentId, selection.assignmentId, selection.assignmentLabel, setAssignment]);
 
   useEffect(() => {
     if (!requestedDeliveryId) return;
@@ -304,6 +342,7 @@ export function useDeliveriesPanel() {
     setSearchParams,
     setProject,
     setAssignment,
+    clearAssignmentFilter,
     deliveries,
   };
 }

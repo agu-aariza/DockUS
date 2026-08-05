@@ -58,8 +58,8 @@ export function RubricEditor({
           <span
             className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
               isBalanced
-                ? "bg-success-50 text-success-700"
-                : "bg-warning-50 text-warning-700"
+                ? "bg-success-50 text-success-700 dark:bg-success-950 dark:text-success-400"
+                : "bg-warning-50 text-warning-700 dark:bg-warning-950 dark:text-warning-400"
             }`}
           >
             Total: {total}%{isBalanced ? " ✓" : " / 100"}
@@ -67,7 +67,7 @@ export function RubricEditor({
         )}
       </div>
 
-      <p className="text-[11px] text-slate-400">
+      <p className="text-[11px] text-app-text-muted">
         Define los criterios y su peso (%). El evaluador reparte la nota final de
         forma proporcional. Los pesos deben sumar 100.
       </p>
@@ -77,12 +77,12 @@ export function RubricEditor({
           {criteria.map((criterion, index) => (
             <div
               key={index}
-              className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 space-y-2"
+              className="rounded-xl border border-app-border bg-app-bg-subtle/50 p-3 space-y-2"
             >
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                  className="flex-1 rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-text placeholder:text-app-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                   placeholder="Nombre del criterio (ej. Correctitud)"
                   value={criterion.name}
                   disabled={disabled}
@@ -93,7 +93,7 @@ export function RubricEditor({
                     type="number"
                     min={0}
                     max={100}
-                    className="w-16 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900 text-right focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                    className="w-16 rounded-lg border border-app-border bg-app-surface px-2 py-2 text-sm text-app-text text-right focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                     value={Number.isFinite(criterion.weight) ? criterion.weight : 0}
                     disabled={disabled}
                     onChange={(e) =>
@@ -102,11 +102,11 @@ export function RubricEditor({
                       })
                     }
                   />
-                  <span className="text-xs font-semibold text-slate-400">%</span>
+                  <span className="text-xs font-semibold text-app-text-muted">%</span>
                 </div>
                 <button
                   type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500 disabled:opacity-40"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-app-text-muted transition-colors hover:bg-danger-50 hover:text-danger-600 dark:hover:bg-danger-subtle dark:hover:text-danger-400 disabled:opacity-40"
                   onClick={() => removeCriterion(index)}
                   disabled={disabled}
                   aria-label="Eliminar criterio"
@@ -116,7 +116,7 @@ export function RubricEditor({
               </div>
               <input
                 type="text"
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                className="w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-xs text-app-text-secondary placeholder:text-app-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                 placeholder="Descripción opcional: qué evaluar en este criterio"
                 value={criterion.description ?? ""}
                 disabled={disabled}
@@ -133,7 +133,7 @@ export function RubricEditor({
 
       <button
         type="button"
-        className="flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
+        className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-xs font-semibold text-app-text-secondary transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
         onClick={addCriterion}
         disabled={disabled}
       >

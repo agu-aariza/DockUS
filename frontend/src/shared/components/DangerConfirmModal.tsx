@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (DangerConfirmModal).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (DangerConfirmModal).
  *
  * @module DangerConfirmModal
  */
@@ -84,26 +84,26 @@ export function DangerConfirmModal({
           Escape, ya gestionado arriba — no necesita foco ni rol propios. */}
       {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
       <div
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity motion-modal-backdrop"
         onClick={() => { if (!loading) onCancel(); }}
       />
 
       {/* Card */}
       <div
         ref={dialogRef}
-        className="relative z-10 w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-md"
+        className="relative z-10 w-full max-w-md rounded-lg border border-app-border bg-app-surface shadow-md motion-modal-panel"
       >
         {/* Header */}
-        <div className="flex items-start gap-4 border-b border-slate-100 px-5 py-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-50 border border-danger-100">
-            <RiAlertFill className="text-xl text-danger-600" />
+        <div className="flex items-start gap-4 border-b border-app-border-subtle px-5 py-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-50 border border-danger-100 dark:bg-danger-subtle dark:border-danger-800">
+            <RiAlertFill className="text-xl text-danger-600 dark:text-danger-400" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-            <p className="mt-1 text-sm text-slate-500 leading-relaxed">{description}</p>
+            <h3 className="text-base font-semibold text-app-text">{title}</h3>
+            <p className="mt-1 text-sm text-app-text-secondary leading-relaxed">{description}</p>
           </div>
           <button
-            className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:outline-none"
+            className="shrink-0 rounded-md p-1 text-app-text-muted transition hover:bg-app-bg-subtle hover:text-app-text focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:outline-none"
             onClick={onCancel}
             disabled={loading}
             aria-label="Cerrar"
@@ -114,8 +114,8 @@ export function DangerConfirmModal({
 
         {/* Confirm input */}
         <div className="px-5 py-4 space-y-3">
-          <p className="text-sm text-slate-500">
-            Escribe <code className="rounded bg-danger-50 border border-danger-100 px-1.5 py-0.5 text-xs font-semibold text-danger-700">{confirmWord}</code> para confirmar:
+          <p className="text-sm text-app-text-secondary">
+            Escribe <code className="rounded bg-danger-50 border border-danger-100 px-1.5 py-0.5 text-xs font-semibold text-danger-700 dark:bg-danger-subtle dark:border-danger-800 dark:text-danger-400">{confirmWord}</code> para confirmar:
           </p>
           <input
             ref={inputRef}
@@ -131,7 +131,7 @@ export function DangerConfirmModal({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3 bg-slate-50/50 rounded-b-lg">
+        <div className="flex items-center justify-end gap-2 border-t border-app-border-subtle px-5 py-3 bg-app-bg-subtle/50 rounded-b-lg">
           <Button
             type="button"
             variant="secondary"

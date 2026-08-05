@@ -80,7 +80,7 @@ export function ProjectOverview({
         title="Control Operativo"
         description="Operaciones de gestión"
         headerAction={
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 text-slate-500 border border-slate-200/40 shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-app-bg-subtle text-app-text-muted border border-app-border/60 shadow-sm">
             <RiSettings4Line className="text-lg" />
           </div>
         }
@@ -93,7 +93,7 @@ export function ProjectOverview({
                 className="justify-start shadow-sm hover:shadow"
                 onClick={onRefreshAssignments}
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100/50 border border-slate-200/40 text-slate-600">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-app-bg-subtle border border-app-border/60 text-app-text-secondary">
                   <RiRefreshLine />
                 </span>
                 Sincronizar asignaciones
@@ -103,7 +103,7 @@ export function ProjectOverview({
                 className="justify-start shadow-sm hover:shadow"
                 onClick={onFetchTestSuite}
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100/50 border border-slate-200/40 text-slate-600">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-app-bg-subtle border border-app-border/60 text-app-text-secondary">
                   <RiTestTubeLine />
                 </span>
                 Recuperar suite docente
@@ -113,7 +113,7 @@ export function ProjectOverview({
                 className="justify-start shadow-sm hover:shadow"
                 onClick={onOpenMonitoring}
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100/50 border border-slate-200/40 text-slate-600">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-app-bg-subtle border border-app-border/60 text-app-text-secondary">
                   <RiBarChart2Line />
                 </span>
                 Ver seguimiento
@@ -123,7 +123,7 @@ export function ProjectOverview({
 
           <div className="flex items-end xl:w-56 xl:shrink-0 xl:border-l xl:border-app-border xl:pl-6">
             <Button variant="danger" className="w-full justify-start shadow-sm" onClick={onDelete}>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger-100/60 border border-danger-200/40 text-danger-600">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger-100/60 border border-danger-200/40 text-danger-600 dark:bg-danger-950/60 dark:border-danger-800/40 dark:text-danger-400">
                 <RiDeleteBin6Line />
               </span>
               Eliminar proyecto

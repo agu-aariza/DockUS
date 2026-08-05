@@ -1,36 +1,35 @@
-# Módulo de Administración de Usuarios (src/users)
+# Administración de usuarios (`src/users/`)
 
-> **Resumen rápido:** Vista de administración para consultar, crear y modificar usuarios, roles y permisos de la plataforma.
-
----
-
-## Propósito y Responsabilidades
-Permitir a los administradores la gestión de las cuentas de usuario.
-- **Gestión de Cuentas:** Alta de nuevos profesores y estudiantes.
-- **Filtros y Búsqueda:** Búsqueda rápida por nombre, email o rol.
+> **Resumen rápido:** Panel exclusivo de `ADMIN` para listar, crear, editar y cambiar el rol/estado de cualquier cuenta (`GET/POST/PATCH /users`). Un profesor puede consultar usuarios (rol compartido en el backend), pero solo un admin ve este panel completo con acciones de escritura.
 
 ---
 
-## Estructura Interna
+## Estructura interna
 
 ```text
-.
-└── UsersPanel.tsx # Vista principal de gestión de usuarios
+users/
+├── UsersPanel.tsx                  # Página principal: tabla + búsqueda/filtro por rol o estado
+├── components/EditUserModal.tsx      # Modal de creación/edición: rol, estado, datos personales
+├── hooks/useUserManagement.ts          # Queries/mutaciones React Query sobre /users
+└── userConstants.ts                      # Etiquetas e iconografía por rol/estado — fuente única de esos textos
 ```
 
----
+## `userConstants.ts`: por qué existe
 
-## Flujo de Trabajo / Arquitectura
+Centraliza cómo se muestra cada `UserRole` (`STUDENT`/`TEACHER`/`ADMIN`) y `UserStatus` (`ACTIVE`/`INACTIVE`/`SUSPENDED`/`PENDING_VERIFICATION`) — icono, etiqueta legible y el "tono" de color (`StatusTone`, de `shared/components/ui/StatusBadge.tsx`) para cada valor. `UsersPanel.tsx` y `EditUserModal.tsx` comparten esta misma fuente en vez de que cada uno decida su propio texto/color para el mismo rol — así un cambio de terminología (p. ej. renombrar cómo se muestra `SUSPENDED`) se hace en un solo sitio.
 
-```text
-[ UsersPanel ] ──> [ API HTTP /users ] ──> [ PostgreSQL User Service ]
-```
+## Qué opera realmente cada acción
 
----
+- Crear/editar (`EditUserModal.tsx`) → `POST`/`PATCH /users/:id` (solo `ADMIN`).
+- Cambiar rol o estado → `PATCH /users/:id` / `PATCH /users/:id/status/:status`.
+- Eliminar → borrado lógico (`DELETE /users/:id`), reversible desde el propio backend (`PATCH /users/:id/restore`), aunque este panel puede no exponer la restauración directamente — si necesitas esa acción y no está en la UI, revisa primero si conviene añadirla aquí antes de asumir que hay que hacerlo por otra vía.
 
-## Cómo Usar / Probar este Módulo
+## Cómo trabajar aquí
 
-### Ejecutar tests del panel de usuarios:
 ```bash
 npm run test -- src/users
 ```
+
+## Ver también
+
+- [`../../../backend/src/modules/users/README.md`](../../../backend/src/modules/users/README.md) — los endpoints y reglas de rol/estado que este panel administra.

@@ -6,7 +6,6 @@
 
 import { RiCloseLine, RiInformationFill } from "react-icons/ri";
 import { VisualPicker } from "../../shared/components/ui/VisualPicker";
-import { SectionCard } from "../../shared/components/ui/Layout";
 import type { UserEntity } from "../../features/auth/types";
 
 export interface ProjectTeachersSectionProps {
@@ -32,11 +31,7 @@ export function ProjectTeachersSection({
   );
 
   return (
-    <SectionCard
-      title="Equipo Docente"
-      description="Profesores con permisos administrativos."
-    >
-      <div className="space-y-5">
+    <div className="space-y-5">
         <div className="flex flex-col md:flex-row gap-3 items-end">
           <div className="flex-1 w-full">
             <label htmlFor="project-teachers-picker" className="label-text">
@@ -48,7 +43,7 @@ export function ProjectTeachersSection({
                 id: teacher.id,
                 label: `${teacher.firstName} ${teacher.lastName}`,
                 description: teacher.email,
-                icon: <div className="flex h-6 w-6 items-center justify-center rounded-full border border-app-border bg-slate-100 text-[10px] font-semibold uppercase text-slate-500">
+                icon: <div className="flex h-6 w-6 items-center justify-center rounded-full border border-app-border bg-app-bg-subtle text-[10px] font-semibold uppercase text-app-text-muted">
                   {teacher.firstName[0]}{teacher.lastName[0]}
                 </div>,
               }))}
@@ -68,15 +63,15 @@ export function ProjectTeachersSection({
           {teachers.map((teacher) => (
             <div
               key={teacher.id}
-              className="group flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all duration-200"
+              className="group flex items-center justify-between p-3.5 rounded-xl border border-app-border bg-app-bg-subtle/50 hover:bg-app-surface hover:border-app-text-muted/40 hover:shadow-sm transition-all duration-200"
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
                   {teacher.firstName[0]}{teacher.lastName[0]}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{teacher.firstName} {teacher.lastName}</p>
-                  <p className="text-xs text-slate-400">{teacher.email}</p>
+                  <p className="text-sm font-semibold text-app-text">{teacher.firstName} {teacher.lastName}</p>
+                  <p className="data-meta">{teacher.email}</p>
                 </div>
               </div>
 
@@ -84,7 +79,7 @@ export function ProjectTeachersSection({
                 <button
                   type="button"
                   onClick={() => onRemoveTeacher(projectId, teacher.id)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50 opacity-0 group-hover:opacity-100 transition-all focus-visible:ring-2 focus-visible:ring-danger-400/50 focus-visible:outline-none"
+                  className="p-1.5 rounded-lg text-app-text-muted hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-subtle opacity-0 group-hover:opacity-100 transition-all focus-visible:ring-2 focus-visible:ring-danger-400/50 focus-visible:outline-none"
                   title="Eliminar del equipo"
                   aria-label="Eliminar del equipo"
                 >
@@ -94,7 +89,6 @@ export function ProjectTeachersSection({
             </div>
           ))}
         </div>
-      </div>
-    </SectionCard>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (VisualPicker).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (VisualPicker).
  *
  * @module VisualPicker
  */
@@ -30,7 +30,7 @@ interface VisualPickerProps {
   /**
    * Búsqueda server-side (debounced 300ms). Si se define, `options` se usa
    * tal cual llega —ya filtrada por el backend— en vez de aplicar el filtro
-   * local por substring, que solo veía la página ya cargada (FE-MED-01).
+   * local por substring, que solo veía la página ya cargada.
    */
   onSearchChange?: (_query: string) => void;
 }
@@ -38,7 +38,7 @@ interface VisualPickerProps {
 const BADGE_TONES = {
   success: 'bg-success-50 text-success-700 border-success-100',
   warning: 'bg-warning-50 text-warning-700 border-warning-100',
-  info: 'bg-primary-50 text-primary-700 border-primary-100',
+  info: 'bg-primary-subtle text-primary border-primary/20',
   default: 'bg-slate-50 text-slate-700 border-slate-100',
 };
 

@@ -23,3 +23,6 @@ describe('SeverityBadge', () => {
     expect(screen.queryByText('Nivel básico')).not.toBeInTheDocument();
   });
 });
+/**
+ * Pruebas de las etiquetas de severidad y de su correspondencia visual.
+ */

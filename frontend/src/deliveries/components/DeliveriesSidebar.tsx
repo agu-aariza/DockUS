@@ -4,7 +4,7 @@
  * @module DeliveriesSidebar
  */
 
-import { RiRefreshLine, RiInboxArchiveLine, RiPulseLine, RiCheckFill } from "react-icons/ri";
+import { RiRefreshLine, RiInboxArchiveLine, RiPulseLine, RiCheckFill, RiCloseLine } from "react-icons/ri";
 import { BuildRunEntity, DeliveryEntity, ProjectAssignmentEntity } from "../../shared/types";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { Button } from "../../shared/components/ui/Button";
@@ -41,6 +41,7 @@ export function DeliveriesSidebar({
   onRefreshDeliveries,
   onProjectSelect,
   onAssignmentSelect,
+  onAssignmentClear,
   onDeliverySearchChange,
   onQuickFilterChange,
   openDelivery,
@@ -61,6 +62,7 @@ export function DeliveriesSidebar({
   onRefreshDeliveries: () => void;
   onProjectSelect: (_id: string) => void;
   onAssignmentSelect: (_id: string, _label: string) => void;
+  onAssignmentClear: () => void;
   onDeliverySearchChange: (_value: string) => void;
   onQuickFilterChange: (_key: DeliveryQuickFilterKey) => void;
   openDelivery: (_id: string, _tab: "overview" | "grading" | "report") => void;
@@ -86,7 +88,7 @@ export function DeliveriesSidebar({
           size="sm"
           className="h-9 w-9 !p-0 shadow-sm"
           onClick={onRefreshDeliveries}
-          disabled={!selectedAssignmentId}
+          disabled={!selectedProjectId}
         >
           <RiRefreshLine className={loadingDeliveries ? "animate-spin" : ""} />
         </Button>
@@ -106,13 +108,27 @@ export function DeliveriesSidebar({
         </div>
 
         <div>
-          <label htmlFor="deliveries-sidebar-assignment-picker" className="label-text">Asignación</label>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label htmlFor="deliveries-sidebar-assignment-picker" className="label-text mb-0">
+              Filtrar por alumno
+            </label>
+            {selectedAssignmentId && (
+              <button
+                type="button"
+                onClick={onAssignmentClear}
+                className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold text-app-text-muted transition-colors hover:bg-app-bg-subtle hover:text-app-text"
+              >
+                <RiCloseLine className="text-sm" aria-hidden="true" />
+                Ver todos
+              </button>
+            )}
+          </div>
           <VisualPicker
             id="deliveries-sidebar-assignment-picker"
             options={assignmentOptions}
             value={selectedAssignmentId}
             onSelect={onAssignmentSelect}
-            placeholder="Selecciona alumno..."
+            placeholder="Todos los alumnos"
             searchPlaceholder="Buscar por nombre o email..."
             className={!selectedProjectId ? 'opacity-50 grayscale pointer-events-none' : ''}
           />
@@ -133,7 +149,7 @@ export function DeliveriesSidebar({
               className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-[0.97] hover:shadow-sm ${
                 quickFilterKey === key
                   ? "bg-primary text-white shadow-sm shadow-primary/20"
-                  : "border border-app-border bg-app-surface text-app-text-secondary hover:border-slate-400 hover:bg-app-bg-subtle"
+                  : "border border-app-border bg-app-surface text-app-text-secondary hover:border-app-text-muted/40 hover:bg-app-bg-subtle"
               }`}
             >
               {label}
@@ -172,7 +188,7 @@ export function DeliveriesSidebar({
         <div className="flex items-center justify-between gap-3 mb-3">
           <div>
             <p className="ui-label">Selección actual</p>
-            <div className="mt-1 text-sm font-semibold text-slate-900">
+            <div className="mt-1 text-sm font-semibold text-app-text">
               <AssignmentLabel assignment={selectedAssignment} />
             </div>
           </div>
@@ -182,9 +198,9 @@ export function DeliveriesSidebar({
           {loadingDeliveries ? (
             <SkeletonTable rows={4} />
           ) : visibleDeliveries.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/30 px-4 py-8 text-center text-xs font-semibold text-slate-400 leading-relaxed">
-              {!selectedAssignmentId
-                ? "Selecciona una asignación para cargar entregas."
+            <div className="rounded-xl border border-dashed border-app-border bg-app-bg-subtle/30 px-4 py-8 text-center text-xs font-semibold text-app-text-muted leading-relaxed">
+              {!selectedProjectId
+                ? "Selecciona un proyecto para cargar entregas."
                 : "No hay entregas con los filtros actuales."}
             </div>
           ) : (

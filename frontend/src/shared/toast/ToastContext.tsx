@@ -177,13 +177,13 @@ export function ToastProvider({ children }: PropsWithChildren): JSX.Element {
       {children}
       <div className="pointer-events-none fixed right-4 top-4 z-[140] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3">
         {/*
-          Dos regiones live persistentes en vez de una sola con
-          aria-live="assertive" fijo (FE-004): antes, un toast de éxito
-          interrumpía a un lector de pantalla con la misma urgencia que un
-          error real, porque el aria-live del contenedor padre pisaba el
-          role="status"/"alert" de cada hijo. `display: contents` mantiene el
-          layout como si ambos grupos vivieran en el flex de arriba.
-        */}
+ Dos regiones live persistentes en vez de una sola con
+ aria-live="assertive" fijo: antes, un toast de éxito
+ interrumpía a un lector de pantalla con la misma urgencia que un
+ error real, porque el aria-live del contenedor padre pisaba el
+ role="status"/"alert" de cada hijo. `display: contents` mantiene el
+ layout como si ambos grupos vivieran en el flex de arriba.
+ */}
         <div className="contents" aria-live="polite" aria-relevant="additions text">
           {toasts.filter((toast) => toast.tone !== "error").map(renderToast)}
         </div>

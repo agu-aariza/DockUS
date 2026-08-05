@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (Sidebar).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (Sidebar).
  *
  * @module Sidebar
  */
@@ -82,17 +82,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <button
         onClick={() => onTabChange(item.id)}
         aria-current={isActive ? "page" : undefined}
-        className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+        className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
           isActive
             ? "bg-white/10 text-white shadow-sm ring-1 ring-white/5"
-            : "text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:translate-x-1"
+            : "text-stone-400 hover:bg-white/5 hover:text-stone-200"
         }`}
       >
         {/* Active side indicator */}
         {isActive && (
-          <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-md bg-primary" aria-hidden="true" />
+          <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-md bg-rail-accent" aria-hidden="true" />
         )}
-        <span className={`flex items-center justify-center transition-colors duration-200 ${isActive ? 'text-primary' : 'text-slate-500 group-hover:text-slate-300'}`}>
+        <span className={`flex items-center justify-center transition-colors duration-200 ${isActive ? 'text-rail-accent' : 'text-stone-500 group-hover:text-stone-300'}`}>
           <Icon className="text-lg" />
         </span>
         <span className="transition-transform duration-200">{item.label}</span>
@@ -108,17 +108,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <button
         onClick={() => onStudentTabChange?.(item.id)}
         aria-current={isActive ? "page" : undefined}
-        className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+        className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
           isActive
             ? "bg-white/10 text-white shadow-sm ring-1 ring-white/5"
-            : "text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:translate-x-1"
+            : "text-stone-400 hover:bg-white/5 hover:text-stone-200"
         }`}
       >
         {/* Active side indicator */}
         {isActive && (
-          <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-md bg-primary" aria-hidden="true" />
+          <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-md bg-rail-accent" aria-hidden="true" />
         )}
-        <span className={`flex items-center justify-center transition-colors duration-200 ${isActive ? 'text-primary' : 'text-slate-500 group-hover:text-slate-300'}`}>
+        <span className={`flex items-center justify-center transition-colors duration-200 ${isActive ? 'text-rail-accent' : 'text-stone-500 group-hover:text-stone-300'}`}>
           <Icon className="text-lg" />
         </span>
         <span className="flex-1 text-left transition-transform duration-200">{item.label}</span>
@@ -128,22 +128,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-950 xl:flex">
+    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-rail-border bg-rail xl:flex">
       {/* Brand Header */}
-      <div className="border-b border-slate-800 px-5 py-5">
+      <div className="border-b border-rail-border px-5 py-5">
         <div className="flex items-center gap-3">
           <img
             src="/logos/Logo01.png"
             alt="EduCode AI"
-            className="h-10 w-10 rounded-full shadow-md shadow-black/30 border border-slate-800"
+            className="h-10 w-10 rounded-full shadow-md shadow-black/30 border border-rail-border"
           />
-          <div>
-            <h1 className="text-base font-bold tracking-wider text-white">EduCode AI</h1>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-              {isStudent ? 'Espacio alumno' : 'Gestión académica'}
-            </span>
-          </div>
+          <h1 className="text-base font-semibold tracking-wide text-white">EduCode AI</h1>
         </div>
+        {/* El lema va debajo y a todo el ancho del raíl, no junto al logo: en
+            la columna que dejaba el logotipo no cabía en una línea a ningún
+            tamaño legible. El rol del usuario, que ocupaba antes este sitio,
+            sigue bajo su correo en el pie. Margen mínimo (mt-1, no mt-2.5):
+            así lee como subtítulo pegado a "EduCode AI", no como una línea
+            suelta y separada. */}
+        <span className="mt-1 block whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.02em] text-stone-500">
+          Containerizing Academic Excellence
+        </span>
       </div>
 
       {/* Navigation Links */}
@@ -160,22 +164,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {/* Buscar tab */}
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}
-                className="group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:translate-x-1"
+                className="group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 text-stone-400 hover:bg-white/5 hover:text-stone-200"
               >
-                <span className="flex items-center justify-center transition-colors duration-200 text-slate-500 group-hover:text-slate-300">
+                <span className="flex items-center justify-center transition-colors duration-200 text-stone-500 group-hover:text-stone-300">
                   <RiSearch2Line className="text-lg" />
                 </span>
                 <span className="transition-transform duration-200">Buscar</span>
                 
                 {/* Hotkey hint */}
-                <span className="ml-auto hidden group-hover:inline-block rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 tracking-wider font-mono">
+                <span className="ml-auto hidden group-hover:inline-block rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-stone-500 tracking-wider font-mono">
                   Ctrl+K
                 </span>
               </button>
             </nav>
 
             <div className="space-y-1">
-              <div className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+              <div className="px-3 mb-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-600">
                 Administración
               </div>
               <nav className="space-y-1" aria-label="Navegación de administración">
@@ -187,21 +191,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Footer Section */}
-      <div className="mt-auto border-t border-slate-800 p-3 space-y-3">
+      <div className="mt-auto border-t border-rail-border p-3 space-y-3">
         {isWorkspaceActive && isMinimized && (
           <button
             onClick={() => setIsMinimized(false)}
-            className="flex w-full items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-left transition-colors hover:border-slate-700"
+            className="flex w-full items-center gap-3 rounded-lg border border-rail-border bg-rail-subtle px-3 py-2 text-left transition-colors hover:border-rail-border"
             title="Expandir espacio de trabajo"
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rail-accent/10 text-rail-accent">
               <RiStackLine className="text-base" />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">
                 Espacio activo
               </div>
-              <div className="truncate text-xs font-medium text-slate-200">
+              <div className="truncate text-xs font-medium text-stone-200">
                 {selection.projectTitle || "Workspace"}
               </div>
             </div>
@@ -209,15 +213,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* User Session Profile Widget */}
-        <div className="flex items-center gap-3 rounded-xl border border-slate-800/80 bg-slate-900/50 p-3 shadow-inner">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-primary-400 text-sm font-bold text-white shadow">
+        <div className="flex items-center gap-3 rounded-lg border border-rail-border/70 bg-rail-subtle/60 p-3 shadow-inner">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-rail-accent-strong to-rail-accent text-sm font-bold text-white shadow">
             {userInitial}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-xs font-semibold text-slate-200" title={userEmail}>
+            <div className="truncate text-xs font-semibold text-stone-200" title={userEmail}>
               {userEmail}
             </div>
-            <div className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            <div className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-stone-500">
               {userRole}
             </div>
           </div>
@@ -225,26 +229,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Theme toggle */}
         <button
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all duration-200 hover:bg-white/5 hover:text-slate-200 group"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-stone-400 transition-all duration-200 hover:bg-white/5 hover:text-stone-200 group"
           onClick={toggleTheme}
           aria-pressed={theme === 'dark'}
         >
           {theme === 'dark' ? (
-            <RiSunLine className="text-lg text-slate-500 group-hover:text-slate-300 transition-colors duration-200" />
+            <RiSunLine className="text-lg text-stone-500 group-hover:text-stone-300 transition-colors duration-200" />
           ) : (
-            <RiMoonLine className="text-lg text-slate-500 group-hover:text-slate-300 transition-colors duration-200" />
+            <RiMoonLine className="text-lg text-stone-500 group-hover:text-stone-300 transition-colors duration-200" />
           )}
           <span>{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>
         </button>
 
         {/* Logout button */}
         <button
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all duration-200 hover:bg-danger-500/10 hover:text-danger-400 group"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-stone-400 transition-all duration-200 hover:bg-danger-500/10 hover:text-danger-400 group"
           onClick={onLogout}
         >
-          <RiLogoutBoxRLine className="text-lg text-slate-500 group-hover:text-danger-400 transition-colors duration-200" />
+          <RiLogoutBoxRLine className="text-lg text-stone-500 group-hover:text-danger-400 transition-colors duration-200" />
           <span>Cerrar sesión</span>
         </button>
+
+        {/* Respaldo institucional, como en el pie de la landing. */}
+        <div className="flex items-center gap-2.5 border-t border-rail-border px-3 pt-3">
+          {/* Sin placa: el logo es PNG con alfa y sus tintas (carmín y oro)
+              tienen contraste de sobra sobre el raíl oscuro. */}
+          <img
+            src="/logos/logo_dit.png"
+            alt="Departamento de Ingeniería Telemática"
+            className="h-8 w-8 shrink-0 object-contain"
+          />
+          <span className="font-mono text-[10px] leading-tight text-stone-600">
+            © 2026
+            <br />
+            Universidad de Sevilla
+          </span>
+        </div>
       </div>
     </aside>
   );

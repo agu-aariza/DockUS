@@ -78,20 +78,24 @@ export function useDeliveryManagement(
   type UpdateDeliveryPayload = Parameters<typeof deliveriesApi.update>[1];
   type GradingPayload = Parameters<typeof deliveriesApi.updateGrading>[1];
 
+  // Se pide por proyecto (no por asignación): el profesor quiere ver de
+  // entrada todas las entregas del proyecto y filtrarlas por alumno después,
+  // sin tener que elegir una asignación primero. El filtro por alumno se
+  // aplica en cliente sobre esta misma lista (ver useDeliveriesPanel).
   const deliveriesQuery = useQuery({
-    queryKey: queryKeys.deliveries.list(selectedAssignmentId),
+    queryKey: queryKeys.deliveries.list(selectedProjectId),
     queryFn: ({ signal }) =>
       deliveriesApi.list(
         {
-          assignmentId: selectedAssignmentId,
+          projectId: selectedProjectId,
           page: 1,
-          limit: 50,
+          limit: 100,
           sortBy: "createdAt",
           sortOrder: "DESC",
         },
         signal,
       ),
-    enabled: canRead && !!selectedAssignmentId,
+    enabled: canRead && !!selectedProjectId,
   });
   const deliveries = deliveriesQuery.data ?? null;
 
@@ -133,9 +137,9 @@ export function useDeliveryManagement(
     return myAssignments.filter((a) => a.projectId === selectedProjectId);
   }, [canRead, canWrite, assignmentsByProjectQuery.data, myAssignments, selectedProjectId]);
 
-  // Cada una de estas cargas de fondo ya mostraba su propio aviso de error en
-  // workspaceNotice antes de esta migración; useQuery v5 no tiene onError, así
-  // que se reproduce con un efecto explícito por query.
+  // Cada carga mantiene su propio aviso de error en `workspaceNotice`.
+  // `useQuery` no comparte ese estado entre consultas, así que cada efecto
+  // publica únicamente el fallo que le corresponde.
   useEffect(() => {
     if (deliveriesQuery.isError) {
       setWorkspaceNotice({ text: getErrorMessage(deliveriesQuery.error), tone: "warning" });
@@ -340,20 +344,30 @@ export function useDeliveryManagement(
   useEffect(() => {
     const response = deliveriesQuery.data;
     if (!response) return;
+    // El "primero" se calcula sobre el subconjunto ya filtrado por alumno (si
+    // hay uno activo): si no, un filtro sin resultados dejaba la entrega de
+    // OTRO alumno abierta en el panel de detalle, aunque la lista visible
+    // mostrase "0 entregas".
+    const scoped = selectedAssignmentId
+      ? response.data.filter((d) => d.assignmentId === selectedAssignmentId)
+      : response.data;
     const activeId = selectedDeliveryId || options?.initialDeliveryId;
-    if (!activeId || !response.data.some(d => d.id === activeId)) {
-      const first = response.data[0];
-      if (first) setDelivery(first.id, `v${first.version} - ${first.studentEmail}`);
+    if (!activeId || !scoped.some(d => d.id === activeId)) {
+      const first = scoped[0];
+      if (first) {
+        setDelivery(first.id, `v${first.version} - ${first.studentEmail}`);
+      } else if (selectedDeliveryId) {
+        setDelivery("");
+      }
     } else if (activeId && !selectedDeliveryId) {
-      const match = response.data.find(d => d.id === activeId);
+      const match = scoped.find(d => d.id === activeId);
       if (match) setDelivery(activeId, `v${match.version} - ${match.studentEmail}`);
     }
     // setDelivery no es estable entre renders (no está memoizado en el
     // contexto); se omite deliberadamente de las deps para no reejecutar este
     // efecto por cada render del workspace, solo cuando cambian los datos o la
     // selección relevante.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deliveriesQuery.data, selectedDeliveryId, options?.initialDeliveryId]);
+    }, [deliveriesQuery.data, selectedDeliveryId, selectedAssignmentId, options?.initialDeliveryId]);
 
   useEffect(() => {
     if (!selectedDeliveryId) return;

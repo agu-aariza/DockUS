@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (DataTable).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (DataTable).
  *
  * @module DataTable
  */

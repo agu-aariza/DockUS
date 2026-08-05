@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (TutorChatBlock).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (TutorChatBlock).
  *
  * @module TutorChatBlock
  */

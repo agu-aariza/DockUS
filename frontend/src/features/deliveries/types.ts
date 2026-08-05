@@ -5,13 +5,13 @@
  */
 
 /**
- * Shapes compartidas con el backend: fuente única en `@dockus/contracts`.
+ * Shapes compartidas con el backend: fuente única en `@educodeai/contracts`.
  * `DeliveryEntity` es el nombre local del `DeliveryResponse` del contrato.
  */
 export type {
   DeliveryStatus,
   DeliveryResponse as DeliveryEntity,
-} from "@dockus/contracts";
+} from "@educodeai/contracts";
 
 // ---------------------------------------------------------------------------
 // Shapes exclusivas del frontend

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (Glossary).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (Glossary).
  *
  * @module Glossary
  */

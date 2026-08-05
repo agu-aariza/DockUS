@@ -219,7 +219,7 @@ export function QualityInsightsDashboard({
   if (loading) {
     // Mismo grid de dos tarjetas rounded-3xl que el contenido cargado, en vez
     // de un spinner centrado, para que el dashboard no cambie de forma al
-    // llegar los datos (FE-MED-03).
+    // llegar los datos.
     return (
       <div
         className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_1fr]"
@@ -461,7 +461,7 @@ export function QualityInsightsDashboard({
 
             {studentLoading ? (
               // Misma cuadrícula 2x2 de categorías que el contenido cargado
-              // (FE-MED-03).
+
               <div className="space-y-4" aria-busy="true" aria-label="Cargando hallazgos individuales">
                 <div className="grid grid-cols-2 gap-3">
                   {Array.from({ length: 4 }).map((_, index) => (

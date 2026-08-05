@@ -1,35 +1,24 @@
-# Componentes de Analíticas del Cohorte (summary/components)
+# Componentes del panel de inicio (`summary/components/`)
 
-> **Resumen rápido:** Dashboards e indicadores gráficos para el resumen estadístico de la clase.
-
----
-
-## Propósito y Responsabilidades
-Renderizar gráficos interactivos y métricas agregadas del rendimiento del grupo.
-- **Dashboard:** `CohortAnalyticsDashboard.tsx` para análisis visual de calificaciones.
+> **Resumen rápido:** Los cuatro bloques visuales que `TeacherHomePanel.tsx` compone — ver la tabla completa en [`../README.md`](../README.md), que los describe todos juntos porque forman una sola página. Este README existe como punto de navegación para quien llega directo a esta subcarpeta.
 
 ---
 
-## Estructura Interna
+## Los cuatro ficheros
 
 ```text
-.
-└── CohortAnalyticsDashboard.tsx # Componente de cuadro de mando estadístico
+CourseStatusStrip.tsx        # Franja de indicadores — componente puro, recibe CourseStatusReading[]
+ReviewQueue.tsx                # Cola de entregas pendientes de revisión — recibe DeliveryEntity[]
+IntegrityAudit.tsx               # Señales de auditoría de integridad
+CohortAnalyticsDashboard.tsx       # Distribución de notas y progreso del grupo
 ```
 
----
+## Cómo trabajar aquí
 
-## Flujo de Trabajo / Arquitectura
-
-```text
-[ Cohort Summary Page ] ──> [ CohortAnalyticsDashboard ] ──> Chart Visualizations
-```
-
----
-
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests de componentes de resumen:
 ```bash
 npm run test -- src/summary/components
 ```
+
+## Ver también
+
+- [`../README.md`](../README.md) — la descripción completa de cómo `TeacherHomePanel.tsx` compone estos cuatro componentes.

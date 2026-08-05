@@ -30,7 +30,7 @@ import { DEFAULT_SELECTION } from "../../shared/workspace/WorkspaceSelectionCont
 import { createTestQueryClient, renderHookWithProviders } from "../../test/renderWithProviders";
 import { useDeliveryManagement } from "./useDeliveryManagement";
 
-describe("useDeliveryManagement — flujo de calificación del profesor (FE-ALTO-01)", () => {
+describe("useDeliveryManagement — flujo de calificación del profesor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -167,9 +167,14 @@ describe("useDeliveryManagement — caché de la lista de entregas entre remount
 
   it("reentrar a la pestaña con la misma asignación dentro de la ventana de staleTime no vuelve a pedir la lista al servidor", async () => {
     localStorage.setItem(
-      "dockus_workspace_session-1",
+      "educodeai_workspace_session-1",
       JSON.stringify({
         ...DEFAULT_SELECTION,
+        // Las entregas ahora se piden por proyecto (no por asignación): el
+        // profesor ve de entrada todas las entregas del proyecto y las filtra
+        // por alumno en cliente (ver useDeliveriesPanel.visibleDeliveries).
+        projectId: "project-1",
+        projectTitle: "Proyecto 1",
         assignmentId: "assignment-1",
         assignmentLabel: "Asignación 1",
       }),

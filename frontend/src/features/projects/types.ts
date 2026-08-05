@@ -12,7 +12,7 @@ import {
 
 /**
  * Shapes compartidas con el backend. La fuente única de verdad vive en
- * `@dockus/contracts`; aquí se re-exportan (con alias donde el nombre local
+ * `@educodeai/contracts`; aquí se re-exportan (con alias donde el nombre local
  * difiere) para no romper los imports existentes del frontend.
  */
 export type {
@@ -23,9 +23,10 @@ export type {
   ProjectOperationalIssuesReconcileResult,
   ProjectQualityInsight,
   ProjectQualityInsightsSummary as ProjectQualityInsightsResponse,
+  FindingSeverity,
   ProjectAssignmentResponse as ProjectAssignmentEntity,
   BulkAssignResponse,
-} from "@dockus/contracts";
+} from "@educodeai/contracts";
 
 // ---------------------------------------------------------------------------
 // Shapes exclusivas del frontend

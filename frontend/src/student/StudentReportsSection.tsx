@@ -19,6 +19,7 @@ import { EmptyState } from "../shared/components/EmptyState";
 import { MetricCard } from "../shared/components/MetricCard";
 import { Skeleton, SkeletonCard } from "../shared/components/Skeleton";
 import { Button } from "../shared/components/ui/Button";
+import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import type {
   BuildRunEntity,
   DeliveryEntity,
@@ -87,7 +88,7 @@ function GradeTimeline({ deliveries }: { deliveries: DeliveryEntity[] }) {
           const color =
             grade >= 5
               ? "bg-success-400"
-              : "bg-rose-400";
+              : "bg-danger";
 
           return (
             <div
@@ -96,7 +97,7 @@ function GradeTimeline({ deliveries }: { deliveries: DeliveryEntity[] }) {
                 isLatest ? "opacity-100" : "opacity-70"
               }`}
             >
-              <span className="text-xs font-semibold text-slate-900">
+              <span className="text-xs font-semibold text-app-text">
                 {grade.toFixed(1)}
               </span>
               <div className="mt-2 flex h-24 items-end">
@@ -105,7 +106,7 @@ function GradeTimeline({ deliveries }: { deliveries: DeliveryEntity[] }) {
                   style={{ height: `${heightPct}%` }}
                 />
               </div>
-              <span className="mt-2 text-[11px] font-semibold uppercase text-slate-400">
+              <span className="mt-2 text-[11px] font-semibold uppercase text-app-text-muted">
                 v{delivery.version}
               </span>
             </div>
@@ -176,32 +177,30 @@ function ReportContainer({
   const coaching = run?.report?.coaching ?? summaryRun?.report?.coaching ?? null;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-app-border bg-white">
+    <div className="overflow-hidden rounded-lg border border-app-border bg-app-surface">
       <button
-        className="flex w-full items-start justify-between gap-4 px-6 py-5 text-left transition hover:bg-slate-50/20"
+        className="flex w-full items-start justify-between gap-4 px-6 py-5 text-left transition hover:bg-app-bg-subtle/20"
         onClick={() => setIsOpen((previous) => !previous)}
       >
         <div className="flex min-w-0 flex-1 items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-primary">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-app-bg-subtle text-primary">
             <RiFileTextLine className="text-xl" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h4 className="text-lg font-semibold text-slate-900">
+              <h4 className="text-lg font-semibold text-app-text">
                 Entrega v{delivery.version}
               </h4>
               <DeliveryOutcomeBadge delivery={delivery} summaryRun={summaryRun} />
               {delivery.isLate ? (
-                <span className="inline-flex rounded-full border border-warning-200 bg-warning-50 px-3 py-1 text-xs font-semibold text-warning-700">
-                  Fuera de plazo
-                </span>
+                <StatusBadge tone="warning">Fuera de plazo</StatusBadge>
               ) : null}
             </div>
-            <div className="mt-2 text-sm text-slate-500">
+            <div className="mt-2 data-meta">
               {delivery.projectTitle} ·{" "}
               {new Date(delivery.createdAt).toLocaleString("es-ES")}
             </div>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-app-text-secondary">
               {coaching
                 ? coaching.passReadiness === "BLOCKED"
                   ? "El informe detecta bloqueos claros antes de poder pasar. Abre el expediente para ver coaching, evidencia y checklist."
@@ -214,35 +213,35 @@ function ReportContainer({
             </p>
           </div>
         </div>
-        <div className="shrink-0 pt-1 text-slate-400">
+        <div className="shrink-0 pt-1 text-app-text-muted">
           {isOpen ? <RiArrowUpSLine className="text-2xl" /> : <RiArrowDownSLine className="text-2xl" />}
         </div>
       </button>
 
       {isOpen ? (
-        <div className="border-t border-app-border bg-slate-50/50 px-6 py-6">
+        <div className="border-t border-app-border bg-app-bg-subtle/50 px-6 py-6">
           <div className="mb-5 grid gap-4 lg:grid-cols-3">
-            <article className="rounded-lg border border-app-border bg-white p-4">
-              <div className="ui-label text-slate-400">Estado de entrega</div>
-              <div className="mt-3 text-sm font-semibold text-slate-900">
+            <article className="rounded-lg border border-app-border bg-app-surface p-4">
+              <div className="ui-label">Estado de entrega</div>
+              <div className="mt-3 text-sm font-semibold text-app-text">
                 {delivery.isLate ? "Registrada fuera de plazo" : "Registrada dentro de plazo"}
               </div>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
+              <p className="mt-2 text-sm leading-6 text-app-text-secondary">
                 {delivery.isLate
                   ? "La versión queda guardada como tardía, pero sigue disponible para revisión técnica y académica."
                   : "La versión quedó registrada dentro de la ventana prevista para la práctica."}
               </p>
             </article>
-            <article className="rounded-lg border border-app-border bg-white p-4">
-              <div className="ui-label text-slate-400">Observaciones docentes</div>
-              <p className="mt-3 text-sm leading-6 text-slate-500">
+            <article className="rounded-lg border border-app-border bg-app-surface p-4">
+              <div className="ui-label">Observaciones docentes</div>
+              <p className="mt-3 text-sm leading-6 text-app-text-secondary">
                 {delivery.graderNotes ||
                   "Todavía no hay observaciones manuales del profesorado para esta versión."}
               </p>
             </article>
-            <article className="rounded-lg border border-app-border bg-white p-4">
-              <div className="ui-label text-slate-400">Trayectoria de la versión</div>
-              <p className="mt-3 text-sm leading-6 text-slate-500">
+            <article className="rounded-lg border border-app-border bg-app-surface p-4">
+              <div className="ui-label">Trayectoria de la versión</div>
+              <p className="mt-3 text-sm leading-6 text-app-text-secondary">
                 {coaching
                   ? `${coaching.mustFix.length} bloqueo(s), ${coaching.shouldImprove.length} mejora(s) y ${coaching.strengths.length} fortaleza(s) detectadas.`
                   : summaryRun
@@ -258,22 +257,22 @@ function ReportContainer({
                 {[1, 2, 3].map((index) => (
                   <div
                     key={index}
-                    className="rounded-lg border border-app-border bg-white p-4"
+                    className="rounded-lg border border-app-border bg-app-surface p-4"
                   >
-                    <div className="h-3 w-24 animate-pulse rounded bg-slate-50" />
-                    <div className="mt-4 h-5 w-32 animate-pulse rounded bg-slate-50/60" />
-                    <div className="mt-3 h-4 w-full animate-pulse rounded bg-slate-50/60" />
+                    <div className="h-3 w-24 animate-pulse rounded bg-app-bg-subtle" />
+                    <div className="mt-4 h-5 w-32 animate-pulse rounded bg-app-bg-subtle/60" />
+                    <div className="mt-3 h-4 w-full animate-pulse rounded bg-app-bg-subtle/60" />
                   </div>
                 ))}
               </div>
               <SkeletonCard />
             </div>
           ) : error ? (
-            <div className="rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger-800">
+            <div className="rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger-800 dark:text-danger-300">
               Error: {error}
             </div>
           ) : !run ? (
-            <div className="rounded-lg border border-app-border/30 bg-white px-4 py-6 text-center text-sm text-slate-500">
+            <div className="rounded-lg border border-app-border/30 bg-app-surface px-4 py-6 text-center text-sm text-app-text-muted">
               Esta entrega aún no tiene un informe técnico disponible.
             </div>
           ) : (
@@ -391,7 +390,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="rounded-lg border border-app-border bg-white p-6">
+        <div className="rounded-lg border border-app-border bg-app-surface p-6">
           <Skeleton type="text" className="h-6 w-52" />
           <Skeleton type="text" className="mt-4 h-4 w-3/4" />
         </div>
@@ -404,7 +403,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-danger-800">
+      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-danger-800 dark:text-danger-300">
         Error: {error}
       </div>
     );
@@ -413,7 +412,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
   if (projects.length === 0) {
     return (
       <EmptyState
-        icon={<RiInboxArchiveLine className="text-4xl text-slate-400/40" />}
+        icon={<RiInboxArchiveLine className="text-4xl text-app-text-muted/40" />}
         title="Aún no hay informes"
         description="Cuando registres tu primera entrega, esta vista reunirá el historial técnico, las observaciones docentes y el coaching para la siguiente versión."
       />
@@ -425,8 +424,8 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
   return (
     <div className="space-y-6">
       {/* 1. Project Selector Section */}
-      <div className="rounded-lg border border-app-border bg-white p-6">
-        <h3 className="text-xs font-semibold uppercase text-slate-400 mb-4">
+      <div className="rounded-lg border border-app-border bg-app-surface p-6">
+        <h3 className="ui-label mb-4">
           Selecciona un Proyecto
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -446,7 +445,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
                 className={`relative text-left rounded-lg border p-5 transition-colors ${
                   isSelected
                     ? "border-primary bg-primary-subtle"
-                    : "border-app-border bg-white hover:border-slate-300"
+                    : "border-app-border bg-app-surface hover:border-app-text-muted/40"
                 }`}
               >
                 {/* Accent indicator bar on the left */}
@@ -455,16 +454,16 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
                     isSelected ? "bg-primary" : "bg-transparent"
                   }`}
                 />
-                
+
                 <div className="pl-2">
-                  <h4 className={`text-sm font-semibold text-slate-900 ${
+                  <h4 className={`text-sm font-semibold text-app-text ${
                     isSelected ? "text-primary" : ""
                   }`}>
                     {project.title}
                   </h4>
-                  
+
                   <div className="mt-3 flex items-center justify-between gap-2 text-xs">
-                    <span className="text-xs font-medium text-slate-500">
+                    <span className="text-xs font-medium text-app-text-muted">
                       {projectDeliveries.length === 0
                         ? "Sin entregas"
                         : projectDeliveries.length === 1
@@ -550,7 +549,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
 
           <div className="space-y-4">
             {filteredDeliveries.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-app-border bg-white px-6 py-12 text-center text-slate-500">
+              <div className="rounded-lg border border-dashed border-app-border bg-app-surface px-6 py-12 text-center text-app-text-muted">
                 <RiInboxArchiveLine className="mx-auto text-4xl opacity-30 mb-2" />
                 <p className="text-sm font-semibold">No se han registrado entregas para este proyecto.</p>
                 <p className="text-xs opacity-75 mt-1">Utiliza el espacio de trabajo para subir tu código e iniciar la evaluación del sandbox.</p>

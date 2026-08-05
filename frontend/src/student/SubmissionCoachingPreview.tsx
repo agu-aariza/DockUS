@@ -29,7 +29,7 @@ export function SubmissionCoachingPreview({
         runtimeFamily={run.llmAssessment?.runtime?.family}
       />
       {remainingDeliveries <= 0 ? (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        <div className="rounded-lg border border-app-border bg-app-bg-subtle px-4 py-3 text-sm text-app-text-secondary">
           Ya no quedan intentos para reenviar esta practica, pero puedes usar
           este resumen para entender que habria que corregir.
         </div>

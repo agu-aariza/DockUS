@@ -130,7 +130,7 @@ export function ProjectAssignmentManager({
   // Pero visualmente usaremos los badges de 'Asignado' de los alumnos que ya tenemos.
   const activeAssignmentsCount = assignments.filter(a => !a.revokedAt).length;
   // meta.total real, no students.length: ese array se queda truncado a la
-  // página de 100 alumnos que carga useProjectManagement (FE-MED-01) — con
+  // página de 100 alumnos que carga useProjectManagement — con
   // más de 100 en la plataforma, la métrica y el % de cobertura mentían.
   const totalStudents = totalStudentsCount ?? students.length;
   const pendingCount = totalStudents - activeAssignmentsCount;
@@ -165,12 +165,12 @@ export function ProjectAssignmentManager({
         <aside className="flex flex-col gap-6 sticky top-8">
 
           {/* Quick Actions Card */}
-          <div className="relative overflow-hidden rounded-lg border border-app-border bg-white p-5">
+          <div className="relative overflow-hidden rounded-lg border border-app-border bg-app-surface p-5">
             <div className="absolute -right-4 -top-4 opacity-[0.05] text-8xl text-primary/30 pointer-events-none">
               <RiSearchLine />
             </div>
 
-            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-4">Filtrado y Búsqueda</h4>
+            <h4 className="ui-label mb-4">Filtrado y Búsqueda</h4>
             <div className="space-y-4">
               <SearchInput
                 placeholder="Buscar grupo o código..."
@@ -201,7 +201,7 @@ export function ProjectAssignmentManager({
                 Classroom Hub
                 <StatusBadge tone="info">{filteredGroups.length} grupos</StatusBadge>
               </h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-app-text-secondary">
                 Gestiona la matriculación por grupos académicos
               </p>
             </div>
@@ -222,7 +222,7 @@ export function ProjectAssignmentManager({
             <EmptyState
               title="No hay grupos"
               description={searchTerm ? "No se encontraron grupos que coincidan con tu búsqueda." : "No hay grupos registrados en el sistema."}
-              icon={<RiGroupLine className="text-5xl text-slate-200" />}
+              icon={<RiGroupLine className="text-5xl text-app-text-muted/40" />}
             />
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
@@ -249,7 +249,7 @@ export function ProjectAssignmentManager({
                         onFocusedGroupChange(group.id);
                       }
                     }}
-                    className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border bg-white p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                    className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border bg-app-surface p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
                       isGroupAssigned
                         ? 'border-success-200'
                         : isFocused
@@ -264,7 +264,7 @@ export function ProjectAssignmentManager({
                           ? 'border-success-200 bg-success-50 text-success-600'
                           : isFocused
                             ? 'border-primary bg-primary text-white'
-                            : 'border-app-border bg-slate-50 text-slate-400 group-hover:text-primary'
+                            : 'border-app-border bg-app-bg-subtle text-app-text-muted group-hover:text-primary'
                       }`}>
                         <RiGroupLine />
                       </div>
@@ -280,7 +280,7 @@ export function ProjectAssignmentManager({
                         }}
                         disabled={!!assignmentBusy}
                         className={`relative flex h-7 w-12 items-center rounded-full transition-colors motion-reduce:transition-none ${
-                          isGroupAssigned ? 'bg-success-500' : 'bg-slate-200 hover:bg-slate-300'
+                          isGroupAssigned ? 'bg-success-500' : 'bg-app-border hover:bg-app-text-muted/40'
                         }`}
                       >
                         <div className={`absolute left-1 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-200 motion-reduce:transition-none ${
@@ -296,7 +296,7 @@ export function ProjectAssignmentManager({
                       <span className={`ui-label ${isGroupAssigned ? 'text-success-600' : ''}`}>
                         {group.code || "SC"}
                       </span>
-                      <h4 className="mt-0.5 truncate text-sm font-semibold text-slate-900">
+                      <h4 className="mt-0.5 truncate text-sm font-semibold text-app-text">
                         {group.name}
                       </h4>
                       <div className="mt-2 flex items-center gap-2">
@@ -306,13 +306,13 @@ export function ProjectAssignmentManager({
                             // Navegamos a la pestaña general de grupos
                             window.location.href = `/groups?focusedGroupId=${group.id}`;
                           }}
-                          className="group/btn flex items-center gap-2 rounded-md border border-app-border bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors motion-reduce:transition-none hover:border-primary/30 hover:bg-white hover:text-primary"
+                          className="group/btn flex items-center gap-2 rounded-md border border-app-border bg-app-bg-subtle px-3 py-1.5 text-xs font-medium text-app-text-secondary transition-colors motion-reduce:transition-none hover:border-primary/30 hover:bg-app-surface hover:text-primary"
                         >
-                          <RiUser3Fill className="text-slate-400 group-hover/btn:text-primary" />
+                          <RiUser3Fill className="text-app-text-muted group-hover/btn:text-primary" />
                           Ver alumnos
                         </button>
                       </div>
-                      <p className="mt-3 line-clamp-1 text-xs text-slate-500">
+                      <p className="mt-3 line-clamp-1 text-xs text-app-text-secondary">
                         {group.description || "Sin descripción"}
                       </p>
                     </div>
@@ -326,7 +326,7 @@ export function ProjectAssignmentManager({
                     
                     {/* Overlay de Carga */}
                     {assignmentBusy && (assignmentBusy === `assign:groups` || assignmentBusy.startsWith('revoke:')) && (
-                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70">
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-app-surface/70">
                         <RiRefreshLine className="text-2xl text-primary animate-spin motion-reduce:animate-none" />
                       </div>
                     )}

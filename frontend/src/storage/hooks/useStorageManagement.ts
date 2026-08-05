@@ -148,7 +148,6 @@ export function useStorageManagement() {
   // Al cambiar de proyecto, la entrega/run seleccionados dejan de ser válidos.
   useEffect(() => {
     setQuery(prev => ({ ...prev, deliveryId: '', runId: '' }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.projectId]);
 
   // 3. Runs de la entrega seleccionada.
@@ -168,7 +167,6 @@ export function useStorageManagement() {
   // Al cambiar de entrega, el run seleccionado deja de ser válido.
   useEffect(() => {
     setQuery(prev => ({ ...prev, runId: '' }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.deliveryId]);
 
   const buildUnifiedItems = (response: PaginatedResponse<StorageObjectEntity>) => {

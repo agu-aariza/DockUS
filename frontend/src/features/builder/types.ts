@@ -5,15 +5,15 @@
  */
 
 /**
- * Shapes compartidas con el backend: fuente única en `@dockus/contracts`
- * (audit/04 ARQ-008). `BuildRunChatMessage` es el nombre local de
+ * Shapes compartidas con el backend: fuente única en `@educodeai/contracts`
+ * `BuildRunChatMessage` es el nombre local de
  * `ChatMessageResponse` del contrato.
  */
 export type {
   BuildRunEvent,
   BuildRunEventsPage,
   ChatMessageResponse as BuildRunChatMessage,
-} from "@dockus/contracts";
+} from "@educodeai/contracts";
 
 export type BuilderOutcome = "PASS" | "FAIL" | "PARTIAL" | "UNKNOWN";
 export type QualityInsightCategory =

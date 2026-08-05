@@ -1,36 +1,32 @@
-# Proveedor de Tema y Diseño (shared/theme)
+# Tema (`shared/theme/`)
 
-> **Resumen rápido:** Contexto de tema de interfaz (modo claro/oscuro) y gestión de clases globales de apariencia visual.
-
----
-
-## Propósito y Responsabilidades
-Gestionar las preferencias estéticas del usuario y alternar dinámicamente el tema de la aplicación.
-- **Contexto de Tema:** `ThemeContext.tsx` para alternar entre tema oscuro (`dark`) y tema claro (`light`).
+> **Resumen rápido:** Un único contexto, `ThemeContext.tsx`, que alterna entre modo claro y oscuro, persiste la preferencia y aplica la clase correspondiente al elemento raíz del documento para que las variables CSS de `styles.css` cambien de valor.
 
 ---
 
-## Estructura Interna
+## Cómo funciona
+
+`ThemeContext` guarda la preferencia (`light`/`dark`) en `localStorage` y la aplica como clase en el `<html>`/`<body>` — todo el resto del sistema de color depende de variables CSS (`--color-primary`, tokens `app-bg`/`app-surface`/`app-text*`, etc.) definidas en `styles.css`, que cambian de valor según esa clase. Ningún componente decide su propio color "a mano" por tema; todos consumen los mismos tokens, que ya resuelven claro/oscuro automáticamente.
+
+## Un ejemplo real de por qué esto importa
+
+`shared/components/ui/LogoPlate.tsx` (ver [`../../landing/README.md`](../../landing/README.md) para el detalle completo) decide si aplicar un fondo blanco a un logo **según el tema activo**, leyendo este mismo contexto — porque algunos logos de terceros llevan tinta oscura sin canal alfa y desaparecerían sobre un fondo oscuro sin ese tratamiento condicional.
+
+## Estructura interna
 
 ```text
-.
-├── ThemeContext.spec.tsx # Pruebas unitarias del proveedor de tema
-└── ThemeContext.tsx      # Proveedor de contexto React para la gestión del tema visual
+theme/
+└── ThemeContext.tsx   # Provider + hook de tema, persistencia en localStorage
 ```
 
----
+## Cómo trabajar aquí
 
-## Flujo de Trabajo / Arquitectura
-
-```text
-[ User Action / Toggle ] ──> [ ThemeContext ] ──> Actualiza clase HTML y LocalStorage
-```
-
----
-
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests del proveedor de tema:
 ```bash
 npm run test -- src/shared/theme
 ```
+
+Si añades un color nuevo a la UI, defínelo como variable CSS en `styles.css` con su par claro/oscuro — no hardcodees un valor hexadecimal condicionado por `useTheme()` dentro de un componente.
+
+## Ver también
+
+- [`../../landing/README.md`](../../landing/README.md) — el caso de uso más detallado documentado sobre tema y logos.

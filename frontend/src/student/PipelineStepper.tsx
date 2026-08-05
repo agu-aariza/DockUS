@@ -83,26 +83,26 @@ export function PipelineStepper({
         let labelColor: string;
 
         if (isCompleted) {
-          circleClasses = "border-success-400 bg-success-50 text-success-600";
+          circleClasses = "border-success-400 bg-success-50 text-success-600 dark:border-success-700 dark:bg-success-950 dark:text-success-400";
           IconComponent = RiCheckLine;
-          labelColor = "text-success-600";
+          labelColor = "text-success-600 dark:text-success-400";
         } else if (isFailedStep) {
-          circleClasses = "border-rose-300 bg-rose-50 text-rose-600";
+          circleClasses = "border-danger-300 bg-danger-50 text-danger-600 dark:border-danger-700 dark:bg-danger-950 dark:text-danger-400";
           IconComponent = RiAlertLine;
-          labelColor = "text-rose-600";
+          labelColor = "text-danger-600 dark:text-danger-400";
         } else if (isCurrent) {
           circleClasses = "border-primary/40 bg-primary/5 text-primary ring-2 ring-primary/10";
           labelColor = "text-primary";
         } else {
-          circleClasses = "border-app-border/30 bg-slate-50/50 text-slate-400";
-          labelColor = "text-slate-400";
+          circleClasses = "border-app-border/30 bg-app-bg-subtle/50 text-app-text-muted";
+          labelColor = "text-app-text-muted";
         }
 
         const connectorColor = isCompleted
-          ? "bg-success-400"
+          ? "bg-success-400 dark:bg-success-700"
           : isCurrent && !isFuture
             ? isFailedStep
-              ? "bg-rose-300"
+              ? "bg-danger-300 dark:bg-danger-700"
               : "bg-primary/40"
             : "bg-app-bg-subtle";
 
@@ -121,7 +121,7 @@ export function PipelineStepper({
                 {step.label}
               </span>
               {isCurrent && stageStartedAt && !compact && (
-                <span className="mt-0.5 text-[10px] text-slate-400">
+                <span className="mt-0.5 text-[10px] text-app-text-muted">
                   {formatElapsed(stageStartedAt)}
                 </span>
               )}

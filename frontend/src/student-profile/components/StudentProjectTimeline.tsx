@@ -54,7 +54,7 @@ export function StudentProjectTimeline({
     return (
       <SectionCard title="Historial">
         <EmptyState
-          icon={<RiStackLine className="text-3xl text-slate-400" />}
+          icon={<RiStackLine className="text-3xl text-app-text-muted" />}
           title="Sin proyectos asignados"
           description="Cuando el alumno tenga proyectos asignados aparecerán aquí con sus entregas y ejecuciones."
         />
@@ -85,13 +85,13 @@ export function StudentProjectTimeline({
                   {formatGrade(project.grade)}
                 </span>
               ) : (
-                <span className="text-xs text-slate-500">Sin nota</span>
+                <span className="text-xs text-app-text-muted">Sin nota</span>
               )}
             </div>
           }
         >
           {project.deliveries.length === 0 ? (
-            <p className="py-2 text-sm text-slate-500">
+            <p className="py-2 text-sm text-app-text-secondary">
               El alumno todavía no ha entregado en este proyecto.
             </p>
           ) : (
@@ -130,10 +130,10 @@ function DeliveryRow({
           onClick={() => setExpanded((prev) => !prev)}
           disabled={!hasRuns}
           aria-expanded={expanded}
-          className="flex items-center gap-2 text-slate-400 transition-colors hover:text-slate-700 disabled:opacity-40"
+          className="flex items-center gap-2 text-app-text-muted transition-colors hover:text-app-text-secondary disabled:opacity-40"
         >
           {expanded ? <RiArrowDownSLine /> : <RiArrowRightSLine />}
-          <span className="data-figure text-sm font-semibold text-slate-900">
+          <span className="data-figure text-sm font-semibold text-app-text">
             v{delivery.version}
           </span>
         </button>
@@ -151,7 +151,7 @@ function DeliveryRow({
           {grade ? (
             <span className="data-figure text-sm font-semibold">{grade}</span>
           ) : (
-            <span className="text-xs text-slate-500">Pendiente</span>
+            <span className="text-xs text-app-text-muted">Pendiente</span>
           )}
           {onOpenDelivery && (
             <button

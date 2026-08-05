@@ -55,3 +55,6 @@ describe('ReportHeader', () => {
     expect(screen.getByText('No apto')).toBeInTheDocument();
   });
 });
+/**
+ * Pruebas de la cabecera de informe, sus metadatos y acciones.
+ */

@@ -5,7 +5,7 @@
  */
 
 /**
- * Shapes compartidas con el backend: fuente única en `@dockus/contracts`.
+ * Shapes compartidas con el backend: fuente única en `@educodeai/contracts`.
  */
 export type {
   StudentProfileResponse,
@@ -14,4 +14,4 @@ export type {
   StudentProfileRun,
   StudentProfileSummary,
   TeacherRef,
-} from "@dockus/contracts";
+} from "@educodeai/contracts";

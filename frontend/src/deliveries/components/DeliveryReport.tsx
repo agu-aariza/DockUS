@@ -31,13 +31,13 @@ export function DeliveryReport({
   const selectedDeliveryId = selection.deliveryId;
 
   return (
-    <section className="rounded-lg border border-app-border bg-white p-6">
+    <section className="rounded-lg border border-app-border bg-app-surface p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h4 className="text-sm font-semibold text-slate-900">
+          <h4 className="text-sm font-semibold text-app-text">
             Dictamen de Evaluación Técnica
           </h4>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
+          <p className="mt-1 text-sm leading-6 text-app-text-secondary">
             Se carga desde el último run disponible de la entrega y convive aquí con el contexto de corrección.
           </p>
         </div>
@@ -63,7 +63,7 @@ export function DeliveryReport({
 
       <div className="mt-6">
         {reportLoading ? (
-          <div className="flex justify-center py-12 text-slate-400">
+          <div className="flex justify-center py-12 text-app-text-muted">
             <RiLoader4Line className="animate-spin text-2xl" />
           </div>
         ) : reportRun ? (
@@ -74,7 +74,7 @@ export function DeliveryReport({
           />
         ) : (
           <EmptyState
-            icon={<RiFileTextLine className="text-3xl text-slate-400" />}
+            icon={<RiFileTextLine className="text-3xl text-app-text-muted" />}
             title="Ningún informe cargado"
             description="Pulsa en 'Recargar informe' para traer el último run asociado a esta entrega."
           />

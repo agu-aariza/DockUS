@@ -28,6 +28,7 @@ export interface WorkspaceSelectionContextValue {
   selection: WorkspaceSelection;
   setProject: (id: string, title?: string) => void;
   setAssignment: (id: string, label?: string) => void;
+  clearAssignment: () => void;
   setDelivery: (id: string, label?: string) => void;
   setRun: (id: string) => void;
   clearWorkspace: () => void;
@@ -46,7 +47,7 @@ export const DEFAULT_SELECTION: WorkspaceSelection = {
 };
 
 function getStorageKey(sessionId: string) {
-  return `dockus_workspace_${sessionId}`;
+  return `educodeai_workspace_${sessionId}`;
 }
 
 export function WorkspaceSelectionProvider({ children }: PropsWithChildren): JSX.Element {
@@ -125,6 +126,17 @@ export function WorkspaceSelectionProvider({ children }: PropsWithChildren): JSX
     });
   };
 
+  const clearAssignment = () => {
+    setSelection(prev => ({
+      ...prev,
+      assignmentId: null,
+      assignmentLabel: null,
+      deliveryId: null,
+      deliveryLabel: null,
+      lastRunId: null,
+    }));
+  };
+
   const setDelivery = (id: string, label?: string) => {
     setSelection(prev => {
       if (prev.deliveryId !== id) {
@@ -156,6 +168,7 @@ export function WorkspaceSelectionProvider({ children }: PropsWithChildren): JSX
       selection,
       setProject,
       setAssignment,
+      clearAssignment,
       setDelivery,
       setRun,
       clearWorkspace,

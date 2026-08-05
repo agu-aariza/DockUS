@@ -30,10 +30,10 @@ function getUrgencyStyle(
 ): { border: string; iconBg: string; iconColor: string; chip: string } {
   if (assignment.revokedAt) {
     return {
-      border: "border-app-border/30 opacity-75 bg-slate-50/20",
-      iconBg: "bg-slate-50",
-      iconColor: "text-slate-400",
-      chip: "bg-slate-50 text-slate-500 border-app-border/20",
+      border: "border-app-border/30 opacity-75 bg-app-bg-subtle/20",
+      iconBg: "bg-app-bg-subtle",
+      iconColor: "text-app-text-muted",
+      chip: "bg-app-bg-subtle text-app-text-muted border-app-border/20",
     };
   }
 
@@ -43,19 +43,19 @@ function getUrgencyStyle(
 
   if (closesAt && closesAt < now) {
     return {
-      border: "border-rose-100 bg-rose-50/10",
-      iconBg: "bg-rose-50",
-      iconColor: "text-rose-600",
-      chip: "bg-rose-50 text-rose-700 border-rose-100",
+      border: "border-danger-100 bg-danger-50/10 dark:border-danger-800 dark:bg-danger-950/10",
+      iconBg: "bg-danger-50 dark:bg-danger-950",
+      iconColor: "text-danger-600 dark:text-danger-400",
+      chip: "bg-danger-50 text-danger-700 border-danger-100 dark:bg-danger-950 dark:text-danger-400 dark:border-danger-800",
     };
   }
 
   if (closesAt && closesAt - now < 48 * 60 * 60 * 1000) {
     return {
-      border: "border-warning-100 bg-warning-50/10",
-      iconBg: "bg-warning-50",
-      iconColor: "text-warning-600",
-      chip: "bg-warning-50 text-warning-700 border-warning-100",
+      border: "border-warning-100 bg-warning-50/10 dark:border-warning-800 dark:bg-warning-950/10",
+      iconBg: "bg-warning-50 dark:bg-warning-950",
+      iconColor: "text-warning-600 dark:text-warning-400",
+      chip: "bg-warning-50 text-warning-700 border-warning-100 dark:bg-warning-950 dark:text-warning-400 dark:border-warning-800",
     };
   }
 
@@ -126,7 +126,7 @@ export function StudentAssignmentsSection({
         {[1, 2, 3].map((index) => (
           <div
             key={index}
-            className="rounded-lg border border-app-border bg-white p-6 shadow-sm"
+            className="rounded-lg border border-app-border bg-app-surface p-6 shadow-sm"
           >
             <div className="flex items-start justify-between gap-4">
               <Skeleton type="rounded" className="h-12 w-12" />
@@ -156,7 +156,7 @@ export function StudentAssignmentsSection({
   if (assignments.length === 0) {
     return (
       <EmptyState
-        icon={<RiFolderOpenLine className="text-4xl text-slate-400/40" />}
+        icon={<RiFolderOpenLine className="text-4xl text-app-text-muted/40" />}
         title="Sin proyectos asignados"
         description="Aún no tienes ningún proyecto asignado. Contacta con tu profesor si crees que es un error o espera a que se abran nuevas convocatorias."
       />
@@ -178,7 +178,7 @@ export function StudentAssignmentsSection({
               role="button"
               tabIndex={0}
               aria-label={`Abrir historial de ${assignment.projectTitle}`}
-              className={`card-interactive group flex h-full cursor-pointer flex-col rounded-lg border bg-white p-6 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${urgency.border}`}
+              className={`card-interactive group flex h-full cursor-pointer flex-col rounded-lg border bg-app-surface p-6 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${urgency.border}`}
               onClick={() => handleSelect(assignment)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -201,35 +201,35 @@ export function StudentAssignmentsSection({
               </div>
 
               <div className="mt-6 flex-1">
-                <h4 className="text-base font-semibold text-slate-900">
+                <h4 className="text-base font-semibold text-app-text">
                   {assignment.projectTitle}
                 </h4>
-                <p className="mt-3 text-sm leading-6 text-slate-500">
+                <p className="mt-3 text-sm leading-6 text-app-text-secondary">
                   {timeline.detail}
                 </p>
 
-                <div className="mt-5 space-y-3 rounded-lg border border-app-border bg-slate-50 p-4 text-sm">
+                <div className="mt-5 space-y-3 rounded-lg border border-app-border bg-app-bg-subtle p-4 text-sm">
                   <div className="flex items-center justify-between gap-4">
-                    <span className="ui-label text-slate-400">Entregas realizadas</span>
-                    <span className="font-semibold text-slate-900">
+                    <span className="ui-label">Entregas realizadas</span>
+                    <span className="font-semibold text-app-text">
                       {assignment.deliveryCount}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="ui-label text-slate-400">Intentos restantes</span>
-                    <span className="font-semibold text-slate-900">
+                    <span className="ui-label">Intentos restantes</span>
+                    <span className="font-semibold text-app-text">
                       {assignment.remainingDeliveries}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="ui-label text-slate-400">Apertura</span>
-                    <span className="text-right font-medium text-slate-900">
+                    <span className="ui-label">Apertura</span>
+                    <span className="text-right font-medium text-app-text">
                       {formatDate(assignment.opensAt)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="ui-label text-slate-400">Cierre</span>
-                    <span className="text-right font-medium text-slate-900">
+                    <span className="ui-label">Cierre</span>
+                    <span className="text-right font-medium text-app-text">
                       {formatDate(assignment.closesAt)}
                     </span>
                   </div>
@@ -237,15 +237,15 @@ export function StudentAssignmentsSection({
 
                 {assignment.teachers.length > 0 && (
                   <div className="mt-4">
-                    <span className="ui-label text-slate-400">Equipo docente</span>
+                    <span className="ui-label">Equipo docente</span>
                     <ul className="mt-2 flex flex-wrap gap-3">
                       {assignment.teachers.map((teacher) => (
                         <li
                           key={teacher.id}
-                          className="flex items-center gap-2 text-sm text-slate-700"
+                          className="flex items-center gap-2 text-sm text-app-text-secondary"
                         >
                           {/* Solo nombre: el alumno no navega al perfil de un docente. */}
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-app-border bg-slate-100 text-[10px] font-semibold uppercase text-slate-600">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-app-border bg-app-bg-subtle text-[10px] font-semibold uppercase text-app-text-secondary">
                             {teacher.firstName[0]}
                             {teacher.lastName[0]}
                           </span>
@@ -258,7 +258,7 @@ export function StudentAssignmentsSection({
               </div>
 
               <div className="mt-6 flex items-center justify-between border-t border-app-border pt-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
+                <div className="flex items-center gap-2 text-xs text-app-text-muted">
                   <RiTimeLine className="text-sm" />
                   {timeline.countdownLabel ?? "Sin cuenta atrás"}
                 </div>

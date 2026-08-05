@@ -17,8 +17,29 @@ import {
 import { projectsApi } from "../../shared/api/services";
 import { MetricCard } from "../../shared/components/MetricCard";
 import { Skeleton } from "../../shared/components/Skeleton";
+import { EmptyState } from "../../shared/components/EmptyState";
+import { StatusBadge, type StatusTone } from "../../shared/components/ui/StatusBadge";
 import { queryKeys } from "../../shared/query/queryKeys";
-import type { ProjectEntity } from "../../features/projects/types";
+import type { ProjectEntity, FindingSeverity } from "../../features/projects/types";
+import type { QualityInsightCategory } from "../../features/builder/types";
+
+const SEVERITY_RANK: Record<FindingSeverity, number> = { high: 0, medium: 1, low: 2 };
+const SEVERITY_TONE: Record<FindingSeverity, StatusTone> = {
+  high: "danger",
+  medium: "warning",
+  low: "idle",
+};
+const SEVERITY_LABEL: Record<FindingSeverity, string> = {
+  high: "Alta",
+  medium: "Media",
+  low: "Baja",
+};
+const CATEGORY_LABEL: Record<QualityInsightCategory, string> = {
+  security: "Seguridad",
+  architecture: "Arquitectura",
+  quality: "Calidad",
+  rubricCompliance: "Rúbrica",
+};
 
 interface CohortAnalyticsDashboardProps {
   initialProjectId: string | null;
@@ -43,7 +64,8 @@ export function CohortAnalyticsDashboard({
 
   // Dos queries independientes en vez de un Promise.all con .catch() por
   // rama: cada una carga o falla por su cuenta, que es justo lo que esas
-  // .catch() manuales lograban a mano.
+  // El comportamiento equivale a los .catch() manuales, pero deja el estado
+  // de cada consulta aislado y reutiliza la caché de React Query.
   const summaryQuery = useQuery({
     queryKey: queryKeys.projects.progressSummary(selectedId ?? ""),
     queryFn: () => projectsApi.progressSummary(selectedId!),
@@ -73,12 +95,11 @@ export function CohortAnalyticsDashboard({
 
   if (projects.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-        <RiFolderOpenLine className="mb-2 text-3xl text-slate-400" />
-        <p className="text-sm font-medium text-slate-600">
-          No hay proyectos activos para mostrar análisis de cohortes.
-        </p>
-      </div>
+      <EmptyState
+        icon={<RiFolderOpenLine className="text-2xl" />}
+        title="Sin proyectos activos"
+        description="Crea un proyecto y recibe entregas para ver aquí el análisis de la cohorte."
+      />
     );
   }
 
@@ -140,27 +161,31 @@ export function CohortAnalyticsDashboard({
       const suspensos = gradedStudents.filter((s) => s.grade! < 5.0).length;
 
       distribution = [
-        { label: "Sobresaliente [9.0 - 10.0]", count: sobresalientes, percent: totalGraded ? Math.round((sobresalientes / totalGraded) * 100) : 0, color: "bg-success-500" },
-        { label: "Notable [7.0 - 8.9]", count: notables, percent: totalGraded ? Math.round((notables / totalGraded) * 100) : 0, color: "bg-primary-500" },
-        { label: "Aprobado [5.0 - 6.9]", count: aprobados, percent: totalGraded ? Math.round((aprobados / totalGraded) * 100) : 0, color: "bg-warning-500" },
-        { label: "Suspenso [0.0 - 4.9]", count: suspensos, percent: totalGraded ? Math.round((suspensos / totalGraded) * 100) : 0, color: "bg-danger-500" },
+        { label: "Sobresaliente [9.0 - 10.0]", count: sobresalientes, percent: totalGraded ? Math.round((sobresalientes / totalGraded) * 100) : 0, color: "bg-success" },
+        { label: "Notable [7.0 - 8.9]", count: notables, percent: totalGraded ? Math.round((notables / totalGraded) * 100) : 0, color: "bg-primary" },
+        { label: "Aprobado [5.0 - 6.9]", count: aprobados, percent: totalGraded ? Math.round((aprobados / totalGraded) * 100) : 0, color: "bg-warning" },
+        { label: "Suspenso [0.0 - 4.9]", count: suspensos, percent: totalGraded ? Math.round((suspensos / totalGraded) * 100) : 0, color: "bg-danger" },
       ];
     } else {
       const totalStudents = summary.totalAssignments;
       distribution = [
-        { label: "Pasan todos los tests", count: summary.passedAllTests, percent: totalStudents ? Math.round((summary.passedAllTests / totalStudents) * 100) : 0, color: "bg-success-500" },
-        { label: "Tests fallidos", count: summary.deliveredAtLeastOnce - summary.passedAllTests, percent: totalStudents ? Math.round(((summary.deliveredAtLeastOnce - summary.passedAllTests) / totalStudents) * 100) : 0, color: "bg-danger-500" },
+        { label: "Pasan todos los tests", count: summary.passedAllTests, percent: totalStudents ? Math.round((summary.passedAllTests / totalStudents) * 100) : 0, color: "bg-success" },
+        { label: "Tests fallidos", count: summary.deliveredAtLeastOnce - summary.passedAllTests, percent: totalStudents ? Math.round(((summary.deliveredAtLeastOnce - summary.passedAllTests) / totalStudents) * 100) : 0, color: "bg-danger" },
         { label: "Sin entregas", count: summary.neverDelivered, percent: totalStudents ? Math.round((summary.neverDelivered / totalStudents) * 100) : 0, color: "bg-slate-300" },
       ];
     }
   }
 
+  // Más críticas primero: es la razón por la que un profesor abriría esta
+  // tarjeta, no un orden arbitrario de llegada del backend.
+  const sortedInsights = [...insights].sort(
+    (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity],
+  );
+
   return (
     <section className="space-y-5">
-      <div className="flex flex-col gap-3 rounded-lg border border-app-border bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-xs font-medium text-slate-500">
-          Métricas de cohorte para:
-        </span>
+      <div className="flex flex-col gap-3 rounded-lg border border-app-border bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <span className="ui-label shrink-0">Proyecto analizado</span>
         <select
           value={selectedId || ""}
           onChange={(e) => handleProjectChange(e.target.value)}
@@ -177,7 +202,7 @@ export function CohortAnalyticsDashboard({
       {loading ? (
         // Misma cuadrícula que el contenido cargado (4 MetricCard + 2
         // artículos) en vez de un spinner centrado, para que las tarjetas no
-        // cambien de forma al llegar los datos (FE-MED-03).
+        // cambien de forma al llegar los datos.
         <div className="space-y-5" aria-busy="true" aria-label="Analizando cohorte">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, idx) => (
@@ -186,10 +211,12 @@ export function CohortAnalyticsDashboard({
           </div>
           <div className="grid gap-5 lg:grid-cols-2">
             {Array.from({ length: 2 }).map((_, idx) => (
-              <article key={idx} className="rounded-lg border border-app-border bg-white p-4">
-                <Skeleton type="text" className="h-4 w-40" />
-                <Skeleton type="text" className="mt-2 h-3 w-56" />
-                <div className="mt-4 space-y-3">
+              <article key={idx} className="overflow-hidden rounded-lg border border-app-border bg-white">
+                <div className="border-b border-app-border px-5 py-4">
+                  <Skeleton type="text" className="h-4 w-40" />
+                  <Skeleton type="text" className="mt-2 h-3 w-56" />
+                </div>
+                <div className="space-y-3 p-5">
                   <Skeleton type="text" className="h-2.5 w-full" />
                   <Skeleton type="text" className="h-2.5 w-full" />
                   <Skeleton type="text" className="h-2.5 w-2/3" />
@@ -199,13 +226,15 @@ export function CohortAnalyticsDashboard({
           </div>
         </div>
       ) : error ? (
-        <div className="rounded-lg border border-danger-200 bg-danger-50 p-4 text-center text-sm text-danger-700">
+        <div className="rounded-lg border border-danger-200 bg-danger-subtle p-4 text-center text-sm text-danger-700 dark:border-danger-800 dark:text-danger-400">
           {error}
         </div>
       ) : !summary ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-          Selecciona un proyecto válido para cargar el resumen de cohorte.
-        </div>
+        <EmptyState
+          icon={<RiBarChartGroupedLine className="text-2xl" />}
+          title="Selecciona un proyecto"
+          description="Elige un proyecto válido en el selector para cargar sus métricas de cohorte."
+        />
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -222,21 +251,23 @@ export function CohortAnalyticsDashboard({
           </div>
 
           <div className="grid gap-5 lg:grid-cols-2">
-            <article className="rounded-lg border border-app-border bg-white p-4">
-              <h4 className="text-sm font-semibold text-slate-900">
-                {hasGrades ? "Distribución de Calificaciones" : "Estado de Entregas"}
-              </h4>
-              <p className="text-xs text-slate-500">
-                {hasGrades
-                  ? "Alumnos por intervalo de notas en la cohorte activa."
-                  : "Progreso técnico basado en tests automatizados."}
-              </p>
-              <div className="mt-4 space-y-3">
+            <article className="overflow-hidden rounded-lg border border-app-border bg-white">
+              <header className="border-b border-app-border px-5 py-4">
+                <h4 className="text-sm font-semibold text-slate-900">
+                  {hasGrades ? "Distribución de Calificaciones" : "Estado de Entregas"}
+                </h4>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {hasGrades
+                    ? "Alumnos por intervalo de notas en la cohorte activa."
+                    : "Progreso técnico basado en tests automatizados."}
+                </p>
+              </header>
+              <div className="space-y-3 p-5">
                 {distribution.map((d, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between text-xs font-medium text-slate-700">
                       <span>{d.label}</span>
-                      <span className="text-slate-500">{d.count} ({d.percent}%)</span>
+                      <span className="data-meta text-slate-500">{d.count} ({d.percent}%)</span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                       <div
@@ -249,37 +280,50 @@ export function CohortAnalyticsDashboard({
               </div>
             </article>
 
-            <article className="rounded-lg border border-app-border bg-white p-4">
-              <h4 className="text-sm font-semibold text-slate-900">Hallazgos de Calidad</h4>
-              <p className="text-xs text-slate-500">
-                Incidencias detectadas automáticamente en el proyecto.
-              </p>
-              {insights.length === 0 ? (
-                <div className="mt-4 flex flex-col items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50 py-8 text-center">
-                  <RiShieldCheckLine className="mb-2 text-2xl text-success-500" />
-                  <p className="px-4 text-xs font-medium text-slate-600">
-                    No se han detectado incidencias de calidad destacables.
+            <article className="overflow-hidden rounded-lg border border-app-border bg-white">
+              <header className="flex items-start justify-between gap-3 border-b border-app-border px-5 py-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900">Hallazgos de Calidad</h4>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Incidencias detectadas automáticamente en el proyecto.
                   </p>
                 </div>
-              ) : (
-                <div className="mt-4 max-h-[220px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
-                  {insights.map((f, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between rounded-md border border-app-border bg-slate-50 p-3 transition-colors hover:bg-slate-100"
-                    >
-                      <div className="min-w-0 pr-4">
-                        <div className="truncate text-xs font-semibold text-slate-900">
-                          {f.title}
+                {sortedInsights.length > 0 && (
+                  <StatusBadge tone="idle" size="sm" className="shrink-0">
+                    {sortedInsights.length} {sortedInsights.length === 1 ? "hallazgo" : "hallazgos"}
+                  </StatusBadge>
+                )}
+              </header>
+              <div className="p-5">
+                {sortedInsights.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50 py-8 text-center">
+                    <RiShieldCheckLine className="mb-2 text-2xl text-success" />
+                    <p className="px-4 text-xs font-medium text-slate-600">
+                      No se han detectado incidencias de calidad destacables.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="max-h-[220px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                    {sortedInsights.map((f, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start justify-between gap-3 rounded-md border border-app-border bg-slate-50 p-3 transition-colors hover:bg-slate-100"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold text-slate-900">{f.title}</p>
+                          <p className="mt-1 text-[10px] uppercase tracking-wider text-slate-400">
+                            {CATEGORY_LABEL[f.category as QualityInsightCategory]} · {f.studentCount}{" "}
+                            {f.studentCount === 1 ? "alumno" : "alumnos"}
+                          </p>
                         </div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-400">
-                          {f.category}
-                        </div>
+                        <StatusBadge tone={SEVERITY_TONE[f.severity]} size="sm" className="shrink-0">
+                          {SEVERITY_LABEL[f.severity]}
+                        </StatusBadge>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </article>
           </div>
         </>

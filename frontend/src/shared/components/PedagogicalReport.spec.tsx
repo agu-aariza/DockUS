@@ -26,3 +26,6 @@ describe('PedagogicalReport', () => {
     expect(screen.getByText('Compilaste sin errores.')).toBeInTheDocument();
   });
 });
+/**
+ * Pruebas de representación del informe pedagógico y de sus estados vacíos o incompletos.
+ */

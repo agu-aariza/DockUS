@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (AssessmentContextSummary).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (AssessmentContextSummary).
  *
  * @module AssessmentContextSummary
  */

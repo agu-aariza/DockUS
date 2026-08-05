@@ -32,7 +32,7 @@ function getStepState(currentStep: number, targetStep: number): StepState {
 const BUBBLE_STATE: Record<StepState, string> = {
   complete: "bg-success text-white ring-4 ring-success/10",
   active: "bg-primary text-white ring-4 ring-primary/15 status-pulse status-pulse-primary",
-  idle: "border border-app-border bg-white text-slate-400",
+  idle: "border border-app-border bg-app-surface text-app-text-muted",
 };
 
 export function SubmissionStepIndicator({ flow }: Props) {
@@ -40,7 +40,7 @@ export function SubmissionStepIndicator({ flow }: Props) {
 
   return (
     // Sin `sticky`: el banner de notificaciones ya ocupa `top-0` y taparía el indicador.
-    <div className="border-b border-app-border bg-slate-50 px-5 py-5 sm:px-8">
+    <div className="border-b border-app-border bg-app-bg-subtle px-5 py-5 sm:px-8">
       <ol className="flex items-center gap-2 sm:gap-4">
         {STEPS.map((item, index) => {
           const stepState = getStepState(step, item.number);
@@ -63,10 +63,10 @@ export function SubmissionStepIndicator({ flow }: Props) {
               </div>
 
               <div className="min-w-0">
-                <div className="ui-label text-slate-400">Paso {item.number}</div>
+                <div className="ui-label">Paso {item.number}</div>
                 <div
                   className={`truncate text-sm font-semibold transition-colors duration-200 motion-reduce:transition-none ${
-                    stepState === "idle" ? "text-slate-400" : "text-slate-900"
+                    stepState === "idle" ? "text-app-text-muted" : "text-app-text"
                   }`}
                 >
                   {item.label}

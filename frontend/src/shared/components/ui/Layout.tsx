@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (Layout).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (Layout).
  *
  * @module Layout
  */
@@ -15,11 +15,11 @@ interface CardProps {
 
 export function Card({ children, className = "", title, headerAction }: CardProps) {
   return (
-    <article className={`rounded-lg border border-app-border bg-white ${className}`}>
+    <article className={`rounded-lg border border-app-border bg-app-surface shadow-sm ${className}`}>
       {(title || headerAction) && (
         <div className="flex flex-col gap-2 border-b border-app-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           {title && (
-            <h3 className="text-sm font-semibold text-slate-900">
+            <h3 className="text-sm font-semibold text-app-text">
               {title}
             </h3>
           )}
@@ -41,12 +41,12 @@ interface SectionCardProps {
 
 export function SectionCard({ children, className = "", title, description, headerAction }: SectionCardProps) {
   return (
-    <section className={`rounded-lg border border-app-border bg-white ${className}`}>
-      {(title || headerAction) && (
+    <section className={`rounded-lg border border-app-border bg-app-surface shadow-sm ${className}`}>
+      {(title || description || headerAction) && (
         <div className="flex flex-col gap-2 border-b border-app-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            {title && <h3 className="text-sm font-semibold text-slate-900">{title}</h3>}
-            {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
+            {title && <h3 className="text-sm font-semibold text-app-text">{title}</h3>}
+            {description && <p className="mt-0.5 text-xs text-app-text-muted">{description}</p>}
           </div>
           {headerAction}
         </div>

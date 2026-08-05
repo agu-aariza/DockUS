@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (TeacherGradingStudio).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (TeacherGradingStudio).
  *
  * @module TeacherGradingStudio
  */

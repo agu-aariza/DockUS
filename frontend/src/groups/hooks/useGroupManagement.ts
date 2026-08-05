@@ -1,228 +1,311 @@
 /**
- * @fileoverview Gestión de grupos y matrículas de estudiantes (useGroupManagement).
+ * @fileoverview Gestión reactiva de grupos y matrículas con React Query.
  *
  * @module useGroupManagement
  */
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { groupsApi, usersApi } from "../../shared/api/services";
-import type { CourseGroupEntity, GroupEnrollmentEntity } from "../../features/groups/types";
-import type { UserEntity } from "../../features/auth/types";
+import type {
+  BulkGroupEnrollResponse,
+  CourseGroupEntity,
+} from "../../features/groups/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { normalizeOptionalText } from "../../projects/hooks/projectManagement.utils";
+import { queryKeys } from "../../shared/query/queryKeys";
 
-export function useGroupManagement(canWrite: boolean) {
-  const [groups, setGroups] = useState<CourseGroupEntity[]>([]);
-  const [focusedGroupId, setFocusedGroupId] = useState("");
-  const [groupEnrollments, setGroupEnrollments] = useState<GroupEnrollmentEntity[] | null>(null);
-  const [allStudents, setAllStudents] = useState<UserEntity[]>([]);
-  
-  const [groupForm, setGroupForm] = useState({
-    name: "",
-    code: "",
-    description: "",
+export interface GroupFormValues {
+  name: string;
+  code: string;
+  description: string;
+}
+
+interface UseGroupManagementOptions {
+  canWrite: boolean;
+  focusedGroupId: string;
+  studentSearch: string;
+  studentPage: number;
+  directoryEnabled: boolean;
+}
+
+type Notice = {
+  text: string;
+  tone: "info" | "warning" | "success" | "error";
+};
+
+const STUDENTS_PER_PAGE = 20;
+
+export function useGroupManagement({
+  canWrite,
+  focusedGroupId,
+  studentSearch,
+  studentPage,
+  directoryEnabled,
+}: UseGroupManagementOptions) {
+  const queryClient = useQueryClient();
+  const [notice, setNotice] = useState<Notice | null>(null);
+
+  const studentQuery = useMemo(
+    () => ({
+      page: studentPage,
+      limit: STUDENTS_PER_PAGE,
+      role: "STUDENT" as const,
+      search: studentSearch.trim() || undefined,
+      sortBy: "lastName",
+      sortOrder: "ASC" as const,
+    }),
+    [studentPage, studentSearch],
+  );
+
+  const groupsQuery = useQuery({
+    queryKey: queryKeys.groups.list(),
+    queryFn: ({ signal }) => groupsApi.list(signal),
+    enabled: canWrite,
   });
-  
-  const [bulkInput, setBulkInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [notice, setNotice] = useState<{ text: string; tone: "info" | "warning" } | null>(null);
 
-  const refreshGroups = async () => {
-    if (!canWrite) return;
-    setLoading(true);
-    try {
-      const response = await groupsApi.list();
-      setGroups(response);
-      if (!focusedGroupId && response.length > 0) {
-        setFocusedGroupId(response[0].id);
-      }
-    } catch (error) {
-      setNotice({ text: getErrorMessage(error), tone: "warning" });
-    } finally {
-      setLoading(false);
-    }
+  const enrollmentsQuery = useQuery({
+    queryKey: queryKeys.groups.enrollments(focusedGroupId),
+    queryFn: () => groupsApi.listEnrollments(focusedGroupId),
+    enabled: canWrite && Boolean(focusedGroupId),
+  });
+
+  const studentsQuery = useQuery({
+    queryKey: queryKeys.users.list(studentQuery),
+    queryFn: () => usersApi.list(studentQuery),
+    enabled: canWrite && Boolean(focusedGroupId) && directoryEnabled,
+  });
+
+  const invalidateMembership = async (groupId: string) => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups.list(), exact: true }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.groups.enrollments(groupId),
+        exact: true,
+      }),
+    ]);
   };
 
-  const refreshEnrollments = async (groupId: string) => {
-    if (!canWrite || !groupId) return;
-    try {
-      const response = await groupsApi.listEnrollments(groupId);
-      setGroupEnrollments(response);
-    } catch (error) {
-      setNotice({ text: getErrorMessage(error), tone: "warning" });
-    }
-  };
+  const createMutation = useMutation({
+    mutationFn: (payload: {
+      name: string;
+      code?: string;
+      description?: string;
+    }) => groupsApi.create(payload),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups.list(), exact: true }),
+  });
 
-  const refreshStudents = async (search?: string) => {
-    try {
-      setLoading(true);
-      // Búsqueda server-side (FE-MED-01): con >50 alumnos, filtrar solo sobre
-      // esta página local dejaba invisibles a los que no entraban en ella.
-      const response = await usersApi.list({
-        role: "STUDENT",
-        limit: 50,
-        search: search?.trim() || undefined,
+  const updateMutation = useMutation({
+    mutationFn: ({
+      groupId,
+      payload,
+    }: {
+      groupId: string;
+      payload: Partial<{
+        name: string;
+        code: string;
+        description: string;
+      }>;
+    }) => groupsApi.update(groupId, payload),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups.list(), exact: true }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (groupId: string) => groupsApi.remove(groupId),
+    onSuccess: async (_, groupId) => {
+      queryClient.removeQueries({
+        queryKey: queryKeys.groups.enrollments(groupId),
+        exact: true,
       });
-      setAllStudents(response.data || []);
-    } catch (error) {
-      setNotice({ text: getErrorMessage(error), tone: "warning" });
-    } finally {
-      setLoading(false);
-    }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.groups.list(), exact: true });
+    },
+  });
+
+  const enrollMutation = useMutation({
+    mutationFn: ({ groupId, studentId }: { groupId: string; studentId: string }) =>
+      groupsApi.bulkEnroll(groupId, { studentIds: [studentId] }),
+    onSuccess: (_, variables) => invalidateMembership(variables.groupId),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: ({
+      groupId: _groupId,
+      enrollmentId,
+    }: {
+      groupId: string;
+      enrollmentId: string;
+    }) => groupsApi.revokeEnrollment(enrollmentId),
+    onSuccess: (_, variables) => invalidateMembership(variables.groupId),
+  });
+
+  const bulkEnrollMutation = useMutation({
+    mutationFn: ({ groupId, rawInput }: { groupId: string; rawInput: string }) =>
+      groupsApi.bulkEnroll(groupId, { rawInput }),
+    onSuccess: (_, variables) => invalidateMembership(variables.groupId),
+  });
+
+  const reportError = (error: unknown) => {
+    setNotice({ text: getErrorMessage(error), tone: "error" });
   };
 
-  const handleCreateGroup = async () => {
-    if (!canWrite || !groupForm.name.trim()) return;
-    setBusy("create");
+  const createGroup = async (
+    values: GroupFormValues,
+  ): Promise<CourseGroupEntity | null> => {
     try {
-      const response = await groupsApi.create({
-        name: groupForm.name.trim(),
-        code: normalizeOptionalText(groupForm.code),
-        description: normalizeOptionalText(groupForm.description),
+      const group = await createMutation.mutateAsync({
+        name: values.name.trim(),
+        code: normalizeOptionalText(values.code),
+        description: normalizeOptionalText(values.description),
       });
-      setGroupForm({ name: "", code: "", description: "" });
-      setNotice({ text: `Grupo "${response.name}" creado.`, tone: "info" });
-      await refreshGroups();
-      setFocusedGroupId(response.id);
+      setNotice({ text: `Grupo "${group.name}" creado.`, tone: "success" });
+      return group;
     } catch (error) {
-      setNotice({ text: getErrorMessage(error), tone: "warning" });
-    } finally {
-      setBusy(null);
+      reportError(error);
+      return null;
     }
   };
 
-  const handleUpdateGroup = async (groupId: string, data: Partial<typeof groupForm>) => {
-    if (!canWrite) return;
-    setBusy(`update:${groupId}`);
+  const updateGroup = async (
+    groupId: string,
+    values: GroupFormValues,
+  ): Promise<boolean> => {
     try {
-      await groupsApi.update(groupId, data);
-      setNotice({ text: "Grupo actualizado correctamente.", tone: "info" });
-      await refreshGroups();
-    } catch (error) {
-      setNotice({ text: getErrorMessage(error), tone: "warning" });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleEnrollStudents = async () => {
-    if (!canWrite || !focusedGroupId || !bulkInput.trim()) return;
-    
-    setBusy("enroll");
-    try {
-      const response = await groupsApi.bulkEnroll(focusedGroupId, {
-        rawInput: bulkInput.trim(),
+      await updateMutation.mutateAsync({
+        groupId,
+        payload: {
+          name: values.name.trim(),
+          code: normalizeOptionalText(values.code),
+          description: normalizeOptionalText(values.description),
+        },
       });
-      setBulkInput("");
-      
-      const enrolled = response.summary.enrolledCount + response.summary.reactivatedCount;
-      const unresolved = (response.summary.unresolvedEmails.length || 0) + (response.summary.unresolvedNames?.length || 0);
-      
-      setNotice({ 
-        text: `Procesamiento completado. ${enrolled} matriculados correctamente. ${unresolved > 0 ? `${unresolved} registros no procesados.` : ''}`, 
-        tone: unresolved > 0 ? "warning" : "info" 
-      });
-      await refreshEnrollments(focusedGroupId);
-      await refreshGroups();
+      setNotice({ text: "Grupo actualizado correctamente.", tone: "success" });
+      return true;
     } catch (error) {
-      setNotice({ text: getErrorMessage(error), tone: "warning" });
-    } finally {
-      setBusy(null);
+      reportError(error);
+      return false;
     }
   };
 
-  const handleToggleEnrollment = async (studentId: string, isEnrolled: boolean) => {
-    if (!canWrite || !focusedGroupId) return;
-    
-    if (isEnrolled) {
-      // Find the enrollment ID to revoke
-      const enrollment = groupEnrollments?.find(e => e.studentId === studentId && !e.revokedAt);
-      if (enrollment) {
-        await handleRevokeEnrollment(enrollment.id);
-      }
-    } else {
-      // Enroll
-      setBusy(`enroll:${studentId}`);
-      try {
-        await groupsApi.bulkEnroll(focusedGroupId, { studentIds: [studentId] });
-        setNotice({ text: "Alumno matriculado.", tone: "info" });
-        await refreshEnrollments(focusedGroupId);
-        await refreshGroups();
-      } catch (error) {
-        setNotice({ text: getErrorMessage(error), tone: "warning" });
-      } finally {
-        setBusy(null);
-      }
-    }
-  };
-
-  const handleRevokeEnrollment = async (enrollmentId: string) => {
-    if (!canWrite || !focusedGroupId) return;
-    setBusy(`revoke:${enrollmentId}`);
+  const deleteGroup = async (groupId: string): Promise<boolean> => {
     try {
-      await groupsApi.revokeEnrollment(enrollmentId);
+      await deleteMutation.mutateAsync(groupId);
+      setNotice({ text: "Grupo eliminado correctamente.", tone: "success" });
+      return true;
+    } catch (error) {
+      reportError(error);
+      return false;
+    }
+  };
+
+  const enrollStudent = async (studentId: string): Promise<boolean> => {
+    if (!focusedGroupId) return false;
+    try {
+      await enrollMutation.mutateAsync({ groupId: focusedGroupId, studentId });
+      setNotice({ text: "Alumno matriculado.", tone: "success" });
+      return true;
+    } catch (error) {
+      reportError(error);
+      return false;
+    }
+  };
+
+  const revokeEnrollment = async (enrollmentId: string): Promise<boolean> => {
+    if (!focusedGroupId) return false;
+    try {
+      await revokeMutation.mutateAsync({
+        groupId: focusedGroupId,
+        enrollmentId,
+      });
       setNotice({ text: "Alumno retirado del grupo.", tone: "info" });
-      await refreshEnrollments(focusedGroupId);
-      await refreshGroups();
+      return true;
     } catch (error) {
-      setNotice({ text: getErrorMessage(error), tone: "warning" });
-    } finally {
-      setBusy(null);
+      reportError(error);
+      return false;
     }
   };
 
-  const handleDeleteGroup = async (groupId: string) => {
-    if (!canWrite) return;
-    setBusy(`delete:${groupId}`);
+  const bulkEnroll = async (
+    rawInput: string,
+  ): Promise<BulkGroupEnrollResponse | null> => {
+    if (!focusedGroupId) return null;
     try {
-      await groupsApi.remove(groupId);
-      setNotice({ text: "Grupo eliminado correctamente.", tone: "info" });
-      await refreshGroups();
-      setFocusedGroupId("");
+      const response = await bulkEnrollMutation.mutateAsync({
+        groupId: focusedGroupId,
+        rawInput: rawInput.trim(),
+      });
+      const incorporated =
+        response.summary.enrolledCount + response.summary.reactivatedCount;
+      const unresolved =
+        response.summary.unresolvedEmails.length +
+        response.summary.unresolvedNames.length;
+      setNotice({
+        text:
+          unresolved > 0
+            ? `Importación completada: ${incorporated} incorporados y ${unresolved} registros por revisar.`
+            : `Importación completada: ${incorporated} alumnos incorporados.`,
+        tone: unresolved > 0 ? "warning" : "success",
+      });
+      return response;
     } catch (error) {
-      setNotice({ text: getErrorMessage(error), tone: "warning" });
-    } finally {
-      setBusy(null);
+      reportError(error);
+      return null;
     }
   };
 
-  useEffect(() => {
-    if (canWrite) {
-      void refreshGroups();
-      void refreshStudents();
-    }
-  }, [canWrite]);
-
-  useEffect(() => {
-    if (focusedGroupId) {
-      void refreshEnrollments(focusedGroupId);
-    } else {
-      setGroupEnrollments(null);
-    }
-  }, [focusedGroupId]);
+  const activeEnrollments = useMemo(
+    () =>
+      (enrollmentsQuery.data ?? [])
+        .filter((enrollment) => !enrollment.revokedAt)
+        .sort((left, right) =>
+          left.studentName.localeCompare(right.studentName, "es", {
+            sensitivity: "base",
+          }),
+        ),
+    [enrollmentsQuery.data],
+  );
 
   return {
-    groups,
-    focusedGroupId,
-    setFocusedGroupId,
-    groupEnrollments,
-    allStudents,
-    groupForm,
-    setGroupForm,
-    bulkInput,
-    setBulkInput,
-    loading,
-    busy,
+    groups: groupsQuery.data ?? [],
+    activeEnrollments,
+    studentDirectory: studentsQuery.data?.data ?? [],
+    studentMeta: studentsQuery.data?.meta ?? null,
     notice,
-    setNotice,
-    refreshGroups,
-    handleCreateGroup,
-    handleUpdateGroup,
-    handleEnrollStudents,
-    handleToggleEnrollment,
-    handleRevokeEnrollment,
-    refreshStudents,
-    handleDeleteGroup,
+
+    isGroupsLoading: groupsQuery.isLoading,
+    isGroupsFetching: groupsQuery.isFetching,
+    groupsError: groupsQuery.error ? getErrorMessage(groupsQuery.error) : null,
+    refetchGroups: groupsQuery.refetch,
+
+    isEnrollmentsLoading: enrollmentsQuery.isLoading,
+    enrollmentsError: enrollmentsQuery.error
+      ? getErrorMessage(enrollmentsQuery.error)
+      : null,
+    refetchEnrollments: enrollmentsQuery.refetch,
+
+    isStudentsLoading: studentsQuery.isLoading || studentsQuery.isFetching,
+    studentsError: studentsQuery.error
+      ? getErrorMessage(studentsQuery.error)
+      : null,
+    refetchStudents: studentsQuery.refetch,
+
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+    isBulkEnrolling: bulkEnrollMutation.isPending,
+    isEnrollingStudent: (studentId: string) =>
+      enrollMutation.isPending &&
+      enrollMutation.variables?.studentId === studentId,
+    isRevokingEnrollment: (enrollmentId: string) =>
+      revokeMutation.isPending &&
+      revokeMutation.variables?.enrollmentId === enrollmentId,
+
+    createGroup,
+    updateGroup,
+    deleteGroup,
+    enrollStudent,
+    revokeEnrollment,
+    bulkEnroll,
   };
 }

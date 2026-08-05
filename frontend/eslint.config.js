@@ -32,20 +32,21 @@ export default [
       'jsx-a11y': jsxA11y,
     },
     rules: {
-      ...jsxA11y.flatConfigs.recommended.rules,
+      ...jsxA11y.configs.recommended.rules,
       // The base rule does not understand TypeScript type-only function signatures.
       // Keep unused-export detection in knip/ts-pruner until the TS ESLint plugin is installed.
       'no-unused-vars': 'off',
       'no-undef': 'off', // TypeScript handles undefined variables natively
       'no-extra-boolean-cast': 'off',
       'no-useless-escape': 'off',
+      // React controla los campos mediante onChange; no sustituirlo por onBlur.
+      'jsx-a11y/no-onchange': 'off',
     },
   },
   {
-    // CLAUDE.md: "all HTTP calls must be encapsulated in frontend/src/shared/api/* facades —
-    // React components/hooks must never import axios directly." Installed as part of audit/04
-    // (ARQ-009): the architecture audit verified this boundary held by grep, but nothing kept
-    // it from drifting since — this makes it a lint error instead of a re-grep next audit.
+    // Las llamadas HTTP deben pasar por las fachadas de frontend/src/shared/api/*;
+    // los componentes y hooks React no pueden importar axios directamente. Esta
+    // regla evita que la frontera arquitectónica se degrade con nuevos cambios.
     files: ['src/**/*.{ts,tsx}'],
     ignores: ['src/shared/api/**'],
     rules: {

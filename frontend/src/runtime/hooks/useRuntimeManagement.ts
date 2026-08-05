@@ -186,8 +186,8 @@ export function useRuntimeManagement() {
     syncSelectedRun();
   }, [selectedRunId, syncSelectedRun]);
 
-  // Sondeo de detalle del run: suspendido con la pestaña oculta (ESC-ALTO-10)
-  // y, además, en estado terminal (FE-ALTO-02) — un run ya terminado no cambia
+  // Sondeo de detalle del run: suspendido con la pestaña oculta
+  // y, además, en estado terminal — un run ya terminado no cambia
   // más, así que seguir repescándolo cada 3s es tráfico puro. El polling de
   // evidencias de abajo ya aplicaba este mismo corte; aquí faltaba.
   useVisibilityAwareInterval(
@@ -244,7 +244,7 @@ export function useRuntimeManagement() {
 
   // Artefactos de evidencia: solo mientras el run siga vivo y la pestaña esté
   // visible. Un run terminal ya no genera artefactos nuevos, de modo que seguir
-  // sondeándolo era tráfico puro (ESC-ALTO-10).
+  // sondeándolo era tráfico puro.
   useVisibilityAwareInterval(
     () => evidenceSyncRef.current?.(),
     4000,

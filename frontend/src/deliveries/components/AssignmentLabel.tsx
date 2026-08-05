@@ -8,14 +8,14 @@ import { ProjectAssignmentEntity } from "../../shared/types";
 
 export function AssignmentLabel({ assignment }: { assignment: ProjectAssignmentEntity | undefined }) {
   if (!assignment) {
-    return <>Sin asignación</>;
+    return <>Todos los alumnos</>;
   }
 
   return (
     <>
-      <span className="font-semibold text-slate-900">{assignment.studentName}</span>
-      <span className="mx-2 text-slate-300">|</span>
-      <span className="text-slate-500">{assignment.projectTitle}</span>
+      <span className="font-semibold text-app-text">{assignment.studentName}</span>
+      <span className="mx-2 text-app-text-muted/50">|</span>
+      <span className="text-app-text-secondary">{assignment.projectTitle}</span>
     </>
   );
 }

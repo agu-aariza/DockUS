@@ -23,3 +23,6 @@ describe('ProfessionalVerdict', () => {
     expect(screen.getByText('Necesita mejoras')).toBeInTheDocument();
   });
 });
+/**
+ * Pruebas de presentación del veredicto profesional y de sus variantes de severidad.
+ */

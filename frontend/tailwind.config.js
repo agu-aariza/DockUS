@@ -17,7 +17,7 @@ export default {
       colors: {
         // Core institutional palette (sober B2B dashboard). DEFAULT/hover/
         // subtle en cada color de abajo resuelven vía variable CSS (modo
-        // oscuro real, UX-ALTO-02); las escalas numeradas (50-950) se quedan
+        // oscuro real; las escalas numeradas (50-950) se quedan
         // en hex fijo — ver el comentario largo en styles.css sobre por qué.
         app: {
           bg: themed('--color-app-bg'),
@@ -46,10 +46,24 @@ export default {
           subtle: themed('--color-primary-subtle'),
           muted: '#93c5fd',        // = 300; sin variante oscura dedicada, uso puntual
         },
+        // Granate institucional (Universidad de Sevilla). Resuelve vía
+        // variable CSS: en claro son los mismos valores de siempre, y en
+        // oscuro sube para seguir siendo legible (ver styles.css).
         accent: {
-          DEFAULT: '#5b040d',      // brand wine — institutional accent only
-          hover: '#7a1d20',
-          subtle: '#fef2f2',
+          DEFAULT: themed('--color-accent'),
+          hover: themed('--color-accent-hover'),
+          subtle: themed('--color-accent-subtle'),
+        },
+
+        // Raíl lateral: grafito cálido y neutro. Es oscuro en los DOS temas a
+        // propósito —ancla la marca contra el contenido claro— y conserva el
+        // granate institucional como acento, no como una gran masa de fondo.
+        rail: {
+          DEFAULT: '#181617',
+          subtle: '#242022',
+          border: '#352E31',
+          accent: '#D46C78',
+          'accent-strong': '#8F2430',
         },
         success: {
           50: '#ecfdf5',
@@ -101,6 +115,9 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        // Solo para las superficies públicas y solo a >=28px: es una serif de
+        // libro, y por debajo de ese tamaño se deshace en pantalla.
+        display: ['EB Garamond', 'Georgia', 'Cambria', 'serif'],
       },
       borderRadius: {
         sm: '0.25rem',

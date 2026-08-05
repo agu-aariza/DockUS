@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (Skeleton).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (Skeleton).
  *
  * @module Skeleton
  */
@@ -42,7 +42,7 @@ export function SkeletonCard() {
     // rounded-lg, no -3xl: es la esquina real de las tarjetas que reemplaza
     // (StudentReportsSection, StudentProfilePanel, TeacherProjectsPanel) —
     // antes cambiaba de forma visible en el momento en que llegaban los datos
-    // (UX-MED-02).
+
     <div className="rounded-lg border border-app-border bg-app-surface p-6 shadow-sm">
       <div className="flex items-center gap-4 mb-4">
         <Skeleton type="circular" className="w-12 h-12" />

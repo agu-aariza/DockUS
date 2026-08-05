@@ -11,12 +11,20 @@ import type {
   ProjectAssignmentEntity,
   StudentWorkflowState,
 } from "../shared/types";
+import type { StatusTone } from "../shared/components/ui/StatusBadge";
 
 interface StudentWorkflowPresentation {
   state: StudentWorkflowState;
   label: string;
   description: string;
-  badgeClassName: string;
+  /**
+   * Tono del `StatusBadge` compartido, no una clase suelta: la paleta real
+   * de la app tiene tres colores de estado (success/warning/danger) más el
+   * granate institucional — un tono por cada uno de los diez estados del
+   * pipeline (sky/violet/fuchsia/indigo/rose...) es justo el arcoíris sin
+   * sistema que hace que un dashboard se lea genérico.
+   */
+  tone: StatusTone;
 }
 
 const RUNNING_STATUSES = new Set<BuildRunStatus>(["RUNNING"]);
@@ -96,7 +104,7 @@ export function describeStudentWorkflowState(
         label: "Sin asignación",
         description:
           "Todavía no tienes una práctica asignada. Contacta con tu profesorado si esperabas verla aquí.",
-        badgeClassName: "border-slate-200 bg-slate-100 text-slate-700",
+        tone: "idle",
       };
     case "WINDOW_NOT_OPEN":
       return {
@@ -104,14 +112,14 @@ export function describeStudentWorkflowState(
         label: "Aún no abre",
         description:
           "La ventana de entrega todavía no está abierta. Podrás subir tu versión cuando llegue la fecha de apertura.",
-        badgeClassName: "border-sky-200 bg-sky-50 text-sky-700",
+        tone: "idle",
       };
     case "READY_TO_SUBMIT":
       return {
         state,
         label: "Lista para entregar",
         description: `Ya puedes preparar y subir una versión para ${projectName}.`,
-        badgeClassName: "border-indigo-200 bg-indigo-50 text-indigo-700",
+        tone: "info",
       };
     case "RECEIVED":
       return {
@@ -120,7 +128,7 @@ export function describeStudentWorkflowState(
         description:
           "La plataforma ya registró tu archivo y está esperando el siguiente paso operativo." +
           lateSuffix,
-        badgeClassName: "border-slate-200 bg-slate-100 text-slate-700",
+        tone: "idle",
       };
     case "QUEUED":
       return {
@@ -129,7 +137,7 @@ export function describeStudentWorkflowState(
         description:
           "La evaluación automática está en cola. En cuanto arranque, verás el progreso del run." +
           lateSuffix,
-        badgeClassName: "border-violet-200 bg-violet-50 text-violet-700",
+        tone: "running",
       };
     case "RUNNING":
       return {
@@ -138,7 +146,7 @@ export function describeStudentWorkflowState(
         description:
           "El builder está analizando, construyendo o validando tu entrega ahora mismo." +
           lateSuffix,
-        badgeClassName: "border-warning-200 bg-warning-50 text-warning-700",
+        tone: "running",
       };
     case "BUILD_FAILED":
       return {
@@ -147,7 +155,7 @@ export function describeStudentWorkflowState(
         description:
           "El proceso automático falló antes de generar un informe. Revisa tu código y vuelve a intentarlo." +
           lateSuffix,
-        badgeClassName: "border-rose-200 bg-rose-50 text-rose-700",
+        tone: "danger",
       };
     case "REPORT_READY":
       return {
@@ -156,7 +164,7 @@ export function describeStudentWorkflowState(
         description:
           "El informe técnico ya está listo para consulta. Revísalo antes de decidir si subes otra versión." +
           lateSuffix,
-        badgeClassName: "border-success-200 bg-success-50 text-success-700",
+        tone: "success",
       };
     case "AWAITING_TEACHER_REVIEW":
       return {
@@ -165,7 +173,7 @@ export function describeStudentWorkflowState(
         description:
           "La evaluación automática terminó, pero todavía falta la revisión o la consolidación final del profesorado." +
           lateSuffix,
-        badgeClassName: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
+        tone: "pending",
       };
     case "GRADED":
       return {
@@ -174,7 +182,7 @@ export function describeStudentWorkflowState(
         description:
           "La entrega ya tiene nota oficial y observaciones consolidadas." +
           lateSuffix,
-        badgeClassName: "border-sky-200 bg-sky-50 text-sky-700",
+        tone: "success",
       };
   }
 }

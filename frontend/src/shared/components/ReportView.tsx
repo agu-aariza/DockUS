@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (ReportView).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (ReportView).
  *
  * @module ReportView
  */

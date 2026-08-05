@@ -20,6 +20,7 @@ import {
 } from "react-router";
 import React, { useEffect, useState, Suspense, lazy } from "react";
 import { AuthPanel } from "./auth/AuthPanel";
+import { LandingPage } from "./landing/LandingPage";
 import { AppShell } from "./shared/components/ui/AppShell";
 import { WorkspaceBar } from "./shared/workspace/WorkspaceBar";
 import { CommandPalette } from "./shared/components/CommandPalette";
@@ -29,6 +30,9 @@ import type { AuthResponse } from "./features/auth/types";
 import { useToast } from "./shared/toast/ToastContext";
 import { RiSpyLine, RiLoader4Line } from "react-icons/ri";
 import { ErrorBoundary } from "./shared/components/ErrorBoundary";
+
+/** Rutas accesibles sin sesión. Todo lo demás exige autenticación. */
+const PUBLIC_PATHS = ["/", "/acceso", "/auth"];
 
 // Lazy-loaded route components (Code Splitting)
 const TeacherHomePanel = lazy(() => import("./summary/TeacherHomePanel").then(m => ({ default: m.TeacherHomePanel })));
@@ -215,24 +219,34 @@ function App(): JSX.Element {
   const hasAuthenticatedSession = Boolean(activeSession);
   const activeTab = location.pathname.split("/")[1] || (activeSession?.role === 'STUDENT' ? "mi-espacio" : "summary");
 
-  // Public routes
-  if (location.pathname === "/" || location.pathname === "/auth") {
+  // Public routes: `/` es la landing y `/acceso` el formulario. `/auth` se
+  // conserva como alias del enlace antiguo.
+  if (PUBLIC_PATHS.includes(location.pathname)) {
     if (hasAuthenticatedSession) {
       return <Navigate to={activeSession?.role === 'STUDENT' ? "/mi-espacio" : "/summary"} replace />;
     }
 
+    // La landing enlaza a la pestaña de registro con `?modo=crear`.
+    const initialMode = new URLSearchParams(location.search).get('modo') === 'crear'
+      ? 'REGISTER'
+      : 'LOGIN';
+
     return (
       <Routes>
-        <Route path="/" element={<AuthPanel onAuthSuccess={handleAuthSuccess} />} />
-        <Route path="/auth" element={<Navigate to="/" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route
+          path="/acceso"
+          element={<AuthPanel onAuthSuccess={handleAuthSuccess} initialMode={initialMode} />}
+        />
+        <Route path="/auth" element={<Navigate to="/acceso" replace />} />
       </Routes>
     );
   }
 
-  // Auth check for protected routes
+  // Auth check for protected routes. Va a `/acceso`, no a `/`: quien llega a
+  // una ruta interna sin sesión quiere el formulario, no la portada.
   if (!hasAuthenticatedSession) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/acceso" replace />;
   }
 
   const isStudent = activeSession?.role === 'STUDENT';

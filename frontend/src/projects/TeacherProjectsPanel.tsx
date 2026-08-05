@@ -27,7 +27,6 @@ import { PageHeader } from "../shared/components/ui/PageHeader";
 import { Button } from "../shared/components/ui/Button";
 import { SearchInput } from "../shared/components/ui/SearchInput";
 import { Card } from "../shared/components/ui/Layout";
-import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import { ProjectListItem } from "./components/ProjectListItem";
 import { ProjectOverview } from "./components/ProjectOverview";
 import { ProjectCreateForm } from "./features/ProjectCreateForm";
@@ -205,14 +204,14 @@ export function TeacherProjectsPanel(): JSX.Element {
 
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
         <Card className="flex h-full flex-col overflow-hidden p-4">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div>
-              <p className="ui-label">Catálogo</p>
-              <h3 className="text-sm font-semibold text-slate-900">
-                Proyectos
-              </h3>
-            </div>
-            <StatusBadge tone="info">{projects.length}</StatusBadge>
+          <div className="mb-4">
+            <p className="ui-label">Catálogo</p>
+            <h3 className="text-sm font-semibold text-app-text">
+              Proyectos
+            </h3>
+            <p className="mt-1 text-xs text-app-text-muted">
+              Selecciona un proyecto para modificarlo.
+            </p>
           </div>
 
           <div className="space-y-3">
@@ -240,9 +239,9 @@ export function TeacherProjectsPanel(): JSX.Element {
                 <SkeletonCard />
               </>
             ) : visibleProjects.length === 0 ? (
-              <div className="rounded-md border border-dashed border-app-border bg-slate-50/60 px-4 py-10 text-center">
-                <RiFoldersLine className="mx-auto mb-2 text-3xl text-slate-400" />
-                <p className="text-xs font-medium text-slate-500">No se encontraron proyectos</p>
+              <div className="rounded-md border border-dashed border-app-border bg-app-bg-subtle/60 px-4 py-10 text-center">
+                <RiFoldersLine className="mx-auto mb-2 text-3xl text-app-text-muted" />
+                <p className="text-xs font-medium text-app-text-muted">No se encontraron proyectos</p>
               </div>
             ) : (
               visibleProjects.map((project) => {
@@ -351,7 +350,7 @@ export function TeacherProjectsPanel(): JSX.Element {
             </>
           ) : (
             <EmptyState
-              icon={<RiStackFill className="text-4xl text-slate-400" />}
+              icon={<RiStackFill className="text-4xl text-app-text-muted" />}
               title="Selecciona un proyecto o crea uno nuevo"
               description="El detalle aparece aquí con el resumen, los alumnos, el seguimiento y los ajustes. Mientras tanto, mantenemos el lienzo limpio para evitar contexto roto."
               actionLabel="Crear proyecto"

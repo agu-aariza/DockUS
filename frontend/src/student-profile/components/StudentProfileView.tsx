@@ -39,12 +39,12 @@ export function StudentProfileView({
     <div className="space-y-6">
       <SectionCard>
         <div className="flex flex-wrap items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-app-border bg-slate-100 text-sm font-semibold uppercase text-slate-600">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-app-border bg-app-bg-subtle text-sm font-semibold uppercase text-app-text-secondary">
             {initials}
           </div>
 
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 className="text-lg font-semibold text-app-text">
               {student.lastName}, {student.firstName}
             </h2>
             <p className="data-meta">{student.email}</p>

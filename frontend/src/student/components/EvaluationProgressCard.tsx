@@ -16,6 +16,7 @@ import { useState, useEffect, useMemo } from "react";
 
 import { Button } from "../../shared/components/ui/Button";
 import { Alert } from "../../shared/components/ui/Alert";
+import { StatusBadge } from "../../shared/components/ui/StatusBadge";
 import type { BuildRunEntity } from "../../shared/types";
 import { useSession } from "../../shared/session/SessionContext";
 import { useBuildRunStream } from "../hooks/useBuildRunStream";
@@ -82,36 +83,36 @@ export function EvaluationProgressCard({
 
   return (
     <section
-      className="rounded-lg border border-app-border bg-white p-5 shadow-sm"
+      className="rounded-lg border border-app-border bg-app-surface p-5 shadow-sm"
       aria-live="polite"
       aria-busy={isActive}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className="ui-label">
             Evaluación en vivo
           </p>
-          <h3 className="mt-2 text-lg font-semibold text-slate-900">
+          <h3 className="mt-2 text-lg font-semibold text-app-text">
             {isActive
               ? `Fase actual: ${progress.label}`
               : run.status === "SUCCESS"
                 ? "La evaluación ya terminó"
                 : "La evaluación ya no está activa"}
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-app-text-secondary">
             El stream reutiliza el timeline real del builder y cae a polling si la
             conexión SSE no se puede mantener.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-2 rounded-full border border-app-border bg-slate-50 px-3 py-1 text-xs font-semibold uppercase text-slate-600">
+          <span className="inline-flex items-center gap-2 rounded-full border border-app-border bg-app-bg-subtle px-3 py-1 text-xs font-semibold uppercase text-app-text-secondary">
             <span
               className={`h-1.5 w-1.5 rounded-full ${
                 streamState === "streaming"
                   ? "bg-success status-pulse status-pulse-success"
                   : streamState === "polling"
                     ? "bg-warning"
-                    : "bg-slate-400"
+                    : "bg-app-text-muted"
               }`}
               aria-hidden="true"
             />
@@ -126,7 +127,7 @@ export function EvaluationProgressCard({
       </div>
 
       <div
-        className="mt-6 overflow-hidden rounded-full bg-slate-100"
+        className="mt-6 overflow-hidden rounded-full bg-app-bg-subtle"
         role="progressbar"
         aria-valuenow={progressPercent}
         aria-valuemin={0}
@@ -152,10 +153,10 @@ export function EvaluationProgressCard({
                   ? "border-primary bg-primary-subtle status-pulse status-pulse-primary"
                   : reached
                     ? "border-success/30 bg-success-subtle"
-                    : "border-app-border bg-white"
+                    : "border-app-border bg-app-surface"
               }`}
             >
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase text-app-text-muted">
                 {isCurrent ? (
                   <RiLoader4Line
                     className="animate-spin text-primary motion-reduce:animate-none"
@@ -168,7 +169,7 @@ export function EvaluationProgressCard({
                   />
                 ) : (
                   <span
-                    className="h-2 w-2 rounded-full bg-slate-300"
+                    className="h-2 w-2 rounded-full bg-app-text-muted/40"
                     aria-hidden="true"
                   />
                 )}
@@ -176,7 +177,7 @@ export function EvaluationProgressCard({
               </div>
               <div
                 className={`mt-2 text-sm font-medium ${
-                  isCurrent ? "text-primary" : "text-slate-900"
+                  isCurrent ? "text-primary" : "text-app-text"
                 }`}
               >
                 {isCurrent ? "En curso" : reached ? "Completado" : "Pendiente"}
@@ -187,34 +188,34 @@ export function EvaluationProgressCard({
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-app-border bg-white p-4">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
+        <div className="rounded-lg border border-app-border bg-app-surface p-4">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase text-app-text-muted">
             <RiTimeLine />
             Tiempo transcurrido
           </div>
-          <div className="mt-2 text-lg font-semibold text-slate-900">
+          <div className="mt-2 text-lg font-semibold text-app-text">
             {formatDuration(elapsedMs)}
           </div>
         </div>
-        <div className="rounded-lg border border-app-border bg-white p-4">
-          <div className="text-xs font-semibold uppercase text-slate-500">
+        <div className="rounded-lg border border-app-border bg-app-surface p-4">
+          <div className="text-xs font-semibold uppercase text-app-text-muted">
             Referencia personal
           </div>
-          <div className="mt-2 text-lg font-semibold text-slate-900">
+          <div className="mt-2 text-lg font-semibold text-app-text">
             {historicalMedianMs ? formatDuration(historicalMedianMs) : "Sin historial"}
           </div>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
+          <p className="mt-1 text-xs leading-5 text-app-text-muted">
             Mediana de tus últimas evaluaciones completas.
           </p>
         </div>
-        <div className="rounded-lg border border-app-border bg-white p-4">
-          <div className="text-xs font-semibold uppercase text-slate-500">
+        <div className="rounded-lg border border-app-border bg-app-surface p-4">
+          <div className="text-xs font-semibold uppercase text-app-text-muted">
             Estado técnico
           </div>
-          <div className="mt-2 text-lg font-semibold text-slate-900">
+          <div className="mt-2 text-lg font-semibold text-app-text">
             {run.status}
           </div>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
+          <p className="mt-1 text-xs leading-5 text-app-text-muted">
             {streamError
               ? "Estamos manteniendo la sincronización con un modo degradado."
               : "La superficie está leyendo el mismo timeline que consume el panel docente."}
@@ -238,7 +239,7 @@ export function EvaluationProgressCard({
           <div className="flex items-center justify-between">
             <button
               onClick={() => setShowLogs(!showLogs)}
-              className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-950 transition-colors focus-visible:outline-none"
+              className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-app-text-muted hover:text-app-text transition-colors focus-visible:outline-none"
               aria-expanded={showLogs}
             >
               <RiTerminalBoxLine className="text-base" />
@@ -246,9 +247,7 @@ export function EvaluationProgressCard({
               {showLogs ? <RiArrowUpSLine /> : <RiArrowDownSLine />}
             </button>
             {run.status === "FAILED" && (
-              <span className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
-                La ejecución falló: revisa los logs
-              </span>
+              <StatusBadge tone="danger">La ejecución falló: revisa los logs</StatusBadge>
             )}
           </div>
 

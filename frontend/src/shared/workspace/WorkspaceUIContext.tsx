@@ -19,7 +19,7 @@ export interface WorkspaceUIContextValue {
 
 const WorkspaceUIContext = createContext<WorkspaceUIContextValue | null>(null);
 
-const MINIMIZED_STORAGE_KEY = 'dockus_workspace_bar_minimized';
+const MINIMIZED_STORAGE_KEY = 'educodeai_workspace_bar_minimized';
 
 export function WorkspaceUIProvider({ children }: PropsWithChildren): JSX.Element {
   const [isMinimized, setIsMinimizedState] = useState(() => {

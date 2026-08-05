@@ -17,7 +17,7 @@ export function getPasswordStrength(password: string): StrengthLevel {
 }
 
 // Escala de 4 tonos (rojo→naranja→amarillo→verde) deliberadamente fuera del
-// sistema de tokens danger/warning/success (UX-ALTO-01): son 3 estados
+// sistema de tokens danger/warning/success: son 3 estados
 // semánticos, no 4 puntos de un degradado ordenado, y colapsar naranja+amarillo
 // en un único "warning" perdería el nivel intermedio que este medidor existe
 // para mostrar. Único uso de `orange`/`yellow` en todo el frontend.
@@ -52,9 +52,35 @@ export function validateRequired(value: string, label: string): Omit<FieldValida
   return { valid: true, message: '' };
 }
 
-export function validatePassword(value: string): Omit<FieldValidation, 'touched'> {
+/*
+ * Contrato de `RegisterDto` en el backend: 8+ caracteres, una mayúscula, una
+ * minúscula y un dígito O un carácter especial. Estos tres literales existen
+ * para no repetir la regla entre el validador y el checklist de abajo.
+ *
+ * `\W` no incluye el guion bajo, igual que en la expresión del backend.
+ */
+const HAS_UPPER = /[A-Z]/;
+const HAS_LOWER = /[a-z]/;
+const HAS_DIGIT_OR_SPECIAL = /[\d\W]/;
+
+/**
+ * @param requireStrong Aplica la complejidad que exige el backend. Solo se
+ *   activa al crear cuenta: `LoginDto` no tiene regla de complejidad, y
+ *   exigirla al entrar bloquearía cuentas creadas antes de que existiera.
+ */
+export function validatePassword(
+  value: string,
+  requireStrong = false,
+): Omit<FieldValidation, 'touched'> {
   if (!value) return { valid: false, message: 'La contraseña es obligatoria' };
   if (value.length < 8) return { valid: false, message: 'Mínimo 8 caracteres' };
+  if (!requireStrong) return { valid: true, message: '' };
+  if (!HAS_UPPER.test(value) || !HAS_LOWER.test(value)) {
+    return { valid: false, message: 'Combina mayúsculas y minúsculas' };
+  }
+  if (!HAS_DIGIT_OR_SPECIAL.test(value)) {
+    return { valid: false, message: 'Añade un número o un carácter especial' };
+  }
   return { valid: true, message: '' };
 }
 
@@ -74,14 +100,25 @@ export interface PasswordRequirement {
   test: (password: string) => boolean;
 }
 
+/**
+ * El checklist enumera exactamente lo que `validatePassword` exige en modo
+ * registro. Si cambia una regla, cambian las dos: antes el checklist pedía
+ * "al menos un número" mientras el backend aceptaba también un carácter
+ * especial, y el formulario dejaba pasar contraseñas que el servidor
+ * rechazaba con un 400.
+ */
 export const PASSWORD_REQUIREMENTS: PasswordRequirement[] = [
   { id: 'length', label: 'Mínimo 8 caracteres', test: (pw) => pw.length >= 8 },
   {
     id: 'case',
     label: 'Mayúsculas y minúsculas',
-    test: (pw) => /[a-z]/.test(pw) && /[A-Z]/.test(pw),
+    test: (pw) => HAS_LOWER.test(pw) && HAS_UPPER.test(pw),
   },
-  { id: 'digit', label: 'Al menos un número', test: (pw) => /\d/.test(pw) },
+  {
+    id: 'digit',
+    label: 'Un número o carácter especial',
+    test: (pw) => HAS_DIGIT_OR_SPECIAL.test(pw),
+  },
 ];
 
 export const EMPTY_VALIDATION: Record<string, FieldValidation> = {

@@ -32,7 +32,7 @@ function displayTitle(title: string, tone: "finding" | "strength"): string {
     return title;
   }
 
-  return title.replace(/^\s*buena\s+pr[aá]ctica\s*:\s*/iu, "").trim() || title;
+  return title.replace(/^\s*buena\s+pr[aá]ctica\s*:?\s*/iu, "").trim() || title;
 }
 
 export function TechnicalFindingCard({

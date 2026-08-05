@@ -1,43 +1,30 @@
-# Componentes del Módulo de Proyectos (projects/components)
+# Componentes de detalle de proyecto (`projects/components/`)
 
-> **Resumen rápido:** Componentes visuales de la vista de profesor para edición de rúbricas, cabeceras de proyectos y cuadros de notas.
-
----
-
-## Propósito y Responsabilidades
-Modularizar la interfaz de gestión de prácticas docentes.
-- **Edición de Rúbricas:** Editor interactivo de criterios de evaluación (`RubricEditor.tsx`).
-- **Visualización:** Paneles secundarios (`ProjectSubPanels.tsx`), vista general (`ProjectOverview.tsx`) y subcarpeta de progreso (`progress/`).
+> **Resumen rápido:** Las piezas visuales que `TeacherProjectsPanel.tsx` compone para mostrar un proyecto concreto: cabecera, resumen, rúbrica, suite de tests y profesores asignados.
 
 ---
 
-## Estructura Interna
+## Los siete ficheros
 
-```text
-.
-├── progress/                 # Componentes de tablas de notas, gráficos y modales
-├── ProjectDetailHeader.tsx   # Encabezado detallado con acciones de proyecto
-├── ProjectListItem.tsx       # Tarjeta de elemento de lista de proyecto
-├── ProjectOverview.tsx       # Resumen general del proyecto
-├── ProjectSubPanels.tsx      # Subpaneles de configuración y detalles
-├── ProjectSuiteSection.tsx   # Sección de suites de pruebas asociadas
-├── ProjectTeachersSection.tsx# Sección de profesores asignados al proyecto
-└── RubricEditor.tsx          # Editor interactivo de rúbricas ponderadas
-```
+| Fichero | Qué muestra |
+| --- | --- |
+| `ProjectListItem.tsx` | Fila de la lista de proyectos (vista general del panel). |
+| `ProjectDetailHeader.tsx` | Cabecera del panel de detalle: título, estado, fechas, acciones rápidas. |
+| `ProjectOverview.tsx` | Resumen del proyecto seleccionado — punto de entrada del panel de detalle. |
+| `ProjectSubPanels.tsx` | Contenedor de pestañas/secciones secundarias del detalle. |
+| `RubricEditor.tsx` | Editor interactivo de los criterios de rúbrica que se envían al LLM evaluador. |
+| `ProjectSuiteSection.tsx` | Subida y gestión de la suite de tests del profesor (`TEACHER_TESTS`). |
+| `ProjectTeachersSection.tsx` | Añadir/quitar profesores con permiso de administración sobre el proyecto (`POST/DELETE /projects/:id/teachers/:teacherId`). |
 
----
+`progress/` (subcarpeta) es un grupo separado y más grande, centrado en el libro de notas — ver su propio README.
 
-## Flujo de Trabajo / Arquitectura
+## Cómo trabajar aquí
 
-```text
-[ TeacherProjectsPanel ] ──> [ ProjectOverview ] ──> [ RubricEditor + ProjectSubPanels ]
-```
-
----
-
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests de componentes de proyectos:
 ```bash
 npm run test -- src/projects/components
 ```
+
+## Ver también
+
+- [`progress/README.md`](progress/README.md) — libro de notas y gráficos de progreso.
+- [`../README.md`](../README.md) — visión general del panel de proyectos.

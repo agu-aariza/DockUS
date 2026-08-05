@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (PedagogicalReport).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (PedagogicalReport).
  *
  * @module PedagogicalReport
  */

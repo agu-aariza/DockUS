@@ -5,3 +5,6 @@ describe('Vitest Setup', () => {
     expect(true).toBe(true);
   });
 });
+/**
+ * Pruebas de la configuración común que prepara el entorno de tests del frontend.
+ */

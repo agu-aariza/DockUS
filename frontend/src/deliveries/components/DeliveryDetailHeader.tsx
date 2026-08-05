@@ -28,7 +28,7 @@ export function DeliveryDetailHeader({
   onNavigateRuntime: () => void;
 }) {
   return (
-    <article className="rounded-lg border border-app-border bg-white p-6">
+    <article className="rounded-lg border border-app-border bg-app-surface p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
           <div className="flex flex-wrap items-center gap-2">
@@ -36,18 +36,18 @@ export function DeliveryDetailHeader({
             <StatusBadge tone={selectedDelivery.isLate ? "danger" : "success"}>
               {selectedDelivery.isLate ? "Entrega Tardía" : "A Tiempo"}
             </StatusBadge>
-            <span className="rounded-full border border-app-border bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-500">
+            <span className="inline-flex items-center rounded border border-app-border bg-app-bg-subtle px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-app-text-secondary">
               Versión {selectedDelivery.version}
             </span>
           </div>
 
-          <h3 className="mt-4 text-base font-semibold text-slate-900">
+          <h3 className="mt-4 text-base font-semibold text-app-text">
             {selectedDelivery.studentName}
           </h3>
-          <p className="mt-1 text-sm text-slate-500">
-            {selectedDelivery.projectTitle} · <span className="text-slate-400">{selectedDelivery.studentEmail}</span>
+          <p className="mt-1 text-sm text-app-text-secondary">
+            {selectedDelivery.projectTitle} · <span className="data-meta">{selectedDelivery.studentEmail}</span>
           </p>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-600">
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-app-text-secondary">
             {selectedDelivery.notes || "Sin notas adicionales del alumno para esta entrega."}
           </p>
         </div>

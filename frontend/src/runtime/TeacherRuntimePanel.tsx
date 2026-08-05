@@ -212,7 +212,6 @@ export function TeacherRuntimePanel(): JSX.Element {
             ]}
             activeTab={activeTab}
             onTabChange={(id) => setActiveTab(id as RuntimeTab)}
-            variant="primary"
           />
         }
       />
@@ -225,14 +224,14 @@ export function TeacherRuntimePanel(): JSX.Element {
 
       {activeTab === "control" ? (
         <section className="card">
-          <div className="panel-header bg-slate-50">
+          <div className="panel-header bg-app-bg-subtle">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <RiPlayLine className="text-lg" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-slate-900">Evaluación Integral</h2>
-                <p className="text-sm text-slate-500">Ejecución de código y evaluación por LLM en tiempo real.</p>
+                <h2 className="text-base font-semibold text-app-text">Evaluación Integral</h2>
+                <p className="text-sm text-app-text-muted">Ejecución de código y evaluación por LLM en tiempo real.</p>
               </div>
             </div>
             <StatusBadge tone="success">READY</StatusBadge>
@@ -278,32 +277,32 @@ export function TeacherRuntimePanel(): JSX.Element {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <div className="rounded-lg border border-app-border bg-slate-50 p-5">
+              <div className="rounded-lg border border-app-border bg-app-bg-subtle p-5">
                 <div className="eyebrow mb-2">Contexto Académico</div>
-                <div className="text-base font-semibold text-slate-900 mb-2">
+                <div className="text-base font-semibold text-app-text mb-2">
                   {selectedProject?.title ?? "Sin proyecto seleccionado"}
                 </div>
-                <p className="text-sm leading-relaxed text-slate-500">
+                <p className="text-sm leading-relaxed text-app-text-muted">
                   {selectedProject?.contextAcademico ??
                     "El contexto académico del proyecto define los objetivos y restricciones de la ejecución."}
                 </p>
               </div>
 
-              <div className="rounded-lg border border-app-border bg-slate-50 p-5">
+              <div className="rounded-lg border border-app-border bg-app-bg-subtle p-5">
                 <div className="eyebrow mb-3">Resumen de Destino</div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-500">Modo Ejecución:</span>
+                    <span className="font-medium text-app-text-muted">Modo Ejecución:</span>
                     <span className="font-semibold text-success-600">Efímero / Aislado</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-500">Alumno:</span>
-                    <span className="font-semibold text-slate-900 truncate max-w-[200px]">
+                    <span className="font-medium text-app-text-muted">Alumno:</span>
+                    <span className="font-semibold text-app-text truncate max-w-[200px]">
                       {formatStudentName(selectedAssignment?.studentName, selectedAssignment?.studentEmail)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-500">Entrega:</span>
+                    <span className="font-medium text-app-text-muted">Entrega:</span>
                     <span className="font-semibold text-accent">
                       {selectedDelivery ? `v${selectedDelivery.version} (${selectedDelivery.status})` : "n/a"}
                     </span>

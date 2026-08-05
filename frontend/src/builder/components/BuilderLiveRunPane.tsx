@@ -103,7 +103,7 @@ export function BuilderLiveRunPane({
   const [activeTab, setActiveTab] = useState<LiveRunTab>("live");
   // liveEvents crece con cada frame SSE (mergeEvents reordena el array
   // entero); sin memoizar, cada render no relacionado con la consola volvía
-  // a recorrerlo completo dos veces (FE-005).
+  // a recorrerlo completo dos veces.
   const consoleOutput = useMemo(
     () => buildConsoleOutput(liveEvents),
     [liveEvents],

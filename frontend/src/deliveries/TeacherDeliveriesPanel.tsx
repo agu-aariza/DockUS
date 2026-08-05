@@ -68,7 +68,7 @@ export function TeacherDeliveriesPanel(): JSX.Element {
           icon={<RiInboxArchiveLine />}
           badge={panel.dc.projects.length.toString()}
         />
-        <section className="rounded-lg border border-app-border bg-white p-6">
+        <section className="rounded-lg border border-app-border bg-app-surface p-6">
           <ProjectSelectionHub
             projects={hubProjects}
             onSelect={(id, label) => panel.setProject(id, label)}
@@ -117,6 +117,7 @@ export function TeacherDeliveriesPanel(): JSX.Element {
             panel.setSearchParams(next, { replace: true });
           }}
           onAssignmentSelect={(id, label) => panel.setAssignment(id, label)}
+          onAssignmentClear={panel.clearAssignmentFilter}
           onDeliverySearchChange={panel.setDeliverySearch}
           onQuickFilterChange={panel.setQuickFilterKey}
           openDelivery={panel.openDelivery}
@@ -127,7 +128,7 @@ export function TeacherDeliveriesPanel(): JSX.Element {
         <section className="space-y-6">
           {!panel.selectedDelivery ? (
             <EmptyState
-              icon={<RiInboxArchiveLine className="text-3xl text-slate-400" />}
+              icon={<RiInboxArchiveLine className="text-3xl text-app-text-muted" />}
               title="Terminal de Auditoría de Entregas"
               description="Seleccione un registro de la cola operativa para iniciar el proceso de revisión técnica y académica."
               actionLabel={panel.visibleDeliveries[0] ? "Empezar con la primera entrega" : undefined}

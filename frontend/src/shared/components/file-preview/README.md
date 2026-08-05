@@ -1,45 +1,35 @@
-# Componentes de Previsualización de Código (shared/components/file-preview)
+# Previsualización de código (`shared/components/file-preview/`)
 
-> **Resumen rápido:** Visor de código fuente con resaltado de sintaxis, explorador de archivos en árbol, asignación de iconos y panel de notas.
-
----
-
-## Propósito y Responsabilidades
-Permitir la inspección visual de los archivos de código subidos en las entregas sin salir de la plataforma.
-- **Visor de Código:** `CodeViewer.tsx` con resaltado Prism (`filePreviewTheme.ts`).
-- **Explorador de Archivos:** `FileExplorer.tsx` e iconos dinámicos según extensión (`fileIcon.tsx`).
-- **Panel de Calificación:** `GradingPanel.tsx` para anotar comentarios y notas directamente sobre el código.
+> **Resumen rápido:** El visor de código fuente con resaltado de sintaxis y explorador de ficheros en árbol, usado tanto para que un profesor revise el código de una entrega como para que un alumno confirme qué subió antes de enviarlo.
 
 ---
 
-## Estructura Interna
+## Estructura interna
 
 ```text
-.
-├── CodeViewer.tsx        # Componente visor de código con numeración de líneas
-├── FileExplorer.tsx      # Árbol interactivo de archivos y carpetas del proyecto
-├── FilePreviewShell.tsx  # Layout contenedor del visor y explorador
-├── fileIcon.tsx          # Asignador de iconos según extensión (.js, .py, .ts, .json, etc.)
-├── filePreviewTheme.ts   # Tema y estilos para el resaltado de código Prism
-├── GradingPanel.tsx      # Panel lateral de calificación y feedback de código
-└── useFilePreview.ts     # Custom hook para el control de archivos seleccionados
+file-preview/
+├── FilePreviewShell.tsx    # Layout contenedor: compone explorador + visor (+ panel de calificación si aplica)
+├── FileExplorer.tsx          # Árbol interactivo de carpetas/ficheros
+├── fileIcon.tsx                 # Icono según extensión (.js, .py, .ts, .json...)
+├── CodeViewer.tsx                  # Visor con numeración de línea, resaltado Prism
+├── filePreviewTheme.ts               # Tema de resaltado de sintaxis (Prism), coherente con claro/oscuro
+├── GradingPanel.tsx                    # Panel lateral de calificación/comentarios sobre el código (solo profesor)
+└── useFilePreview.ts                     # Hook de estado: fichero seleccionado, contenido cargado
 ```
 
----
+## Dos consumidores con necesidades distintas
 
-## Flujo de Trabajo / Arquitectura
+- **Profesor** (`deliveries/`, `projects/components/progress/PreviewOrGradingModal.tsx`): usa `FilePreviewShell` con `GradingPanel.tsx` habilitado, para anotar y calificar sin salir del visor.
+- **Alumno** (`student/components/FileTreePreview.tsx`): usa una vista más ligera, solo para confirmar qué ficheros contiene el ZIP antes de enviarlo — sin `GradingPanel.tsx`.
 
-```text
-[ Delivery Preview Modal ] ──> [ FilePreviewShell ]
-                                       ├──> [ FileExplorer (fileIcon) ]
-                                       └──> [ CodeViewer (filePreviewTheme) + GradingPanel ]
-```
+`GradingPanel.tsx` es, por tanto, opcional en la composición — no asumas que siempre está presente al modificar `FilePreviewShell.tsx`.
 
----
+## Cómo trabajar aquí
 
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests del previsualizador de código:
 ```bash
 npm run test -- src/shared/components/file-preview
 ```
+
+## Ver también
+
+- [`../../../deliveries/README.md`](../../../deliveries/README.md), [`../../../student/README.md`](../../../student/README.md) — los dos consumidores principales.

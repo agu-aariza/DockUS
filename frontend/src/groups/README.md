@@ -1,38 +1,36 @@
-# Módulo de Gestión de Grupos Académicos (src/groups)
+# Grupos académicos — vista de profesor (`src/groups/`)
 
-> **Resumen rápido:** Paneles de administración de grupos de estudiantes, matrículas y listados docentes para profesores.
-
----
-
-## Propósito y Responsabilidades
-Permitir a los profesores organizar sus alumnos en grupos de clase.
-- **Gestión de Grupos:** Creación y modificación de grupos docentes.
-- **Inscripción de Alumnos:** Asignación y desasignación de estudiantes a grupos.
+> **Resumen rápido:** Alta/edición de grupos de curso y matriculación de alumnos, consumiendo `/groups` del backend con React Query (`useGroupManagement.ts`).
 
 ---
 
-## Estructura Interna
+## Estructura interna
 
 ```text
-.
-├── hooks/                      # Custom hooks para la gestión de datos de grupos (useGroupManagement)
-└── pages/
-    └── TeacherGroupsPanel.tsx  # Vista principal de administración de grupos
+groups/
+├── pages/TeacherGroupsPanel.tsx   # Página principal: lista de grupos + acciones
+├── components/
+│   ├── GroupSelector.tsx            # Selector de grupo activo, reutilizado por otros paneles (proyectos, progreso)
+│   ├── GroupRoster.tsx                # Lista de alumnos matriculados en el grupo seleccionado
+│   └── GroupDialogs.tsx                 # Modales: crear/editar grupo, matriculación masiva, revocar matrícula
+├── hooks/useGroupManagement.ts            # Queries/mutaciones React Query sobre /groups
+└── groupsSelection.ts                       # Helpers puros de selección/filtrado de grupos (sin estado)
 ```
 
----
+## Qué hay detrás de "matricular alumnos" en la UI
 
-## Flujo de Trabajo / Arquitectura
+`GroupDialogs.tsx` (matriculación masiva) llama a `POST /groups/:id/enrollments/bulk` — en el backend, eso dispara un evento de dominio (`GroupEnrollmentEventsService`) que `projects/assignments/` escucha para crear automáticamente las asignaciones de proyecto correspondientes. El frontend no ve ni gestiona ese paso intermedio: solo matricula, el backend se encarga del resto. Ver [`../../../backend/src/modules/academic/README.md`](../../../backend/src/modules/academic/README.md) si necesitas el detalle completo.
 
-```text
-[ TeacherGroupsPanel ] ──> [ useGroupManagement ] ──> [ API HTTP /groups ]
-```
+## Dónde más se usa `GroupSelector`
 
----
+No es exclusivo de este panel — se reutiliza en `projects/components/progress/ProjectSelector.tsx` y en flujos de configuración de proyecto donde hace falta elegir a qué grupo se asigna una práctica. Si cambias su forma de props, revisa esos otros consumidores.
 
-## Cómo Usar / Probar este Módulo
+## Cómo trabajar aquí
 
-### Ejecutar tests del módulo de grupos:
 ```bash
 npm run test -- src/groups
 ```
+
+## Ver también
+
+- [`../projects/README.md`](../projects/README.md) — dónde se asignan proyectos a los grupos gestionados aquí.

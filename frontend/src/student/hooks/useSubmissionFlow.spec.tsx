@@ -35,7 +35,7 @@ function buildAssignment(
     maxDeliveriesPerStudent: 3,
     sourceGroupIds: [],
     studentId: "student-1",
-    studentEmail: "alumno@dockus.local",
+    studentEmail: "alumno@educodeai.local",
     studentName: "Alumno Uno",
     assignedById: "teacher-1",
     assignedAt: "2026-01-01T00:00:00.000Z",

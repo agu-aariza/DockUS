@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (TerminalViewer).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (TerminalViewer).
  *
  * @module TerminalViewer
  */

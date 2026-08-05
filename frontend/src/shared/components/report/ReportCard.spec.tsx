@@ -44,3 +44,6 @@ describe('ReportCard', () => {
     expect(card.className).toContain('bg-white');
   });
 });
+/**
+ * Pruebas de la tarjeta que agrupa el resumen de un informe.
+ */

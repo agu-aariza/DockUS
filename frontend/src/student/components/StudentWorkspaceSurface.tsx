@@ -33,10 +33,10 @@ interface StudentKeyValueListProps {
 }
 
 const SURFACE_TONE: Record<NonNullable<StudentSurfaceProps["tone"]>, string> = {
-  default: "border-app-border bg-white",
+  default: "border-app-border bg-app-surface",
   accent: "border-primary/20 bg-primary-subtle",
-  subtle: "border-app-border bg-slate-50",
-  warm: "border-warning-200 bg-warning-50",
+  subtle: "border-app-border bg-app-bg-subtle",
+  warm: "border-warning-200 bg-warning-50 dark:border-warning-800 dark:bg-warning-950",
 };
 
 export function StudentSurface({
@@ -70,16 +70,16 @@ export function StudentSurfaceHeader({
     >
       <div className="space-y-2">
         {eyebrow ? (
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="text-xs font-semibold uppercase tracking-wide text-app-text-muted">
             {eyebrow}
           </div>
         ) : null}
         <div className="flex flex-wrap items-center gap-3">
-          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+          <h3 className="text-base font-semibold text-app-text">{title}</h3>
           {badge}
         </div>
         {description ? (
-          <p className="max-w-3xl text-sm leading-6 text-slate-500">
+          <p className="max-w-3xl text-sm leading-6 text-app-text-secondary">
             {description}
           </p>
         ) : null}
@@ -104,12 +104,12 @@ export function StudentKeyValueList({
       {items.map((item) => (
         <div
           key={item.label}
-          className="rounded-lg border border-app-border bg-white px-4 py-3"
+          className="rounded-lg border border-app-border bg-app-surface px-4 py-3"
         >
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="text-xs font-semibold uppercase tracking-wide text-app-text-muted">
             {item.label}
           </div>
-          <div className="mt-2 text-sm font-medium text-slate-900">
+          <div className="mt-2 text-sm font-medium text-app-text">
             {item.value}
           </div>
         </div>

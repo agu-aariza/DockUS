@@ -45,7 +45,7 @@ export function SubmissionSuccess({ flow, onNavigate }: Props) {
           title={`Versión v${createdVersion ?? "?"} enviada correctamente`}
           description={`Tu archivo ${file?.name ?? ""} ya forma parte del historial de la práctica. Ahora puedes dejar lanzada la evaluación técnica o volver al workspace para seguirla después.`}
           badge={
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success-subtle px-3 py-1 text-xs font-semibold text-success-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success-subtle px-3 py-1 text-xs font-semibold text-success-700 dark:text-success-400">
               <RiCheckboxCircleLine aria-hidden="true" />
               Entrega confirmada
             </span>
@@ -81,21 +81,21 @@ export function SubmissionSuccess({ flow, onNavigate }: Props) {
           <StudentSurfaceHeader
             eyebrow="Siguiente decisión"
             title="¿Quieres lanzar la evaluación automática ahora?"
-            description="Si la ejecutas ahora, DockUS analizará el código, intentará construirlo y te devolverá un informe técnico con evidencia y coaching para la siguiente versión."
+            description="Si la ejecutas ahora, EduCodeAI analizará el código, intentará construirlo y te devolverá un informe técnico con evidencia y coaching para la siguiente versión."
           />
 
           {buildLaunched ? (
             <div className="mt-6 space-y-4">
-              <div className="rounded-lg border border-success-200 bg-success-50 p-5">
+              <div className="rounded-lg border border-success-200 bg-success-50 p-5 dark:border-success-800 dark:bg-success-950">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white text-success-600 shadow-sm">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-app-surface text-success-600 shadow-sm dark:text-success-400">
                     <RiCheckboxCircleLine className="text-xl" />
                   </div>
                   <div>
-                    <div className="font-semibold text-success-900">
+                    <div className="font-semibold text-success-900 dark:text-success-300">
                       Evaluación ya lanzada
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-success-800">
+                    <p className="mt-2 text-sm leading-6 text-success-800 dark:text-success-400">
                       El run técnico ya está en marcha. Puedes seguirlo desde informes o volver al resumen para esperar el resultado.
                     </p>
                   </div>
@@ -111,14 +111,14 @@ export function SubmissionSuccess({ flow, onNavigate }: Props) {
             </div>
           ) : (
             <div className="mt-6 space-y-4">
-              <div className="rounded-lg border border-app-border bg-slate-50 p-5 text-sm leading-6 text-slate-500">
+              <div className="rounded-lg border border-app-border bg-app-bg-subtle p-5 text-sm leading-6 text-app-text-secondary">
                 Lanzar el builder ahora te ahorra contexto perdido: el siguiente
                 informe quedará asociado a esta versión y podrás usarlo para reenviar
                 con criterio si aún te quedan intentos.
               </div>
 
               {buildError ? (
-                <div className="rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger-800">
+                <div className="rounded-lg border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger-800 dark:text-danger-300">
                   {buildError}
                 </div>
               ) : null}

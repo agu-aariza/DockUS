@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (CodePreviewModal).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (CodePreviewModal).
  *
  * @module CodePreviewModal
  */
@@ -78,7 +78,7 @@ export function CodePreviewModal({
       </div>
       <div className="flex items-center gap-4">
         <span>Lines: {selectedFile?.content.split("\n").length ?? 0}</span>
-        <span className="uppercase text-primary/60">DockUS Engine v1.0</span>
+        <span className="uppercase text-primary/60">EduCodeAI Engine v1.0</span>
       </div>
     </footer>
   );

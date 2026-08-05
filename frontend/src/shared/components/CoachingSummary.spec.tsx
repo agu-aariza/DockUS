@@ -22,7 +22,7 @@ function finding(
 
 const rubricFinding = finding({
   title: 'Incumplimiento parcial de la suite de pruebas',
-  file: '.dockus/teacher-tests/test_main.c',
+  file: '.educodeai/teacher-tests/test_main.c',
   line: 1,
 });
 

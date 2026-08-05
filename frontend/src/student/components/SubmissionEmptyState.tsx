@@ -30,7 +30,7 @@ export function SubmissionEmptyState({ onNavigate }: Props) {
         />
       </StudentSurface>
       <EmptyState
-        icon={<RiFolderOpenLine className="text-4xl text-slate-400/40" />}
+        icon={<RiFolderOpenLine className="text-4xl text-app-text-muted/40" />}
         title="Sin convocatorias activas"
         description="No hay ninguna práctica disponible para subir en este momento. Revisa el resumen o espera a nuevas asignaciones."
       />

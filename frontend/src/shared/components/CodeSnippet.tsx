@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (CodeSnippet).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (CodeSnippet).
  *
  * @module CodeSnippet
  */

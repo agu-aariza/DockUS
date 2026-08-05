@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (Tabs).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (Tabs).
  *
  * @module Tabs
  */
@@ -43,25 +43,25 @@ export function Tabs({
               className={`group relative inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 ${
                 isActive
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                  : 'border-transparent text-app-text-muted hover:border-app-border hover:text-app-text-secondary'
               } ${tab.disabled ? 'cursor-not-allowed opacity-50' : ''}`}
               aria-current={isActive ? 'page' : undefined}
             >
               {Icon && (
-                <span className={isActive ? 'text-primary' : 'text-slate-400 group-hover:text-slate-500'}>
+                <span className={isActive ? 'text-primary' : 'text-app-text-muted group-hover:text-app-text-secondary'}>
                   {typeof Icon === 'function' ? <Icon className="text-base" /> : Icon}
                 </span>
               )}
               {tab.label}
               {typeof tab.badge === 'number' && tab.badge > 0 && (
                 <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                  isActive ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+                  isActive ? 'bg-primary text-white' : 'bg-app-bg-subtle text-app-text-secondary'
                 }`}>
                   {tab.badge}
                 </span>
               )}
               {tab.badge === true && (
-                <span className={`ml-1 h-1.5 w-1.5 rounded-full ${isActive ? 'bg-primary' : 'bg-slate-400'}`} aria-hidden="true" />
+                <span className={`ml-1 h-1.5 w-1.5 rounded-full ${isActive ? 'bg-primary' : 'bg-app-text-muted'}`} aria-hidden="true" />
               )}
             </button>
           );

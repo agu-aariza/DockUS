@@ -34,9 +34,8 @@ const now = () => new Date().toISOString();
 /**
  * Toda la lógica de `LlmConfigPanel`: carga inicial, edición del formulario
  * por proveedor, guardado, borrado de clave y prueba de conexión en vivo.
- * Extraído para que el componente sea solo composición de vista (FE-ALTO-03),
- * siguiendo el mismo patrón panel+hook que `useDeliveryManagement`/
- * `useRuntimeManagement`.
+ * Mantiene el componente como composición de vista y concentra el estado
+ * asíncrono en un hook reutilizable.
  */
 export function useLlmConfigManagement() {
   const { pushToast } = useToast();

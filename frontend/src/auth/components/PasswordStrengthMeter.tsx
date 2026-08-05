@@ -26,24 +26,26 @@ export function PasswordStrengthMeter({ strength, password }: PasswordStrengthMe
             className={`h-1 flex-1 rounded-full transition-all duration-300 ${
               strength >= level
                 ? `${STRENGTH_CONFIG[level].barColor} strength-bar-segment active`
-                : 'bg-slate-200 strength-bar-segment'
+                : 'bg-app-border strength-bar-segment'
             }`}
           />
         ))}
       </div>
       {strength > 0 && (
-        <p className={`text-[10px] font-semibold ${STRENGTH_CONFIG[strength].color} transition-colors duration-300`}>
+        <p className={`text-[11px] font-semibold ${STRENGTH_CONFIG[strength].color} transition-colors duration-300`}>
           {STRENGTH_CONFIG[strength].label}
         </p>
       )}
-      <ul className="pt-1 space-y-1">
+      {/* En fila, no apilados: tres líneas sueltas empujaban el formulario de
+          registro por debajo del pliegue en pantallas de portátil. */}
+      <ul className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5">
         {PASSWORD_REQUIREMENTS.map((req) => {
           const met = req.test(password);
           return (
             <li
               key={req.id}
-              className={`flex items-center gap-1.5 text-[10px] font-medium transition-colors duration-200 ${
-                met ? 'text-success-600' : 'text-slate-400'
+              className={`flex items-center gap-1 whitespace-nowrap text-[11px] font-medium transition-colors duration-200 ${
+                met ? 'text-success' : 'text-app-text-muted'
               }`}
             >
               {met

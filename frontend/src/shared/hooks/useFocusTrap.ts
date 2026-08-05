@@ -5,7 +5,7 @@
  */
 
 /**
- * Atrapa el foco dentro de un diálogo modal mientras está abierto (UX-MED-01).
+ * Atrapa el foco dentro de un diálogo modal mientras está abierto.
  *
  * Sin esto, Tab podía sacar el foco de teclado del modal hacia el fondo de la
  * página mientras el backdrop seguía bloqueando la interacción visual —un

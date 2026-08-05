@@ -164,19 +164,20 @@ export function ProviderConfigForm({
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label htmlFor="llm-provider-region" className="label-text">Región AWS</label>
-              <input
-                id="llm-provider-region"
-                type="text"
-                value={activeConfig.region ?? ""}
-                onChange={(event) => onInputChange("region", event.target.value)}
-                placeholder="us-east-1"
-                disabled={selectedProvider !== "bedrock"}
-                className="input-field"
-              />
-            </div>
+          <div className={`grid gap-4 ${isAws ? "sm:grid-cols-2" : ""}`}>
+            {isAws && (
+              <div className="space-y-1.5">
+                <label htmlFor="llm-provider-region" className="label-text">Región AWS</label>
+                <input
+                  id="llm-provider-region"
+                  type="text"
+                  value={activeConfig.region ?? ""}
+                  onChange={(event) => onInputChange("region", event.target.value)}
+                  placeholder="us-east-1"
+                  className="input-field"
+                />
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label className="label-text">

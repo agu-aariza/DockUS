@@ -23,7 +23,7 @@ describe("useStudentWorkspaceData", () => {
     vi.mocked(assignmentsApi.listMine).mockResolvedValue([]);
   });
 
-  it("HIGH-09: fetches the latest run per delivery with a single batch call, not one request per delivery", async () => {
+  it("fetches the latest run per delivery with a single batch call, not one request per delivery", async () => {
     const deliveries = Array.from({ length: 12 }, (_, i) => ({
       id: `delivery-${i}`,
     })) as any;
@@ -63,3 +63,6 @@ describe("useStudentWorkspaceData", () => {
     expect(result.current.error).toBeNull();
   });
 });
+/**
+ * Pruebas de agregación de datos del espacio de trabajo del alumno.
+ */

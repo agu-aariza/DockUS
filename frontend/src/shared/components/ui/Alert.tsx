@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (Alert).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (Alert).
  *
  * @module Alert
  */

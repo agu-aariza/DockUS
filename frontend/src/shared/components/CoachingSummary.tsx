@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (CoachingSummary).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (CoachingSummary).
  *
  * @module CoachingSummary
  */

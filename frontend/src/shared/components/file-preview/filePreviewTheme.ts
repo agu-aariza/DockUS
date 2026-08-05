@@ -51,7 +51,7 @@ export const EXPLORER_THEME: Record<FilePreviewTheme, ExplorerThemeTokens> = {
       "mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500",
     loader: "animate-spin text-xl text-primary/80 motion-reduce:animate-none",
     mutedText: "text-xs font-medium text-slate-500",
-    itemActive: "bg-primary/10 text-primary-300 ring-1 ring-primary/20",
+    itemActive: "bg-primary/15 text-primary ring-1 ring-primary/25",
     itemInactive: "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200",
   },
   light: {

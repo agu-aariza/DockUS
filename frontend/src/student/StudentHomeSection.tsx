@@ -23,6 +23,7 @@ import type { StudentWorkflowState } from "../shared/types";
 import { MetricCard } from "../shared/components/MetricCard";
 import { Skeleton } from "../shared/components/Skeleton";
 import { Button } from "../shared/components/ui/Button";
+import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { StudentKeyValueList, StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
@@ -67,45 +68,45 @@ function formatOutcome(outcome: ReturnType<typeof resolveStudentRunOutcome>): {
       return {
         label: "Apto",
         className:
-          "border-success-200 bg-success-50/70 text-success-700 font-semibold",
+          "border-success-200 bg-success-50/70 text-success-700 font-semibold dark:border-success-800 dark:bg-success-950/70 dark:text-success-400",
       };
     case "FAIL":
       return {
         label: "No apto",
-        className: "border-danger/30 bg-danger-subtle/70 text-rose-700 font-semibold",
+        className: "border-danger/30 bg-danger-subtle/70 text-danger-700 font-semibold dark:text-danger-400",
       };
     case "PARTIAL":
       return {
         label: "Parcial",
-        className: "border-warning-200 bg-warning-50/70 text-warning-700 font-semibold",
+        className: "border-warning-200 bg-warning-50/70 text-warning-700 font-semibold dark:border-warning-800 dark:bg-warning-950/70 dark:text-warning-400",
       };
     case "UNKNOWN":
       return {
         label: "Sin resolver",
-        className: "border-app-border/30 bg-slate-50 text-slate-500 font-semibold",
+        className: "border-app-border/30 bg-app-bg-subtle text-app-text-muted font-semibold",
       };
     default:
       return {
         label: "Sin run",
-        className: "border-app-border/20 bg-slate-50/80 text-slate-500/80",
+        className: "border-app-border/20 bg-app-bg-subtle/80 text-app-text-muted/80",
       };
   }
 }
 
 function gradeColor(grade: number): string {
-  if (grade >= 9) return "text-success-700";
-  if (grade >= 5) return "text-success-600";
-  return "text-rose-700";
+  if (grade >= 9) return "text-success-700 dark:text-success-400";
+  if (grade >= 5) return "text-success-600 dark:text-success-500";
+  return "text-danger-700 dark:text-danger-400";
 }
 
 function timelineStyle(state: string): string {
   switch (state) {
     case "late":
-      return "border-danger/30 bg-danger-subtle/70 text-rose-700 font-semibold";
+      return "border-danger/30 bg-danger-subtle/70 text-danger-700 font-semibold dark:text-danger-400";
     case "upcoming":
       return "border-primary/20 bg-primary/5 text-primary font-semibold";
     default:
-      return "border-success-100 bg-success-50/70 text-success-700 font-semibold";
+      return "border-success-100 bg-success-50/70 text-success-700 font-semibold dark:border-success-800 dark:bg-success-950/70 dark:text-success-400";
   }
 }
 
@@ -181,7 +182,7 @@ export function StudentHomeSection({
         aria-busy="true"
         aria-label="Cargando tu resumen"
       >
-        <div className="rounded-lg border border-app-border bg-white p-8 shadow-sm">
+        <div className="rounded-lg border border-app-border bg-app-surface p-8 shadow-sm">
           <Skeleton type="text" className="h-5 w-28" />
           <Skeleton type="text" className="mt-5 h-12 w-3/4" />
           <Skeleton type="text" className="mt-4 h-4 w-full" />
@@ -191,7 +192,7 @@ export function StudentHomeSection({
           {[1, 2, 3].map((index) => (
             <div
               key={index}
-              className="rounded-lg border border-app-border bg-white p-6 shadow-sm"
+              className="rounded-lg border border-app-border bg-app-surface p-6 shadow-sm"
             >
               <Skeleton type="text" className="h-4 w-28" />
               <Skeleton type="text" className="mt-4 h-8 w-2/3" />
@@ -218,15 +219,13 @@ export function StudentHomeSection({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="eyebrow text-primary">Qué te toca hacer ahora</div>
-                <div
-                  className={`mt-4 inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${workflow.badgeClassName}`}
-                >
+                <StatusBadge tone={workflow.tone} className="mt-4">
                   {workflow.label}
-                </div>
-                <h3 className="mt-4 text-4xl font-semibold text-slate-900 sm:text-5xl">
+                </StatusBadge>
+                <h3 className="mt-4 font-display text-4xl leading-tight text-app-text sm:text-5xl">
                   {hasAssignments ? HEADLINE_MAP[workflowState] : "Aún no tienes proyectos"}
                 </h3>
-                <p className="mt-4 max-w-3xl text-base leading-8 text-slate-500">
+                <p className="mt-4 max-w-3xl text-base leading-8 text-app-text-secondary">
                   {hasAssignments
                     ? workflow.description
                     : "Cuando tu profesor te asigne una práctica, desde aquí verás el estado real de tus entregas, el informe técnico y el siguiente paso recomendado."}
@@ -234,12 +233,12 @@ export function StudentHomeSection({
               </div>
 
               {activeAssignment ? (
-                <div className="rounded-lg border border-app-border/20 bg-white/95 px-4 py-3">
+                <div className="rounded-lg border border-app-border/20 bg-app-surface/95 px-4 py-3">
                   <div className="ui-label text-primary">Práctica activa</div>
-                  <div className="mt-2 text-sm font-semibold text-slate-900">
+                  <div className="mt-2 text-sm font-semibold text-app-text">
                     {activeAssignment.projectTitle}
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">
+                  <div className="mt-1 text-xs text-app-text-muted">
                     {activeAssignment.deliveryCount} entrega(s) · {activeAssignment.remainingDeliveries} intento(s) disponibles
                   </div>
                 </div>
@@ -256,7 +255,7 @@ export function StudentHomeSection({
                     <p className="mt-1 text-sm opacity-90">{activeTimeline.detail}</p>
                   </div>
                   {activeTimeline.countdownLabel ? (
-                    <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-bold uppercase">
+                    <span className="rounded-full bg-app-surface/80 px-3 py-1 text-xs font-bold uppercase">
                       {activeTimeline.countdownLabel}
                     </span>
                   ) : null}
@@ -265,8 +264,8 @@ export function StudentHomeSection({
             ) : null}
 
             {hasAssignments ? (
-              <div className="rounded-lg border border-app-border/30 bg-white/85 px-5 py-4">
-                <div className="ui-label text-slate-400">Pipeline de evaluación</div>
+              <div className="rounded-lg border border-app-border/30 bg-app-surface/85 px-5 py-4">
+                <div className="ui-label">Pipeline de evaluación</div>
                 <div className="mt-4">
                   <PipelineStepper
                     workflowState={workflowState}

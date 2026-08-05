@@ -315,7 +315,7 @@ export function useProjectManagement() {
   const students = studentsQuery.data?.data ?? [];
   // Total real de alumnos en la plataforma (meta.total), no el tamaño de la
   // página cargada (limit: 100) — la métrica "Total Alumnos" usaba
-  // students.length, que se quedaba fija en 100 pasado ese umbral (FE-MED-01).
+  // students.length, que se quedaba fija en 100 pasado ese umbral.
   const totalStudentsCount = studentsQuery.data?.meta.total ?? 0;
 
   useEffect(() => {
@@ -325,10 +325,9 @@ export function useProjectManagement() {
         tone: "warning",
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentsQuery.isError, studentsQuery.error]);
 
-  // Búsqueda server-side de profesores (FE-MED-01): con más de 100 docentes,
+  // Búsqueda server-side de profesores: con más de 100 docentes,
   // el fetch fijo de la primera página los dejaba invisibles para el picker
   // de colaboradores de ProjectTeachersSection sin importar qué se tecleara.
   const [teacherSearch, setTeacherSearch] = useState<string | undefined>(undefined);

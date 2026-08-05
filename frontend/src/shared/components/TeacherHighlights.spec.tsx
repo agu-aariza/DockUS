@@ -28,3 +28,6 @@ describe('TeacherHighlights', () => {
     expect(screen.getByText('Revisar indexación')).toBeInTheDocument();
   });
 });
+/**
+ * Pruebas de los destacados docentes y de su comportamiento cuando faltan métricas.
+ */

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (Button).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (Button).
  *
  * @module Button
  */
@@ -18,7 +18,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary/40 active:bg-primary-800",
+    "bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary/40 active:bg-primary-hover",
   secondary:
     "border border-slate-300 bg-app-surface text-app-text-secondary hover:bg-app-bg-subtle hover:text-app-text focus-visible:ring-slate-300 active:bg-app-bg-subtle dark:border-slate-600",
   tertiary:

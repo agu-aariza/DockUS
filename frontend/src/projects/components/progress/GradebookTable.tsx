@@ -99,8 +99,8 @@ export function GradebookTable({
       className: "whitespace-normal",
       render: (row) => (
         <div className="min-w-[12rem]">
-          <div className="font-medium text-slate-950">{row.studentName}</div>
-          <div className="mt-1 text-sm text-slate-500">{row.studentEmail}</div>
+          <div className="font-medium text-app-text">{row.studentName}</div>
+          <div className="mt-1 data-meta">{row.studentEmail}</div>
         </div>
       ),
     },
@@ -110,7 +110,7 @@ export function GradebookTable({
         row.groupLabels.length > 0 ? row.groupLabels.join(" · ") : "Sin grupo",
       sortable: true,
       sortValue: (row) => row.groupLabels.join(" · "),
-      className: "whitespace-normal text-sm text-slate-600",
+      className: "whitespace-normal text-sm text-app-text-secondary",
     },
     {
       header: "Estado",
@@ -121,7 +121,7 @@ export function GradebookTable({
         <>
           <DeliveryStatusBadge status={row.latestStatus ?? "DRAFT"} />
           {row.isLate ? (
-            <div className="mt-2 text-xs font-medium text-warning-700">
+            <div className="mt-2 text-xs font-medium text-warning-700 dark:text-warning-400">
               Fuera de plazo
             </div>
           ) : null}
@@ -147,15 +147,15 @@ export function GradebookTable({
       className: "whitespace-normal",
       render: (row) => (
         <div className="min-w-[9rem]">
-          <div className="font-semibold text-slate-900">
+          <div className="font-semibold text-app-text">
             {row.grade !== null ? (
               row.grade.toFixed(2)
             ) : (
               // Sin nota no hay cifra que alinear: la palabra vuelve a la tipografía de texto.
-              <span className="font-sans text-slate-500">Pendiente</span>
+              <span className="font-sans text-app-text-muted">Pendiente</span>
             )}
           </div>
-          <div className="mt-1 line-clamp-2 font-sans text-xs font-normal text-slate-500">
+          <div className="mt-1 line-clamp-2 font-sans text-xs font-normal text-app-text-muted">
             {extractLegacyAiEvidence(row.graderNotes).manualNotes ||
               "Sin observaciones manuales"}
           </div>
@@ -173,9 +173,9 @@ export function GradebookTable({
         <>
           <div>
             {row.deliveryCount}
-            <span className="font-sans text-slate-500"> enviadas</span>
+            <span className="font-sans text-app-text-muted"> enviadas</span>
           </div>
-          <div className="mt-1 text-xs text-slate-500">
+          <div className="mt-1 text-xs text-app-text-muted">
             {row.remainingDeliveries}
             <span className="font-sans"> restantes</span>
           </div>
@@ -217,7 +217,7 @@ export function GradebookTable({
       maxHeight="32rem"
       className="rounded-none border-x-0 border-b-0"
       emptyState={
-        <div className="text-center text-sm text-slate-500">
+        <div className="text-center text-sm text-app-text-muted">
           No hay filas de gradebook para los filtros seleccionados.
         </div>
       }

@@ -1,37 +1,48 @@
-# Gestión de Sesión de Usuario (shared/session)
+# Sesión (`shared/session/`)
 
-> **Resumen rápido:** Store de estado de sesión (`sessionStore.ts`) para el almacenamiento seguro de tokens y datos del usuario activo.
-
----
-
-## Propósito y Responsabilidades
-Mantener la información del usuario autenticado en la memoria del navegador y sincronizada en LocalStorage.
-- **Persistencia de Token:** Almacenamiento seguro del JWT.
-- **Estado Global:** Exposición del usuario activo a toda la aplicación.
+> **Resumen rápido:** Tres piezas: el store de persistencia (`sessionStore.ts`), el contexto React que lo expone a la app (`SessionContext.tsx`, `useSession()`), y un hook de permisos derivados del rol (`useManagementPermissions.ts`). Nunca se lee `localStorage` directamente fuera de aquí.
 
 ---
 
-## Estructura Interna
+## Las tres piezas y cómo se relacionan
 
 ```text
-.
-├── sessionStore.ts       # Implementación del store de sesión
-└── sessionStore.spec.ts  # Pruebas unitarias de gestión de sesión
+sessionStore.ts             → funciones puras: leer/escribir localStorage, sin React
+        │
+        ▼
+SessionContext.tsx           → envuelve sessionStore en un Context de React, expone useSession()
+        │
+        ▼
+useManagementPermissions.ts    → deriva "¿puede este usuario hacer X?" a partir de session.role,
+                                   usando hasRole() de shared/utils/permissions.ts
 ```
 
----
+`useSession()` es el único punto de acceso a la identidad activa desde un componente — nunca se lee `localStorage` a mano en otro sitio del código (regla explícita: "siempre pasar por `useSession()`").
 
-## Flujo de Trabajo / Arquitectura
+## Multi-sesión: por qué esto no es un simple `{ token, user }`
+
+`sessionStore.ts` soporta más de una cuenta activa a la vez (relevante para el `DebugSwitcher` de `auth/`, una herramienta de desarrollo para cambiar de sesión rápidamente sin cerrar y volver a entrar) — no asumas que solo existe una sesión guardada; el store gestiona una colección y cuál es la "activa".
+
+## `useManagementPermissions.ts`: dónde vive la lógica de "quién puede qué"
+
+Centraliza comprobaciones como "¿puede este usuario gestionar usuarios?" o "¿puede administrar este proyecto?" a partir del rol de la sesión — los componentes consultan este hook en vez de comparar `session.role === 'ADMIN'` repetidamente por toda la UI. Es la contraparte en el frontend de `RolesGuard`/`@Roles(...)` en el backend — pero **nunca sustituye la comprobación real del servidor**: es solo para adaptar qué se muestra en la UI, la autorización de verdad siempre la aplica el backend.
+
+## Estructura interna
 
 ```text
-[ Auth Login Success ] ──> sessionStore.setSession(user, token) ──> LocalStorage
+session/
+├── sessionStore.ts               # Persistencia multi-cuenta en localStorage, sin React
+├── SessionContext.tsx               # Provider + useSession()
+└── useManagementPermissions.ts        # Permisos derivados del rol activo
 ```
 
----
+## Cómo trabajar aquí
 
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests de sesión:
 ```bash
 npm run test -- src/shared/session
 ```
+
+## Ver también
+
+- [`../../auth/README.md`](../../auth/README.md) — quién produce la sesión (login/registro).
+- [`../utils/README.md`](../utils/README.md) — `hasRole()`, usado por `useManagementPermissions.ts`.

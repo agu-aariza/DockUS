@@ -4,7 +4,6 @@
  * @module GradebookFilters
  */
 
-import { RiFilter3Line, RiTeamLine } from "react-icons/ri";
 import { SearchInput } from "../../../shared/components/ui/SearchInput";
 import type { BuilderOutcome } from "../../../features/builder/types";
 import type { DeliveryStatus } from "../../../features/deliveries/types";
@@ -41,25 +40,17 @@ export function GradebookFilters({
   lateOnly,
   onLateOnlyChange,
 }: GradebookFiltersProps): JSX.Element {
-  const activeGroupLabel =
-    availableGroups.find((group) => group.id === groupFilter)?.label ??
-    "Grupo filtrado";
-
   return (
-    <div className="grid gap-4 border-b border-slate-100 bg-slate-50 p-6 lg:grid-cols-6">
-      <div className="lg:col-span-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-        <RiFilter3Line />
-        Filtros operativos
-      </div>
+    <div className="flex flex-wrap items-center gap-3 border-b border-app-border-subtle bg-app-bg-subtle px-6 py-4">
       <SearchInput
-        className="lg:col-span-2"
+        className="w-full sm:w-56"
         placeholder="Busca por nombre o correo..."
         value={search}
         onChange={onSearchChange}
         aria-label="Buscar alumno por nombre o correo"
       />
       <select
-        className="input-field bg-white"
+        className="input-field w-auto min-w-[9rem]"
         value={groupFilter}
         onChange={(event) => onGroupChange(event.target.value)}
       >
@@ -71,7 +62,7 @@ export function GradebookFilters({
         ))}
       </select>
       <select
-        className="input-field bg-white"
+        className="input-field w-auto min-w-[9rem]"
         value={statusFilter}
         onChange={(event) =>
           onStatusChange(event.target.value as DeliveryStatus | "ALL")
@@ -84,7 +75,7 @@ export function GradebookFilters({
         <option value="DRAFT">Borrador</option>
       </select>
       <select
-        className="input-field bg-white"
+        className="input-field w-auto min-w-[9rem]"
         value={outcomeFilter}
         onChange={(event) =>
           onOutcomeChange(event.target.value as BuilderOutcome | "ALL")
@@ -96,7 +87,7 @@ export function GradebookFilters({
         <option value="FAIL">FAIL</option>
         <option value="UNKNOWN">UNKNOWN</option>
       </select>
-      <label className="flex items-center gap-3 rounded-md border border-app-border bg-white px-4 py-3 text-sm text-slate-600">
+      <label className="flex items-center gap-2 whitespace-nowrap text-sm text-app-text-secondary">
         <input
           type="checkbox"
           checked={lateOnly}
@@ -104,10 +95,6 @@ export function GradebookFilters({
         />
         Solo tardías
       </label>
-      <div className="flex items-center rounded-md border border-app-border bg-white px-4 py-3 text-sm text-slate-500">
-        <RiTeamLine className="mr-2 text-base" />
-        {groupFilter === "ALL" ? "Vista completa del proyecto" : activeGroupLabel}
-      </div>
     </div>
   );
 }

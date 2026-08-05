@@ -19,6 +19,7 @@ import {
 } from "react-icons/ri";
 import { builderApi } from "../shared/api/builderApi";
 import { Button } from "../shared/components/ui/Button";
+import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import { MetricCard } from "../shared/components/MetricCard";
 import { SkeletonTable } from "../shared/components/Skeleton";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
@@ -39,7 +40,7 @@ interface Props {
 function renderGradeBadge(grade: number | null): JSX.Element {
   if (grade === null) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-sm italic text-slate-400">
+      <span className="inline-flex items-center gap-1.5 text-sm italic text-app-text-muted">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning-400 opacity-75" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-warning-500" />
@@ -49,15 +50,19 @@ function renderGradeBadge(grade: number | null): JSX.Element {
     );
   }
 
+  // Cuatro tramos de nota, no cuatro estados: por eso esto no delega en
+  // StatusBadge (success/warning/danger/idle) y conserva su propia escala de
+  // color — la distinción entre "9" y "7" importa aquí y ese tono no existe
+  // en el sistema de estados.
   let badgeClasses: string;
   if (grade >= 9.0) {
-    badgeClasses = "bg-success-100 text-success-800 border border-success-200";
+    badgeClasses = "bg-success-100 text-success-800 border border-success-200 dark:bg-success-950 dark:text-success-300 dark:border-success-700";
   } else if (grade >= 7.0) {
-    badgeClasses = "bg-success-50 text-success-700 border border-success-200";
+    badgeClasses = "bg-success-50 text-success-700 border border-success-200 dark:bg-success-950 dark:text-success-400 dark:border-success-800";
   } else if (grade >= 5.0) {
-    badgeClasses = "bg-sky-50 text-sky-700 border border-sky-200";
+    badgeClasses = "bg-warning-50 text-warning-700 border border-warning-200 dark:bg-warning-950 dark:text-warning-400 dark:border-warning-800";
   } else {
-    badgeClasses = "bg-rose-50 text-rose-700 border border-rose-200";
+    badgeClasses = "bg-danger-50 text-danger-700 border border-danger-200 dark:bg-danger-950 dark:text-danger-400 dark:border-danger-800";
   }
 
   return (
@@ -71,21 +76,17 @@ function renderGradeBadge(grade: number | null): JSX.Element {
 
 function renderOutcomeBadge(outcome: ReturnType<typeof resolveStudentRunOutcome>): JSX.Element {
   if (!outcome) {
-    return (
-      <span className="inline-flex rounded-full border border-app-border/30 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-400">
-        Sin run
-      </span>
-    );
+    return <StatusBadge tone="idle">Sin run</StatusBadge>;
   }
 
-  const styles =
+  const tone =
     outcome === "PASS"
-      ? "border-success-200 bg-success-50 text-success-700"
+      ? "success"
       : outcome === "FAIL"
-        ? "border-danger/30 bg-danger-subtle text-rose-700"
+        ? "danger"
         : outcome === "PARTIAL"
-          ? "border-warning-200 bg-warning-50 text-warning-700"
-          : "border-app-border/30 bg-slate-50 text-slate-500";
+          ? "warning"
+          : "idle";
 
   const label =
     outcome === "PASS"
@@ -96,11 +97,7 @@ function renderOutcomeBadge(outcome: ReturnType<typeof resolveStudentRunOutcome>
           ? "Parcial"
           : "Sin evaluar";
 
-  return (
-    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${styles}`}>
-      {label}
-    </span>
-  );
+  return <StatusBadge tone={tone}>{label}</StatusBadge>;
 }
 
 export function StudentDeliveriesSection({
@@ -247,7 +244,7 @@ export function StudentDeliveriesSection({
       {deliveries.length > 0 && uniqueProjects.length > 1 ? (
         <StudentSurface tone="subtle" className="p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
+            <div className="flex items-center gap-2 text-sm font-medium text-app-text-secondary">
               <RiFilter3Line className="text-base text-primary" />
               Filtra el histórico para comparar prácticas o concentrarte en una sola.
             </div>
@@ -282,12 +279,12 @@ export function StudentDeliveriesSection({
       ) : null}
 
       {filteredDeliveries.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-app-border/30 bg-slate-50/20 px-6 py-12 text-center">
-          <RiInboxArchiveLine className="mx-auto text-4xl text-slate-400/40" />
-          <h3 className="mt-4 text-lg font-bold text-slate-900">
+        <div className="rounded-xl border border-dashed border-app-border/30 bg-app-bg-subtle/20 px-6 py-12 text-center">
+          <RiInboxArchiveLine className="mx-auto text-4xl text-app-text-muted/40" />
+          <h3 className="mt-4 text-lg font-bold text-app-text">
             Aún no hay entregas
           </h3>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-app-text-secondary">
             No has realizado ninguna entrega para este proyecto.
           </p>
         </div>
@@ -301,8 +298,8 @@ export function StudentDeliveriesSection({
                 <StudentSurface key={delivery.id} className="p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="eyebrow text-slate-400">Versión v{delivery.version}</div>
-                      <div className="mt-2 text-lg font-semibold text-slate-900">
+                      <div className="eyebrow">Versión v{delivery.version}</div>
+                      <div className="mt-2 text-lg font-semibold text-app-text">
                         {delivery.projectTitle}
                       </div>
                     </div>
@@ -310,11 +307,7 @@ export function StudentDeliveriesSection({
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <span
-                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${workflow.badgeClassName}`}
-                    >
-                      {workflow.label}
-                    </span>
+                    <StatusBadge tone={workflow.tone}>{workflow.label}</StatusBadge>
                     {renderOutcomeBadge(outcome)}
                     {delivery.isLate ? (
                       <span className="inline-flex rounded-full border border-warning-100 bg-warning-50/70 px-2.5 py-0.5 text-xs font-semibold text-warning-700">
@@ -323,20 +316,20 @@ export function StudentDeliveriesSection({
                     ) : null}
                   </div>
 
-                  <p className="mt-4 text-sm leading-6 text-slate-500">
+                  <p className="mt-4 text-sm leading-6 text-app-text-secondary">
                     {workflow.description}
                   </p>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border border-app-border bg-slate-50 px-4 py-3">
-                      <div className="ui-label text-slate-400">Fecha</div>
-                      <div className="mt-2 text-sm font-medium text-slate-900">
+                    <div className="rounded-lg border border-app-border bg-app-bg-subtle px-4 py-3">
+                      <div className="ui-label">Fecha</div>
+                      <div className="mt-2 text-sm font-medium text-app-text">
                         {new Date(delivery.createdAt).toLocaleString()}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-app-border bg-slate-50 px-4 py-3">
-                      <div className="ui-label text-slate-400">Intentos restantes</div>
-                      <div className="mt-2 text-sm font-medium text-slate-900">
+                    <div className="rounded-lg border border-app-border bg-app-bg-subtle px-4 py-3">
+                      <div className="ui-label">Intentos restantes</div>
+                      <div className="mt-2 text-sm font-medium text-app-text">
                         {delivery.remainingDeliveries}
                       </div>
                     </div>
@@ -379,15 +372,15 @@ export function StudentDeliveriesSection({
             })}
           </div>
 
-          <div className="hidden overflow-hidden rounded-lg border border-app-border bg-white shadow-sm md:block">
+          <div className="hidden overflow-hidden rounded-lg border border-app-border bg-app-surface shadow-sm md:block">
             <div className="custom-scrollbar overflow-x-auto">
               <table className="min-w-full border-collapse text-left">
-              <thead className="bg-slate-50">
+              <thead className="bg-app-bg-subtle">
                 <tr className="border-b border-app-border">
                   {["Versión", "Práctica", "Estado", "Resultado y nota", "Fecha", "Acciones"].map((label) => (
                     <th
                       key={label}
-                      className="px-5 py-4 text-xs font-semibold uppercase text-slate-400"
+                      className="px-5 py-4 text-xs font-semibold uppercase text-app-text-muted"
                     >
                       {label}
                     </th>
@@ -399,40 +392,36 @@ export function StudentDeliveriesSection({
                   const { workflow, retryAction, outcome, latestRun } = deriveRow(delivery);
 
                   return (
-                    <tr key={delivery.id} className="align-top transition hover:bg-slate-50/20">
+                    <tr key={delivery.id} className="align-top transition hover:bg-app-bg-subtle/20">
                       <td className="px-5 py-5">
-                        <div className="font-semibold text-slate-900">
+                        <div className="font-semibold text-app-text">
                           v{delivery.version}
                         </div>
-                        <div className="mt-1 text-xs text-slate-500">
+                        <div className="mt-1 text-xs text-app-text-muted">
                           {delivery.remainingDeliveries} intento(s) disponibles
                         </div>
                       </td>
                       <td className="px-5 py-5">
-                        <div className="font-semibold text-slate-900">
+                        <div className="font-semibold text-app-text">
                           {delivery.projectTitle ?? "Proyecto"}
                         </div>
-                        <div className="mt-1 text-sm text-slate-500">
+                        <div className="mt-1 text-sm text-app-text-muted">
                           {delivery.isLate ? "Entrega tardía" : "Entrega en plazo"}
                         </div>
                       </td>
                       <td className="px-5 py-5">
                         <div className="flex flex-wrap gap-2">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${workflow.badgeClassName}`}
-                          >
-                            {workflow.label}
-                          </span>
+                          <StatusBadge tone={workflow.tone}>{workflow.label}</StatusBadge>
                           {renderOutcomeBadge(outcome)}
                         </div>
-                        <p className="mt-3 max-w-md text-sm leading-6 text-slate-500">
+                        <p className="mt-3 max-w-md text-sm leading-6 text-app-text-secondary">
                           {workflow.description}
                         </p>
                       </td>
                       <td className="px-5 py-5">
                         {renderGradeBadge(delivery.grade)}
                       </td>
-                      <td className="px-5 py-5 text-sm text-slate-500">
+                      <td className="px-5 py-5 text-sm text-app-text-muted">
                         {new Date(delivery.createdAt).toLocaleString()}
                       </td>
                       <td className="px-5 py-5">

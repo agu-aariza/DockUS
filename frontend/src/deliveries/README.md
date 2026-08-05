@@ -1,35 +1,41 @@
-# Módulo de Entregas y Calificaciones (src/deliveries)
+# Entregas — vista de profesor (`src/deliveries/`)
 
-> **Resumen rápido:** Hooks y componentes para la gestión y revisión de entregas por parte de profesores y alumnos.
-
----
-
-## Propósito y Responsabilidades
-Facilitar la consulta del estado de entregas y el proceso de evaluación manual o automática.
-- **Gestión de Calificaciones:** Custom hooks para calificar entregas (`useDeliveryManagement`).
+> **Resumen rápido:** El panel donde un profesor revisa, filtra y califica las entregas de sus alumnos: `TeacherDeliveriesPanel.tsx` como página, más nueve componentes de detalle/calificación y dos hooks que hablan con `/deliveries` vía React Query.
 
 ---
 
-## Estructura Interna
+## Estructura interna
 
 ```text
-.
-└── hooks/ # Custom hooks de gestión de entregas (useDeliveryManagement)
+deliveries/
+├── TeacherDeliveriesPanel.tsx        # Página principal: lista + panel de detalle de una entrega
+├── components/
+│   ├── DeliveriesSidebar.tsx           # Lista lateral de entregas con filtros
+│   ├── DeliveryListItem.tsx              # Fila individual de la lista
+│   ├── DeliveryDetailHeader.tsx            # Cabecera del panel de detalle (alumno, estado, versión)
+│   ├── DeliveryOverview.tsx                  # Resumen del contenido/estado de la entrega
+│   ├── DeliveryReport.tsx                      # El informe de evaluación consolidado (lo que produjo el Builder)
+│   ├── DeliveryGrading.tsx                       # Formulario de calificación manual/override del profesor
+│   ├── TeacherReviewSummary.tsx                    # Resumen de la cola de revisión pendiente
+│   └── AssignmentLabel.tsx                           # Etiqueta reutilizable de a qué asignación pertenece
+├── hooks/
+│   ├── useDeliveriesPanel.ts                           # Estado del panel: selección, filtros, navegación
+│   └── useDeliveryManagement.ts                          # Mutaciones: calificar, cambiar estado, relanzar evaluación
+├── teacherReviewNavigation.ts                              # Lógica de "siguiente/anterior entrega en la cola de revisión"
+└── utils.ts                                                  # Formateo compartido (fechas, estados)
 ```
 
----
+## Cómo se relaciona con `builder/` y `projects/`
 
-## Flujo de Trabajo / Arquitectura
+Este directorio muestra el resultado de una evaluación (`DeliveryReport.tsx`) pero no la ejecuta ni la monitoriza en vivo — para eso reutiliza los componentes de [`../builder/README.md`](../builder/README.md). La nota final que un profesor puede sobreescribir en `DeliveryGrading.tsx` es la misma que alimenta el libro de notas de [`../projects/README.md`](../projects/README.md) (`GradebookTable.tsx`) — son dos vistas distintas del mismo dato, no dos fuentes de verdad separadas.
 
-```text
-[ Delivery Management Panel ] ──> [ useDeliveryManagement ] ──> [ API HTTP /deliveries ]
-```
+## Cómo trabajar aquí
 
----
-
-## Cómo Usar / Probar este Módulo
-
-### Ejecutar tests del módulo de entregas:
 ```bash
 npm run test -- src/deliveries
 ```
+
+## Ver también
+
+- [`../builder/README.md`](../builder/README.md) — la vista en vivo de una ejecución, reutilizada aquí para relanzar/inspeccionar.
+- [`../projects/README.md`](../projects/README.md) — el libro de notas agregado por proyecto.

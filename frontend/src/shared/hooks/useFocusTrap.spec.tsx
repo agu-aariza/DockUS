@@ -25,7 +25,7 @@ function Harness({ open }: { open: boolean }) {
   );
 }
 
-describe("useFocusTrap (UX-MED-01)", () => {
+describe("useFocusTrap", () => {
   it("moves focus to the initial-focus element when it opens", () => {
     const { rerender } = render(<Harness open={false} />);
     rerender(<Harness open={true} />);

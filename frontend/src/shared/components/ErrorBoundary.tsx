@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (ErrorBoundary).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (ErrorBoundary).
  *
  * @module ErrorBoundary
  */
@@ -46,7 +46,9 @@ export class ErrorBoundary extends Component<
       return (
         <div className="min-h-[400px] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
           <div className="h-16 w-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-6 text-3xl">
-            ⚠️
+            <span role="img" aria-label="Advertencia">
+              ⚠️
+            </span>
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Algo ha salido mal</h2>
           <p className="text-slate-500 mb-8 max-w-md">

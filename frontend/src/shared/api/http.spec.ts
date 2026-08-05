@@ -57,7 +57,7 @@ describe("http refresh-token interceptor", () => {
     vi.restoreAllMocks();
   });
 
-  it("HIGH-08: rejects (does not hang) requests queued behind a refresh that ends up failing", async () => {
+  it("rejects (does not hang) requests queued behind a refresh that ends up failing", async () => {
     postMock.mockRejectedValue(new Error("refresh token expired"));
 
     // Ambas peticiones fallan con 401 mientras un unico refresh esta en
@@ -72,7 +72,7 @@ describe("http refresh-token interceptor", () => {
     await expect(secondRequestFailure).rejects.toBeDefined();
   });
 
-  it("HIGH-08: resolves queued requests with the new token when refresh succeeds", async () => {
+  it("resolves queued requests with the new token when refresh succeeds", async () => {
     postMock.mockResolvedValue({
       data: { accessToken: "fresh-access-token", refreshToken: "fresh-refresh-token" },
     });
@@ -89,7 +89,7 @@ describe("http refresh-token interceptor", () => {
     );
   });
 
-  it("HIGH-08: calls the refresh endpoint with an explicit timeout", async () => {
+  it("calls the refresh endpoint with an explicit timeout", async () => {
     postMock.mockResolvedValue({
       data: { accessToken: "a", refreshToken: "b" },
     });
@@ -103,7 +103,7 @@ describe("http refresh-token interceptor", () => {
     );
   });
 
-  it("FE-MED-04: recovers on its own from a rehydrated session with no accessToken (sessionStore no longer persists it)", async () => {
+  it("recovers on its own from a rehydrated session with no accessToken (sessionStore no longer persists it)", async () => {
     // Simula un reload: el accessToken se rehidrata vacío (sessionStore.ts ya
     // no lo persiste), pero el refreshToken sí sobrevivió. La primera
     // petición autenticada llega sin token, el backend responde 401, y este

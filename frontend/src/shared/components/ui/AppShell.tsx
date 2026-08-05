@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño DockUS (AppShell).
+ * @fileoverview Componente UI base del sistema de diseño EduCodeAI (AppShell).
  *
  * @module AppShell
  */
@@ -93,7 +93,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             </button>
             <div className="flex items-center gap-2">
               <img src="/logos/Logo01.png" alt="" className="h-7 w-7 rounded-full shadow-sm" />
-              <span className="font-bold tracking-tight text-app-text">EduCode AI</span>
+              <span className="font-semibold tracking-wide text-app-text">EduCode AI</span>
             </div>
           </div>
           {userEmail && (

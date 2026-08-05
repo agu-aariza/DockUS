@@ -74,3 +74,6 @@ describe('TechnicalFindingCard', () => {
     ).toBeInTheDocument();
   });
 });
+/**
+ * Pruebas de la tarjeta de hallazgo técnico y de sus detalles expandibles.
+ */

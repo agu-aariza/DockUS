@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz DockUS (MarkdownContent).
+ * @fileoverview Componente compartido de la interfaz EduCodeAI (MarkdownContent).
  *
  * @module MarkdownContent
  */
