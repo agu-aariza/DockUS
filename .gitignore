@@ -20,24 +20,21 @@ backend/.env
 .vscode/
 .idea/
 .DS_Store
-
-# Ficheros de documentación
-docs/
+*:Zone.Identifier
 
 # Casos de uso
 graphify-out/
 .agents/
 .codex/
 AGENTS.md
-academic_proyects/
-skills/*
-agents/*
-frontend/.tmp-test-dist/*
-.github/hooks/
-.github/skills/
-.impeccable/
 audit/*
-memoria_tfg/*
-diagramas_tfg/
-ai_context/
 memoria_tfg.zip
+prompts/
+CLAUDE.md
+.claude/
+features.md
+FINDING_NAME.md
+test_educode/
+.graphifyignore
+docs/
+memoria_tfg/*

@@ -1,12 +1,12 @@
 services:
   postgres:
     image: postgres:16.4-alpine
-    container_name: dockus-postgres
+    container_name: educodeai-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USERNAME:-dockus}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-dockus_pass}
-      POSTGRES_DB: ${DB_NAME:-dockus_db}
+      POSTGRES_USER: ${DB_USERNAME:-educodeai}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-educodeai_pass}
+      POSTGRES_DB: ${DB_NAME:-educodeai_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,11 +19,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - dockus-network
+      - educodeai-network
 
   redis:
     image: redis:7.4-alpine
-    container_name: dockus-redis
+    container_name: educodeai-redis
     restart: unless-stopped
     command: >
       sh -c 'if [ -z "$$REDIS_PASSWORD" ]; then
@@ -45,18 +45,18 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - dockus-network
+      - educodeai-network
 
   minio:
     image: quay.io/minio/minio:RELEASE.2024-08-29T01-40-52Z
-    container_name: dockus-minio
+    container_name: educodeai-minio
     restart: unless-stopped
     ports:
       - "${MINIO_API_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-dockus_admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-dockus_secret_key}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-educodeai_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-educodeai_secret_key}
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
@@ -71,15 +71,15 @@ services:
       retries: 5
       start_period: 15s
     networks:
-      - dockus-network
+      - educodeai-network
 
   minio-init:
     image: quay.io/minio/minio:RELEASE.2024-08-29T01-40-52Z
-    container_name: dockus-minio-init
+    container_name: educodeai-minio-init
     restart: "no"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-dockus_admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-dockus_secret_key}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-educodeai_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-educodeai_secret_key}
       STORAGE_EVIDENCE_RETENTION_DAYS: ${STORAGE_EVIDENCE_RETENTION_DAYS:-90}
     depends_on:
       minio:
@@ -88,26 +88,26 @@ services:
     command:
       - |
         set -eu;
-        mc alias set dockus http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null;
-        lifecycle_rules_file=/tmp/dockus-lifecycle-rules.json;
+        mc alias set educodeai http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null;
+        lifecycle_rules_file=/tmp/educodeai-lifecycle-rules.json;
         lifecycle_rule_found=false;
-        mc ilm rule ls --json dockus/dockus-storage >"$$lifecycle_rules_file" 2>/dev/null || true;
+        mc ilm rule ls --json educodeai/educodeai-storage >"$$lifecycle_rules_file" 2>/dev/null || true;
         while IFS= read -r lifecycle_rule; do
           case "$$lifecycle_rule" in *runs/*Enabled*) lifecycle_rule_found=true ;; esac
         done <"$$lifecycle_rules_file";
         if [ "$$lifecycle_rule_found" != "true" ]; then
-          mc ilm rule add dockus/dockus-storage --prefix "runs/" --expire-days "$$STORAGE_EVIDENCE_RETENTION_DAYS";
+          mc ilm rule add educodeai/educodeai-storage --prefix "runs/" --expire-days "$$STORAGE_EVIDENCE_RETENTION_DAYS";
         fi
     networks:
-      - dockus-network
+      - educodeai-network
 
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile.backend
       target: dev
-    image: dockus-backend:dev
-    container_name: dockus-backend
+    image: educodeai-backend:dev
+    container_name: educodeai-backend
     restart: unless-stopped
     profiles: ["dev"]
     working_dir: /app
@@ -139,7 +139,7 @@ services:
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
-      # @dockus/contracts es un symlink a /shared/contracts: sin este bind, un
+      # @educodeai/contracts es un symlink a /shared/contracts: sin este bind, un
       # cambio en el contrato compartido solo se ve reconstruyendo la imagen.
       - ./shared:/shared:ro
       # El socket de Docker no se monta en la API HTTP. La comprobación de salud
@@ -148,7 +148,7 @@ services:
     # `backend` y `worker` comparten el volumen `backend_node_modules`. Sin el
     # cerrojo ambos arrancan a la vez y lanzan `npm install` sobre el mismo
     # arbol: uno deja `.bin/` a medio enlazar y el otro muere con EEXIST al
-    # crear el symlink de @dockus/contracts. El sintoma final no es el error de
+    # crear el symlink de @educodeai/contracts. El sintoma final no es el error de
     # npm sino `sh: nest: Permission denied` en el arranque siguiente, porque
     # los binarios quedan sin bit de ejecucion.
     #
@@ -157,10 +157,10 @@ services:
     command: >
       sh -c '
         set -e;
-        flock /app/node_modules/.dockus-install.lock sh -c "
-          if ! cmp -s package-lock.json node_modules/.dockus-install.stamp; then
+        flock /app/node_modules/.educodeai-install.lock sh -c "
+          if ! cmp -s package-lock.json node_modules/.educodeai-install.stamp; then
             npm install --legacy-peer-deps &&
-            cp package-lock.json node_modules/.dockus-install.stamp;
+            cp package-lock.json node_modules/.educodeai-install.stamp;
           fi
         ";
         npm run start:dev
@@ -178,15 +178,15 @@ services:
       # frio: el primer sondeo correcto lo marca sano de inmediato.
       start_period: 300s
     networks:
-      - dockus-network
+      - educodeai-network
 
   worker:
     build:
       context: .
       dockerfile: backend/Dockerfile.backend
       target: dev
-    image: dockus-backend:dev
-    container_name: dockus-worker
+    image: educodeai-backend:dev
+    container_name: educodeai-worker
     restart: unless-stopped
     profiles: ["dev"]
     working_dir: /app
@@ -203,7 +203,7 @@ services:
       BUILDER_DOCKER_RUNTIME: ${BUILDER_DOCKER_RUNTIME:-runc}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      # Raiz de los workspaces de evaluacion (ESC-ALTO-03). `os.tmpdir()`
+      # Raiz de los workspaces de evaluacion. `os.tmpdir`
       # respeta TMPDIR, de modo que fijarlo aqui reubica tanto los workspaces
       # como los contextos de build de imagen sin tocar codigo.
       #
@@ -214,7 +214,7 @@ services:
       # el del worker. Con el `/tmp` en tmpfs privado que habia aqui, esa ruta
       # no existia fuera del contenedor y Docker montaba un directorio vacio:
       # el contenedor de ejecucion recibia `/app` sin el codigo del alumno.
-      TMPDIR: /dockus-workspaces
+      TMPDIR: /educodeai-workspaces
     depends_on:
       postgres:
         condition: service_healthy
@@ -229,20 +229,20 @@ services:
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
-      # @dockus/contracts es un symlink a /shared/contracts: sin este bind, un
+      # @educodeai/contracts es un symlink a /shared/contracts: sin este bind, un
       # cambio en el contrato compartido solo se ve reconstruyendo la imagen.
       - ./shared:/shared:ro
       - /var/run/docker.sock:/var/run/docker.sock
       # Ruta identica a ambos lados: es lo que hace resoluble el bind mount que
       # el worker solicita al demonio. Vease TMPDIR arriba.
-      - /dockus-workspaces:/dockus-workspaces
+      - /educodeai-workspaces:/educodeai-workspaces
       # El tmpfs se conserva para lo que SI es local al proceso (el fichero de
       # heartbeat que lee el healthcheck), que no necesita verse desde fuera.
       #
-      # ESC-MED-04 apuntaba a este tmpfs: los workspaces vivian aqui, es decir
+      # apuntaba a este tmpfs: los workspaces vivian aqui, es decir
       # sobre RAM del anfitrion, y cinco runs concurrentes se acercaban al cap
       # de 2G llevandose al worker entero por ENOSPC/OOM. Al mover TMPDIR a
-      # /dockus-workspaces (disco) por ESC-ALTO-03 ese riesgo desaparecio: hoy
+      # /educodeai-workspaces (disco) por ese riesgo desaparecio: hoy
       # aqui solo vive el heartbeat, del orden de kilobytes. Lo que queda del
       # hallazgo es la RAM de los contenedores de ejecucion, sobre la que el
       # worker avisa al arrancar si concurrencia x limite se acerca al total.
@@ -256,22 +256,22 @@ services:
     command: >
       sh -c '
         set -e;
-        flock /app/node_modules/.dockus-install.lock sh -c "
-          if ! cmp -s package-lock.json node_modules/.dockus-install.stamp; then
+        flock /app/node_modules/.educodeai-install.lock sh -c "
+          if ! cmp -s package-lock.json node_modules/.educodeai-install.stamp; then
             npm install --legacy-peer-deps &&
-            cp package-lock.json node_modules/.dockus-install.stamp;
+            cp package-lock.json node_modules/.educodeai-install.stamp;
           fi
         ";
         npm run start:worker:dev
       '
     healthcheck:
-      # El worker refresca /tmp/dockus-worker.heartbeat cada 10s. Se considera
+      # El worker refresca /tmp/educodeai-worker.heartbeat cada 10s. Se considera
       # sano si el fichero se ha tocado en los últimos 60s: un proceso colgado o
       # en crash-loop deja de refrescarlo y el healthcheck pasa a unhealthy.
       test:
         [
           "CMD-SHELL",
-          "test $(( $(date +%s) - $(stat -c %Y /tmp/dockus-worker.heartbeat 2>/dev/null || echo 0) )) -lt 60",
+          "test $(( $(date +%s) - $(stat -c %Y /tmp/educodeai-worker.heartbeat 2>/dev/null || echo 0) )) -lt 60",
         ]
       interval: 20s
       timeout: 5s
@@ -280,15 +280,15 @@ services:
       # necesita al menos la misma ventana en frio (vease `backend`).
       start_period: 300s
     networks:
-      - dockus-network
+      - educodeai-network
 
   backend-prod:
     build:
       context: .
       dockerfile: backend/Dockerfile.prod
       target: production
-    image: dockus-backend:prod
-    container_name: dockus-backend-prod
+    image: educodeai-backend:prod
+    container_name: educodeai-backend-prod
     restart: unless-stopped
     profiles: ["prod"]
     ports:
@@ -331,15 +331,15 @@ services:
       retries: 5
       start_period: 45s
     networks:
-      - dockus-network
+      - educodeai-network
 
   worker-prod:
     build:
       context: .
       dockerfile: backend/Dockerfile.prod
       target: production
-    image: dockus-backend:prod
-    container_name: dockus-worker-prod
+    image: educodeai-backend:prod
+    container_name: educodeai-worker-prod
     restart: unless-stopped
     profiles: ["prod"]
     env_file:
@@ -358,8 +358,8 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       # Vease el servicio `worker` de dev: la ruta de los workspaces debe ser
       # identica dentro y fuera del contenedor para que el demonio del anfitrion
-      # pueda resolver el bind mount del codigo del alumno (ESC-ALTO-03).
-      TMPDIR: /dockus-workspaces
+      # pueda resolver el bind mount del codigo del alumno.
+      TMPDIR: /educodeai-workspaces
     depends_on:
       postgres:
         condition: service_healthy
@@ -371,7 +371,7 @@ services:
         condition: service_completed_successfully
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /dockus-workspaces:/dockus-workspaces
+      - /educodeai-workspaces:/educodeai-workspaces
       - type: tmpfs
         target: /tmp
         tmpfs:
@@ -384,18 +384,18 @@ services:
       test:
         [
           "CMD-SHELL",
-          "test $(( $(date +%s) - $(stat -c %Y /tmp/dockus-worker.heartbeat 2>/dev/null || echo 0) )) -lt 60",
+          "test $(( $(date +%s) - $(stat -c %Y /tmp/educodeai-worker.heartbeat 2>/dev/null || echo 0) )) -lt 60",
         ]
       interval: 20s
       timeout: 5s
       retries: 3
       start_period: 40s
     networks:
-      - dockus-network
+      - educodeai-network
 
   frontend:
     image: node:22-alpine
-    container_name: dockus-frontend
+    container_name: educodeai-frontend
     restart: unless-stopped
     profiles: ["dev"]
     working_dir: /app
@@ -418,9 +418,9 @@ services:
     command: >
       sh -c '
         set -e;
-        if ! cmp -s package-lock.json node_modules/.dockus-install.stamp; then
+        if ! cmp -s package-lock.json node_modules/.educodeai-install.stamp; then
           npm install --legacy-peer-deps;
-          cp package-lock.json node_modules/.dockus-install.stamp;
+          cp package-lock.json node_modules/.educodeai-install.stamp;
         fi;
         npm run dev -- --host 0.0.0.0 --port 5173
       '
@@ -439,7 +439,7 @@ services:
       # completo, que no cabe en 30s.
       start_period: 300s
     networks:
-      - dockus-network
+      - educodeai-network
 
   frontend-prod:
     build:
@@ -447,8 +447,8 @@ services:
       dockerfile: frontend/Dockerfile.frontend
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api}
-    image: dockus-frontend:prod
-    container_name: dockus-frontend-prod
+    image: educodeai-frontend:prod
+    container_name: educodeai-frontend-prod
     restart: unless-stopped
     profiles: ["prod"]
     depends_on:
@@ -457,7 +457,7 @@ services:
     ports:
       - "8080:80"
     networks:
-      - dockus-network
+      - educodeai-network
 
 volumes:
   postgres_data:
@@ -472,6 +472,6 @@ volumes:
     driver: local
 
 networks:
-  dockus-network:
+  educodeai-network:
     driver: bridge
-    name: dockus-network
+    name: educodeai-network
