@@ -41,9 +41,9 @@ function formatStudentName(name?: string, email?: string) {
 }
 
 export function TeacherRuntimePanel(): JSX.Element {
-  const rc = useRuntimeManagement();
-  const { selection, setProject, setAssignment, setDelivery, setRun } = useWorkspaceSelection();
   const [activeTab, setActiveTab] = useState<RuntimeTab>("control");
+  const rc = useRuntimeManagement(activeTab === "live");
+  const { selection, setProject, setAssignment, setDelivery, setRun } = useWorkspaceSelection();
   const { pushToast } = useToast();
 
   // Code preview state

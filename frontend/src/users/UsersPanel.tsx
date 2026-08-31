@@ -139,11 +139,6 @@ export function UsersPanel(): JSX.Element {
         title="Directorio de Usuarios"
         subtitle="Gestión de identidades, roles y permisos de seguridad para el ecosistema EduCodeAI."
         icon={<RiUser3Fill />}
-        badge={
-          uc.listResponse
-            ? `${uc.listResponse.meta.total} ${uc.listResponse.meta.total === 1 ? 'registro' : 'registros'}`
-            : undefined
-        }
       />
 
       <Tabs

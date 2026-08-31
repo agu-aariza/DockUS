@@ -80,6 +80,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-educodeai_admin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-educodeai_secret_key}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-educodeai-storage}
       STORAGE_EVIDENCE_RETENTION_DAYS: ${STORAGE_EVIDENCE_RETENTION_DAYS:-90}
     depends_on:
       minio:
@@ -89,14 +90,19 @@ services:
       - |
         set -eu;
         mc alias set educodeai http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null;
+        bucket_target="educodeai/$$MINIO_BUCKET_NAME";
+        mc mb --ignore-existing "$$bucket_target" >/dev/null;
+        if [ "$$STORAGE_EVIDENCE_RETENTION_DAYS" -le 0 ]; then
+          exit 0;
+        fi;
         lifecycle_rules_file=/tmp/educodeai-lifecycle-rules.json;
         lifecycle_rule_found=false;
-        mc ilm rule ls --json educodeai/educodeai-storage >"$$lifecycle_rules_file" 2>/dev/null || true;
+        mc ilm rule ls --json "$$bucket_target" >"$$lifecycle_rules_file" 2>/dev/null || true;
         while IFS= read -r lifecycle_rule; do
           case "$$lifecycle_rule" in *runs/*Enabled*) lifecycle_rule_found=true ;; esac
         done <"$$lifecycle_rules_file";
         if [ "$$lifecycle_rule_found" != "true" ]; then
-          mc ilm rule add educodeai/educodeai-storage --prefix "runs/" --expire-days "$$STORAGE_EVIDENCE_RETENTION_DAYS";
+          mc ilm rule add "$$bucket_target" --prefix "runs/" --expire-days "$$STORAGE_EVIDENCE_RETENTION_DAYS";
         fi
     networks:
       - educodeai-network
@@ -118,6 +124,7 @@ services:
     environment:
       NODE_ENV: development
       DB_SYNCHRONIZE: "false"
+      DB_RUN_MIGRATIONS: "true"
       PORT: ${PORT:-3000}
       DB_HOST: postgres
       REDIS_HOST: redis

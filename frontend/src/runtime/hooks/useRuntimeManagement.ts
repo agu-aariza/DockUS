@@ -26,7 +26,7 @@ interface NoticeState {
   tone: NoticeTone;
 }
 
-export function useRuntimeManagement() {
+export function useRuntimeManagement(isLiveActive: boolean) {
   const { activeSession: session } = useSession();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -52,7 +52,13 @@ export function useRuntimeManagement() {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const autorunKeyRef = useRef("");
 
-  const { events, streamError, streamState, latestSequence } = useBuilderRunStream(selectedRunId, session);
+  // El SSE solo se abre con la pestaña «En vivo» activa: fuera de ella nadie
+  // consume events/liveEvents, y mantenerlo conectado en Control o Historial
+  // era tráfico de fondo sin ningún observador.
+  const { events, streamError, streamState, latestSequence } = useBuilderRunStream(
+    isLiveActive ? selectedRunId : "",
+    session,
+  );
   const liveEvents = useMemo(() => [...events].slice(-80).reverse(), [events]);
 
   const reqProjectId = searchParams.get("projectId");
@@ -186,18 +192,24 @@ export function useRuntimeManagement() {
     syncSelectedRun();
   }, [selectedRunId, syncSelectedRun]);
 
-  // Sondeo de detalle del run: suspendido con la pestaña oculta
-  // y, además, en estado terminal — un run ya terminado no cambia
-  // más, así que seguir repescándolo cada 3s es tráfico puro. El polling de
-  // evidencias de abajo ya aplicaba este mismo corte; aquí faltaba.
+  // Sondeo de detalle del run: suspendido con la pestaña oculta, en estado
+  // terminal —un run ya terminado no cambia más— y, además, fuera de la
+  // pestaña «En vivo» del panel. Cambiar de proyecto/asignación/entrega
+  // auto-selecciona un run (más abajo) y, si ese run sigue activo, antes
+  // se sondeaba cada 3s aunque el usuario estuviera en «Control» sin haber
+  // pedido ver nada en directo. La ficha de «Abortar Run» en Control usa
+  // selectedRun igualmente, pero le basta con la carga puntual de abajo.
   useVisibilityAwareInterval(
     syncSelectedRun,
     3000,
-    Boolean(selectedRunId) && !selectedRun?.isTerminal,
+    isLiveActive && Boolean(selectedRunId) && !selectedRun?.isTerminal,
   );
 
+  // Los artefactos de evidencia solo los consume BuilderLiveRunPane, que
+  // únicamente se renderiza en la pestaña «En vivo»: fuera de ella no hay
+  // observador, así que ni la carga inicial ni el sondeo tienen sentido.
   useEffect(() => {
-    if (!selectedRunId) {
+    if (!isLiveActive || !selectedRunId) {
       setEvidenceArtifacts([]);
       setEvidenceError(null);
       setEvidenceLoading(false);
@@ -240,15 +252,16 @@ export function useRuntimeManagement() {
       cancelled = true;
       evidenceSyncRef.current = null;
     };
-  }, [selectedRun?.isTerminal, selectedRunId]);
+  }, [isLiveActive, selectedRun?.isTerminal, selectedRunId]);
 
-  // Artefactos de evidencia: solo mientras el run siga vivo y la pestaña esté
-  // visible. Un run terminal ya no genera artefactos nuevos, de modo que seguir
-  // sondeándolo era tráfico puro.
+  // Artefactos de evidencia: solo mientras el run siga vivo, la pestaña del
+  // navegador esté visible y la pestaña «En vivo» del panel esté activa. Un
+  // run terminal ya no genera artefactos nuevos, y fuera de «En vivo» nadie
+  // los muestra, de modo que seguir sondeándolo era tráfico puro.
   useVisibilityAwareInterval(
     () => evidenceSyncRef.current?.(),
     4000,
-    Boolean(selectedRunId) && !selectedRun?.isTerminal,
+    isLiveActive && Boolean(selectedRunId) && !selectedRun?.isTerminal,
   );
 
   const handleDownloadArtifact = async (artifactId: string) => {
