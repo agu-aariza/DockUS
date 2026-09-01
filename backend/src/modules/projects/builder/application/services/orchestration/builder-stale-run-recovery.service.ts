@@ -46,7 +46,7 @@ export class BuilderStaleRunRecoveryService {
 
   /**
    * Punto de entrada del arranque del worker. Conserva el nombre porque es el
-   * que invoca `BuilderModule.onModuleInit`.
+   * que invoca `BuilderPipelineModule.onModuleInit`.
    */
   async failStaleRunsOnStartup(): Promise<void> {
     await this.recoverStaleRuns('startup');
