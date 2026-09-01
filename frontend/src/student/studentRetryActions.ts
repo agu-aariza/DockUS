@@ -4,7 +4,8 @@
  * @module studentRetryActions
  */
 
-import type { BuildRunEntity, DeliveryEntity } from "../shared/types";
+import type { BuildRunEntity } from "../features/builder/types";
+import type { DeliveryEntity } from "../features/deliveries/types";
 
 interface StudentRetryAction {
   enabled: boolean;

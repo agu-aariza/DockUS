@@ -17,7 +17,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "../../shared/components/ui/Button";
 import { Alert } from "../../shared/components/ui/Alert";
 import { StatusBadge } from "../../shared/components/ui/StatusBadge";
-import type { BuildRunEntity } from "../../shared/types";
+import type { BuildRunEntity } from "../../features/builder/types";
 import { useSession } from "../../shared/session/SessionContext";
 import { useBuildRunStream } from "../hooks/useBuildRunStream";
 import { isStageReached } from "../studentBuildRunStages";

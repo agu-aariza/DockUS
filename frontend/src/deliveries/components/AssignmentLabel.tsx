@@ -4,7 +4,7 @@
  * @module AssignmentLabel
  */
 
-import { ProjectAssignmentEntity } from "../../shared/types";
+import type { ProjectAssignmentEntity } from "../../features/projects/types";
 
 export function AssignmentLabel({ assignment }: { assignment: ProjectAssignmentEntity | undefined }) {
   if (!assignment) {

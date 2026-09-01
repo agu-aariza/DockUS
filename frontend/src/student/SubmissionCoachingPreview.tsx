@@ -4,7 +4,7 @@
  * @module SubmissionCoachingPreview
  */
 
-import type { BuildRunEntity } from "../shared/types";
+import type { BuildRunEntity } from "../features/builder/types";
 import { CoachingSummary } from "../shared/components/CoachingSummary";
 
 interface SubmissionCoachingPreviewProps {

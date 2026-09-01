@@ -5,7 +5,7 @@
  */
 
 import { RiAddLine, RiDeleteBin6Line, RiScales3Line } from "react-icons/ri";
-import type { RubricCriterion } from "../../shared/types";
+import type { RubricCriterion } from "../../features/projects/types";
 
 interface RubricEditorProps {
   criteria: RubricCriterion[];

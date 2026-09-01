@@ -14,7 +14,7 @@ import {
 } from "react-icons/ri";
 import { Button } from "../../shared/components/ui/Button";
 import { formatBytes } from "../../shared/utils/format";
-import type { StorageObjectEntity } from "../../shared/types";
+import type { StorageObjectEntity } from "../../features/storage/types";
 
 export type TestSuiteResult = StorageObjectEntity | { message: string } | null;
 

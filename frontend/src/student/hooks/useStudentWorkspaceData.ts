@@ -8,11 +8,9 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { assignmentsApi, deliveriesApi } from "../../shared/api/services";
 import { builderApi } from "../../shared/api/builderApi";
-import type {
-  BuildRunEntity,
-  ProjectAssignmentEntity,
-  DeliveryEntity,
-} from "../../shared/types";
+import type { BuildRunEntity } from "../../features/builder/types";
+import type { ProjectAssignmentEntity } from "../../features/projects/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { queryKeys } from "../../shared/query/queryKeys";
 

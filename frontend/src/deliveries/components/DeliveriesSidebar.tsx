@@ -5,7 +5,9 @@
  */
 
 import { RiRefreshLine, RiInboxArchiveLine, RiPulseLine, RiCheckFill, RiCloseLine } from "react-icons/ri";
-import { BuildRunEntity, DeliveryEntity, ProjectAssignmentEntity } from "../../shared/types";
+import type { BuildRunEntity } from "../../features/builder/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
+import type { ProjectAssignmentEntity } from "../../features/projects/types";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { Button } from "../../shared/components/ui/Button";
 import { VisualPicker, VisualPickerOption } from "../../shared/components/ui/VisualPicker";

@@ -4,7 +4,7 @@
  * @module deadlineUtils
  */
 
-import type { ProjectAssignmentEntity } from "../shared/types";
+import type { ProjectAssignmentEntity } from "../features/projects/types";
 
 type AssignmentTimelineState =
   | "upcoming"

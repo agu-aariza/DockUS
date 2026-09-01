@@ -4,13 +4,9 @@
  * @module studentWorkflowState
  */
 
-import type {
-  BuildRunEntity,
-  BuildRunStatus,
-  DeliveryEntity,
-  ProjectAssignmentEntity,
-  StudentWorkflowState,
-} from "../shared/types";
+import type { BuildRunEntity, BuildRunStatus } from "../features/builder/types";
+import type { DeliveryEntity, StudentWorkflowState } from "../features/deliveries/types";
+import type { ProjectAssignmentEntity } from "../features/projects/types";
 import type { StatusTone } from "../shared/components/ui/StatusBadge";
 
 interface StudentWorkflowPresentation {

@@ -13,7 +13,7 @@ import {
   RiCheckLine,
   RiAlertLine,
 } from "react-icons/ri";
-import type { StudentWorkflowState } from "../shared/types";
+import type { StudentWorkflowState } from "../features/deliveries/types";
 
 interface PipelineStepperProps {
   workflowState: StudentWorkflowState;

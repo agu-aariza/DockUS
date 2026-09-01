@@ -5,7 +5,7 @@
  */
 
 import { RiCodeSSlashLine, RiArrowRightUpLine, RiStackLine, RiFolderChartLine, RiFileTextLine } from "react-icons/ri";
-import { DeliveryEntity } from "../../shared/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
 import { Tabs } from "../../shared/components/ui/Tabs";
 import { Button } from "../../shared/components/ui/Button";
 import { DeliveryStatusBadge } from "../../features/deliveries/components/DeliveryStatusBadge";

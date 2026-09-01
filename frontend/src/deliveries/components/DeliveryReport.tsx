@@ -5,7 +5,8 @@
  */
 
 import { RiFileTextLine, RiLoader4Line } from "react-icons/ri";
-import { BuildRunEntity, DeliveryEntity } from "../../shared/types";
+import type { BuildRunEntity } from "../../features/builder/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { Button } from "../../shared/components/ui/Button";
 import { EmptyState } from "../../shared/components/EmptyState";

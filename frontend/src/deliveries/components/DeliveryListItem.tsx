@@ -6,7 +6,8 @@
 
 import { useState } from "react";
 import { RiTimeLine, RiFileChartLine, RiStackLine, RiFileTextLine, RiAlertLine } from "react-icons/ri";
-import { BuildRunEntity, DeliveryEntity } from "../../shared/types";
+import type { BuildRunEntity } from "../../features/builder/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
 import { DeliveryStatusBadge } from "../../features/deliveries/components/DeliveryStatusBadge";
 import { StatusBadge } from "../../shared/components/ui/StatusBadge";
 import { isLowConfidenceVerdict } from "../../shared/data/builderTaxonomy";

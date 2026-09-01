@@ -25,10 +25,3 @@ export interface PaginatedResponse<T> {
   data: T[];
   meta: PaginatedMeta;
 }
-
-export * from "../features/auth/types";
-export * from "../features/builder/types";
-export * from "../features/deliveries/types";
-export * from "../features/groups/types";
-export * from "../features/projects/types";
-export * from "../features/storage/types";

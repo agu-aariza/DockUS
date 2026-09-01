@@ -10,10 +10,7 @@ import {
   projectsApi,
   usersApi,
 } from "../../shared/api/services";
-import type {
-  ProjectStatus,
-  RubricCriterion,
-} from "../../shared/types";
+import type { ProjectStatus, RubricCriterion } from "../../features/projects/types";
 import { useSession } from "../../shared/session/SessionContext";
 import { useManagementPermissions } from "../../shared/session/useManagementPermissions";
 import { getErrorMessage } from "../../shared/utils/errors";

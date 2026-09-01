@@ -21,7 +21,7 @@ import { WorkspaceProvider } from "../../shared/workspace/WorkspaceContext";
 import { createTestQueryClient } from "../../test/renderWithProviders";
 import { useSubmissionFlow } from "./useSubmissionFlow";
 import type { StudentWorkspaceData } from "./useStudentWorkspaceData";
-import type { ProjectAssignmentEntity } from "../../shared/types";
+import type { ProjectAssignmentEntity } from "../../features/projects/types";
 
 function buildAssignment(
   overrides: Partial<ProjectAssignmentEntity> = {},

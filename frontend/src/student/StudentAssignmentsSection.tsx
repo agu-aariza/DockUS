@@ -11,7 +11,7 @@ import {
   RiTimeLine,
 } from "react-icons/ri";
 
-import type { ProjectAssignmentEntity } from "../shared/types";
+import type { ProjectAssignmentEntity } from "../features/projects/types";
 import { EmptyState } from "../shared/components/EmptyState";
 import { Skeleton } from "../shared/components/Skeleton";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";

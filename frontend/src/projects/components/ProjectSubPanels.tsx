@@ -47,13 +47,9 @@ import { EmptyState } from "../../shared/components/EmptyState";
 import { SearchInput } from "../../shared/components/ui/SearchInput";
 import { Button } from "../../shared/components/ui/Button";
 import { StatusBadge } from "../../shared/components/ui/StatusBadge";
-import type {
-  CourseGroupEntity,
-  GroupEnrollmentEntity,
-  ProjectEntity,
-  ProjectAssignmentEntity,
-  UserEntity,
-} from "../../shared/types";
+import type { CourseGroupEntity, GroupEnrollmentEntity } from "../../features/groups/types";
+import type { ProjectEntity, ProjectAssignmentEntity } from "../../features/projects/types";
+import type { UserEntity } from "../../features/auth/types";
 
 type GroupFormState = {
   name: string;
@@ -335,4 +331,3 @@ export function ProjectAssignmentManager({
     </div>
   );
 }
-

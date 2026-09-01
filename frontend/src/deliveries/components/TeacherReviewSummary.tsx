@@ -6,7 +6,8 @@
 
 import { RiAwardLine, RiRobot2Line, RiScales3Line } from "react-icons/ri";
 import { MetricCard } from "../../shared/components/MetricCard";
-import type { BuildRunEntity, DeliveryEntity } from "../../shared/types";
+import type { BuildRunEntity } from "../../features/builder/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
 
 interface TeacherReviewSummaryProps {
   delivery: DeliveryEntity;

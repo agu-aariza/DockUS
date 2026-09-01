@@ -19,7 +19,7 @@ import {
 } from "react-icons/ri";
 import { builderApi } from "../shared/api/builderApi";
 
-import type { StudentWorkflowState } from "../shared/types";
+import type { StudentWorkflowState } from "../features/deliveries/types";
 import { MetricCard } from "../shared/components/MetricCard";
 import { Skeleton } from "../shared/components/Skeleton";
 import { Button } from "../shared/components/ui/Button";

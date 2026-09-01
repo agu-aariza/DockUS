@@ -5,7 +5,8 @@
  */
 
 import { RiTimeLine, RiStackLine, RiSparkling2Line, RiFileChartLine, RiRefreshLine, RiFileTextLine, RiFolderChartLine, RiPulseLine } from "react-icons/ri";
-import { DeliveryEntity, ProjectEntity, ProjectAssignmentEntity } from "../../shared/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
+import type { ProjectEntity, ProjectAssignmentEntity } from "../../features/projects/types";
 import { MetricCard } from "../../shared/components/MetricCard";
 import { Button } from "../../shared/components/ui/Button";
 import { AssignmentLabel } from "./AssignmentLabel";

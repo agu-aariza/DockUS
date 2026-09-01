@@ -5,7 +5,8 @@
  */
 
 import { StatusBadge } from '../../../shared/components/ui/StatusBadge';
-import type { BuildRunEntity, DeliveryEntity } from '../../../shared/types';
+import type { BuildRunEntity } from '../../builder/types';
+import type { DeliveryEntity } from '../types';
 import { resolveStudentRunOutcome } from '../../../student/studentWorkspaceInsights';
 
 interface DeliveryOutcomeBadgeProps {

@@ -4,7 +4,7 @@
  * @module studentBuildRunStages
  */
 
-import type { BuildRunEntity, BuildRunEvent } from "../shared/types";
+import type { BuildRunEntity, BuildRunEvent } from "../features/builder/types";
 
 export type StudentRunStage =
   | "queued"

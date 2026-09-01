@@ -5,7 +5,7 @@
  */
 
 import { useMemo, useState } from "react";
-import type { DeliveryEntity } from "../shared/types";
+import type { DeliveryEntity } from "../features/deliveries/types";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import {
   RiFileTextLine,

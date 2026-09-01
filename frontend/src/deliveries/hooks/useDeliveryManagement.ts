@@ -14,11 +14,8 @@ import {
   projectsApi,
 } from "../../shared/api/services";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
-import type {
-  BuildRunEntity,
-  DeliveryEntity,
-  DeliveryStatus,
-} from "../../shared/types";
+import type { BuildRunEntity } from "../../features/builder/types";
+import type { DeliveryEntity, DeliveryStatus } from "../../features/deliveries/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useSession } from "../../shared/session/SessionContext";
 import { useManagementPermissions } from "../../shared/session/useManagementPermissions";

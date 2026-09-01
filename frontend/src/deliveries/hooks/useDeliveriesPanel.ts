@@ -13,7 +13,7 @@ import { useToast } from "../../shared/toast/ToastContext";
 import { useNoticeToasts } from "../../shared/toast/useNoticeToasts";
 import { useDeliveryManagement } from "./useDeliveryManagement";
 import { normalizeTeacherDeliveryTab } from "../teacherReviewNavigation";
-import { DeliveryEntity } from "../../shared/types";
+import type { DeliveryEntity } from "../../features/deliveries/types";
 import { isLowConfidenceVerdict } from "../../shared/data/builderTaxonomy";
 
 export type DetailTab = "overview" | "grading" | "report";

@@ -4,7 +4,7 @@
  * @module teacherReviewNavigation
  */
 
-import type { ProjectGradebookRow } from "../shared/types";
+import type { ProjectGradebookRow } from "../features/projects/types";
 
 export type TeacherDeliveryDetailTab = "overview" | "grading" | "report";
 

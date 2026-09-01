@@ -20,10 +20,8 @@ import { MetricCard } from "../shared/components/MetricCard";
 import { Skeleton, SkeletonCard } from "../shared/components/Skeleton";
 import { Button } from "../shared/components/ui/Button";
 import { StatusBadge } from "../shared/components/ui/StatusBadge";
-import type {
-  BuildRunEntity,
-  DeliveryEntity,
-} from "../shared/types";
+import type { BuildRunEntity } from "../features/builder/types";
+import type { DeliveryEntity } from "../features/deliveries/types";
 import { getErrorMessage } from "../shared/utils/errors";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import { EvaluationProgressCard } from "./components/EvaluationProgressCard";

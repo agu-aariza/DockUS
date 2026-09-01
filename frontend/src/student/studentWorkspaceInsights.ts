@@ -4,12 +4,9 @@
  * @module studentWorkspaceInsights
  */
 
-import type {
-  BuilderOutcome,
-  BuildRunEntity,
-  DeliveryEntity,
-  ProjectAssignmentEntity,
-} from "../shared/types";
+import type { BuilderOutcome, BuildRunEntity } from "../features/builder/types";
+import type { DeliveryEntity } from "../features/deliveries/types";
+import type { ProjectAssignmentEntity } from "../features/projects/types";
 
 interface StudentWorkspaceInsights {
   activeAssignments: number;

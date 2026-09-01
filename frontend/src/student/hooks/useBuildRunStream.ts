@@ -7,7 +7,8 @@
 import { useMemo } from "react";
 
 import { useBuilderRunStream } from "../../builder/hooks/useBuilderRunStream";
-import type { BuildRunEntity, SessionRecord } from "../../shared/types";
+import type { BuildRunEntity } from "../../features/builder/types";
+import type { SessionRecord } from "../../features/auth/types";
 import {
   deriveStudentRunProgress,
   type StudentRunProgressSnapshot,
