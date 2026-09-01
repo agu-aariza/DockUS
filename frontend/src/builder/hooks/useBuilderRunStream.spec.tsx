@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { useBuilderRunStream } from "./useBuilderRunStream";
 import { builderApi } from "../api/builderApi";
 import type { SessionRecord } from "../../shared/session/session.types";
@@ -181,5 +181,45 @@ describe("useBuilderRunStream", () => {
     // La peticion de stream nunca llega a lanzarse tras el desmontaje.
     expect(mockFetch).not.toHaveBeenCalled();
     expect(() => getByTestId("stream-state")).toThrow();
+  });
+
+  it("espera el backoff antes de reconectar tras cerrar el stream", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+
+    const mockReader = {
+      read: vi.fn().mockResolvedValue({ done: true }),
+      cancel: vi.fn().mockResolvedValue(undefined),
+      releaseLock: vi.fn(),
+    };
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      body: { getReader: vi.fn().mockReturnValue(mockReader) },
+    });
+    global.fetch = mockFetch;
+
+    const { unmount } = render(
+      <TestComponent runId="run-1" session={session} />,
+    );
+
+    await act(async () => {
+      for (let index = 0; index < 8; index += 1) await Promise.resolve();
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_999);
+      await Promise.resolve();
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      for (let index = 0; index < 8; index += 1) await Promise.resolve();
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+
+    unmount();
+    vi.useRealTimers();
   });
 });
