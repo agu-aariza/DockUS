@@ -4,9 +4,9 @@
  * @module authApi
  */
 
-import { http } from "./http";
+import { http } from "../../shared/api/http";
 import type { AuthResponse } from "../../features/auth/types";
-import type { UserRole } from "../types";
+import type { UserRole } from "../../shared/types";
 
 export const authApi = {
   async register(payload: {

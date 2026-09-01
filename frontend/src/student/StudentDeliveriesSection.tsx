@@ -17,7 +17,7 @@ import {
   RiRocketLine,
   RiLoader4Line,
 } from "react-icons/ri";
-import { builderApi } from "../shared/api/builderApi";
+import { builderApi } from "../builder/api/builderApi";
 import { Button } from "../shared/components/ui/Button";
 import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import { MetricCard } from "../shared/components/MetricCard";

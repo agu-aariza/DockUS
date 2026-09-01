@@ -6,7 +6,7 @@
 
 import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { usersApi } from '../../shared/api/services';
+import { usersApi } from '../api/usersApi';
 import type { UserRole } from "../../shared/types";
 import type { UserEntity, UserStatus } from "../../features/auth/types";
 import { useSession } from '../../shared/session/SessionContext';

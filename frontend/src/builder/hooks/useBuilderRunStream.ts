@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { apiBaseUrl } from "../../shared/api/http";
-import { builderApi } from "../../shared/api/services";
+import { builderApi } from "../api/builderApi";
 import type { BuildRunEvent } from "../../features/builder/types";
 import type { SessionRecord } from "../../features/auth/types";
 import { getErrorMessage } from "../../shared/utils/errors";

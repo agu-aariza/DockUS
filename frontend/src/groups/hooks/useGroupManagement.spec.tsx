@@ -4,7 +4,7 @@ import type { BulkGroupEnrollResponse, CourseGroupEntity, GroupEnrollmentEntity 
 import type { UserEntity } from "../../features/auth/types";
 import { renderHookWithProviders } from "../../test/renderWithProviders";
 
-vi.mock("../../shared/api/services", () => ({
+vi.mock("../api/groupsApi", () => ({
   groupsApi: {
     list: vi.fn(),
     create: vi.fn(),
@@ -14,12 +14,13 @@ vi.mock("../../shared/api/services", () => ({
     bulkEnroll: vi.fn(),
     revokeEnrollment: vi.fn(),
   },
-  usersApi: {
-    list: vi.fn(),
-  },
+}));
+vi.mock("../../users/api/usersApi", () => ({
+  usersApi: { list: vi.fn() },
 }));
 
-import { groupsApi, usersApi } from "../../shared/api/services";
+import { groupsApi } from "../api/groupsApi";
+import { usersApi } from "../../users/api/usersApi";
 import { useGroupManagement } from "./useGroupManagement";
 
 const group: CourseGroupEntity = {

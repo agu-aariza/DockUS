@@ -4,8 +4,7 @@
  * @module healthApi
  */
 
-import axios from "axios";
-import { http } from "./http";
+import { http, isHttpError } from "../../shared/api/http";
 import type { ReadinessReport } from "../../features/health/types";
 
 export const healthApi = {
@@ -21,7 +20,7 @@ export const healthApi = {
       const { data } = await http.get<ReadinessReport>("/health/readiness", { signal });
       return data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.data) {
+      if (isHttpError(error) && error.response?.data) {
         const report = error.response.data as Partial<ReadinessReport>;
         if (report.status && report.checks) {
           return report as ReadinessReport;

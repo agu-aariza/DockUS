@@ -18,7 +18,8 @@ import {
 import { useNavigate } from 'react-router';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useWorkspaceSelection } from '../workspace/WorkspaceContext';
-import { projectsApi, assignmentsApi } from '../api/services';
+import { projectsApi } from '../../projects/api/projectsApi';
+import { assignmentsApi } from '../../projects/api/assignmentsApi';
 import { queryKeys } from '../query/queryKeys';
 import type { ProjectAssignmentEntity } from '../../features/projects/types';
 

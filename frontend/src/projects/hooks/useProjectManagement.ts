@@ -6,10 +6,8 @@
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  projectsApi,
-  usersApi,
-} from "../../shared/api/services";
+import { projectsApi } from "../api/projectsApi";
+import { usersApi } from "../../users/api/usersApi";
 import type { ProjectStatus, RubricCriterion } from "../../features/projects/types";
 import { useSession } from "../../shared/session/SessionContext";
 import { useManagementPermissions } from "../../shared/session/useManagementPermissions";

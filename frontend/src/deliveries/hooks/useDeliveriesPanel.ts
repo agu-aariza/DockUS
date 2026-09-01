@@ -7,7 +7,7 @@
 import { useState, useDeferredValue, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
-import { deliveriesApi } from "../../shared/api/services";
+import { deliveriesApi } from "../api/deliveriesApi";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useToast } from "../../shared/toast/ToastContext";
 import { useNoticeToasts } from "../../shared/toast/useNoticeToasts";

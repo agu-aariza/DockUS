@@ -19,7 +19,7 @@ import {
   RiUserLine,
 } from "react-icons/ri";
 
-import { projectsApi } from "../../shared/api/services";
+import { projectsApi } from "../../projects/api/projectsApi";
 import { queryKeys } from "../../shared/query/queryKeys";
 import { Card } from "../../shared/components/ui/Layout";
 import { Skeleton } from "../../shared/components/Skeleton";

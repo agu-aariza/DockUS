@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { builderApi } from "../api/builderApi";
+import { builderApi } from "../../builder/api/builderApi";
 import { queryKeys } from "../query/queryKeys";
 import type { BuilderReportEntity, BuilderRuntimeFamily, BuildRunEntity, TechnicalFeedbackItem } from "../../features/builder/types";
 import {

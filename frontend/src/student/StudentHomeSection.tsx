@@ -17,7 +17,7 @@ import {
   RiRocketLine,
   RiLoader4Line,
 } from "react-icons/ri";
-import { builderApi } from "../shared/api/builderApi";
+import { builderApi } from "../builder/api/builderApi";
 
 import type { StudentWorkflowState } from "../features/deliveries/types";
 import { MetricCard } from "../shared/components/MetricCard";

@@ -134,7 +134,7 @@ export function TeacherProjectsPanel(): JSX.Element {
   const handleDownloadSuite = async () => {
     if (!pc.testSuiteResult || typeof pc.testSuiteResult === 'string' || !('id' in pc.testSuiteResult)) return;
     try {
-      const { storageApi } = await import("../shared/api/services");
+      const { storageApi } = await import("../storage/api/storageApi");
       const { downloadUrl } = await storageApi.createDownloadUrl(pc.testSuiteResult.id);
 
       const link = document.createElement('a');
@@ -153,7 +153,7 @@ export function TeacherProjectsPanel(): JSX.Element {
     setIsLoadingPreview(true);
     setIsPreviewModalOpen(true);
     try {
-      const { projectsApi } = await import("../shared/api/services");
+      const { projectsApi } = await import("./api/projectsApi");
       const data = await projectsApi.previewTestSuite(pc.selectedProjectId);
       setPreviewFiles(data);
       if (data.length > 0) setSelectedPreviewFile(0);

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, waitFor } from "@testing-library/react";
 import { useBuilderRunStream } from "./useBuilderRunStream";
-import { builderApi } from "../../shared/api/services";
+import { builderApi } from "../api/builderApi";
 import type { SessionRecord } from "../../features/auth/types";
 
 const session: SessionRecord = {

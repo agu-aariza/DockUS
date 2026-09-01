@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
-vi.mock("../../shared/api/services", () => ({
+vi.mock("../api/authApi", () => ({
   authApi: { login: vi.fn(), register: vi.fn() },
 }));
 
-import { authApi } from "../../shared/api/services";
+import { authApi } from "../api/authApi";
 import { useAuthForm } from "./useAuthForm";
 
 const AUTH_RESPONSE = {

@@ -4,8 +4,8 @@
  * @module groupsApi
  */
 
-import { http } from "./http";
-import { normalizeStringArray } from "./query-params";
+import { http } from "../../shared/api/http";
+import { normalizeStringArray } from "../../shared/api/query-params";
 import type { BulkGroupEnrollResponse, CourseGroupEntity, GroupEnrollmentEntity } from "../../features/groups/types";
 
 export const groupsApi = {

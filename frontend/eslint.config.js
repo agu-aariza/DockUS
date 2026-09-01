@@ -64,4 +64,38 @@ export default [
       ],
     },
   },
+  {
+    // El transporte compartido no puede volver a conocer tipos o APIs de dominio.
+    // La guarda equivalente para todo shared/ se ampliará cuando PR4 extraiga
+    // los componentes de dominio que aún viven allí.
+    files: ['src/shared/api/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '../features/**',
+                '../../features/**',
+                '../../auth/**',
+                '../../users/**',
+                '../../projects/**',
+                '../../groups/**',
+                '../../deliveries/**',
+                '../../storage/**',
+                '../../builder/**',
+                '../../llm/**',
+                '../../student/**',
+                '../../health/**',
+                '../../reporting/**',
+              ],
+              message:
+                'shared/api is transport-only; domain APIs and types must live in their domain folder.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];

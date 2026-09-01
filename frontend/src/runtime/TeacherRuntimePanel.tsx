@@ -23,7 +23,7 @@ import { useNoticeToasts } from "../shared/toast/useNoticeToasts";
 import { useToast } from "../shared/toast/ToastContext";
 import { useRuntimeManagement } from "./hooks/useRuntimeManagement";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
-import { deliveriesApi } from "../shared/api/services";
+import { deliveriesApi } from "../deliveries/api/deliveriesApi";
 import { getErrorMessage } from "../shared/utils/errors";
 import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import { VisualPicker, type VisualPickerOption } from "../shared/components/ui/VisualPicker";

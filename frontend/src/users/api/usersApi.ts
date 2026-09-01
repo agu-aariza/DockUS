@@ -4,9 +4,9 @@
  * @module usersApi
  */
 
-import { http } from "./http";
-import { toParams } from "./query-params";
-import type { PaginatedResponse, UserRole } from "../types";
+import { http } from "../../shared/api/http";
+import { toParams } from "../../shared/api/query-params";
+import type { PaginatedResponse, UserRole } from "../../shared/types";
 import type { UserEntity, UserStatus } from "../../features/auth/types";
 
 export const usersApi = {

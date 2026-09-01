@@ -4,11 +4,11 @@
  * @module builderApi
  */
 
-import { http } from "./http";
+import { http } from "../../shared/api/http";
 import type { BuildRunEntity, BuildRunEventsPage, EvidenceArtifactDto, EnqueueBuildRunResponse, BuildRunChatMessage } from "../../features/builder/types";
 import type { DownloadUrlResponse } from "../../features/storage/types";
-import type { PaginatedResponse } from "../types";
-import { toParams } from "./query-params";
+import type { PaginatedResponse } from "../../shared/types";
+import { toParams } from "../../shared/api/query-params";
 
 export const builderApi = {
   async runForDelivery(deliveryId: string): Promise<EnqueueBuildRunResponse> {

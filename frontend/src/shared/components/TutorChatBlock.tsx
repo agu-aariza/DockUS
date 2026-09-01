@@ -12,7 +12,7 @@ import {
   RiMessage3Line,
   RiUser3Line,
 } from "react-icons/ri";
-import { builderApi } from "../api/builderApi";
+import { builderApi } from "../../builder/api/builderApi";
 import { queryKeys } from "../query/queryKeys";
 import type { BuildRunChatMessage, BuilderReportEntity } from "../../features/builder/types";
 import { MarkdownContent } from "./MarkdownContent";

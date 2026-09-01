@@ -19,7 +19,9 @@ import type {
 } from "../features/projects/types";
 import type { DeliveryEntity } from "../features/deliveries/types";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
-import { projectsApi, deliveriesApi, usersApi } from "../shared/api/services";
+import { projectsApi } from "../projects/api/projectsApi";
+import { deliveriesApi } from "../deliveries/api/deliveriesApi";
+import { usersApi } from "../users/api/usersApi";
 import { queryKeys } from "../shared/query/queryKeys";
 import { CohortAnalyticsDashboard } from "./components/CohortAnalyticsDashboard";
 import { CourseStatusStrip, CourseStatusStripSkeleton } from "./components/CourseStatusStrip";

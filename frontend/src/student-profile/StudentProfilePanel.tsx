@@ -11,7 +11,7 @@ import { PageHeader } from "../shared/components/ui/PageHeader";
 import { Button } from "../shared/components/ui/Button";
 import { SkeletonCard } from "../shared/components/Skeleton";
 import { EmptyState } from "../shared/components/EmptyState";
-import { studentsApi } from "../shared/api/services";
+import { studentsApi } from "../student/api/studentsApi";
 import { getErrorMessage } from "../shared/utils/errors";
 import { queryKeys } from "../shared/query/queryKeys";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";

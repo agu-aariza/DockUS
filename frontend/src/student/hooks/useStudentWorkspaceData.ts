@@ -6,8 +6,9 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { assignmentsApi, deliveriesApi } from "../../shared/api/services";
-import { builderApi } from "../../shared/api/builderApi";
+import { assignmentsApi } from "../../projects/api/assignmentsApi";
+import { deliveriesApi } from "../../deliveries/api/deliveriesApi";
+import { builderApi } from "../../builder/api/builderApi";
 import type { BuildRunEntity } from "../../features/builder/types";
 import type { ProjectAssignmentEntity } from "../../features/projects/types";
 import type { DeliveryEntity } from "../../features/deliveries/types";

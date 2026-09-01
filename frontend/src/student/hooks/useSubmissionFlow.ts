@@ -7,8 +7,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { builderApi } from "../../shared/api/builderApi";
-import { deliveriesApi, storageApi } from "../../shared/api/services";
+import { builderApi } from "../../builder/api/builderApi";
+import { deliveriesApi } from "../../deliveries/api/deliveriesApi";
+import { storageApi } from "../../storage/api/storageApi";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { computeSha256Hex } from "../../shared/utils/hash";
 import { queryKeys } from "../../shared/query/queryKeys";

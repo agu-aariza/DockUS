@@ -6,7 +6,8 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { groupsApi, usersApi } from "../../shared/api/services";
+import { groupsApi } from "../api/groupsApi";
+import { usersApi } from "../../users/api/usersApi";
 import type {
   BulkGroupEnrollResponse,
   CourseGroupEntity,

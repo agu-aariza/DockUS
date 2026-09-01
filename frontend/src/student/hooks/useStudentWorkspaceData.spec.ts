@@ -1,16 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 
-vi.mock("../../shared/api/services", () => ({
+vi.mock("../../projects/api/assignmentsApi", () => ({
   assignmentsApi: { listMine: vi.fn() },
+}));
+vi.mock("../../deliveries/api/deliveriesApi", () => ({
   deliveriesApi: { list: vi.fn() },
 }));
-vi.mock("../../shared/api/builderApi", () => ({
+vi.mock("../../builder/api/builderApi", () => ({
   builderApi: { listLatestRunsByDeliveries: vi.fn() },
 }));
 
-import { assignmentsApi, deliveriesApi } from "../../shared/api/services";
-import { builderApi } from "../../shared/api/builderApi";
+import { assignmentsApi } from "../../projects/api/assignmentsApi";
+import { deliveriesApi } from "../../deliveries/api/deliveriesApi";
+import { builderApi } from "../../builder/api/builderApi";
 import { renderHookWithProviders } from "../../test/renderWithProviders";
 import { useStudentWorkspaceData } from "./useStudentWorkspaceData";
 

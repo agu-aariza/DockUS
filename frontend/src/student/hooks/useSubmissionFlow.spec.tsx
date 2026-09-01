@@ -3,19 +3,22 @@ import { renderHook, act } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
 
-vi.mock("../../shared/api/services", () => ({
+vi.mock("../../deliveries/api/deliveriesApi", () => ({
   deliveriesApi: { create: vi.fn(), preview: vi.fn() },
+}));
+vi.mock("../../storage/api/storageApi", () => ({
   storageApi: { upload: vi.fn() },
 }));
-vi.mock("../../shared/api/builderApi", () => ({
+vi.mock("../../builder/api/builderApi", () => ({
   builderApi: { runForDelivery: vi.fn() },
 }));
 vi.mock("../../shared/utils/hash", () => ({
   computeSha256Hex: vi.fn().mockResolvedValue("deadbeef"),
 }));
 
-import { deliveriesApi, storageApi } from "../../shared/api/services";
-import { builderApi } from "../../shared/api/builderApi";
+import { deliveriesApi } from "../../deliveries/api/deliveriesApi";
+import { storageApi } from "../../storage/api/storageApi";
+import { builderApi } from "../../builder/api/builderApi";
 import { SessionProvider } from "../../shared/session/SessionContext";
 import { WorkspaceProvider } from "../../shared/workspace/WorkspaceContext";
 import { createTestQueryClient } from "../../test/renderWithProviders";

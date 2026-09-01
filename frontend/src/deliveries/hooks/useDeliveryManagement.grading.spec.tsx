@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, waitFor } from "@testing-library/react";
 
-vi.mock("../../shared/api/services", () => ({
+vi.mock("../../projects/api/assignmentsApi", () => ({
   assignmentsApi: { listMine: vi.fn(), listByProject: vi.fn() },
+}));
+vi.mock("../../builder/api/builderApi", () => ({
   builderApi: { listByDelivery: vi.fn(), detail: vi.fn(), listLatestRunsByDeliveries: vi.fn() },
+}));
+vi.mock("../api/deliveriesApi", () => ({
   deliveriesApi: {
     list: vi.fn(),
     create: vi.fn(),
@@ -12,6 +16,8 @@ vi.mock("../../shared/api/services", () => ({
     updateGrading: vi.fn(),
     detail: vi.fn(),
   },
+}));
+vi.mock("../../projects/api/projectsApi", () => ({
   projectsApi: { list: vi.fn() },
 }));
 
@@ -25,7 +31,8 @@ vi.mock("../../shared/session/SessionContext", () => ({
   }),
 }));
 
-import { deliveriesApi, projectsApi } from "../../shared/api/services";
+import { deliveriesApi } from "../api/deliveriesApi";
+import { projectsApi } from "../../projects/api/projectsApi";
 import { DEFAULT_SELECTION } from "../../shared/workspace/WorkspaceSelectionContext";
 import { createTestQueryClient, renderHookWithProviders } from "../../test/renderWithProviders";
 import { useDeliveryManagement } from "./useDeliveryManagement";

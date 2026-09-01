@@ -38,6 +38,8 @@ export const http = axios.create({
   },
 });
 
+export const isHttpError = axios.isAxiosError;
+
 export function setAccessToken(token: string | null): void {
   accessToken = token;
 }

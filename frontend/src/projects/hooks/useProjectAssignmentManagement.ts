@@ -6,10 +6,8 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  assignmentsApi,
-  groupsApi,
-} from "../../shared/api/services";
+import { assignmentsApi } from "../api/assignmentsApi";
+import { groupsApi } from "../../groups/api/groupsApi";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { queryKeys } from "../../shared/query/queryKeys";
 import type { NoticeState } from "./projectManagement.types";

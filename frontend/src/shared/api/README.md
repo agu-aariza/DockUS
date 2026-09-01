@@ -1,31 +1,33 @@
-# Cliente API (`shared/api/`)
+# Transporte HTTP (`shared/api/`)
 
-> **Resumen rápido:** El único lugar del frontend donde se usa `axios`. Un fichero de fachada por dominio del backend (`projectsApi.ts`, `deliveriesApi.ts`, etc.), todos construidos sobre la misma instancia configurada en `http.ts`. `services.ts` es solo un punto de reexportación de compatibilidad.
+> **Resumen rápido:** Esta carpeta contiene únicamente el transporte HTTP transversal: la instancia Axios configurada en `http.ts` y los helpers de parámetros. Los clientes de cada dominio viven junto al dominio que representan.
 
 ---
 
-## Por qué está partido en un fichero por dominio
+## Dónde viven los clientes de dominio
 
-Antes existía como un único agregado grande; ahora cada `*Api.ts` vive cerca del dominio al que sirve, para mantener los contratos pequeños y el fichero manejable. `services.ts` reexporta todos (`export { authApi } from "./authApi";` ...) — sigue existiendo como fachada de compatibilidad para no romper imports antiguos, pero un componente nuevo puede importar directamente `./projectsApi` si lo prefiere.
+Cada `*Api.ts` vive cerca del dominio al que sirve, para que los componentes y hooks importen directamente el cliente que necesitan:
+
+```text
+auth/api/authApi.ts
+users/api/usersApi.ts
+projects/api/{projectsApi,assignmentsApi}.ts
+groups/api/groupsApi.ts
+deliveries/api/deliveriesApi.ts
+storage/api/storageApi.ts
+builder/api/builderApi.ts
+llm/api/llmApi.ts
+student/api/studentsApi.ts
+health/api/healthApi.ts
+```
 
 ## Estructura interna
 
 ```text
 api/
 ├── http.ts               # La instancia axios: interceptores de token JWT, manejo global de 401/403
-├── query-params.ts         # Serialización consistente de query params (paginación, filtros) entre todas las *Api
-├── services.ts                # Reexporta todas las *Api — fachada de compatibilidad
-├── authApi.ts                   # /auth/*
-├── usersApi.ts                    # /users/*
-├── groupsApi.ts                     # /groups/*
-├── projectsApi.ts                     # /projects/*
-├── assignmentsApi.ts                    # /projects/:id/assignments/*, /assignments/*
-├── deliveriesApi.ts                       # /deliveries/*
-├── storageApi.ts                            # /storage/*
-├── builderApi.ts                              # /builder/* (incluye el endpoint SSE, consumido aparte por useBuilderRunStream)
-├── llmApi.ts                                    # /builder/llm-configs/*
-├── studentsApi.ts                                 # /students/*
-└── healthApi.ts                                     # /health/*
+├── http.spec.ts          # Tests de los interceptores de autenticación
+└── query-params.ts       # Serialización consistente de query params
 ```
 
 ## `http.ts`: qué pasa en cada petición
@@ -38,7 +40,7 @@ Cada petición sale con el token JWT de la sesión activa inyectado por un inter
 npm run test -- src/shared/api
 ```
 
-Si añades un endpoint nuevo, añade el método en el `*Api.ts` del dominio correspondiente (créalo si el dominio es nuevo) — nunca llames a `axios`/`http.ts` directamente desde un hook o componente de fuera de esta carpeta.
+Si añades un endpoint nuevo, añade el método en el `*Api.ts` del dominio correspondiente (créalo si el dominio es nuevo). Los clientes de dominio deben importar `http` y `query-params` desde esta carpeta; los hooks y componentes no deben llamar a Axios directamente.
 
 ## Ver también
 

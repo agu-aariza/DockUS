@@ -4,12 +4,12 @@
  * @module projectsApi
  */
 
-import { http } from "./http";
-import { toParams } from "./query-params";
+import { http } from "../../shared/api/http";
+import { toParams } from "../../shared/api/query-params";
 import type { BuilderOutcome, QualityInsightCategory } from "../../features/builder/types";
 import type { DeliveryStatus } from "../../features/deliveries/types";
 import type { ProjectEntity, ProjectGradebookRow, ProjectOperationalIssuesReconcileResult, ProjectOperationalIssuesSummary, ProjectProgressSummary, ProjectQualityInsightsResponse, ProjectStatus, ProjectStudentQualityInsightsResponse, RubricCriterion } from "../../features/projects/types";
-import type { PaginatedResponse } from "../types";
+import type { PaginatedResponse } from "../../shared/types";
 import type { StorageObjectEntity } from "../../features/storage/types";
 
 export const projectsApi = {

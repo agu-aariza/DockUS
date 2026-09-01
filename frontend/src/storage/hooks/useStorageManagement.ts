@@ -6,13 +6,11 @@
 
 import { type FormEvent, useState, useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  storageApi,
-  projectsApi,
-  deliveriesApi,
-  assignmentsApi,
-  builderApi
-} from '../../shared/api/services';
+import { storageApi } from '../api/storageApi';
+import { projectsApi } from '../../projects/api/projectsApi';
+import { deliveriesApi } from '../../deliveries/api/deliveriesApi';
+import { assignmentsApi } from '../../projects/api/assignmentsApi';
+import { builderApi } from '../../builder/api/builderApi';
 import type { DownloadUrlResponse, StorageObjectEntity } from "../../features/storage/types";
 import type { PaginatedResponse } from "../../shared/types";
 import { useSession } from '../../shared/session/SessionContext';

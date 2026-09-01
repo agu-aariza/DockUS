@@ -14,7 +14,7 @@ import {
   RiLineChartLine,
 } from "react-icons/ri";
 
-import { builderApi } from "../shared/api/builderApi";
+import { builderApi } from "../builder/api/builderApi";
 import { EmptyState } from "../shared/components/EmptyState";
 import { MetricCard } from "../shared/components/MetricCard";
 import { Skeleton, SkeletonCard } from "../shared/components/Skeleton";

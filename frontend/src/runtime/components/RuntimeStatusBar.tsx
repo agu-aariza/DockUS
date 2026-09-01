@@ -5,7 +5,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { healthApi } from "../../shared/api/services";
+import { healthApi } from "../../health/api/healthApi";
 import { queryKeys } from "../../shared/query/queryKeys";
 import {
   DEPENDENCY_LABEL,

@@ -25,7 +25,7 @@ import { AppShell } from "./shared/components/ui/AppShell";
 import { WorkspaceBar } from "./shared/workspace/WorkspaceBar";
 import { CommandPalette } from "./shared/components/CommandPalette";
 import { useSession } from "./shared/session/SessionContext";
-import { authApi } from "./shared/api/services";
+import { authApi } from "./auth/api/authApi";
 import type { AuthResponse } from "./features/auth/types";
 import { useToast } from "./shared/toast/ToastContext";
 import { RiSpyLine, RiLoader4Line } from "react-icons/ri";

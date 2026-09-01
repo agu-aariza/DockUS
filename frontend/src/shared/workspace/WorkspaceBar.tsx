@@ -21,7 +21,10 @@ import {
   RiArrowDownSLine
 } from "react-icons/ri";
 import { useWorkspaceSelection, useWorkspaceUI } from "./WorkspaceContext";
-import { projectsApi, assignmentsApi, deliveriesApi, builderApi } from "../api/services";
+import { projectsApi } from "../../projects/api/projectsApi";
+import { assignmentsApi } from "../../projects/api/assignmentsApi";
+import { deliveriesApi } from "../../deliveries/api/deliveriesApi";
+import { builderApi } from "../../builder/api/builderApi";
 import { queryKeys } from "../query/queryKeys";
 import type { ProjectEntity, ProjectAssignmentEntity } from "../../features/projects/types";
 import type { DeliveryEntity } from "../../features/deliveries/types";

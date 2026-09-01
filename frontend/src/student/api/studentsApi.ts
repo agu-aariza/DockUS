@@ -4,7 +4,7 @@
  * @module studentsApi
  */
 
-import { http } from "./http";
+import { http } from "../../shared/api/http";
 import type { StudentProfileResponse } from "../../features/students/types";
 
 export const studentsApi = {

@@ -14,7 +14,7 @@ import {
   RiFolderOpenLine,
   RiShieldCheckLine,
 } from "react-icons/ri";
-import { projectsApi } from "../../shared/api/services";
+import { projectsApi } from "../../projects/api/projectsApi";
 import { MetricCard } from "../../shared/components/MetricCard";
 import { Skeleton } from "../../shared/components/Skeleton";
 import { EmptyState } from "../../shared/components/EmptyState";

@@ -7,12 +7,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  assignmentsApi,
-  builderApi,
-  deliveriesApi,
-  projectsApi,
-} from "../../shared/api/services";
+import { assignmentsApi } from "../../projects/api/assignmentsApi";
+import { builderApi } from "../../builder/api/builderApi";
+import { deliveriesApi } from "../../deliveries/api/deliveriesApi";
+import { projectsApi } from "../../projects/api/projectsApi";
 import type { BuildRunEntity, EvidenceArtifactDto } from "../../features/builder/types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { useSession } from "../../shared/session/SessionContext";

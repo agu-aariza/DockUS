@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { projectsApi } from "../../shared/api/services";
+import { projectsApi } from "../api/projectsApi";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { queryKeys } from "../../shared/query/queryKeys";
 import type { NoticeState } from "./projectManagement.types";

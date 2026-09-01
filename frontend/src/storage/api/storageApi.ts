@@ -4,10 +4,10 @@
  * @module storageApi
  */
 
-import { http } from "./http";
-import { toParams } from "./query-params";
+import { http } from "../../shared/api/http";
+import { toParams } from "../../shared/api/query-params";
 import type { DownloadUrlResponse, StorageAssetRole, StorageObjectEntity } from "../../features/storage/types";
-import type { PaginatedResponse } from "../types";
+import type { PaginatedResponse } from "../../shared/types";
 
 export const storageApi = {
   async list(query: {

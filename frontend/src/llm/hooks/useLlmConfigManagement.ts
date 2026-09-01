@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { llmApi } from "../../shared/api/services";
+import { llmApi } from "../api/llmApi";
 import { queryKeys } from "../../shared/query/queryKeys";
 import { useToast } from "../../shared/toast/ToastContext";
 import {

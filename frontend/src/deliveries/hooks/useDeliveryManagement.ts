@@ -7,12 +7,10 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  assignmentsApi,
-  builderApi,
-  deliveriesApi,
-  projectsApi,
-} from "../../shared/api/services";
+import { assignmentsApi } from "../../projects/api/assignmentsApi";
+import { builderApi } from "../../builder/api/builderApi";
+import { deliveriesApi } from "../api/deliveriesApi";
+import { projectsApi } from "../../projects/api/projectsApi";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import type { BuildRunEntity } from "../../features/builder/types";
 import type { DeliveryEntity, DeliveryStatus } from "../../features/deliveries/types";
