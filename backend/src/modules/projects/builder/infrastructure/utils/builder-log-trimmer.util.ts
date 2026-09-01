@@ -9,27 +9,6 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class BuilderLogTrimmer {
   /**
-   * Recorta los logs para evitar exceder la ventana de contexto del LLM.
-   * Prioriza las líneas finales y las que contienen errores.
-   */
-  trim(logs: string, maxLines: number = 200): string {
-    if (!logs) return '';
-
-    const lines = logs.split('\n');
-    if (lines.length <= maxLines) return logs;
-
-    const half = Math.floor(maxLines / 2);
-    const startLines = lines.slice(0, half);
-    const endLines = lines.slice(-half);
-
-    return [
-      ...startLines,
-      `... [Recortadas ${lines.length - maxLines} líneas por brevedad] ...`,
-      ...endLines,
-    ].join('\n');
-  }
-
-  /**
    * Intenta identificar líneas críticas (errores, fallos) y las mantiene aunque estén en el medio.
    */
   smartTrim(logs: string, maxLines: number = 200): string {

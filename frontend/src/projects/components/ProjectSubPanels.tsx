@@ -55,11 +55,6 @@ import type {
   UserEntity,
 } from "../../shared/types";
 
-function formatOptionalDate(value?: string | null): string {
-  return value ? new Date(value).toLocaleString("es-ES") : "Sin definir";
-}
-
-
 type GroupFormState = {
   name: string;
   code: string;
@@ -340,5 +335,4 @@ export function ProjectAssignmentManager({
     </div>
   );
 }
-
 

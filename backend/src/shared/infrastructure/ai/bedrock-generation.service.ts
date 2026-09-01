@@ -50,10 +50,6 @@ export class BedrockGenerationService implements ILlmGenerationService {
     );
   }
 
-  getRuntimeConfig(): { region: string } {
-    return { region: this.region };
-  }
-
   /**
    * Cliente para las credenciales de la petición. Sin `accessKeyId` explícito se
    * delega en la cadena de credenciales del SDK (variables de entorno, rol IAM),

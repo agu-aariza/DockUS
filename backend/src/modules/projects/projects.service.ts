@@ -242,13 +242,6 @@ export class ProjectsService {
     );
   }
 
-  async findOwnedProjectOrThrow(
-    id: string,
-    actor: AuthenticatedUser,
-  ): Promise<Project> {
-    return this.projectAccessService.findOwnedProjectOrThrow(id, actor);
-  }
-
   async exportProgressSummaryCsv(
     projectId: string,
     actor: AuthenticatedUser,

@@ -174,7 +174,7 @@ describe('BuilderLlmEvaluatorService', () => {
       usage: { inputTokens: 120, outputTokens: 40 },
     });
 
-    await service.plan({
+    const trace = await service.planWithTrace({
       sourceCodePayload: 'A'.repeat(2000),
       assignmentContext: {
         expectedType: 'C_CLI',
@@ -184,6 +184,12 @@ describe('BuilderLlmEvaluatorService', () => {
       },
     });
 
+    expect(trace.parsedContract).toEqual(
+      expect.objectContaining({
+        stage: 'plan',
+        schemaVersion: 'builder-llm/v2',
+      }),
+    );
     expect(llmService.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         stage: 'plan',
@@ -295,7 +301,7 @@ describe('BuilderLlmEvaluatorService', () => {
       usage: { inputTokens: 120, outputTokens: 40 },
     });
 
-    await service.evaluate({
+    const trace = await service.evaluateWithTrace({
       projectRootDir: '/tmp/project',
       sourceCodePayload: 'B'.repeat(2000),
       facts: JSON.parse(validFactsResponse),
@@ -308,6 +314,12 @@ describe('BuilderLlmEvaluatorService', () => {
       },
     });
 
+    expect(trace.parsedContract).toEqual(
+      expect.objectContaining({
+        stage: 'evaluation',
+        schemaVersion: 'builder-llm/v2',
+      }),
+    );
     expect(llmService.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         stage: 'evaluation',

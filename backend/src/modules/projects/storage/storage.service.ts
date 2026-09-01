@@ -24,7 +24,6 @@ import { ListStorageObjectsQueryDto } from './dto/list-storage-objects-query.dto
 import { StorageAccessService } from './storage-access.service';
 import { StorageQueryService } from './storage-query.service';
 import { StorageUploadService } from './storage-upload.service';
-import { StorageObject } from './entities/storage-object.entity';
 import { UploadedStorageFile } from './interfaces/uploaded-storage-file.interface';
 import {
   CreateDownloadUrlResponse,
@@ -185,12 +184,6 @@ export class StorageService {
     const restored =
       await this.storageAccessService.findStorageObjectWithAccess(id, actor);
     return toStorageObjectResponse(restored);
-  }
-
-  async findProjectTestSuiteStorage(
-    projectId: string,
-  ): Promise<StorageObject | null> {
-    return this.storageQueryService.findProjectTestSuiteStorage(projectId);
   }
 
   async previewProjectTestSuite(

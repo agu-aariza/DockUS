@@ -90,18 +90,6 @@ export class BuilderLlmEvaluatorService {
     this.factsSystemPrompt = this.promptRegistry.getPrompt(PromptId.FACTS);
   }
 
-  async evaluate(input: EvaluatorInput): Promise<BuilderEvaluationContractV2> {
-    const trace = await this.evaluateWithTrace(input);
-    if (trace.parsedContract) {
-      return trace.parsedContract;
-    }
-
-    throw new Error(
-      trace.error?.message ??
-        'No se pudo obtener una evaluacion valida del LLM.',
-    );
-  }
-
   async evaluateWithTrace(
     input: EvaluatorInput,
     hooks?: BuilderLlmTraceHooks,
@@ -160,20 +148,6 @@ export class BuilderLlmEvaluatorService {
       parseBuilderFactsContractV2,
       'del extractor de hechos',
       hooks,
-    );
-  }
-
-  async plan(input: {
-    sourceCodePayload: string;
-    assignmentContext: AssignmentContext;
-  }): Promise<BuilderPlanContractV2> {
-    const trace = await this.planWithTrace(input);
-    if (trace.parsedContract) {
-      return trace.parsedContract;
-    }
-
-    throw new Error(
-      trace.error?.message ?? 'No se pudo obtener un plan valido del LLM.',
     );
   }
 

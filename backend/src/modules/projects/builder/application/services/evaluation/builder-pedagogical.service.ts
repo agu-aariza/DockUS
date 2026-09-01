@@ -127,20 +127,4 @@ export class BuilderPedagogicalService {
       conceptExplanation: feedback.explanation,
     }));
   }
-
-  /**
-   * Formatea el feedback pedagógico para ser incluido en las notas del evaluador.
-   */
-  formatFeedbackForStudent(feedbacks: PedagogicalFeedback[]): string {
-    if (feedbacks.length === 0) return '';
-
-    let output = '\n--- 🎓 RECOMENDACIONES PEDAGÓGICAS ---\n';
-    feedbacks.forEach((f) => {
-      output += `\n📌 CONCEPTO: ${f.concept}\n`;
-      output += `💡 EXPLICACIÓN: ${f.explanation}\n`;
-      output += `🚀 CONSEJO: ${f.advice}\n`;
-    });
-
-    return output;
-  }
 }
