@@ -13,8 +13,7 @@ import {
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
-import type { IUserRepository } from '../../users/domain/repositories/user.repository.interface';
-import { USER_REPOSITORY } from '../../users/domain/repositories/user.repository.interface';
+import { StudentTargetResolverService } from '../../users/application/student-target-resolver.service';
 import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
 import { DELIVERY_REPOSITORY } from '../domain/repositories/delivery.repository.interface';
 import type { IProjectRepository } from '../domain/repositories/project.repository.interface';
@@ -42,13 +41,12 @@ export class ProjectAssignmentsService {
   constructor(
     @Inject(PROJECT_ASSIGNMENT_REPOSITORY)
     private readonly assignmentsRepository: IProjectAssignmentRepository,
-    @Inject(USER_REPOSITORY)
-    private readonly usersRepository: IUserRepository,
     @Inject(DELIVERY_REPOSITORY)
     private readonly deliveriesRepository: IDeliveryRepository,
     @Inject(PROJECT_REPOSITORY)
     private readonly projectsRepository: IProjectRepository,
     private readonly projectAccessService: ProjectAccessService,
+    private readonly studentTargetResolver: StudentTargetResolverService,
     @Inject(GROUP_ROSTER_READER)
     private readonly groupRosterReader: GroupRosterReader,
   ) {}
@@ -136,47 +134,9 @@ export class ProjectAssignmentsService {
       projectId,
       actor,
     );
-    const requestedIds = [...new Set((input.studentIds ?? []).filter(Boolean))];
-    const requestedEmails = [
-      ...new Set(
-        (input.studentEmails ?? [])
-          .map((email) => email.trim().toLowerCase())
-          .filter(Boolean),
-      ),
-    ];
-
     const requestedGroupIds = [
       ...new Set((input.groupIds ?? []).filter(Boolean)),
     ];
-
-    // Parse raw input if provided
-    if (input.rawInput) {
-      const lines = input.rawInput
-        .split(/[\n,;]+/)
-        .map((l: string) => l.trim())
-        .filter(Boolean);
-
-      for (const line of lines) {
-        if (line.includes('@')) {
-          const email = line.toLowerCase();
-          if (!requestedEmails.includes(email)) {
-            requestedEmails.push(email);
-          }
-        }
-        // Project assignments currently don't support searching by name directly in the service,
-        // but we can add it later if needed. For now, we focus on emails.
-      }
-    }
-
-    if (
-      requestedIds.length === 0 &&
-      requestedEmails.length === 0 &&
-      requestedGroupIds.length === 0
-    ) {
-      throw new ConflictException(
-        'Debes indicar al menos un studentId, studentEmail o groupId para asignar.',
-      );
-    }
 
     const studentToGroups = new Map<string, Set<string>>();
     for (const groupId of requestedGroupIds) {
@@ -190,41 +150,24 @@ export class ProjectAssignmentsService {
     }
     const groupStudentIds = Array.from(studentToGroups.keys());
 
-    const usersByEmail = requestedEmails.length
-      ? await this.usersRepository.findByEmails(requestedEmails)
-      : [];
-    const emailToStudentId = new Map(
-      usersByEmail.map((user) => [user.email.toLowerCase(), user.id]),
-    );
-    const unresolvedEmails = requestedEmails.filter(
-      (email) => !emailToStudentId.has(email),
-    );
-    const uniqueStudentIds = [
-      ...new Set([
-        ...requestedIds,
-        ...groupStudentIds,
-        ...requestedEmails
-          .map((email) => emailToStudentId.get(email))
-          .filter((candidateId): candidateId is string => Boolean(candidateId)),
-      ]),
-    ];
-    const students = await this.usersRepository.findByIds(uniqueStudentIds);
+    const resolution = await this.studentTargetResolver.resolve({
+      studentIds: [...(input.studentIds ?? []), ...groupStudentIds],
+      studentEmails: input.studentEmails,
+      rawInput: input.rawInput,
+    });
 
-    if (students.length !== uniqueStudentIds.length) {
-      throw new NotFoundException(
-        'No se pudieron resolver todos los alumnos solicitados.',
+    if (
+      resolution.requestedIds.length === 0 &&
+      resolution.requestedEmails.length === 0 &&
+      requestedGroupIds.length === 0
+    ) {
+      throw new ConflictException(
+        'Debes indicar al menos un studentId, studentEmail o groupId para asignar.',
       );
     }
 
-    for (const student of students) {
-      if (student.role !== UserRole.STUDENT) {
-        throw new ConflictException(
-          `El usuario ${student.email} no tiene rol STUDENT.`,
-        );
-      }
-    }
-
-    const studentIds = students.map((s) => s.id);
+    const { students, resolvedStudentIds } = resolution;
+    const studentIds = resolvedStudentIds;
     const existingAssignments =
       await this.assignmentsRepository.findByProjectIdsAndStudentIds(
         [project.id],
@@ -287,14 +230,14 @@ export class ProjectAssignmentsService {
     return {
       assignments,
       summary: {
-        requestedIds,
-        requestedEmails,
+        requestedIds: resolution.requestedIds,
+        requestedEmails: resolution.requestedEmails,
         requestedGroupIds,
-        resolvedStudentIds: uniqueStudentIds,
+        resolvedStudentIds,
         assignedCount,
         reactivatedCount,
         alreadyActiveCount,
-        unresolvedEmails,
+        unresolvedEmails: resolution.unresolvedEmails,
       },
     };
   }

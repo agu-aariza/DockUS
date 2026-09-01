@@ -22,10 +22,16 @@ describe('GroupsService', () => {
         enrolledCount: 0,
       }),
     };
-    const usersRepository = {
-      findByEmails: jest.fn().mockResolvedValue([]),
-      findByNameAndRole: jest.fn().mockResolvedValue([]),
-      findByIds: jest.fn().mockResolvedValue([]),
+    const studentTargetResolver = {
+      resolve: jest.fn().mockResolvedValue({
+        students: [],
+        resolvedStudentIds: [],
+        requestedIds: [],
+        requestedEmails: [],
+        requestedNames: [],
+        unresolvedEmails: [],
+        unresolvedNames: [],
+      }),
     };
     const events = { publishStudentsEnrolled: jest.fn() };
 
@@ -33,11 +39,13 @@ describe('GroupsService', () => {
       service: new GroupsService(
         groupsRepository,
         enrollmentsRepository,
-        usersRepository as never,
+        studentTargetResolver as never,
         events as never,
       ),
       groupsRepository,
       enrollmentsRepository,
+      studentTargetResolver,
+      events,
     };
   }
 
@@ -80,7 +88,16 @@ describe('GroupsService', () => {
 
   describe('bulkEnroll', () => {
     it('delega la matrícula masiva en el puerto con los ids resueltos', async () => {
-      const { service, enrollmentsRepository } = build();
+      const { service, enrollmentsRepository, studentTargetResolver } = build();
+      studentTargetResolver.resolve.mockResolvedValue({
+        students: [{ id: 's1' }, { id: 's2' }],
+        resolvedStudentIds: ['s1', 's2'],
+        requestedIds: ['s1', 's2'],
+        requestedEmails: [],
+        requestedNames: [],
+        unresolvedEmails: [],
+        unresolvedNames: [],
+      });
       enrollmentsRepository.bulkEnroll.mockResolvedValue({
         alreadyActiveCount: 0,
         reactivatedCount: 1,
@@ -102,12 +119,56 @@ describe('GroupsService', () => {
       expect(result.summary.enrolledCount).toBe(1);
     });
 
+    it('conserva los conteos de reactivación y matrículas ya activas', async () => {
+      const { service, enrollmentsRepository, studentTargetResolver } = build();
+      studentTargetResolver.resolve.mockResolvedValue({
+        students: [{ id: 's1' }],
+        resolvedStudentIds: ['s1'],
+        requestedIds: ['s1'],
+        requestedEmails: [],
+        requestedNames: [],
+        unresolvedEmails: [],
+        unresolvedNames: [],
+      });
+      enrollmentsRepository.bulkEnroll.mockResolvedValue({
+        alreadyActiveCount: 2,
+        reactivatedCount: 1,
+        enrolledCount: 0,
+      });
+
+      const result = await service.bulkEnroll(
+        'g1',
+        { studentIds: ['s1'] },
+        'admin',
+      );
+
+      expect(result.summary).toEqual(
+        expect.objectContaining({
+          alreadyActiveCount: 2,
+          reactivatedCount: 1,
+          enrolledCount: 0,
+        }),
+      );
+    });
+
     it('no llama al puerto si no hay alumnos que matricular', async () => {
-      const { service, enrollmentsRepository } = build();
+      const { service, enrollmentsRepository, studentTargetResolver } = build();
 
       await service.bulkEnroll('g1', { studentIds: [] }, 'admin');
 
       expect(enrollmentsRepository.bulkEnroll).not.toHaveBeenCalled();
+      expect(studentTargetResolver.resolve).toHaveBeenCalledWith({
+        studentIds: [],
+      });
+    });
+
+    it('no persiste ni publica eventos para grupos sin alumnos', async () => {
+      const { service, enrollmentsRepository, events } = build();
+
+      await service.bulkEnroll('g1', {}, 'admin');
+
+      expect(enrollmentsRepository.bulkEnroll).not.toHaveBeenCalled();
+      expect(events.publishStudentsEnrolled).not.toHaveBeenCalled();
     });
   });
 });

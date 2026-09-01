@@ -24,14 +24,21 @@ describe('ProjectAssignmentsService', () => {
       saveMany: jest.fn(async (input) => input),
     } as any;
     const usersRepository = {
-      findByEmails: jest.fn().mockResolvedValue([]),
-      findByIds: jest.fn().mockResolvedValue([
-        {
-          id: 'student-1',
-          email: 'student@example.com',
-          role: UserRole.STUDENT,
-        },
-      ]),
+      resolve: jest.fn().mockResolvedValue({
+        students: [
+          {
+            id: 'student-1',
+            email: 'student@example.com',
+            role: UserRole.STUDENT,
+          },
+        ],
+        resolvedStudentIds: ['student-1'],
+        requestedIds: [],
+        requestedEmails: [],
+        requestedNames: [],
+        unresolvedEmails: [],
+        unresolvedNames: [],
+      }),
     } as any;
     const deliveriesRepository = {} as any;
     const projectAccessService = {
@@ -46,14 +53,15 @@ describe('ProjectAssignmentsService', () => {
         },
       ]),
       listGroups: jest.fn().mockResolvedValue([]),
+      listGroupsForStudent: jest.fn().mockResolvedValue([]),
     };
 
     const service = new ProjectAssignmentsService(
       assignmentsRepository,
-      usersRepository,
       deliveriesRepository,
       projectsRepository as any,
       projectAccessService,
+      usersRepository,
       groupRosterReader,
     );
     jest.spyOn(service, 'listByProject').mockResolvedValue([]);
@@ -69,6 +77,11 @@ describe('ProjectAssignmentsService', () => {
     );
 
     expect(groupRosterReader.listEnrollments).toHaveBeenCalledWith('group-1');
+    expect(usersRepository.resolve).toHaveBeenCalledWith({
+      studentIds: ['student-1'],
+      studentEmails: undefined,
+      rawInput: undefined,
+    });
     expect(assignmentsRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         projectId: 'project-1',
@@ -84,8 +97,8 @@ describe('ProjectAssignmentsService', () => {
       new ProjectAssignmentsService(
         assignmentsRepository,
         {} as any,
-        {} as any,
         projectsRepository as any,
+        {} as any,
         {} as any,
         {} as any,
       );

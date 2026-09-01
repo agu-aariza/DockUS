@@ -6,9 +6,7 @@
 
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CourseGroup } from '../entities/course-group.entity';
-import { User, UserRole } from '../../users/entities/user.entity';
-import type { IUserRepository } from '../../users/domain/repositories/user.repository.interface';
-import { USER_REPOSITORY } from '../../users/domain/repositories/user.repository.interface';
+import { StudentTargetResolverService } from '../../users/application/student-target-resolver.service';
 import type { ICourseGroupRepository } from '../domain/repositories/course-group.repository.interface';
 import { COURSE_GROUP_REPOSITORY } from '../domain/repositories/course-group.repository.interface';
 import type { IGroupEnrollmentRepository } from '../domain/repositories/group-enrollment.repository.interface';
@@ -16,6 +14,10 @@ import { GROUP_ENROLLMENT_REPOSITORY } from '../domain/repositories/group-enroll
 import { CreateGroupDto } from '../dto/create-group.dto';
 import { BulkEnrollDto } from '../dto/bulk-enroll.dto';
 import { GroupEnrollmentEventsService } from '../../../shared/application/group-enrollment-events.service';
+import type {
+  BulkEnrollResponse,
+  GroupEnrollmentResponse,
+} from '../academic.types';
 
 @Injectable()
 export class GroupsService {
@@ -24,8 +26,7 @@ export class GroupsService {
     private readonly groupsRepository: ICourseGroupRepository,
     @Inject(GROUP_ENROLLMENT_REPOSITORY)
     private readonly enrollmentsRepository: IGroupEnrollmentRepository,
-    @Inject(USER_REPOSITORY)
-    private readonly usersRepository: IUserRepository,
+    private readonly studentTargetResolver: StudentTargetResolverService,
     private readonly groupEnrollmentEventsService: GroupEnrollmentEventsService,
   ) {}
 
@@ -100,7 +101,7 @@ export class GroupsService {
     return this.groupsRepository.save(group);
   }
 
-  async listEnrollments(groupId: string): Promise<any[]> {
+  async listEnrollments(groupId: string): Promise<GroupEnrollmentResponse[]> {
     const enrollments =
       await this.enrollmentsRepository.findByGroupWithStudent(groupId);
 
@@ -127,116 +128,26 @@ export class GroupsService {
     groupId: string,
     dto: BulkEnrollDto,
     enrolledById: string,
-  ): Promise<any> {
+  ): Promise<BulkEnrollResponse> {
     const group = await this.groupsRepository.findById(groupId);
     if (!group) throw new NotFoundException('Grupo no encontrado');
 
-    const studentIds = dto.studentIds || [];
-    const studentEmails = dto.studentEmails || [];
-    const studentNames = dto.studentNames || [];
-
-    // Parse raw input if provided
-    if (dto.rawInput) {
-      const lines = dto.rawInput
-        .split(/[\n,;]+/)
-        .map((l) => l.trim())
-        .filter(Boolean);
-
-      for (const line of lines) {
-        if (line.includes('@')) {
-          if (!studentEmails.includes(line.toLowerCase())) {
-            studentEmails.push(line.toLowerCase());
-          }
-        } else {
-          if (!studentNames.includes(line)) {
-            studentNames.push(line);
-          }
-        }
-      }
-    }
-
-    // Find students by email if provided
-    if (studentEmails.length > 0) {
-      const emailStudents = await this.usersRepository.findByEmails(
-        studentEmails,
-        UserRole.STUDENT,
-      );
-      emailStudents.forEach((s) => {
-        if (!studentIds.includes(s.id)) studentIds.push(s.id);
-      });
-    }
-
-    // Find students by name/surname if provided
-    for (const name of studentNames) {
-      const cleanName = name.trim();
-      if (!cleanName) continue;
-
-      // Try searching by "LastName, FirstName" or "FirstName LastName"
-      const parts = cleanName.includes(',')
-        ? cleanName.split(',').map((p) => p.trim())
-        : cleanName.split(' ').map((p) => p.trim());
-
-      let students: User[] = [];
-
-      if (cleanName.includes(',')) {
-        // Format: "LastName, FirstName"
-        students = await this.usersRepository.findByNameAndRole(
-          parts[1],
-          parts[0],
-          UserRole.STUDENT,
-        );
-      } else if (parts.length >= 2) {
-        // Format: "FirstName LastName" (simple)
-        students = await this.usersRepository.findByNameAndRole(
-          parts[0],
-          parts[1],
-          UserRole.STUDENT,
-        );
-      }
-
-      // If only one match, add it
-      if (students.length === 1) {
-        const s = students[0];
-        if (!studentIds.includes(s.id)) studentIds.push(s.id);
-      }
-    }
-
-    const results = {
+    const resolution = await this.studentTargetResolver.resolve(dto);
+    const studentIds = resolution.resolvedStudentIds;
+    const results: BulkEnrollResponse = {
       enrollments: [],
       summary: {
-        requestedIds: dto.studentIds || [],
-        requestedEmails: dto.studentEmails || [],
-        requestedNames: dto.studentNames || [],
+        requestedIds: resolution.requestedIds,
+        requestedEmails: resolution.requestedEmails,
+        requestedNames: resolution.requestedNames,
         resolvedStudentIds: studentIds,
         enrolledCount: 0,
         reactivatedCount: 0,
         alreadyActiveCount: 0,
-        unresolvedEmails: [] as string[],
-        unresolvedNames: [] as string[],
+        unresolvedEmails: resolution.unresolvedEmails,
+        unresolvedNames: resolution.unresolvedNames,
       },
     };
-
-    // Calculate unresolved emails
-    let foundStudents: User[] = [];
-    if (studentIds.length > 0) {
-      foundStudents = await this.usersRepository.findByIds(studentIds);
-    }
-    const foundEmails = foundStudents.map((s) => s.email);
-    results.summary.unresolvedEmails = studentEmails.filter(
-      (email) => !foundEmails.includes(email),
-    );
-
-    // Calculate unresolved names (best effort)
-    const foundFullNames = foundStudents.map((s) =>
-      `${s.lastName}, ${s.firstName}`.toLowerCase(),
-    );
-    const foundSimpleNames = foundStudents.map((s) =>
-      `${s.firstName} ${s.lastName}`.toLowerCase(),
-    );
-    results.summary.unresolvedNames = studentNames.filter((name) => {
-      const ln = name.toLowerCase().trim();
-      return !foundFullNames.includes(ln) && !foundSimpleNames.includes(ln);
-    });
 
     // Matrícula masiva atómica bajo transacción para prevenir condiciones de carrera y duplicados.
     if (studentIds.length > 0) {

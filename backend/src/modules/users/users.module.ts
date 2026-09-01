@@ -13,6 +13,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '../../shared/infrastructure/cache/cache.module';
 import { User } from './entities/user.entity';
 import { UsersService } from './application/users.service';
+import { StudentTargetResolverService } from './application/student-target-resolver.service';
 import { UsersController } from './presentation/users.controller';
 import { UserRepository } from './infrastructure/database/user.repository';
 import { USER_REPOSITORY } from './domain/repositories/user.repository.interface';
@@ -25,6 +26,7 @@ import { USER_REPOSITORY } from './domain/repositories/user.repository.interface
   controllers: [UsersController], // Habilitamos la gestión administrativa via API
   providers: [
     UsersService,
+    StudentTargetResolverService,
     {
       provide: USER_REPOSITORY,
       useClass: UserRepository,
@@ -33,6 +35,6 @@ import { USER_REPOSITORY } from './domain/repositories/user.repository.interface
   // USER_REPOSITORY exportado para ProjectsModule/AcademicModule: el
   // puerto se registra una vez, aquí, y los consumidores importan este módulo
   // en vez de volver a declarar el `provide`.
-  exports: [UsersService, USER_REPOSITORY],
+  exports: [UsersService, StudentTargetResolverService, USER_REPOSITORY],
 })
 export class UsersModule {}
