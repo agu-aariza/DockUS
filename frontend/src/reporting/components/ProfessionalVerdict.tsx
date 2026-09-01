@@ -1,11 +1,11 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (ProfessionalVerdict).
+ * @fileoverview Veredicto profesional del informe Builder (ProfessionalVerdict).
  *
  * @module ProfessionalVerdict
  */
 
 import { RiBriefcaseLine } from "react-icons/ri";
-import { MarkdownContent } from "./MarkdownContent";
+import { MarkdownContent } from "../../shared/components/MarkdownContent";
 import type { BuilderOutcome } from "../../features/builder/types";
 import { ReportCard } from "./report/ReportCard";
 import { OutcomeBadge } from "./report/OutcomeBadge";

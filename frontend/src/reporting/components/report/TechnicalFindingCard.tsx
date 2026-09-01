@@ -9,7 +9,7 @@ import type {
   TechnicalFeedbackItem,
 } from "../../../features/builder/types";
 import { CodeSnippet } from "../CodeSnippet";
-import { MarkdownContent } from "../MarkdownContent";
+import { MarkdownContent } from "../../../shared/components/MarkdownContent";
 import { SeverityBadge } from "./SeverityBadge";
 import {
   normalizeTechnicalFeedbackItem,

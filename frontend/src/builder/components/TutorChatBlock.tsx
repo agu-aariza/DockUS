@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (TutorChatBlock).
+ * @fileoverview Chat del tutor dentro del flujo de Builder (TutorChatBlock).
  *
  * @module TutorChatBlock
  */
@@ -12,10 +12,10 @@ import {
   RiMessage3Line,
   RiUser3Line,
 } from "react-icons/ri";
-import { builderApi } from "../../builder/api/builderApi";
-import { queryKeys } from "../query/queryKeys";
+import { builderApi } from "../api/builderApi";
+import { queryKeys } from "../../shared/query/queryKeys";
 import type { BuildRunChatMessage, BuilderReportEntity } from "../../features/builder/types";
-import { MarkdownContent } from "./MarkdownContent";
+import { MarkdownContent } from "../../shared/components/MarkdownContent";
 
 interface TutorChatBlockProps {
   buildRunId: string;

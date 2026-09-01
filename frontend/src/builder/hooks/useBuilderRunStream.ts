@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { apiBaseUrl } from "../../shared/api/http";
 import { builderApi } from "../api/builderApi";
 import type { BuildRunEvent } from "../../features/builder/types";
-import type { SessionRecord } from "../../features/auth/types";
+import type { SessionRecord } from "../../shared/session/session.types";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { computeBackoffDelay } from "../../shared/utils/backoff";
 import { mergeEvents } from "../utils";

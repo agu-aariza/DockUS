@@ -12,9 +12,9 @@ import {
 } from "react-icons/ri";
 import { EmptyState } from "../shared/components/EmptyState";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";
-import { TeacherGradingStudio } from "../shared/components/TeacherGradingStudio";
+import { TeacherGradingStudio } from "./components/TeacherGradingStudio";
 import { VisualPickerOption } from "../shared/components/ui/VisualPicker";
-import { ProjectSelectionHub, type ProjectHubOption } from "../shared/components/ui/ProjectSelectionHub";
+import { ProjectSelectionHub, type ProjectHubOption } from "../projects/components/ProjectSelectionHub";
 import { getErrorMessage } from "../shared/utils/errors";
 import { useToast } from "../shared/toast/ToastContext";
 import { PageHeader } from "../shared/components/ui/PageHeader";

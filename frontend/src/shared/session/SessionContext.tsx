@@ -14,7 +14,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 import { setAccessToken, setRefreshToken, subscribeAuthWarning, subscribeTokenUpdate } from '../api/http';
-import type { AuthResponse, SessionRecord } from "../../features/auth/types";
+import type { SessionAuthPayload, SessionRecord } from "./session.types";
 import {
   createSessionRecord,
   readActiveSessionId,
@@ -28,7 +28,7 @@ interface SessionContextValue {
   activeSessionId: string | null;
   activeSession: SessionRecord | null;
   authWarning: string | null;
-  addSession: (auth: AuthResponse, label?: string) => SessionRecord;
+  addSession: (auth: SessionAuthPayload, label?: string) => SessionRecord;
   setActiveSessionId: (sessionId: string) => void;
   removeSession: (sessionId: string) => void;
   clearSessions: () => void;
@@ -91,7 +91,7 @@ export function SessionProvider({ children }: PropsWithChildren): JSX.Element {
     return unsubscribe;
   }, [activeSessionId]);
 
-  const addSession = useCallback((auth: AuthResponse, label?: string): SessionRecord => {
+  const addSession = useCallback((auth: SessionAuthPayload, label?: string): SessionRecord => {
     const created = createSessionRecord(auth, label);
     setSessions((prev) => [created, ...prev]);
     setActiveSessionIdState(created.id);

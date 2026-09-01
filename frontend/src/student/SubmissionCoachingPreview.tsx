@@ -5,7 +5,7 @@
  */
 
 import type { BuildRunEntity } from "../features/builder/types";
-import { CoachingSummary } from "../shared/components/CoachingSummary";
+import { CoachingSummary } from "../reporting/components/CoachingSummary";
 
 interface SubmissionCoachingPreviewProps {
   run: BuildRunEntity;

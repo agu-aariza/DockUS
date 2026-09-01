@@ -1,5 +1,5 @@
 /**
- * @fileoverview Contexto y componentes de navegación del espacio de trabajo (WorkspaceBar).
+ * @fileoverview Barra de navegación del espacio de trabajo (WorkspaceBar).
  *
  * @module WorkspaceBar
  */
@@ -20,12 +20,12 @@ import {
   RiCloseLine,
   RiArrowDownSLine
 } from "react-icons/ri";
-import { useWorkspaceSelection, useWorkspaceUI } from "./WorkspaceContext";
+import { useWorkspaceSelection, useWorkspaceUI } from "../../shared/workspace/WorkspaceContext";
 import { projectsApi } from "../../projects/api/projectsApi";
 import { assignmentsApi } from "../../projects/api/assignmentsApi";
 import { deliveriesApi } from "../../deliveries/api/deliveriesApi";
 import { builderApi } from "../../builder/api/builderApi";
-import { queryKeys } from "../query/queryKeys";
+import { queryKeys } from "../../shared/query/queryKeys";
 import type { ProjectEntity, ProjectAssignmentEntity } from "../../features/projects/types";
 import type { DeliveryEntity } from "../../features/deliveries/types";
 import type { BuildRunEntity } from "../../features/builder/types";

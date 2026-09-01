@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (GradeBreakdownChart).
+ * @fileoverview Desglose de nota del informe Builder (GradeBreakdownChart).
  *
  * @module GradeBreakdownChart
  */
@@ -8,7 +8,7 @@ import { useState } from "react";
 import { RiArrowDownSLine, RiArrowUpSLine } from "react-icons/ri";
 
 import type { RubricGradeItem } from "../../features/builder/types";
-import { MarkdownContent } from "./MarkdownContent";
+import { MarkdownContent } from "../../shared/components/MarkdownContent";
 import { ReportCard } from "./report/ReportCard";
 
 interface GradeBreakdownChartProps {

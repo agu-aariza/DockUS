@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { readSessions, writeSessions } from "./sessionStore";
-import type { SessionRecord } from "../../features/auth/types";
+import type { SessionRecord } from "./session.types";
 
 function makeSession(overrides: Partial<SessionRecord> = {}): SessionRecord {
   return {

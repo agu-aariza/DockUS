@@ -4,7 +4,7 @@
  * @module permissions
  */
 
-import type { SessionRecord } from "../../features/auth/types";
+import type { SessionRecord } from "../session/session.types";
 import type { UserRole } from "../types";
 
 export function hasRole(

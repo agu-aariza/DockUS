@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (AssessmentContextSummary).
+ * @fileoverview Contexto de evaluación del informe Builder (AssessmentContextSummary).
  *
  * @module AssessmentContextSummary
  */
@@ -8,9 +8,9 @@ import type { BuildRunEntity } from "../../features/builder/types";
 import {
   capabilityLabel,
   capabilityStatusLabel,
-} from "../data/builderTaxonomy";
-import { GlossaryTerm } from "./Glossary";
-import { MarkdownContent } from "./MarkdownContent";
+} from "../../shared/data/builderTaxonomy";
+import { GlossaryTerm } from "../../shared/components/Glossary";
+import { MarkdownContent } from "../../shared/components/MarkdownContent";
 import { ReportCard } from "./report/ReportCard";
 
 interface AssessmentContextSummaryProps {

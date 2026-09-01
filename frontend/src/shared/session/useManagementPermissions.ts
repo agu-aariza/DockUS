@@ -4,7 +4,7 @@
  * @module useManagementPermissions
  */
 
-import type { SessionRecord } from "../../features/auth/types";
+import type { SessionRecord } from "./session.types";
 import type { UserRole } from "../types";
 import { hasRole } from "../utils/permissions";
 

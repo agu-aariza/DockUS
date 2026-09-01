@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (ReportView).
+ * @fileoverview Vista de informes Builder de EduCodeAI (ReportView).
  *
  * @module ReportView
  */
@@ -7,7 +7,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { builderApi } from "../../builder/api/builderApi";
-import { queryKeys } from "../query/queryKeys";
+import { queryKeys } from "../../shared/query/queryKeys";
 import type { BuilderReportEntity, BuilderRuntimeFamily, BuildRunEntity, TechnicalFeedbackItem } from "../../features/builder/types";
 import {
   RiAlarmWarningLine,
@@ -26,19 +26,19 @@ import {
 
 import { AssessmentContextSummary } from "./AssessmentContextSummary";
 import { CoachingSummary } from "./CoachingSummary";
-import { GlossaryTerm } from "./Glossary";
+import { GlossaryTerm } from "../../shared/components/Glossary";
 import { GradeBreakdownChart } from "./GradeBreakdownChart";
-import { MarkdownContent } from "./MarkdownContent";
+import { MarkdownContent } from "../../shared/components/MarkdownContent";
 import { PedagogicalReport } from "./PedagogicalReport";
 import { TeacherHighlights } from "./TeacherHighlights";
-import { TerminalViewer } from "./TerminalViewer";
-import { TutorChatBlock } from "./TutorChatBlock";
+import { TerminalViewer } from "../../shared/components/TerminalViewer";
+import { TutorChatBlock } from "../../builder/components/TutorChatBlock";
 import { normalizeTechnicalFeedbackItem } from "../utils/technicalFeedback";
 import {
   confidenceLabel,
   evaluativeStateLabel,
   structuralTypeLabel,
-} from "../data/builderTaxonomy";
+} from "../../shared/data/builderTaxonomy";
 import { ReportCard } from "./report/ReportCard";
 import { ReportHeader } from "./report/ReportHeader";
 import { TechnicalFindingCard } from "./report/TechnicalFindingCard";

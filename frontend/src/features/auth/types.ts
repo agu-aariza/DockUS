@@ -4,7 +4,10 @@
  * @module types
  */
 
+import type { SessionIdentity } from "../../shared/session/session.types";
 import { UserRole } from "../../shared/types";
+
+export type { SessionAuthPayload, SessionIdentity, SessionRecord } from "../../shared/session/session.types";
 
 export type UserStatus =
   | "ACTIVE"
@@ -12,27 +15,12 @@ export type UserStatus =
   | "SUSPENDED"
   | "PENDING_VERIFICATION";
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  role: UserRole;
-}
+export interface AuthUser extends SessionIdentity {}
 
 export interface AuthResponse {
   user: AuthUser;
   accessToken: string;
   refreshToken: string;
-}
-
-export interface SessionRecord {
-  id: string;
-  label: string;
-  userId: string;
-  email: string;
-  role: UserRole;
-  accessToken: string;
-  refreshToken: string;
-  createdAt: string;
 }
 
 export interface UserEntity {

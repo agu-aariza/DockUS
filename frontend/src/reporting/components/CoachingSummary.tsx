@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (CoachingSummary).
+ * @fileoverview Resumen de coaching del informe Builder (CoachingSummary).
  *
  * @module CoachingSummary
  */
@@ -12,7 +12,7 @@ import {
   RiListCheck3,
   RiSparklingLine,
 } from "react-icons/ri";
-import { MarkdownContent } from "./MarkdownContent";
+import { MarkdownContent } from "../../shared/components/MarkdownContent";
 import { ReportCard } from "./report/ReportCard";
 import { TechnicalFindingCard } from "./report/TechnicalFindingCard";
 import {

@@ -1,4 +1,4 @@
-# Componentes de informe (`shared/components/report/`)
+# Componentes de informe (`reporting/components/report/`)
 
 > **Resumen rápido:** Cinco piezas visuales específicas de un informe de evaluación — insignias de resultado/severidad y las tarjetas que lo estructuran. Construidas sobre `shared/components/ui/StatusBadge.tsx`, no lo reimplementan.
 
@@ -21,7 +21,7 @@ Estos componentes ya conocen vocabulario del dominio de evaluación (qué es un 
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/components/report
+npm run test -- src/reporting/components/report
 ```
 
 Si necesitas un nuevo tono de severidad o resultado, añádelo a `StatusTone` en `shared/components/ui/StatusBadge.tsx` primero — estos componentes deberían consumir esa fuente única, no declarar sus propios colores.

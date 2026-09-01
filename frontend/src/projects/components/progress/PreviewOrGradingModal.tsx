@@ -5,7 +5,7 @@
  */
 
 import { CodePreviewModal } from "../../../shared/components/CodePreviewModal";
-import { TeacherGradingStudio } from "../../../shared/components/TeacherGradingStudio";
+import { TeacherGradingStudio } from "../../../deliveries/components/TeacherGradingStudio";
 import { extractLegacyAiEvidence } from "../../../deliveries/teacherReviewNavigation";
 import type { BuildRunEntity } from "../../../features/builder/types";
 import type { DeliveryEntity } from "../../../features/deliveries/types";

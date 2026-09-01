@@ -27,7 +27,7 @@ import { deliveriesApi } from "../deliveries/api/deliveriesApi";
 import { getErrorMessage } from "../shared/utils/errors";
 import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import { VisualPicker, type VisualPickerOption } from "../shared/components/ui/VisualPicker";
-import { ProjectSelectionHub, type ProjectHubOption } from "../shared/components/ui/ProjectSelectionHub";
+import { ProjectSelectionHub, type ProjectHubOption } from "../projects/components/ProjectSelectionHub";
 import { PageHeader } from "../shared/components/ui/PageHeader";
 import { Button } from "../shared/components/ui/Button";
 import { Tabs } from "../shared/components/ui/Tabs";

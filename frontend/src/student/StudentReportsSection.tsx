@@ -29,7 +29,7 @@ import { StudentSurface, StudentSurfaceHeader } from "./components/StudentWorksp
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { DeliveryOutcomeBadge } from "../features/deliveries/components/DeliveryOutcomeBadge";
 import { resolveStudentRunOutcome } from "./studentWorkspaceInsights";
-import { ReportView } from "../shared/components/ReportView";
+import { ReportView } from "../reporting/components/ReportView";
 
 function computeMedianDurationMs(
   runs: BuildRunEntity[],

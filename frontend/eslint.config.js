@@ -66,8 +66,6 @@ export default [
   },
   {
     // El transporte compartido no puede volver a conocer tipos o APIs de dominio.
-    // La guarda equivalente para todo shared/ se ampliará cuando PR4 extraiga
-    // los componentes de dominio que aún viven allí.
     files: ['src/shared/api/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
@@ -92,6 +90,48 @@ export default [
               ],
               message:
                 'shared/api is transport-only; domain APIs and types must live in their domain folder.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Ningún módulo transversal puede depender de features ni de un dominio.
+    // Las piezas con conocimiento de negocio viven en reporting/ o en su
+    // dominio propietario; shared/ solo expone infraestructura agnóstica.
+    files: ['src/shared/**/*.{ts,tsx}'],
+    ignores: ['src/shared/api/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'axios',
+              message:
+                'shared is domain-agnostic; HTTP calls must use a domain API facade.',
+            },
+          ],
+          patterns: [
+            {
+              group: [
+                '**/features/**',
+                '**/auth/**',
+                '**/users/**',
+                '**/projects/**',
+                '**/groups/**',
+                '**/deliveries/**',
+                '**/storage/**',
+                '**/builder/**',
+                '**/llm/**',
+                '**/student/**',
+                '**/health/**',
+                '**/reporting/**',
+                '**/app/**',
+              ],
+              message:
+                'shared is domain-agnostic; domain APIs and types must live in their owning folder.',
             },
           ],
         },

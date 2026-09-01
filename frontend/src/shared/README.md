@@ -12,8 +12,7 @@ shared/
 ├── query/            # queryClient.ts, queryKeys.ts, QueryDevtools.tsx — ver query/README.md
 ├── components/         # UI compartida — ver components/README.md
 │   ├── ui/               # Design system puro: sin imports de api/ ni lógica de negocio
-│   ├── report/             # Badges/tarjetas específicas de informes de evaluación
-│   └── file-preview/         # Visor de código + explorador de ficheros
+│   └── file-preview/         # Visor genérico de código + explorador de ficheros
 ├── session/              # Sesión activa, multi-cuenta, permisos por rol — ver session/README.md
 ├── workspace/              # Contexto de proyecto/entrega en curso — ver workspace/README.md
 ├── theme/                    # Claro/oscuro — ver theme/README.md
@@ -30,7 +29,7 @@ shared/
 
 ## Cómo encaja con `features/`
 
-`shared/` es transversal a *toda* la aplicación (no conoce ningún dominio); [`../features/README.md`](../features/README.md) son los tipos puros *de cada dominio* (sí conoce, por ejemplo, la forma de un `Project`). Un componente de `projects/` importa de ambos: de `shared/` para UI/sesión/API genérica, de `features/projects/` para los tipos concretos de ese dominio.
+`shared/` es transversal a *toda* la aplicación y no conoce ningún dominio. Los componentes de negocio reutilizados por varias vistas viven en [`../reporting/README.md`](../reporting/README.md) o en su dominio propietario; [`../features/README.md`](../features/README.md) contiene los tipos puros de cada dominio. Un componente de `projects/` puede importar de `shared/` y `features/projects/`, pero la dirección nunca se invierte.
 
 ## Cómo trabajar aquí
 

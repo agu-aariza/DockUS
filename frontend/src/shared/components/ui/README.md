@@ -1,6 +1,6 @@
 # Sistema de diseño (`shared/components/ui/`)
 
-> **Resumen rápido:** La capa de componentes puramente presentacionales — sin `import` de `api/`, sin conocimiento de ningún dominio de negocio. Trece componentes: layout de la aplicación, átomos de interacción y utilidades visuales.
+> **Resumen rápido:** La capa de componentes puramente presentacionales — sin `import` de `api/`, sin conocimiento de ningún dominio de negocio. Doce componentes: layout de la aplicación, átomos de interacción y utilidades visuales.
 
 ---
 
@@ -23,7 +23,6 @@ Es explícita en `CLAUDE.md`: **`shared/components/ui/` son componentes dumb, ag
 | `SearchInput.tsx` | Campo de búsqueda con debounce. |
 | `StatsOverview.tsx` | Fila de estadísticas resumidas. |
 | `VisualPicker.tsx` | Selector visual (tarjetas seleccionables), usado en flujos de configuración. |
-| `ProjectSelectionHub.tsx` | Selector de proyecto reutilizado como building block de `GroupSelector`/`ProjectSelector` de otros dominios. |
 | `LogoPlate.tsx` | Placa que normaliza logos heterogéneos (con/sin canal alfa) según el tema — ver el detalle completo en [`../../../landing/README.md`](../../../landing/README.md), que es donde nació. |
 
 ## Cómo trabajar aquí

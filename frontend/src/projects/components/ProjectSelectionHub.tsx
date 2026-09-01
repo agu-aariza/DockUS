@@ -1,13 +1,13 @@
 /**
- * @fileoverview Componente UI base del sistema de diseño EduCodeAI (ProjectSelectionHub).
+ * @fileoverview Selector de proyecto del dominio de proyectos (ProjectSelectionHub).
  *
  * @module ProjectSelectionHub
  */
 
 import React from 'react';
 import { RiStackFill, RiUser3Fill, RiArrowRightLine, RiPlayLine, RiTeamFill } from 'react-icons/ri';
-import { StatusBadge, type StatusTone } from './StatusBadge';
-import type { UserEntity } from "../../../features/auth/types";
+import { StatusBadge, type StatusTone } from '../../shared/components/ui/StatusBadge';
+import type { UserEntity } from "../../features/auth/types";
 
 export interface ProjectHubOption {
   id: string;

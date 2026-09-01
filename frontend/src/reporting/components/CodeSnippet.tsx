@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (CodeSnippet).
+ * @fileoverview Fragmento de código asociado a un hallazgo del informe.
  *
  * @module CodeSnippet
  */

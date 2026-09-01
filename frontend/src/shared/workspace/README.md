@@ -14,19 +14,16 @@ WorkspaceContext.tsx                → Compone los dos anteriores en un único 
 
 Separar "qué está seleccionado" de "cómo se está mostrando" permite que un componente que solo necesita saber el proyecto activo (`useWorkspaceSelection()`) no se re-renderice cuando cambia un detalle de UI que no le afecta, y viceversa — son dos ejes de cambio independientes con frecuencias de actualización distintas.
 
-## `WorkspaceBar.tsx`
-
-El único componente visual de esta carpeta: la barra contextual que deja cambiar de proyecto/entrega sin salir del panel actual. Consume `useWorkspaceSelection()` para leer y cambiar la selección activa.
-
 ## Estructura interna
 
 ```text
 workspace/
 ├── WorkspaceContext.tsx            # Provider compuesto (Selection + UI), el que se monta en App.tsx
 ├── WorkspaceSelectionContext.tsx     # useWorkspaceSelection() — proyecto/entrega/grupo activos
-├── WorkspaceUIContext.tsx              # Estado de presentación del workspace
-└── WorkspaceBar.tsx                       # La barra de navegación contextual
+└── WorkspaceUIContext.tsx              # Estado de presentación del workspace
 ```
+
+La barra visual que consume estos contextos vive en `app/workspace/WorkspaceBar.tsx`.
 
 ## Cómo trabajar aquí
 

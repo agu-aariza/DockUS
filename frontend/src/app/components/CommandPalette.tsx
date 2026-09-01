@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (CommandPalette).
+ * @fileoverview Paleta de comandos global de la aplicación (CommandPalette).
  *
  * @module CommandPalette
  */
@@ -16,11 +16,11 @@ import {
   RiLayoutGridFill
 } from 'react-icons/ri';
 import { useNavigate } from 'react-router';
-import { useFocusTrap } from '../hooks/useFocusTrap';
-import { useWorkspaceSelection } from '../workspace/WorkspaceContext';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import { useWorkspaceSelection } from '../../shared/workspace/WorkspaceContext';
 import { projectsApi } from '../../projects/api/projectsApi';
 import { assignmentsApi } from '../../projects/api/assignmentsApi';
-import { queryKeys } from '../query/queryKeys';
+import { queryKeys } from '../../shared/query/queryKeys';
 import type { ProjectAssignmentEntity } from '../../features/projects/types';
 
 interface CommandItem {

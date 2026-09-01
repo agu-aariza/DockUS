@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente de previsualización de archivos y código fuente (GradingPanel).
+ * @fileoverview Panel de calificación asociado a la previsualización de una entrega.
  *
  * @module GradingPanel
  */
@@ -8,8 +8,8 @@ import { useState } from "react";
 import { RiLoader4Line, RiSave2Line } from "react-icons/ri";
 import type { BuildRunEntity } from "../../../features/builder/types";
 import type { DeliveryEntity } from "../../../features/deliveries/types";
-import { structuralTypeLabel } from "../../data/builderTaxonomy";
-import { Button } from "../ui/Button";
+import { structuralTypeLabel } from "../../../shared/data/builderTaxonomy";
+import { Button } from "../../../shared/components/ui/Button";
 
 interface GradingPanelProps {
   delivery: DeliveryEntity;

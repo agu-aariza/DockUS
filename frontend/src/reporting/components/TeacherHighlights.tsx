@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (TeacherHighlights).
+ * @fileoverview Destacados docentes del informe Builder (TeacherHighlights).
  *
  * @module TeacherHighlights
  */
@@ -10,7 +10,7 @@ import {
   RiClipboardLine,
   RiListCheck3,
 } from "react-icons/ri";
-import { MarkdownContent } from "./MarkdownContent";
+import { MarkdownContent } from "../../shared/components/MarkdownContent";
 import type { BuilderTeacherHighlights } from "../../features/builder/types";
 import { ReportCard } from "./report/ReportCard";
 

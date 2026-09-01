@@ -11,7 +11,7 @@ import {
   RiFlagLine,
 } from "react-icons/ri";
 import type { BuildRunEntity, BuilderOutcome } from "../../../features/builder/types";
-import { MarkdownContent } from "../MarkdownContent";
+import { MarkdownContent } from "../../../shared/components/MarkdownContent";
 import { ReportCard } from "./ReportCard";
 import { OutcomeBadge } from "./OutcomeBadge";
 

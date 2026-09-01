@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (TeacherGradingStudio).
+ * @fileoverview Estudio de calificación docente del dominio de entregas.
  *
  * @module TeacherGradingStudio
  */
@@ -7,12 +7,12 @@
 import { RiAwardFill, RiCloseLine } from "react-icons/ri";
 import type { BuildRunEntity } from "../../features/builder/types";
 import type { DeliveryEntity } from "../../features/deliveries/types";
-import { evaluativeStateLabel } from "../data/builderTaxonomy";
-import { CodeViewer } from "./file-preview/CodeViewer";
-import { FileExplorer } from "./file-preview/FileExplorer";
-import { FilePreviewShell } from "./file-preview/FilePreviewShell";
-import { GradingPanel } from "./file-preview/GradingPanel";
-import { useFilePreview, type PreviewFile } from "./file-preview/useFilePreview";
+import { evaluativeStateLabel } from "../../shared/data/builderTaxonomy";
+import { CodeViewer } from "../../shared/components/file-preview/CodeViewer";
+import { FileExplorer } from "../../shared/components/file-preview/FileExplorer";
+import { FilePreviewShell } from "../../shared/components/file-preview/FilePreviewShell";
+import { GradingPanel } from "../../reporting/components/file-preview/GradingPanel";
+import { useFilePreview, type PreviewFile } from "../../shared/components/file-preview/useFilePreview";
 
 interface TeacherGradingStudioProps {
   isOpen: boolean;

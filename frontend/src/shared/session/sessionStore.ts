@@ -4,7 +4,7 @@
  * @module sessionStore
  */
 
-import type { AuthResponse, SessionRecord } from "../../features/auth/types";
+import type { SessionAuthPayload, SessionRecord } from "./session.types";
 
 const SESSIONS_KEY = 'educodeai_console_sessions';
 const ACTIVE_SESSION_KEY = 'educodeai_console_active_session';
@@ -43,7 +43,7 @@ export function writeActiveSessionId(sessionId: string | null): void {
 }
 
 export function createSessionRecord(
-  auth: AuthResponse,
+  auth: SessionAuthPayload,
   label?: string,
 ): SessionRecord {
   const fallbackLabel = `${auth.user.email} (${auth.user.role})`;

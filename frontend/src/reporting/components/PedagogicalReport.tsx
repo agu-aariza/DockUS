@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente compartido de la interfaz EduCodeAI (PedagogicalReport).
+ * @fileoverview Narrativa pedagógica del informe Builder (PedagogicalReport).
  *
  * @module PedagogicalReport
  */
@@ -16,7 +16,7 @@ import {
   RiMapPinLine,
   RiRoadMapLine,
 } from "react-icons/ri";
-import { MarkdownContent } from "./MarkdownContent";
+import { MarkdownContent } from "../../shared/components/MarkdownContent";
 import { ReportCard } from "./report/ReportCard";
 
 interface PedagogicalReportProps {

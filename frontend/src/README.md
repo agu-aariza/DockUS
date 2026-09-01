@@ -23,6 +23,7 @@ src/
 ├── student-profile/         # Expediente/timeline de un alumno — ver student-profile/README.md
 ├── projects/                 # Panel docente de proyectos y rúbricas — ver projects/README.md
 ├── deliveries/                 # Panel docente de entregas y calificación — ver deliveries/README.md
+├── reporting/                 # Componentes de informes Builder compartidos por las vistas — ver reporting/README.md
 ├── groups/                      # Gestión de grupos académicos — ver groups/README.md
 ├── builder/                       # Visualización en vivo del pipeline del Builder — ver builder/README.md
 ├── runtime/                         # Inspección de entornos/runtimes Docker — ver runtime/README.md
@@ -33,6 +34,7 @@ src/
 │
 ├── features/                # Tipos/DTOs puros por dominio, espejo del backend — ver features/README.md
 ├── shared/                    # Capa transversal: API, sesión, UI, tema, toasts... — ver shared/README.md
+├── app/                       # Composición global de la aplicación y navegación de workspace
 └── test/                        # Setup global de Vitest + Testing Library — ver test/README.md
 ```
 
@@ -41,6 +43,7 @@ src/
 ```text
 features/<dominio>/    → SOLO tipos/DTOs/constantes. Sin React, sin llamadas a API, sin UI.
 <dominio>/               → Componentes, hooks y páginas de ESE dominio. Puede importar de features/ y shared/.
+reporting/                  → UI y utilidades de informes Builder. Puede importar tipos/API del Builder y piezas transversales.
 shared/                     → Cross-cutting: API, sesión, workspace, toasts, design system. No conoce ningún dominio.
 ```
 

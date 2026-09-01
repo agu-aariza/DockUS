@@ -10,7 +10,7 @@ import type { DeliveryEntity } from "../../features/deliveries/types";
 import { useWorkspaceSelection } from "../../shared/workspace/WorkspaceContext";
 import { Button } from "../../shared/components/ui/Button";
 import { EmptyState } from "../../shared/components/EmptyState";
-import { ReportView } from "../../shared/components/ReportView";
+import { ReportView } from "../../reporting/components/ReportView";
 import { TeacherReviewSummary } from "./TeacherReviewSummary";
 
 export function DeliveryReport({
