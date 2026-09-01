@@ -49,7 +49,7 @@ query/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/query
+npm run test -- test/unit/shared/query
 ```
 
 Cualquier hook nuevo que use `useQuery`/`useMutation` debe tomar su clave de `queryKeys`, nunca declarar un array de clave inline en el propio hook — es la única forma de que la invalidación de caché (`queryClient.invalidateQueries(...)`) funcione de forma predecible entre hooks distintos que consultan el mismo dato.

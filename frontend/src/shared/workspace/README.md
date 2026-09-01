@@ -28,7 +28,7 @@ La barra visual que consume estos contextos vive en `app/workspace/WorkspaceBar.
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/workspace
+npm run test -- test/unit/shared/workspace
 ```
 
 Si necesitas que un componente sepa "qué proyecto está activo", usa `useWorkspaceSelection()` — no lo subas como prop desde `App.tsx` a través de varios niveles de componentes intermedios que no lo necesitan.

@@ -11,7 +11,7 @@
     "test:compile": "tsc -p tsconfig.tests.json",
     "typecheck": "tsc -b",
     "preview": "vite preview",
-    "lint": "eslint src",
+    "lint": "eslint src test",
     "knip": "knip",
     "test:ui": "vitest --ui",
     "coverage": "vitest run --coverage"

@@ -58,7 +58,7 @@ dto/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/presentation
+npm run test -- test/unit/modules/projects/builder/presentation
 ```
 
 ## Ver también

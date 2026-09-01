@@ -32,7 +32,7 @@ No es exclusivo de este panel — se reutiliza en `projects/components/progress/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/groups
+npm run test -- test/unit/groups
 ```
 
 ## Ver también

@@ -27,7 +27,7 @@ health/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/health
+npm run test -- test/unit/modules/health
 ```
 
 Si añades una dependencia externa nueva al sistema (otro servicio que el backend necesite para funcionar), considera si `readiness` debería comprobarla también — sigue el patrón de `checkDatabase`/`checkRedis`/`checkDocker`/`checkBedrock`: mide latencia, captura el error sin dejarlo propagar, y añade la entrada a `ReadinessReport.checks`.

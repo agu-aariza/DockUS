@@ -29,7 +29,7 @@ Project (tabla `projects`)
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/entities
+npm run test -- test/unit/modules/projects/entities
 ```
 
 Si cambias un campo de `Project`, genera la migración correspondiente desde la raíz de `backend/` (`npm run migration:generate`) y revisa manualmente el diff antes de aplicarlo — ver la advertencia sobre `IDX_users_search_trgm` en [`../../../README.md`](../../../README.md).

@@ -52,7 +52,7 @@ academic/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/academic
+npm run test -- test/unit/modules/academic
 ```
 
 Si necesitas que otro módulo consulte matrículas o grupos, **no** importes `GroupsService` directamente desde fuera de `academic/` — extiende el puerto `GroupRosterReader` en `shared/application/` y que `academic/` lo implemente, siguiendo el mismo patrón ya usado por `projects/assignments/`.

@@ -21,7 +21,7 @@ Nota sobre el nombre de esta carpeta: es una excepción al patrón general de `f
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/projects/features
+npm run test -- test/unit/projects/features
 ```
 
 ## Ver también

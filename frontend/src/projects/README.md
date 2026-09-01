@@ -35,7 +35,7 @@ Cada una tiene su propio hook porque son ciclos de mutación independientes — 
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/projects
+npm run test -- test/unit/projects
 ```
 
 ## Ver también

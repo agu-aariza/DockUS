@@ -33,7 +33,7 @@ Lo que este panel envía se cifra en el backend con AES-256-GCM antes de persist
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/llm
+npm run test -- test/unit/llm
 ```
 
 ## Ver también

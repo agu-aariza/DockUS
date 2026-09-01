@@ -30,7 +30,7 @@ SubmissionSuccess.tsx → Pantalla de éxito, con enlace a seguir la evaluación
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/student/components
+npm run test -- test/unit/student/components
 ```
 
 ## Ver también

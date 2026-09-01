@@ -22,7 +22,7 @@ theme/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/theme
+npm run test -- test/unit/shared/theme
 ```
 
 Si añades un color nuevo a la UI, defínelo como variable CSS en `styles.css` con su par claro/oscuro — no hardcodees un valor hexadecimal condicionado por `useTheme()` dentro de un componente.

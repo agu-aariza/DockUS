@@ -35,7 +35,7 @@ SourceCodePayloadBuilderService.build(workspace)
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/application/services/workspace
+npm run test -- test/unit/modules/projects/builder/application/services/workspace
 ```
 
 Si necesitas soportar una extensión de fichero nueva como "código fuente" para el prompt, es aquí (`source-code-payload-builder.service.ts`), no en `domain/ai/`. Si necesitas cambiar cómo se resuelven permisos para lanzar un run, es `builder-access.service.ts` — no dupliques esa comprobación en un controlador o en otro servicio.

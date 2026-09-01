@@ -21,7 +21,7 @@ Detalle no obvio y ya corregido una vez en este repo: el prefijo de las evidenci
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/infrastructure/storage
+npm run test -- test/unit/shared/infrastructure/storage
 ```
 
 Si necesitas una operación nueva sobre objetos (por ejemplo, copiar entre buckets), añádela aquí como método de `MinioStorageService` y expón solo la superficie que un consumidor real necesite en el puerto correspondiente (`builder/domain/ports/object-storage.port.ts` para el Builder) — no ensanches el puerto "por si acaso".

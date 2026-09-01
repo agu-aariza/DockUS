@@ -1,6 +1,6 @@
 # GitHub Actions (`.github/`)
 
-> **Resumen rápido:** Un único workflow (`workflows/backend-ci.yml`, con nombre heredado — en realidad cubre **frontend y backend**) que valida lint, tipos, build y tests unitarios en cada push/PR a `main` o `feature/*`. No ejecuta tests e2e (no hay Docker disponible en este pipeline) ni despliega nada.
+> **Resumen rápido:** Un único workflow (`workflows/backend-ci.yml`, con nombre heredado — en realidad cubre **frontend y backend**) que valida la separación de tests, lint, tipos, build y tests unitarios en cada push/PR a `main` o `feature/*`. No ejecuta tests e2e (no hay Docker disponible en este pipeline) ni despliega nada.
 
 ---
 
@@ -22,7 +22,7 @@ Solo corre si el cambio toca alguna de esas rutas — un commit que solo modifiq
 
 | Job | Pasos |
 | --- | --- |
-| `frontend-verify` | `npm ci` → `npm run lint` → `npm run typecheck` → `npm run build` → `npm test` (Vitest). |
+| `frontend-verify` | Comprueba el layout de tests → `npm ci` → `npm run lint` → `npm run typecheck` → `npm run build` → `npm test` (Vitest). |
 | `backend-verify` | Levanta **servicios Postgres 16 y Redis 7** como contenedores del propio runner → `npm ci` → `npm run lint` → `npm run boundaries` (fronteras de arquitectura hexagonal) → `npm run typecheck` → `npm run build` → `npm test -- --runInBand` (Jest, secuencial). |
 
 Las variables de entorno del job de backend (`DB_*`, `JWT_*`, `REDIS_*`) son credenciales de un solo uso, generadas para este pipeline — no reutilices esos valores fuera de CI.
@@ -30,6 +30,7 @@ Las variables de entorno del job de backend (`DB_*`, `JWT_*`, `REDIS_*`) son cre
 ## Qué NO hace este workflow
 
 - **No ejecuta `npm run test:e2e`.** Los tests e2e (`backend/test/`) requieren Docker real además de Postgres/Redis, y este runner no lo levanta — por eso `npm run test:e2e` usa `--passWithNoTests` y no se invoca aquí.
+- **La guarda de layout (`scripts/check-test-layout.cjs`) impide que vuelvan a aparecer specs o utilidades de test dentro de `backend/src` o `frontend/src`.
 - **No construye ni publica imágenes Docker**, ni despliega a ningún entorno. Es puramente un gate de verificación de calidad sobre el código.
 
 ## Estructura interna

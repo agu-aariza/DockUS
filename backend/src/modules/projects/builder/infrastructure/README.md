@@ -31,7 +31,7 @@ Un ZIP/tar.gz subido por un alumno **no es de confianza**. `archive-extractor.ut
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/infrastructure
+npm run test -- test/unit/modules/projects/builder/infrastructure
 ```
 
 Si tocas `archive-extractor.util.ts`, cualquier cambio debe mantener las tres protecciones (path traversal, límite de ficheros, límite de bytes) — es la única barrera entre "un ZIP subido por un desconocido" y el sistema de ficheros del Worker.

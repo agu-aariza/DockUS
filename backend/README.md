@@ -30,7 +30,7 @@ El backend **no es un único proceso**: el mismo código se arranca de dos forma
 
 ```text
 backend/
-├── src/                     # Todo el código fuente de la aplicación — ver src/README.md
+├── src/                     # Solo código de producción — ver src/README.md
 │   ├── modules/              # Módulos de dominio: auth, users, academic, health, projects/builder
 │   ├── shared/                # Infraestructura transversal: DB, Redis, Docker, IA, seguridad
 │   ├── main.ts                 # Entrypoint del proceso API HTTP (puerto 3000 por defecto)
@@ -39,10 +39,15 @@ backend/
 │   ├── api.module.ts               # Módulo raíz del rol "api"
 │   ├── worker.module.ts             # Módulo raíz del rol "worker"
 │   ├── core.module.ts                # Módulos de dominio compartidos por ambos roles
-│   ├── process-role.module.ts         # Inyecta el token PROCESS_ROLE ('api' | 'worker') en todo el grafo DI
-│   └── test-support/                   # Fábricas de entidades de dominio reutilizadas en tests — ver src/test-support/README.md
-├── test/                     # Tests e2e (Supertest contra una app NestJS real) — ver test/README.md
+│   └── process-role.module.ts         # Inyecta el token PROCESS_ROLE ('api' | 'worker') en todo el grafo DI
+├── test/                     # Tests unitarios, soporte y suites e2e — ver test/README.md
+│   ├── unit/                 # Tests unitarios reflejando el árbol de src/
+│   ├── support/              # Builders, mocks y fixtures compartidos
+│   └── e2e/                  # Tests end-to-end contra infraestructura real
 ├── scripts/                  # Scripts de utilidad, ej. check-repository-ports.js (linter de arquitectura hexagonal)
+├── jest.config.json          # Configuración de tests unitarios
+├── jest.e2e.config.json      # Configuración de tests e2e
+├── tsconfig.spec.json        # TypeScript para src/ y test/
 ├── .dependency-cruiser.cjs   # Reglas de fronteras arquitectónicas verificadas con `npm run boundaries`
 ├── Dockerfile.backend        # Imagen de desarrollo (usada por docker-compose --profile dev)
 ├── Dockerfile.prod           # Imagen multi-stage de producción
@@ -102,7 +107,7 @@ npm run start:worker:dev   # proceso Worker con recarga en caliente (necesario p
 ### Verificar antes de hacer commit
 ```bash
 npm run typecheck    # tsc --noEmit, sin compilar
-npm run lint          # ESLint sobre src/apps/libs/test
+npm run lint          # ESLint sobre src/ y test/
 npm run boundaries     # fronteras de arquitectura (dependency-cruiser)
 npm test                # tests unitarios (*.spec.ts, Jest)
 npm run test:e2e         # tests e2e — requiere Postgres/Redis/Docker reales corriendo
@@ -122,5 +127,5 @@ npm run migration:revert     # revierte la última migración
 - [`src/modules/README.md`](src/modules/README.md) — los módulos de dominio.
 - [`src/shared/README.md`](src/shared/README.md) — infraestructura transversal (DB, Docker, IA, seguridad).
 - [`src/modules/projects/builder/README.md`](src/modules/projects/builder/README.md) — el motor de evaluación, el subsistema más grande e importante del backend.
-- [`test/README.md`](test/README.md) — tests end-to-end.
+- [`test/README.md`](test/README.md) — organización de tests unitarios, soporte y e2e.
 - Raíz del repo: [`../README.md`](../README.md) y [`../ARCHITECTURE.md`](../ARCHITECTURE.md) para la visión global del sistema (incluye el frontend).

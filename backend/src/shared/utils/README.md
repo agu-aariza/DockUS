@@ -21,7 +21,7 @@ Es la única forma de garantizar que estas funciones sean trivialmente testeable
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/utils
+npm run test -- test/unit/shared/utils
 ```
 
 Antes de añadir una función nueva, confirma que de verdad no tiene dependencias (ni de NestJS, ni de una librería con estado) y que resuelve algo genérico — si es específica de un dominio (p. ej. una regla de negocio de proyectos), no pertenece a `shared/`.

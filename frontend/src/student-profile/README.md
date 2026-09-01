@@ -21,7 +21,7 @@ student-profile/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/student-profile
+npm run test -- test/unit/student-profile
 ```
 
 ## Ver también

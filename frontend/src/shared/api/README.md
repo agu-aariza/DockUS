@@ -26,9 +26,10 @@ health/api/healthApi.ts
 ```text
 api/
 ├── http.ts               # La instancia axios: interceptores de token JWT, manejo global de 401/403
-├── http.spec.ts          # Tests de los interceptores de autenticación
 └── query-params.ts       # Serialización consistente de query params
 ```
+
+El test de los interceptores está en [`../../../test/unit/shared/api/http.spec.ts`](../../../test/unit/shared/api/http.spec.ts).
 
 ## `http.ts`: qué pasa en cada petición
 
@@ -37,7 +38,7 @@ Cada petición sale con el token JWT de la sesión activa inyectado por un inter
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/api
+npm run test -- test/unit/shared/api
 ```
 
 Si añades un endpoint nuevo, añade el método en el `*Api.ts` del dominio correspondiente (créalo si el dominio es nuevo). Los clientes de dominio deben importar `http` y `query-params` desde esta carpeta; los hooks y componentes no deben llamar a Axios directamente.

@@ -32,7 +32,7 @@ file-preview/  # Visor genérico de código + explorador de ficheros — ver fil
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/components
+npm run test -- test/unit/shared/components
 ```
 
 Antes de añadir un componente aquí, confirma que de verdad se reutiliza entre dominios — si solo lo usa un panel, pertenece a ese dominio (`<dominio>/components/`), no a `shared/`.

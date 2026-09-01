@@ -47,7 +47,7 @@ El controlador: aplica los guards de autenticación/rol, valida el DTO (automát
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/presentation
+npm run test -- test/unit/modules/projects/presentation
 ```
 
 Al añadir un endpoint: decide primero a qué controlador pertenece por sub-recurso (no lo metas en `projects.controller.ts` "porque ya existe"), documenta con `@ApiOperation`/`@ApiResponse` (alimenta `/api/docs`), y usa los DTOs de [`../dto/README.md`](../dto/README.md) para la validación de entrada.

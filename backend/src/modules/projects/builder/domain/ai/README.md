@@ -43,7 +43,7 @@ Cada prompt final se arma a partir de secciones con **prioridad** y **presupuest
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/domain/ai
+npm run test -- test/unit/modules/projects/builder/domain/ai
 ```
 
 Si el LLM empieza a devolver un contrato con un campo nuevo o distinto, el parser correspondiente es el sitio a tocar — añade el caso de forma defensiva (con su propio test que alimente JSON malformado) en vez de asumir que el modelo siempre respetará el esquema.

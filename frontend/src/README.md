@@ -6,7 +6,7 @@
 
 ## Cómo orientarte aquí
 
-Cada carpeta al mismo nivel que `App.tsx` es, o bien un dominio de negocio con sus propios componentes/hooks/páginas, o bien una de las tres capas transversales (`shared/`, `features/`, `test/`). La convención de nombres es la misma en casi todos los dominios: un `<Dominio>Panel.tsx` como página principal, `components/` para piezas específicas de ese dominio, `hooks/` para su lógica con estado.
+Cada carpeta al mismo nivel que `App.tsx` es, o bien un dominio de negocio con sus propios componentes/hooks/páginas, o bien una de las dos capas transversales (`shared/`, `features/`). Los tests y sus utilidades viven fuera de `src/`, en `../test/`. La convención de nombres es la misma en casi todos los dominios: un `<Dominio>Panel.tsx` como página principal, `components/` para piezas específicas de ese dominio, `hooks/` para su lógica con estado.
 
 ## Estructura interna
 
@@ -35,8 +35,7 @@ src/
 │
 ├── features/                # Tipos/DTOs puros por dominio, espejo del backend — ver features/README.md
 ├── shared/                    # Capa transversal: API, sesión, UI, tema, toasts... — ver shared/README.md
-├── app/                       # Composición global de la aplicación y navegación de workspace
-└── test/                        # Setup global de Vitest + Testing Library — ver test/README.md
+└── app/                       # Composición global de la aplicación y navegación de workspace
 ```
 
 ## La regla de capas: `features/` vs. dominio vs. `shared/`

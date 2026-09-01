@@ -50,7 +50,7 @@ ai/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/infrastructure/ai
+npm run test -- test/unit/shared/infrastructure/ai
 ```
 
 Si necesitas cambiar el texto de un prompt, edita `prompts.json` — nunca hardcodees texto de prompt en un `.ts`. Si necesitas soportar un proveedor LLM nuevo, añade un adaptador en `providers/` que implemente `ILlmGenerationService` (extendiendo `HttpLlmProviderBase` si habla HTTP simple) y regístralo en el `switch` de `LlmGenerationRouter`.

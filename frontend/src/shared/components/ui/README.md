@@ -28,7 +28,7 @@ Es explícita en `CLAUDE.md`: **`shared/components/ui/` son componentes dumb, ag
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/components/ui
+npm run test -- test/unit/shared/components/ui
 ```
 
 Si un componente de aquí empieza a necesitar `useQuery`/`axios` o a importar un tipo de `features/<dominio>/`, es una señal de que ha dejado de ser "dumb" — muévelo a la raíz de `shared/components/` o al dominio correspondiente en vez de romper la regla en el sitio.

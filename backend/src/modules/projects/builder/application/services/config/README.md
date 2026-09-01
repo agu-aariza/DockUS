@@ -29,7 +29,7 @@ config/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/application/services/config
+npm run test -- test/unit/modules/projects/builder/application/services/config
 ```
 
 Si añades un campo de configuración nuevo por proveedor, recuerda: si es sensible (claves, tokens), debe pasar por `SecretCipherService` antes de persistirse, y la vista de lectura debe seguir exponiendo solo un fragmento, nunca el valor completo.

@@ -30,7 +30,7 @@ runtime/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/runtime
+npm run test -- test/unit/runtime
 ```
 
 ## Ver también

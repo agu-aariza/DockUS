@@ -27,9 +27,10 @@ Permitir el acceso a la plataforma y la creación de cuentas de estudiante.
 │   ├── AuthAsidePanel.tsx           # Columna izquierda: marca, tesis y etapas (oculta < lg)
 │   └── PasswordStrengthMeter.tsx    # Barras de fuerza + requisitos (solo registro)
 └── hooks/
-    ├── useAuthForm.ts               # Todo el estado, la validación y el envío
-    └── useAuthForm.spec.ts          # 9 tests a nivel de hook (no hay tests de DOM)
+    └── useAuthForm.ts               # Todo el estado, la validación y el envío
 ```
+
+Sus 9 tests de hook están en [`../../test/unit/auth/hooks/useAuthForm.spec.ts`](../../test/unit/auth/hooks/useAuthForm.spec.ts); no hay tests de DOM para este hook.
 
 ---
 
@@ -66,6 +67,6 @@ El front solo exige 8 caracteres (`validatePassword`), pero el `RegisterDto` del
 ## Cómo Usar / Probar este Módulo
 
 ```bash
-npm test -- src/auth      # tests del hook
+npm test -- test/unit/auth      # tests del hook
 npm run dev               # http://localhost:5173/acceso
 ```

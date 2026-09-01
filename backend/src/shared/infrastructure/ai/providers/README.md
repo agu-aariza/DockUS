@@ -23,7 +23,7 @@ Muchos proveedores (locales o de terceros) exponen una API que imita el formato 
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/infrastructure/ai/providers
+npm run test -- test/unit/shared/infrastructure/ai/providers
 ```
 
 Si añades un proveedor nuevo que hable HTTP simple, extiende `HttpLlmProviderBase` en vez de reimplementar timeouts/reintentos desde cero, e impleméntalo contra `ILlmGenerationService` (`../llm-generation.token.ts`) para que `LlmGenerationRouter` pueda despacharle peticiones.

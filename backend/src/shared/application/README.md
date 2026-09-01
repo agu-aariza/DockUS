@@ -41,7 +41,7 @@ Si el puerto viviera dentro de `academic/`, `projects/` tendría que importar de
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/application
+npm run test -- test/unit/shared/application
 ```
 
 Si dos módulos de dominio necesitan comunicarse y no quieres que se importen directamente, este es el patrón a replicar: define el puerto/evento aquí, que el módulo dueño de los datos lo implemente, y que el módulo consumidor dependa solo de la interfaz.

@@ -21,7 +21,7 @@ Se usa, entre otros, en `users/` (email duplicado), `storage/` (`UQ_storage_obje
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/database
+npm run test -- test/unit/shared/database
 ```
 
 Si necesitas manejar otro código de error de PostgreSQL de forma reutilizable (p. ej. una violación de clave foránea, `23503`), sigue el mismo patrón: una función pura que inspecciona el error y decide si lo traduce o lo relanza.

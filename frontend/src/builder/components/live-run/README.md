@@ -33,7 +33,7 @@ timelineEvent.ts lo normaliza a la forma de UI
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/builder/components/live-run
+npm run test -- test/unit/builder/components/live-run
 ```
 
 Si el backend añade un tipo de evento nuevo (`BuildRunEventType`), el punto de entrada para soportarlo en la UI es `timelineEvent.ts` — no repartas el `switch` de tipos de evento por varios componentes.

@@ -29,7 +29,7 @@ Implementa cerrojos distribuidos sobre Redis (adquirir/liberar con expiración) 
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/infrastructure/cache
+npm run test -- test/unit/shared/infrastructure/cache
 ```
 
 Si necesitas Redis para algo nuevo que **no** sea procesamiento de colas BullMQ, esta es la conexión a reutilizar (vía `RedisClientService`) — no crees una tercera conexión Redis sin una razón de aislamiento tan fuerte como la que separa esta de BullMQ.

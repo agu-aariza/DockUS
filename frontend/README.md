@@ -28,9 +28,11 @@ frontend/
 ├── src/                  # Todo el código fuente — ver src/README.md
 ├── public/               # Estáticos servidos tal cual (favicon, logos) — ver public/README.md
 ├── build/                # Salida de `vite build` (generada, gitignored) — ver build/README.md
-├── test/                 # (dentro de src/, ver src/test/) setup global de Vitest + Testing Library
+├── test/                 # Tests unitarios y soporte de Vitest + Testing Library
 ├── index.html            # Punto de entrada HTML de Vite
 ├── vite.config.ts        # outDir: 'build', plugins (React, análisis de bundle)
+├── vitest.config.ts      # Tests unitarios y setup de Testing Library
+├── tsconfig.tests.json   # TypeScript de src/ y test/
 ├── Dockerfile.frontend    # Imagen de producción (Nginx sirviendo el build estático)
 └── package.json           # Scripts npm (ver abajo)
 ```
@@ -49,8 +51,8 @@ npm install
 npm run dev          # servidor Vite en :5173
 npm run build          # tsc -b && vite build → build/
 npm run typecheck        # tsc -b, sin compilar
-npm run lint               # ESLint sobre src/
-npm test                     # Vitest (*.spec.tsx / *.spec.ts)
+npm run lint               # ESLint sobre src/ y test/
+npm test                     # Vitest (test/unit/**/*.spec.tsx / *.spec.ts)
 npm run coverage                # vitest run --coverage
 ```
 

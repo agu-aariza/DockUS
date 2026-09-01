@@ -36,7 +36,7 @@ Este directorio muestra el resultado de una evaluación (`DeliveryReport.tsx`) p
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/deliveries
+npm run test -- test/unit/deliveries
 ```
 
 ## Ver también

@@ -16,7 +16,7 @@ CohortAnalyticsDashboard.tsx       # Distribución de notas y progreso del grupo
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/summary/components
+npm run test -- test/unit/summary/components
 ```
 
 ## Ver también

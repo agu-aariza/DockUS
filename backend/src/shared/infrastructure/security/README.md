@@ -41,7 +41,7 @@ security/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/infrastructure/security
+npm run test -- test/unit/shared/infrastructure/security
 ```
 
 Si añades un endpoint especialmente sensible a abuso, considera un cubo dedicado (como `auth-identity`/`refresh-identity`) en vez de confiar solo en `global`/`burst` — sobre todo si ese endpoint puede recibir tráfico legítimo concentrado desde una única IP (aulas, campus).

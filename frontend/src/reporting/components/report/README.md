@@ -21,7 +21,7 @@ Estos componentes ya conocen vocabulario del dominio de evaluación (qué es un 
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/reporting/components/report
+npm run test -- test/unit/reporting/components/report
 ```
 
 Si necesitas un nuevo tono de severidad o resultado, añádelo a `StatusTone` en `shared/components/ui/StatusBadge.tsx` primero — estos componentes deberían consumir esa fuente única, no declarar sus propios colores.

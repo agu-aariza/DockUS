@@ -29,7 +29,7 @@ Una operación que debe ser atómica (p. ej. matricular 30 alumnos a la vez) se 
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/domain
+npm run test -- test/unit/modules/projects/domain
 npm run boundaries   # falla si domain/ importa TypeORM directamente
 ```
 

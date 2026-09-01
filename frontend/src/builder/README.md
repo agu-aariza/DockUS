@@ -33,7 +33,7 @@ builder/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/builder
+npm run test -- test/unit/builder
 ```
 
 ## Ver también

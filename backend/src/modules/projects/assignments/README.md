@@ -52,7 +52,7 @@ Expuestos desde `presentation/project-assignments.controller.ts` (no vive dentro
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/assignments
+npm run test -- test/unit/modules/projects/assignments
 ```
 
 Si necesitas disparar una asignación desde código (no HTTP), usa `ProjectAssignmentsService` — nunca escribas directamente en la tabla `project_assignments` desde otro módulo; pasa por el puerto `IProjectAssignmentRepository` si lo que necesitas es solo lectura.

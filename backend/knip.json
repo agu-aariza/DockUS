@@ -4,11 +4,17 @@
     "src/main.ts",
     "src/worker.ts",
     "src/shared/infrastructure/database/data-source.ts",
-    "src/shared/infrastructure/database/migrations/*.ts"
+    "src/shared/infrastructure/database/migrations/*.ts",
+    "test/unit/**/*.spec.ts"
   ],
   "project": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "test/**/*.ts"
   ],
+  "paths": {
+    "@app/*": ["src/*"],
+    "@test/*": ["test/*"]
+  },
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": [
     "pino-pretty"

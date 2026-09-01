@@ -29,7 +29,6 @@ src/
 │   ├── database/                # Helpers TypeORM genéricos (no configuración de conexión)
 │   ├── http/                      # Filtros de excepciones y transformaciones HTTP globales
 │   └── utils/                       # Funciones puras sin dependencias de NestJS
-├── test-support/           # Fábricas de entidades de dominio para tests unitarios — ver test-support/README.md
 ├── main.ts                 # Entrypoint del proceso API HTTP
 ├── worker.ts                # Entrypoint del proceso Worker (sin servidor HTTP)
 ├── bootstrap.ts               # CORS, Helmet, ValidationPipe global, Swagger — solo aplica al proceso API
@@ -59,5 +58,5 @@ Si añades un módulo de dominio nuevo, sigue la convención `presentation/ appl
 
 - [`modules/README.md`](modules/README.md)
 - [`shared/README.md`](shared/README.md)
-- [`test-support/README.md`](test-support/README.md)
+- [`../test/README.md`](../test/README.md) — tests y utilidades fuera del código de producción.
 - [`../README.md`](../README.md) — visión general del backend.

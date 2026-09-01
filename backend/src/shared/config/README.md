@@ -28,7 +28,7 @@ config/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/config
+npm run test -- test/unit/shared/config
 ```
 
 Al añadir una variable de entorno nueva: (1) añádela al esquema Joi aquí con su tipo/default, (2) documenta su propósito en `.env.example` (raíz del repo), (3) si es opcional con comportamiento condicional, indícalo en el `CLAUDE.md` raíz solo si es relevante para quien trabaje en el repo, no solo aquí.

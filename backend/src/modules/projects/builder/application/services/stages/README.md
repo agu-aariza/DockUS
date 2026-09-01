@@ -39,7 +39,7 @@
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/application/services/stages
+npm run test -- test/unit/modules/projects/builder/application/services/stages
 ```
 
 Si necesitas añadir una etapa nueva al pipeline (poco frecuente): créala aquí siguiendo el mismo patrón (`handle(input): Promise<Output>`, sin capturar errores), y regístrala en el orden correcto dentro de `BuilderPipelineOrchestrator`.

@@ -6,15 +6,16 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   test: {
-    include: ['src/**/*.spec.{ts,tsx}'],
+    include: ['test/unit/**/*.spec.{ts,tsx}'],
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
+    setupFiles: './test/support/setup.ts',
     css: true,
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@test': path.resolve(import.meta.dirname, './test'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
 });

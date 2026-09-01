@@ -27,7 +27,7 @@ Los componentes de esta carpeta pueden importar tipos de `features/builder` y `f
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/reporting
+npm run test -- test/unit/reporting
 ```
 
 No cambies rutas, contratos HTTP o comportamiento de evaluación al reorganizar esta capa: la responsabilidad del PR es mantener la UI y aislar sus dependencias.

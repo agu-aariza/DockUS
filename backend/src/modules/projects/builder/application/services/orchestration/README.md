@@ -44,7 +44,7 @@ En paralelo, `builder-stale-run-recovery.service.ts` corre al arrancar el Worker
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/application/services/orchestration
+npm run test -- test/unit/modules/projects/builder/application/services/orchestration
 ```
 
 Si tu cambio afecta a **cuándo** algo pasa (no a qué pasa dentro de una etapa concreta), casi seguro pertenece aquí. Si necesitas marcar un run como fallido desde una etapa, lanza el error — no llames a `builder-run-lifecycle.service.ts` directamente desde dentro de un `*-stage.handler.ts`; deja que `BuilderPipelineOrchestrator` decida.

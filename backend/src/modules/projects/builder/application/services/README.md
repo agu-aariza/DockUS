@@ -45,7 +45,7 @@ stages/report-stage.handler.ts ──▶ evaluation/ (composición del informe f
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/application/services
+npm run test -- test/unit/modules/projects/builder/application/services
 ```
 
 Antes de añadir un servicio nuevo, decide a cuál de estas nueve responsabilidades pertenece — si no encaja claramente en ninguna, probablemente sea una señal de que el caso de uso está mal delimitado, no de que haga falta una carpeta nueva.

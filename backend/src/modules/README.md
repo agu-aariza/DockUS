@@ -54,8 +54,8 @@ Cada submódulo exporta solo las capacidades que necesita la composición superi
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules          # tests unitarios de todos los módulos
-npm run test -- src/modules/auth     # tests de un módulo concreto
+npm run test -- test/unit/modules          # tests unitarios de todos los módulos
+npm run test -- test/unit/modules/auth     # tests de un módulo concreto
 npm run boundaries                    # verifica que ningún módulo rompa las fronteras hexagonales
 ```
 

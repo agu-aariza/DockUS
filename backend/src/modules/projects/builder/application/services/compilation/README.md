@@ -45,7 +45,7 @@ BuilderRecipeCompilerService.compile(plan)  →  CompiledRecipe
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/application/services/compilation
+npm run test -- test/unit/modules/projects/builder/application/services/compilation
 ```
 
 Si necesitas soportar un lenguaje/framework nuevo, el punto de partida real es `domain/runtime-catalog.ts` (el catálogo, fuente única de verdad) — este servicio ya lo consume automáticamente, no dupliques aquí la lista de imágenes o gestores de dependencias soportados.

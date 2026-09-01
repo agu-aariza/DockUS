@@ -30,7 +30,7 @@ No hay un filtro de excepciones global, interceptor de respuesta, ni transformac
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/http
+npm run test -- test/unit/shared/http
 ```
 
 Si un mensaje de error HTTP se repite en 3+ controladores, añádelo aquí como constante en vez de escribirlo literal cada vez.

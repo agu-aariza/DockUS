@@ -14,5 +14,5 @@ La fachada usa el transporte genérico de [`../shared/api/README.md`](../shared/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/health
+npm run test -- test/unit/health
 ```

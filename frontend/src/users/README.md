@@ -31,7 +31,7 @@ Centraliza cómo se muestra cada `UserRole` (`STUDENT`/`TEACHER`/`ADMIN`) y `Use
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/users
+npm run test -- test/unit/users
 ```
 
 ## Ver también

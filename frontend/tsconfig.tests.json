@@ -2,7 +2,13 @@
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
     "noEmit": true,
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@/*": ["src/*"],
+      "@test/*": ["test/*"]
+    },
     "types": ["node", "vite/client", "vitest/globals"]
   },
-  "include": ["src"]
+  "include": ["src", "test"]
 }

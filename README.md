@@ -24,7 +24,7 @@ El repositorio está organizado como una monorepositorio ligero segregado por re
 ```text
 .
 ├── backend/                  # Servidor NestJS y motor de evaluación (Node.js & TypeScript)
-│   ├── src/
+│   ├── src/                  # Código de producción
 │   │   ├── api.module.ts     # Módulo raíz para el proceso API HTTP
 │   │   ├── worker.module.ts  # Módulo raíz para el procesador de colas asíncronas
 │   │   ├── process-role.module.ts # Selector dinámico de módulos por rol de contenedor
@@ -32,7 +32,9 @@ El repositorio está organizado como una monorepositorio ligero segregado por re
 │   │   │   └── projects/builder/ # Submódulo motor de compilación y orquestación Docker
 │   │   └── shared/           # Adaptadores de infraestructura (DB, Redis, Docker, LLM, Security)
 │   ├── .dependency-cruiser.cjs # Linter estricto de fronteras de arquitectura
-│   └── test/                 # Suite de pruebas de integración e2e
+│   ├── test/                 # Tests unitarios, soporte y e2e
+│   ├── jest.config.json      # Configuración Jest unitaria
+│   └── jest.e2e.config.json  # Configuración Jest e2e
 ├── frontend/                 # Aplicación SPA web en React, TypeScript, Vite y TailwindCSS
 │   ├── src/
 │   │   ├── auth/             # Módulo de autenticación y gestión de credenciales
@@ -41,6 +43,9 @@ El repositorio está organizado como una monorepositorio ligero segregado por re
 │   │   ├── student/          # Experiencia del alumno, entregas guiadas y workspace
 │   │   ├── summary/          # Dashboards de analíticas y distribución de notas
 │   │   └── shared/           # Sistema de diseño, cliente HTTP Axios y estado de sesión
+│   ├── test/                 # Tests unitarios y soporte de Vitest
+│   ├── vitest.config.ts      # Configuración de Vitest
+│   ├── tsconfig.tests.json   # TypeScript para src/ y test/
 │   └── vite.config.ts        # Configuración del bundler Vite
 ├── shared/                   # Contratos de interfaz DTO y tipos compartidos
 │   └── contracts/            # Definiciones de tipos comunes backend-frontend

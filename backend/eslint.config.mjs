@@ -53,7 +53,7 @@ export default tseslint.config(
     files: [
       '**/*.spec.ts',
       '**/*.e2e-spec.ts',
-      'src/test-support/**/*.ts',
+      'test/support/**/*.ts',
     ],
     rules: {
       '@typescript-eslint/unbound-method': 'off',
@@ -64,6 +64,10 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
+      // Las aserciones de los tests documentan el contrato que se comprueba;
+      // al moverlos fuera de `src/`, el type-aware linter las identifica como
+      // redundantes aunque sigan siendo útiles para leer la intención del test.
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
     },
   },
   {

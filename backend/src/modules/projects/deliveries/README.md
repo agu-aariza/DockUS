@@ -58,7 +58,7 @@ deliveries/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/deliveries
+npm run test -- test/unit/modules/projects/deliveries
 ```
 
 ## Ver también

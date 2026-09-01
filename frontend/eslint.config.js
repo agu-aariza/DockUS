@@ -11,7 +11,7 @@ export default [
   eslint.configs.recommended,
   ...queryPlugin.configs['flat/recommended'],
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'test/**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

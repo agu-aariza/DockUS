@@ -33,7 +33,7 @@ toast/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/toast
+npm run test -- test/unit/shared/toast
 ```
 
 ## Ver también

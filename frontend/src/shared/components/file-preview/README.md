@@ -26,7 +26,7 @@ El panel de calificación es opcional en la composición — no asumas que siemp
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/components/file-preview
+npm run test -- test/unit/shared/components/file-preview
 ```
 
 ## Ver también

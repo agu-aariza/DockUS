@@ -28,7 +28,7 @@ Cada `types.ts` reexporta, con alias donde el nombre local difiere, tipos que en
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/features
+npm run test -- test/unit/features
 ```
 
 Al añadir un tipo nuevo, revisa primero si ya existe en `@educodeai/contracts` — si el backend ya lo expone, reexpórtalo desde aquí en vez de redeclararlo desde cero.

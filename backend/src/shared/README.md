@@ -55,7 +55,7 @@ Servicio externo real (Docker daemon, AWS Bedrock, MinIO, PostgreSQL, Redis)
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared   # tests unitarios de toda la infraestructura compartida
+npm run test -- test/unit/shared   # tests unitarios de toda la infraestructura compartida
 ```
 
 Antes de añadir algo nuevo aquí, pregúntate: ¿esto es un adaptador genérico reutilizable por cualquier módulo, o es lógica específica de un dominio? Si es lo segundo, no pertenece a `shared/` — debería vivir dentro del módulo correspondiente (posiblemente exponiendo un puerto en `shared/application/` si otros módulos necesitan consultarlo sin acoplarse directamente entre sí).

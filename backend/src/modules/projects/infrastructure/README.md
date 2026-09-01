@@ -42,7 +42,7 @@ queryBuilder.getMany()
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/infrastructure
+npm run test -- test/unit/modules/projects/infrastructure
 ```
 
 Si añades una consulta nueva que deba respetar visibilidad por rol, reutiliza el helper `apply*ActorScope` correspondiente en vez de escribir un `WHERE` de permisos a mano — mantiene la regla de negocio "quién ve qué" en un único sitio por entidad.

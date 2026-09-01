@@ -23,7 +23,7 @@ Como el `ValidationPipe` global tiene `forbidNonWhitelisted: true`, un DTO mal d
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/dto
+npm run test -- test/unit/modules/projects/dto
 ```
 
 Al añadir un campo: decláralo con el decorador de `class-validator` que corresponda (`@IsString()`, `@IsOptional()`, `@IsUUID()`...) y, si se muestra en Swagger, añade `@ApiProperty()`/`@ApiPropertyOptional()` de `@nestjs/swagger` con un `example` — la documentación de `/api/docs` se genera a partir de estos decoradores, no se escribe a mano en otro sitio.

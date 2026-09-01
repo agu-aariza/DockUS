@@ -45,7 +45,7 @@ Nótese la diferencia de roles: crear, editar, borrar y cambiar estado son opera
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/users
+npm run test -- test/unit/modules/users
 ```
 
 `UsersService` es también el punto que usa `auth/` para todo lo relacionado con contraseñas (`validatePassword`) y para resolver identidades desde el JWT (`findById`) — si cambias la forma de `User` o el flujo de creación, revisa el impacto en `auth.service.ts` y `jwt.strategy.ts` antes de continuar.

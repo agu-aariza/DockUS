@@ -33,7 +33,7 @@ El resultado paginado se construye con `buildPaginationMeta(page, limit, total)`
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/dto
+npm run test -- test/unit/shared/dto
 ```
 
 Si un listado nuevo necesita paginación, extiende `PaginatedQueryDto` en vez de declarar `page`/`limit`/`sortOrder` de cero — mantiene el comportamiento (límites, mensajes de validación) idéntico en toda la API.

@@ -74,7 +74,7 @@ Los tres endpoints de escritura tienen un límite de peticiones más estricto qu
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/auth
+npm run test -- test/unit/modules/auth
 ```
 
 Si necesitas proteger un endpoint nuevo: `@UseGuards(JwtAuthGuard, RolesGuard)` a nivel de controlador o método, y `@Roles(UserRole.TEACHER)` (o los roles que correspondan) en el handler concreto. Si solo necesitas "estar logueado, cualquier rol", usa solo `JwtAuthGuard`.

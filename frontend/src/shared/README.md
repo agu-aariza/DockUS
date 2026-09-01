@@ -38,7 +38,7 @@ Todo fichero bajo `src/shared/` tiene prohibido importar `src/features/` o cualq
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared
+npm run test -- test/unit/shared
 ```
 
 ## Ver también

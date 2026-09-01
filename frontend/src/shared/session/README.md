@@ -39,7 +39,7 @@ session/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/session
+npm run test -- test/unit/shared/session
 ```
 
 ## Ver también

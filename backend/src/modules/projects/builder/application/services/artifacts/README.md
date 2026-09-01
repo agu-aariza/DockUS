@@ -25,7 +25,7 @@ artifacts/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/application/services/artifacts
+npm run test -- test/unit/modules/projects/builder/application/services/artifacts
 ```
 
 Si una etapa nueva empieza a producir un tipo de evidencia distinto, añade el método correspondiente aquí en vez de que la propia etapa llame directamente a `EvidenceService` — mantiene en un solo sitio la decisión de qué se persiste de cada tipo de salida del LLM.

@@ -21,7 +21,7 @@ Cada fila es un `StorageObject` (ver `backend/src/modules/projects/storage/READM
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/storage
+npm run test -- test/unit/storage
 ```
 
 Este panel realiza borrados reales de objetos en MinIO — cualquier cambio en `removeMutation`/`purgeMutation` debe tratarse con el mismo cuidado que una operación destructiva, incluida la confirmación explícita en la UI antes de ejecutarla.

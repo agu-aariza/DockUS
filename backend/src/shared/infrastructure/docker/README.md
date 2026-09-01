@@ -43,7 +43,7 @@ docker/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/infrastructure/docker
+npm run test -- test/unit/shared/infrastructure/docker
 ```
 
 Requiere el daemon de Docker accesible (`DOCKER_HOST` si no es el socket por defecto) para pruebas de integración reales; los tests unitarios mockean `runCommand`. Si necesitas exponer una operación nueva de Docker al Builder, decide primero si de verdad pertenece al puerto `IContainerRuntime` (`builder/domain/ports/container-runtime.port.ts`, deliberadamente reducido a los 4 métodos que se usan hoy) antes de ampliar su superficie.

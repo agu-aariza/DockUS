@@ -2,10 +2,11 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "src/env.d.ts",
-    "src/**/*.spec.{ts,tsx}"
+    "test/unit/**/*.spec.{ts,tsx}"
   ],
   "project": [
-    "src/**/*.{ts,tsx}"
+    "src/**/*.{ts,tsx}",
+    "test/**/*.{ts,tsx}"
   ],
   "ignoreExportsUsedInFile": true,
   "ignore": [

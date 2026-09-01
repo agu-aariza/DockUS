@@ -18,7 +18,7 @@
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/utils
+npm run test -- test/unit/shared/utils
 ```
 
 Misma regla que en el backend: si una función necesita estado, un hook de React, o conocer un componente concreto, no pertenece aquí.

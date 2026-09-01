@@ -24,7 +24,7 @@ Esta vista consume el mismo endpoint agregado que expone `project-gradebook.cont
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/projects/components/progress
+npm run test -- test/unit/projects/components/progress
 ```
 
 ## Ver también

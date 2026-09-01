@@ -58,8 +58,8 @@ projects/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects              # todo el módulo, incluido builder/
-npm run test -- src/modules/projects --testPathIgnorePatterns=builder  # todo menos el motor de evaluación
+npm run test -- test/unit/modules/projects              # todo el módulo, incluido builder/
+npm run test -- test/unit/modules/projects --testPathIgnorePatterns=builder  # todo menos el motor de evaluación
 ```
 
 ## Ver también

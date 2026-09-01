@@ -28,7 +28,7 @@ summary/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/summary
+npm run test -- test/unit/summary
 ```
 
 Los componentes de `components/` son mayormente de presentación (reciben datos ya resueltos por el panel) — si necesitas añadir una fuente de datos nueva, resuélvela en `TeacherHomePanel.tsx` con React Query y pásala como prop, no dupliques *fetching* dentro de un componente hijo.

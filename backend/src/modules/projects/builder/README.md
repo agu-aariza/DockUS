@@ -76,7 +76,7 @@ builder/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder
+npm run test -- test/unit/modules/projects/builder
 ```
 
 Si añades una etapa nueva o modificas una existente, debe seguir siendo ejecutable de forma aislada del resto (input/output tipados propios) y **propagar** los fallos, no capturarlos silenciosamente — es el orquestador quien decide qué hacer con un fallo, no la etapa.

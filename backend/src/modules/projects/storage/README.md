@@ -58,7 +58,7 @@ Un índice único (`projectId, deliveryId, assetRole, logicalPath`) impide subir
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/storage
+npm run test -- test/unit/modules/projects/storage
 ```
 
 Si necesitas subir un nuevo tipo de fichero, añade el valor a `StorageAssetRole` y sus extensiones permitidas a `storage.constants.ts` — no valides extensiones "a mano" en un sitio nuevo.

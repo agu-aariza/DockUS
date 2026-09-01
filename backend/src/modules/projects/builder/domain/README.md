@@ -47,7 +47,7 @@ code-quality-finding.util.ts # Helpers puros sobre CodeQualityFinding (agrupar, 
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/domain
+npm run test -- test/unit/modules/projects/builder/domain
 npm run boundaries   # domain/ no puede importar TypeORM/ioredis salvo en las propias entidades
 ```
 

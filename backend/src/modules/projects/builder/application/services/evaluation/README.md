@@ -37,7 +37,7 @@ BuilderReportComposerService       ── ensambla el informe final consolidado
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/application/services/evaluation
+npm run test -- test/unit/modules/projects/builder/application/services/evaluation
 ```
 
 Si cambias el criterio de qué cuenta como "alucinación" en `builder-hallucination-guard.service.ts`, hazlo con mucho cuidado y con tests — es el único cortafuegos entre "lo que el LLM dice" y "la nota que recibe el alumno".

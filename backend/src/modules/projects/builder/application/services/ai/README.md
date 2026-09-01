@@ -34,7 +34,7 @@ Cada uno necesita `BuilderLlmConfigService` (`../config/`) para resolver la cade
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/application/services/ai
+npm run test -- test/unit/modules/projects/builder/application/services/ai
 ```
 
 Si añades una etapa nueva que llame al LLM, sigue el patrón de `builder-llm-evaluator.service.ts`: compón el prompt en `domain/ai/`, despacha con `BuilderLlmDispatcherService` (nunca llames al router de `shared/infrastructure/ai/` directamente desde aquí), y registra el *trace* con `builder-llm-trace.util.ts`.

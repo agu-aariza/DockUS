@@ -51,7 +51,7 @@ student/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/student
+npm run test -- test/unit/student
 ```
 
 ## Ver también

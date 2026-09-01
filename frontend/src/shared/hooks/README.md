@@ -38,7 +38,7 @@ hooks/
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/hooks
+npm run test -- test/unit/shared/hooks
 ```
 
 Cualquier sondeo periódico nuevo (polling de estado, *fallback* de un stream SSE caído) debería pasar por `useVisibilityAwareInterval` en vez de un `setInterval` directo — es la lección ya aprendida de un incidente real de carga, no una precaución teórica.

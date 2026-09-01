@@ -28,7 +28,7 @@ Ambos se registran desde `shared/infrastructure/infrastructure.module.ts` (la ot
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/shared/infrastructure/seed
+npm run test -- test/unit/shared/infrastructure/seed
 ```
 
 Si necesitas más datos de demostración, amplía `demo-seed.service.ts` manteniendo la comprobación de idempotencia — nunca insertes sin comprobar existencia previa.

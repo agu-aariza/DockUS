@@ -21,7 +21,7 @@
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/projects/components
+npm run test -- test/unit/projects/components
 ```
 
 ## Ver también

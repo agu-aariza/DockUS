@@ -27,7 +27,7 @@ Un LLM puede fallar de formas que no son "el proveedor está caído": puede devo
 ## Cómo trabajar aquí
 
 ```bash
-npm run test -- src/modules/projects/builder/application/services/support
+npm run test -- test/unit/modules/projects/builder/application/services/support
 ```
 
 Si el LLM empieza a fallar de una forma nueva no cubierta aquí, el punto de entrada es `resolveEvaluationAssessment(...)` — añade el caso ahí en vez de dejar que el fallo se propague sin control hasta el orquestador.
