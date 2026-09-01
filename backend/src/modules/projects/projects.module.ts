@@ -31,7 +31,7 @@ import { ProjectTestSuiteController } from './presentation/project-test-suite.co
 import { ProjectTeachersController } from './presentation/project-teachers.controller';
 import { ProjectRuntimeController } from './presentation/project-runtime.controller';
 import { ProjectGradebookController } from './presentation/project-gradebook.controller';
-import { ProjectAccessService } from './project-access.service';
+import { ProjectAccessModule } from './project-access.module';
 import { ProjectGradebookService } from './project-gradebook.service';
 import { ProjectLifecycleService } from './project-lifecycle.service';
 import { ProjectOperationalIssuesService } from './project-operational-issues.service';
@@ -56,6 +56,7 @@ import { OBJECT_STORAGE } from './builder/domain/ports/object-storage.port';
     AcademicModule,
     SharedApplicationModule,
     DeliveryStatusModule,
+    ProjectAccessModule,
     ProjectPersistenceModule,
     ProjectAssignmentPersistenceModule,
     UsersModule,
@@ -77,7 +78,6 @@ import { OBJECT_STORAGE } from './builder/domain/ports/object-storage.port';
     },
     ProjectsService,
     ProjectLifecycleService,
-    ProjectAccessService,
     ProjectGradebookService,
     StudentProfileService,
     ProjectOperationalIssuesService,
@@ -89,7 +89,7 @@ import { OBJECT_STORAGE } from './builder/domain/ports/object-storage.port';
   exports: [
     ProjectsService,
     ProjectLifecycleService,
-    ProjectAccessService,
+    ProjectAccessModule,
     DeliveriesQueryService,
     DeliveriesCommandService,
     ProjectAssignmentsService,

@@ -25,8 +25,8 @@ import {
 } from '../../../test-support/domain-builders';
 import { UserRole } from '../../users/entities/user.entity';
 import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
-import type { IProjectRepository } from '../domain/repositories/project.repository.interface';
 import type { IStorageObjectRepository } from '../domain/repositories/storage-object.repository.interface';
+import type { ProjectAccessService } from '../project-access.service';
 import { MinioStorageService } from '../../../shared/infrastructure/storage/minio-storage.service';
 import { StorageAccessService } from './storage-access.service';
 import { StorageQueryService } from './storage-query.service';
@@ -51,9 +51,10 @@ describe('StorageService', () => {
     save: jest.fn(),
   };
 
-  const projectsRepository = {
-    findById: jest.fn(),
-    isTeacherAssignedToProject: jest.fn().mockResolvedValue(true),
+  const projectAccessService = {
+    findProjectOrThrow: jest.fn(),
+    assertCanAccessProject: jest.fn(),
+    assertCanManageProject: jest.fn(),
   };
 
   const minioStorageService = createMinioStorageServiceMock();
@@ -70,18 +71,20 @@ describe('StorageService', () => {
     const storageAccessService = new StorageAccessService(
       storageRepository as unknown as IStorageObjectRepository,
       deliveriesRepository as unknown as IDeliveryRepository,
-      projectsRepository as unknown as IProjectRepository,
+      projectAccessService as unknown as ProjectAccessService,
     );
     const storageQueryService = new StorageQueryService(
       storageRepository as unknown as IStorageObjectRepository,
       minioStorageService as unknown as MinioStorageService,
       storageAccessService,
+      projectAccessService as unknown as ProjectAccessService,
     );
     const storageUploadService = new StorageUploadService(
       storageRepository as unknown as IStorageObjectRepository,
       deliveriesRepository as unknown as IDeliveryRepository,
       minioStorageService as unknown as MinioStorageService,
       storageAccessService,
+      projectAccessService as unknown as ProjectAccessService,
     );
 
     service = new StorageService(
@@ -403,7 +406,7 @@ describe('StorageService', () => {
       contentType: 'application/zip',
     });
 
-    projectsRepository.findById.mockResolvedValue(project);
+    projectAccessService.findProjectOrThrow.mockResolvedValue(project);
     storageRepository.findActiveTeacherTestSuite.mockResolvedValue(null);
     storageRepository.create.mockReturnValue(saved);
     storageRepository.save.mockResolvedValue(saved);

@@ -18,6 +18,7 @@ import { DeliveryStatus } from '../deliveries/entities/delivery.entity';
 import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
 import { DELIVERY_REPOSITORY } from '../domain/repositories/delivery.repository.interface';
 import { StorageAccessService } from './storage-access.service';
+import { ProjectAccessService } from '../project-access.service';
 import { CreateStorageObjectDto } from './dto/create-storage-object.dto';
 import {
   StorageAssetRole,
@@ -47,6 +48,7 @@ export class StorageUploadService {
     @Inject(OBJECT_STORAGE)
     private readonly objectStorage: IObjectStorage,
     private readonly storageAccessService: StorageAccessService,
+    private readonly projectAccessService: ProjectAccessService,
   ) {}
 
   /**
@@ -175,7 +177,7 @@ export class StorageUploadService {
     }
 
     const project =
-      await this.storageAccessService.findProjectOrThrow(projectId);
+      await this.projectAccessService.findProjectOrThrow(projectId);
     await this.storageAccessService.assertCanManageProject(project, actor);
     this.assertFileSize(file.size);
     this.assertAllowedExtension(

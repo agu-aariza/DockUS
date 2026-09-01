@@ -19,12 +19,10 @@ import {
 } from '../deliveries/entities/delivery.entity';
 import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
 import { DELIVERY_REPOSITORY } from '../domain/repositories/delivery.repository.interface';
-import type { IProjectRepository } from '../domain/repositories/project.repository.interface';
-import { PROJECT_REPOSITORY } from '../domain/repositories/project.repository.interface';
 import type { IStorageObjectRepository } from '../domain/repositories/storage-object.repository.interface';
 import { STORAGE_OBJECT_REPOSITORY } from '../domain/repositories/storage-object.repository.interface';
 import { Project } from '../entities/project.entity';
-import { assertTeacherCanManageProject } from '../project-access.policy';
+import { ProjectAccessService } from '../project-access.service';
 import { findDeliveryWithAssignmentOrThrow } from '../deliveries/delivery-lookup.util';
 import { StorageObject } from './entities/storage-object.entity';
 
@@ -35,8 +33,7 @@ export class StorageAccessService {
     private readonly storageRepository: IStorageObjectRepository,
     @Inject(DELIVERY_REPOSITORY)
     private readonly deliveriesRepository: IDeliveryRepository,
-    @Inject(PROJECT_REPOSITORY)
-    private readonly projectsRepository: IProjectRepository,
+    private readonly projectAccessService: ProjectAccessService,
   ) {}
 
   async findStorageObjectWithAccess(
@@ -60,17 +57,18 @@ export class StorageAccessService {
     }
 
     if (storageObject.projectId) {
-      const project = await this.findProjectOrThrow(storageObject.projectId);
+      const project = await this.projectAccessService.findProjectOrThrow(
+        storageObject.projectId,
+      );
       if (actor.role === UserRole.ADMIN) {
         return storageObject;
       }
-      const isAssigned =
-        await this.projectsRepository.isTeacherAssignedToProject(
+      if (actor.role === UserRole.TEACHER) {
+        await this.assertTeacherCanAccessProject(
           project.id,
-          actor.userId,
+          actor,
+          'No tiene permisos sobre el artefacto de proyecto solicitado.',
         );
-
-      if (isAssigned) {
         return storageObject;
       }
       throw new ForbiddenException(
@@ -89,15 +87,6 @@ export class StorageAccessService {
     );
   }
 
-  async findProjectOrThrow(projectId: string): Promise<Project> {
-    const project = await this.projectsRepository.findById(projectId);
-    if (!project) {
-      throw new NotFoundException('Proyecto no encontrado.');
-    }
-
-    return project;
-  }
-
   async assertCanAccessDelivery(
     delivery: Delivery,
     actor: AuthenticatedUser,
@@ -111,20 +100,32 @@ export class StorageAccessService {
     }
 
     if (actor.role === UserRole.TEACHER) {
-      const isAssigned =
-        await this.projectsRepository.isTeacherAssignedToProject(
-          delivery.assignment.project.id,
-          actor.userId,
-        );
-
-      if (isAssigned) {
-        return;
-      }
+      await this.assertTeacherCanAccessProject(
+        delivery.assignment.project.id,
+        actor,
+        'No tiene permisos sobre la entrega asociada al objeto.',
+      );
+      return;
     }
 
     throw new ForbiddenException(
       'No tiene permisos sobre la entrega asociada al objeto.',
     );
+  }
+
+  private async assertTeacherCanAccessProject(
+    projectId: string,
+    actor: AuthenticatedUser,
+    forbiddenMessage: string,
+  ): Promise<void> {
+    try {
+      await this.projectAccessService.assertCanAccessProject(projectId, actor);
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw new ForbiddenException(forbiddenMessage);
+      }
+      throw error;
+    }
   }
 
   async assertCanUploadStudentSource(
@@ -147,8 +148,7 @@ export class StorageAccessService {
     project: Project,
     actor: AuthenticatedUser,
   ): Promise<void> {
-    await assertTeacherCanManageProject(
-      this.projectsRepository,
+    await this.projectAccessService.assertCanManageProject(
       project,
       actor,
       'No tiene permisos para administrar la suite docente del proyecto.',

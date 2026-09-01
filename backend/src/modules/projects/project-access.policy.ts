@@ -3,9 +3,8 @@
  *
  * Contexto:
  * - La regla "quién puede administrar un proyecto" (ADMIN, o TEACHER asignado a
- * él) es idéntica para el proyecto en sí y para su suite docente. Vivía
- * duplicada en `ProjectAccessService` y `StorageAccessService`; aquí queda
- * como función pura reutilizable, sin acoplar ambos servicios entre sí.
+ * él) se centraliza en `ProjectAccessService`; aquí queda como función pura
+ * reutilizable, sin acoplar la política a los servicios consumidores.
  * - Las consultas de asignación de profesores pertenecen al puerto de
  *   proyectos; esta política se limita a decisiones puras de autorización.
  *

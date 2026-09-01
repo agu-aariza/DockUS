@@ -21,6 +21,7 @@ import {
   DEFAULT_MAX_EXTRACTED_FILES,
 } from '../builder/domain/builder.constants';
 import { StorageAccessService } from './storage-access.service';
+import { ProjectAccessService } from '../project-access.service';
 import { ListStorageObjectsQueryDto } from './dto/list-storage-objects-query.dto';
 import { StorageObject } from './entities/storage-object.entity';
 import {
@@ -44,6 +45,7 @@ export class StorageQueryService {
     @Inject(OBJECT_STORAGE)
     private readonly objectStorage: IObjectStorage,
     private readonly storageAccessService: StorageAccessService,
+    private readonly projectAccessService: ProjectAccessService,
   ) {}
 
   async findAll(
@@ -133,7 +135,7 @@ export class StorageQueryService {
     actor: AuthenticatedUser,
   ): Promise<StorageObject> {
     const project =
-      await this.storageAccessService.findProjectOrThrow(projectId);
+      await this.projectAccessService.findProjectOrThrow(projectId);
     await this.storageAccessService.assertCanManageProject(project, actor);
     const storageObject = await this.findProjectTestSuiteStorage(projectId);
     if (!storageObject) {

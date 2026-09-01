@@ -2,12 +2,13 @@ import { ForbiddenException } from '@nestjs/common';
 import {
   buildActor,
   buildDelivery,
+  buildProject,
   buildStorageObject,
 } from '../../../test-support/domain-builders';
 import { UserRole } from '../../users/entities/user.entity';
 import type { IDeliveryRepository } from '../domain/repositories/delivery.repository.interface';
-import type { IProjectRepository } from '../domain/repositories/project.repository.interface';
 import type { IStorageObjectRepository } from '../domain/repositories/storage-object.repository.interface';
+import type { ProjectAccessService } from '../project-access.service';
 import { StorageAccessService } from './storage-access.service';
 
 describe('StorageAccessService', () => {
@@ -18,9 +19,10 @@ describe('StorageAccessService', () => {
   const deliveriesRepository = {
     findByIdWithAssignment: jest.fn(),
   };
-  const projectsRepository = {
-    findById: jest.fn(),
-    isTeacherAssignedToProject: jest.fn(),
+  const projectAccessService = {
+    findProjectOrThrow: jest.fn(),
+    assertCanAccessProject: jest.fn(),
+    assertCanManageProject: jest.fn(),
   };
 
   beforeEach(() => {
@@ -28,7 +30,7 @@ describe('StorageAccessService', () => {
     service = new StorageAccessService(
       storageRepository as unknown as IStorageObjectRepository,
       deliveriesRepository as unknown as IDeliveryRepository,
-      projectsRepository as unknown as IProjectRepository,
+      projectAccessService as unknown as ProjectAccessService,
     );
   });
 
@@ -45,6 +47,29 @@ describe('StorageAccessService', () => {
     );
 
     expect(result.id).toBe(storageObject.id);
+  });
+
+  it('permite a un teacher acceder a un artefacto de proyecto asignado', async () => {
+    const actor = buildActor(UserRole.TEACHER, 'teacher-1');
+    const project = buildProject({ id: 'project-1' });
+    const storageObject = buildStorageObject({
+      projectId: project.id,
+      deliveryId: null,
+    });
+    storageRepository.findByIdWithRelations.mockResolvedValue(storageObject);
+    projectAccessService.findProjectOrThrow.mockResolvedValue(project);
+    projectAccessService.assertCanAccessProject.mockResolvedValue(project);
+
+    const result = await service.findStorageObjectWithAccess(
+      storageObject.id,
+      actor,
+    );
+
+    expect(result.id).toBe(storageObject.id);
+    expect(projectAccessService.assertCanAccessProject).toHaveBeenCalledWith(
+      project.id,
+      actor,
+    );
   });
 
   it('rechaza a un student sobre una entrega ajena', async () => {

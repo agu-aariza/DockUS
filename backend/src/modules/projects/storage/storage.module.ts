@@ -23,14 +23,14 @@ import { OBJECT_STORAGE } from '../builder/domain/ports/object-storage.port';
 import { StorageObjectRepository } from '../infrastructure/database/storage-object.repository';
 import { STORAGE_OBJECT_REPOSITORY } from '../domain/repositories/storage-object.repository.interface';
 import { DeliveryStatusModule } from '../deliveries/delivery-status.module';
-import { ProjectPersistenceModule } from '../project-persistence.module';
+import { ProjectAccessModule } from '../project-access.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([StorageObject, ProjectAssignment]),
     StorageInfrastructureModule,
     DeliveryStatusModule,
-    ProjectPersistenceModule,
+    ProjectAccessModule,
   ],
   controllers: [StorageController],
   providers: [

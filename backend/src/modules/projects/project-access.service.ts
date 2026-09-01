@@ -117,12 +117,13 @@ export class ProjectAccessService {
   async assertCanManageProject(
     project: Project,
     actor: AuthenticatedUser,
+    forbiddenMessage = 'No tiene permisos para modificar el proyecto.',
   ): Promise<void> {
     await assertTeacherCanManageProject(
       this.projectsRepository,
       project,
       actor,
-      'No tiene permisos para modificar el proyecto.',
+      forbiddenMessage,
     );
   }
 }
