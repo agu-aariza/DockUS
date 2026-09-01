@@ -33,12 +33,13 @@ import { Roles, RolesGuard } from '../../auth/guards/roles.guard';
 import type { AuthenticatedRequest } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
 import { ProjectProgressQueryDto } from '../dto/project-progress-query.dto';
-import {
+import { ProjectGradebookService } from '../project-gradebook.service';
+import { ProjectQualityInsightsService } from '../project-quality-insights.service';
+import type {
   ProjectGradebookRow,
   ProjectQualityInsightsSummary,
   ProjectStudentQualityInsights,
-  ProjectsService,
-} from '../projects.service';
+} from '../projects.types';
 import {
   CODE_QUALITY_CATEGORIES,
   type CodeQualityCategory,
@@ -66,7 +67,10 @@ const PROJECT_NOT_FOUND_DESCRIPTION = 'Proyecto no encontrado.';
 @Controller('projects')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProjectGradebookController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectGradebookService: ProjectGradebookService,
+    private readonly projectQualityInsightsService: ProjectQualityInsightsService,
+  ) {}
 
   @ApiOperation({
     summary: 'Consultar insights agregados de calidad del proyecto',
@@ -78,7 +82,10 @@ export class ProjectGradebookController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProjectQualityInsightsSummary> {
-    return this.projectsService.getQualityInsights(id, request.user);
+    return this.projectQualityInsightsService.getQualityInsights(
+      id,
+      request.user,
+    );
   }
 
   @ApiOperation({
@@ -101,7 +108,7 @@ export class ProjectGradebookController {
     category: CodeQualityCategory,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProjectQualityInsightsSummary> {
-    return this.projectsService.getQualityInsightsByCategory(
+    return this.projectQualityInsightsService.getQualityInsightsByCategory(
       id,
       category,
       request.user,
@@ -120,7 +127,7 @@ export class ProjectGradebookController {
     @Param('studentId', ParseUUIDPipe) studentId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProjectStudentQualityInsights> {
-    return this.projectsService.getQualityInsightsForStudent(
+    return this.projectQualityInsightsService.getQualityInsightsForStudent(
       id,
       studentId,
       request.user,
@@ -150,7 +157,11 @@ export class ProjectGradebookController {
     @Query() query: ProjectProgressQueryDto,
     @Req() request: AuthenticatedRequest,
   ) {
-    return this.projectsService.getProgressSummary(id, request.user, query);
+    return this.projectGradebookService.getProgressSummary(
+      id,
+      request.user,
+      query,
+    );
   }
 
   @ApiOperation({
@@ -170,7 +181,7 @@ export class ProjectGradebookController {
     @Query() query: ProjectProgressQueryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProjectGradebookRow[]> {
-    return this.projectsService.getGradebook(id, request.user, query);
+    return this.projectGradebookService.getGradebook(id, request.user, query);
   }
 
   @ApiOperation({
@@ -190,7 +201,7 @@ export class ProjectGradebookController {
     @Req() request: AuthenticatedRequest,
     @Res() response: Response,
   ): Promise<void> {
-    const csv = await this.projectsService.exportGradebookCsv(
+    const csv = await this.projectGradebookService.exportGradebookCsv(
       id,
       request.user,
       query,
@@ -223,7 +234,7 @@ export class ProjectGradebookController {
     @Req() request: AuthenticatedRequest,
     @Res() response: Response,
   ): Promise<void> {
-    const csv = await this.projectsService.exportProgressSummaryCsv(
+    const csv = await this.projectGradebookService.exportProgressSummaryCsv(
       id,
       request.user,
       query,

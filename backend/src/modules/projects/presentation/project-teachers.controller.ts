@@ -29,7 +29,7 @@ import { Roles, RolesGuard } from '../../auth/guards/roles.guard';
 import type { AuthenticatedRequest } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
 import { Project } from '../entities/project.entity';
-import { ProjectsService } from '../projects.service';
+import { ProjectLifecycleService } from '../project-lifecycle.service';
 
 const PROJECT_ID_PARAM = {
   name: 'id',
@@ -42,7 +42,9 @@ const PROJECT_ID_PARAM = {
 @Controller('projects/:id/teachers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProjectTeachersController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectLifecycleService: ProjectLifecycleService,
+  ) {}
 
   @ApiOperation({ summary: 'Asignar profesor al proyecto' })
   @ApiParam(PROJECT_ID_PARAM)
@@ -54,7 +56,7 @@ export class ProjectTeachersController {
     @Param('teacherId', ParseUUIDPipe) teacherId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<Project> {
-    return this.projectsService.addTeacher(id, teacherId, request.user);
+    return this.projectLifecycleService.addTeacher(id, teacherId, request.user);
   }
 
   @ApiOperation({ summary: 'Desasignar profesor del proyecto' })
@@ -70,6 +72,10 @@ export class ProjectTeachersController {
     @Param('teacherId', ParseUUIDPipe) teacherId: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<Project> {
-    return this.projectsService.removeTeacher(id, teacherId, request.user);
+    return this.projectLifecycleService.removeTeacher(
+      id,
+      teacherId,
+      request.user,
+    );
   }
 }

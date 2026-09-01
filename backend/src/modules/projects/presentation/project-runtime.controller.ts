@@ -29,7 +29,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../../auth/guards/roles.guard';
 import type { AuthenticatedRequest } from '../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../users/entities/user.entity';
-import { ProjectsService } from '../projects.service';
+import { ProjectAccessService } from '../project-access.service';
 
 const PROJECT_ID_PARAM = {
   name: 'id',
@@ -42,7 +42,7 @@ const PROJECT_ID_PARAM = {
 @Controller('projects/:id/runtime')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProjectRuntimeController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(private readonly projectAccessService: ProjectAccessService) {}
 
   @ApiOperation({
     summary: 'Consultar estado del runtime (efímero)',
@@ -56,7 +56,7 @@ export class ProjectRuntimeController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ) {
-    await this.projectsService.assertCanAccessProject(id, request.user);
+    await this.projectAccessService.assertCanAccessProject(id, request.user);
     return {
       projectId: id,
       workspaceNetworkName: null,
@@ -76,7 +76,7 @@ export class ProjectRuntimeController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ) {
-    await this.projectsService.assertCanAccessProject(id, request.user);
+    await this.projectAccessService.assertCanAccessProject(id, request.user);
     return { message: 'Plataforma efímera activa. Reconcile no requerido.' };
   }
 }

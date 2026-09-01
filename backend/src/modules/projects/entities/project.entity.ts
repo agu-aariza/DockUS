@@ -130,7 +130,7 @@ export class Project {
 
   /**
    * Numero de asignaciones (alumnos) del proyecto. No es una columna
-   * persistida: `ProjectsService.findAll` la calcula con una subquery
+   * persistida: `ProjectQueryService.findAll` la calcula con una subquery
    * correlacionada y la asigna sobre la entidad tras la consulta (
    * — antes el frontend leia `(project as any).assignmentCount`, un campo que
    * la API nunca devolvia, asi que el contador mostrado era siempre 0).

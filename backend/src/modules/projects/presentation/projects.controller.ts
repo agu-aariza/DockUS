@@ -46,12 +46,14 @@ import { CreateProjectDto, UpdateProjectDto } from '../dto/create-project.dto';
 import { ListProjectsQueryDto } from '../dto/list-projects-query.dto';
 import { ReconcileOperationalIssuesDto } from '../dto/reconcile-operational-issues.dto';
 import { Project, ProjectStatus } from '../entities/project.entity';
-import {
-  ProjectOperationalIssuesReconcileResult,
+import { ProjectLifecycleService } from '../project-lifecycle.service';
+import { ProjectOperationalIssuesService } from '../project-operational-issues.service';
+import { ProjectQueryService } from '../project-query.service';
+import type {
   PaginatedProjectsResponse,
+  ProjectOperationalIssuesReconcileResult,
   ProjectOperationalIssuesSummary,
-  ProjectsService,
-} from '../projects.service';
+} from '../projects.types';
 
 const PROJECT_ID_PARAM = {
   name: 'id',
@@ -66,7 +68,11 @@ const PROJECT_NOT_FOUND_DESCRIPTION = 'Proyecto no encontrado.';
 @Controller('projects')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectQueryService: ProjectQueryService,
+    private readonly projectLifecycleService: ProjectLifecycleService,
+    private readonly projectOperationalIssuesService: ProjectOperationalIssuesService,
+  ) {}
 
   // El estado del runtime (`projects/:id/runtime`) vive en ProjectRuntimeController.
 
@@ -91,7 +97,7 @@ export class ProjectsController {
     @Body() createProjectDto: CreateProjectDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<Project> {
-    return this.projectsService.create(createProjectDto, request.user);
+    return this.projectLifecycleService.create(createProjectDto, request.user);
   }
 
   /**
@@ -117,7 +123,7 @@ export class ProjectsController {
     @Query() query: ListProjectsQueryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<PaginatedProjectsResponse> {
-    return this.projectsService.findAll(query, request.user);
+    return this.projectQueryService.findAll(query, request.user);
   }
 
   @ApiOperation({
@@ -134,7 +140,9 @@ export class ProjectsController {
   async getOperationalIssues(
     @Req() request: AuthenticatedRequest,
   ): Promise<ProjectOperationalIssuesSummary> {
-    return this.projectsService.getOperationalIssues(request.user);
+    return this.projectOperationalIssuesService.getOperationalIssues(
+      request.user,
+    );
   }
 
   @ApiOperation({
@@ -152,7 +160,10 @@ export class ProjectsController {
     @Body() dto: ReconcileOperationalIssuesDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ProjectOperationalIssuesReconcileResult> {
-    return this.projectsService.reconcileOperationalIssues(dto, request.user);
+    return this.projectOperationalIssuesService.reconcileOperationalIssues(
+      dto,
+      request.user,
+    );
   }
 
   /**
@@ -181,7 +192,7 @@ export class ProjectsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<Project> {
-    const project = await this.projectsService.findById(id, request.user);
+    const project = await this.projectQueryService.findById(id, request.user);
     if (!project) {
       throw new NotFoundException(PROJECT_NOT_FOUND_DESCRIPTION);
     }
@@ -216,7 +227,11 @@ export class ProjectsController {
     @Body() updateProjectDto: UpdateProjectDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<Project> {
-    return this.projectsService.update(id, updateProjectDto, request.user);
+    return this.projectLifecycleService.update(
+      id,
+      updateProjectDto,
+      request.user,
+    );
   }
 
   /**
@@ -251,7 +266,7 @@ export class ProjectsController {
     @Param('status', new ParseEnumPipe(ProjectStatus)) status: ProjectStatus,
     @Req() request: AuthenticatedRequest,
   ): Promise<Project> {
-    return this.projectsService.updateStatus(id, status, request.user);
+    return this.projectLifecycleService.updateStatus(id, status, request.user);
   }
 
   // La suite docente (`projects/:id/test-suite`) vive en ProjectTestSuiteController
@@ -284,7 +299,7 @@ export class ProjectsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<void> {
-    await this.projectsService.remove(id, request.user);
+    await this.projectLifecycleService.remove(id, request.user);
   }
 
   /**
@@ -317,6 +332,6 @@ export class ProjectsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<Project> {
-    return this.projectsService.restore(id, request.user);
+    return this.projectLifecycleService.restore(id, request.user);
   }
 }
