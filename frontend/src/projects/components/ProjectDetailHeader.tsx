@@ -13,7 +13,7 @@ import {
 import { Card } from "../../shared/components/ui/Layout";
 import { Tabs } from "../../shared/components/ui/Tabs";
 import { StatusBadge } from "../../shared/components/ui/StatusBadge";
-import { ProjectStatusBadge } from "../../features/projects/components/ProjectStatusBadge";
+import { ProjectStatusBadge } from "./ProjectStatusBadge";
 import type { ProjectEntity } from "../../features/projects/types";
 
 export type SubTab = 'catalog' | 'assignments' | 'config' | 'monitoring';

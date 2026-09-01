@@ -4,8 +4,8 @@
  * @module BuilderOutcomeBadge
  */
 
-import { StatusBadge, type StatusTone } from '../../../shared/components/ui/StatusBadge';
-import type { BuilderOutcome } from '../types';
+import { StatusBadge, type StatusTone } from '../../shared/components/ui/StatusBadge';
+import type { BuilderOutcome } from '../../features/builder/types';
 
 const OUTCOME_TONE: Record<BuilderOutcome, StatusTone> = {
   PASS: 'success',

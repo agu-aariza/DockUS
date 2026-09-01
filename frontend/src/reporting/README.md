@@ -22,7 +22,7 @@ reporting/
 
 ## Frontera de dependencias
 
-Los componentes de esta carpeta pueden importar tipos y APIs de Builder, además de utilidades y componentes genéricos de `shared/`. Los consumidores de `student/` y `deliveries/` importan `ReportView` desde aquí; `shared/` no importa reporting ni ningún otro dominio.
+Los componentes de esta carpeta pueden importar tipos de `features/builder` y `features/deliveries`, la fachada `builder/api/builderApi` y utilidades/componentes genéricos de `shared/`. Los consumidores de `student/` y `deliveries/` importan `ReportView` desde aquí; `shared/` no importa reporting ni ningún otro dominio. Reporting no publica tipos de vuelta a `features/` ni mueve clientes HTTP a `shared/api/`.
 
 ## Cómo trabajar aquí
 

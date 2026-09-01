@@ -1,6 +1,6 @@
 # Módulo de proyectos (`projects/`)
 
-> **Resumen rápido:** El módulo de dominio más grande del backend. Modela un "proyecto" docente (enunciado, rúbrica, plazos), quién puede entregarlo (`assignments/`), lo que un alumno sube (`deliveries/` + `storage/`), y contiene el subsistema que realmente ejecuta y califica el código (`builder/`). Los servicios en la raíz de este directorio (sin subcarpeta) orquestan entre esas piezas.
+> **Resumen rápido:** El módulo de dominio más grande del backend. Modela un "proyecto" docente (enunciado, rúbrica, plazos), quién puede entregarlo (`assignments/`), lo que un alumno sube (`deliveries/` + `storage/`), y contiene el subsistema que realmente ejecuta y califica el código (`builder/`). La raíz conserva solo la composición del proyecto; las capacidades cruzadas viven en submódulos explícitos.
 
 ---
 
@@ -19,7 +19,6 @@ A diferencia de otros módulos, `projects/` tiene varios servicios de aplicació
 | `project-access.service.ts` + `project-access.policy.ts` | La regla "¿puede este usuario administrar este proyecto?" (`ADMIN`, o `TEACHER` asignado a él) — centralizada aquí para no duplicarla entre el propio proyecto y su suite docente de tests. |
 | `project-gradebook.service.ts` | Vista "de proyecto a alumnos": el libro de notas — para cada asignación, su última entrega y el resultado del Builder. |
 | `student-profile.service.ts` | Vista "de alumno a proyectos" (el eje inverso al gradebook): cómo le va a un alumno concreto en todo el curso. Los runs de un alumno se resuelven siempre vía `BuildRun.deliveryId → Delivery.assignmentId → ProjectAssignment.studentId`, nunca por `triggeredById` (quien lanza el run es el profesor, no el alumno). |
-| `project-operational-issues.service.ts` | Herramienta de diagnóstico para `ADMIN`: detecta entregas/asignaciones en estado inconsistente. Es la **única** excepción documentada dentro de `projects/` que hace SQL/`QueryBuilder` directo sobre tablas de varios submódulos en vez de pasar por los puertos de repositorio — está fuera del grafo de relaciones normal de TypeORM. |
 
 ## Estructura interna
 
@@ -33,7 +32,7 @@ projects/
 ├── project-access.service.ts + .policy.ts          # (ver tabla arriba)
 ├── project-gradebook.service.ts                      # (ver tabla arriba)
 ├── student-profile.service.ts                          # (ver tabla arriba)
-├── project-operational-issues.service.ts                 # (ver tabla arriba)
+├── operations/                                             # Diagnóstico/reconciliación administrativa — ver ProjectOperationsModule
 ├── entities/            # SOLO project.entity.ts (tabla `projects`) — ver entities/README.md
 ├── domain/               # Interfaces de repositorio (puertos) de Project/Delivery/Assignment/Storage
 ├── dto/                    # DTOs de proyectos: crear, listar, progreso, reconciliar incidencias

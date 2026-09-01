@@ -9,7 +9,7 @@ import {
   RiCodeSSlashLine,
   RiStackLine,
 } from "react-icons/ri";
-import { DeliveryStatusBadge } from "../../../features/deliveries/components/DeliveryStatusBadge";
+import { DeliveryStatusBadge } from "../../../deliveries/components/DeliveryStatusBadge";
 import { Skeleton } from "../../../shared/components/Skeleton";
 import type { DeliveryEntity } from "../../../features/deliveries/types";
 

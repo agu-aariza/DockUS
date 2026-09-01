@@ -18,6 +18,10 @@ llm/
 └── llmConfigConstants.ts                    # LLM_PROVIDER_IDS y PROVIDER_METADATA — fuente única de qué proveedores existen
 ```
 
+## API del dominio
+
+`api/llmApi.ts` es la fachada HTTP de configuración y prueba de proveedores. Los hooks y componentes del panel la consumen, mientras que el transporte común permanece en `shared/api/http.ts`.
+
 ## `llmConfigConstants.ts` es la fuente única — no la dupliques
 
 `PROVIDER_METADATA` (nombre visible, logo, campos de credenciales requeridos por proveedor) es la única fuente de verdad de qué proveedores soporta la plataforma en la UI. `src/landing/LandingPage.tsx` reutiliza estos mismos valores para su sección de "proveedores compatibles" — si añades un proveedor nuevo aquí, aparece automáticamente en la landing sin tocarla. Nunca redeclares la lista de proveedores en otro sitio.

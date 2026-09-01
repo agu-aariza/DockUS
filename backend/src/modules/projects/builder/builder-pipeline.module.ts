@@ -9,15 +9,8 @@
  */
 
 import { BullModule } from '@nestjs/bullmq';
-import {
-  forwardRef,
-  Inject,
-  Logger,
-  Module,
-  OnModuleInit,
-} from '@nestjs/common';
+import { Inject, Logger, Module, OnModuleInit } from '@nestjs/common';
 import { totalmem } from 'os';
-import { CacheModule } from '../../../shared/infrastructure/cache/cache.module';
 import { DeliveryStatusModule } from '../deliveries/delivery-status.module';
 import { BuilderAiModule } from './builder-ai.module';
 import { BuilderPersistenceModule } from './builder-persistence.module';
@@ -35,7 +28,6 @@ import { BuilderRunCancellationService } from './application/services/orchestrat
 import { BuilderRunCommandsService } from './application/services/orchestration/builder-run-commands.service';
 import { BuilderRunLifecycleService } from './application/services/orchestration/builder-run-lifecycle.service';
 import { BuilderRunMetricsService } from './application/services/orchestration/builder-run-metrics.service';
-import { BuilderRunQueriesService } from './application/services/orchestration/builder-run-queries.service';
 import { BuilderRunSupportService } from './application/services/orchestration/builder-run-support.service';
 import { BuilderStaleRunRecoveryService } from './application/services/orchestration/builder-stale-run-recovery.service';
 import { assessWorkerCapacity } from './domain/worker-capacity.util';
@@ -43,8 +35,6 @@ import { BUILDER_RUNS_QUEUE_NAME } from './domain/builder.constants';
 import { BuilderConfigProvider } from './domain/builder-config.provider';
 import { PROCESS_ROLE } from '../../../process-role.module';
 import type { ProcessRole } from '../../../process-role.module';
-import { BuilderRunEventsService } from './infrastructure/events/builder-run-events.service';
-import { EvidenceService } from './infrastructure/evidence/evidence.service';
 import { resolveWorkerConcurrency } from './presentation/builder.processor';
 
 @Module({
@@ -52,20 +42,16 @@ import { resolveWorkerConcurrency } from './presentation/builder.processor';
     BullModule.registerQueue({
       name: BUILDER_RUNS_QUEUE_NAME,
     }),
-    CacheModule,
     BuilderPersistenceModule,
     BuilderRuntimeModule,
     DeliveryStatusModule,
-    forwardRef(() => BuilderAiModule),
+    BuilderAiModule,
   ],
   providers: [
-    BuilderRunQueriesService,
     BuilderRunCommandsService,
     BuilderRunLifecycleService,
     BuilderRunCancellationService,
     BuilderRunSupportService,
-    BuilderRunEventsService,
-    EvidenceService,
     BuilderArtifactPersister,
     BuilderPlanStageHandler,
     BuilderCompileStageHandler,
@@ -78,11 +64,7 @@ import { resolveWorkerConcurrency } from './presentation/builder.processor';
     BuilderStaleRunRecoveryService,
     BuilderImageRetentionService,
   ],
-  exports: [
-    BuilderRunQueriesService,
-    BuilderRunCommandsService,
-    BuilderRunLifecycleService,
-  ],
+  exports: [BuilderRunCommandsService, BuilderRunLifecycleService],
 })
 export class BuilderPipelineModule implements OnModuleInit {
   constructor(

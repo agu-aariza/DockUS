@@ -25,6 +25,10 @@ deliveries/
 └── utils.ts                                                  # Formateo compartido (fechas, estados)
 ```
 
+## API del dominio
+
+`api/deliveriesApi.ts` es la única fachada HTTP de entregas. Los hooks de este dominio pueden combinarla con las fachadas de `projects/` y `builder/`, pero ningún componente importa `axios` directamente.
+
 ## Cómo se relaciona con `builder/` y `projects/`
 
 Este directorio muestra el resultado de una evaluación (`DeliveryReport.tsx`) pero no la ejecuta ni la monitoriza en vivo — para eso reutiliza los componentes de [`../builder/README.md`](../builder/README.md). La nota final que un profesor puede sobreescribir en `DeliveryGrading.tsx` es la misma que alimenta el libro de notas de [`../projects/README.md`](../projects/README.md) (`GradebookTable.tsx`) — son dos vistas distintas del mismo dato, no dos fuentes de verdad separadas.

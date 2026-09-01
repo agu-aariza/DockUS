@@ -60,12 +60,18 @@ Los prompts y las respuestas brutas del modelo (`domain/ai/`, `shared/infrastruc
 
 ```text
 builder/
-├── builder.module.ts        # Composición: registra ~25 providers, la cola BullMQ, y los puertos hexagonales
+├── builder.module.ts        # Fachada de composición pública; no registra providers de negocio directamente
+├── builder-persistence.module.ts # Entidades/adaptadores TypeORM y tokens de repositorio
+├── builder-runtime.module.ts     # Configuración, workspace, Docker, storage y runtime bindings
+├── builder-ai.module.ts          # Servicios LLM, evaluación, composición pedagógica y consultas/eventos usados por chat
+├── builder-pipeline.module.ts    # Cola, stages, orquestador y recuperación worker-side
 ├── application/services/       # Toda la lógica — ver application/README.md y application/services/README.md
 ├── domain/                       # BuildRun y entidades relacionadas, puertos, catálogo de runtimes, IA — ver domain/README.md
 ├── infrastructure/                  # Adaptadores TypeORM, eventos, evidencias — ver infrastructure/README.md
 └── presentation/                       # builder.controller.ts (API) + builder.processor.ts (Worker) + DTOs
 ```
+
+`BuilderAiModule` expone también las consultas, eventos y evidencias que necesita el chat y que consume la composición del pipeline. `BuilderPipelineModule` importa esa capacidad en una sola dirección; no hay `forwardRef()` entre los módulos de composición y el grafo de módulos permanece acíclico. La cola BullMQ sigue registrada una sola vez en `BuilderPipelineModule` y el processor sigue siendo exclusivo de `WorkerModule`.
 
 ## Cómo trabajar aquí
 

@@ -1,6 +1,6 @@
 # Módulos de dominio (`src/modules/`)
 
-> **Resumen rápido:** Cada subcarpeta es un módulo NestJS autocontenido que representa un contexto delimitado (bounded context) del negocio: autenticación, usuarios, gestión académica, salud del sistema, y el gran módulo de proyectos (que a su vez contiene el motor de evaluación "Builder").
+> **Resumen rápido:** Cada subcarpeta es un módulo NestJS autocontenido que representa un contexto delimitado (bounded context) del negocio: autenticación, usuarios, gestión académica, salud del sistema, y el gran módulo de proyectos (que a su vez compone assignments, deliveries, reporting, operations, storage y el motor de evaluación Builder).
 
 ---
 
@@ -35,7 +35,21 @@ Los módulos que poseen persistencia (`academic`, `users`, `projects` y sus subm
 └── infrastructure/ # Adaptadores TypeORM que implementan los puertos de domain/
 ```
 
-`auth/` y `health/` no tienen persistencia propia (no son "dueños" de ninguna tabla), así que permanecen "planos": sus ficheros viven directamente en la raíz del módulo sin esas cuatro subcarpetas.
+`auth/` y `health/` no tienen persistencia propia (no son "dueños" de ninguna tabla), así que permanecen "planos": sus ficheros viven directamente en la raíz del módulo sin esas cuatro subcarpetas. `projects/` usa módulos Nest hoja para registrar persistencia y módulos de capacidad para aislar cada responsabilidad.
+
+## Composición de `projects/`
+
+```text
+ProjectsModule
+├── ProjectAccessModule       # permisos y política de acceso
+├── ProjectAssignmentsModule # asignaciones y matriculación
+├── DeliveriesModule          # consultas y comandos de entregas
+├── ProjectReportingModule    # gradebook, perfil e insights
+├── ProjectOperationsModule   # diagnóstico/reconciliación administrativa
+└── BuilderModule             # persistencia, runtime, IA y pipeline Builder
+```
+
+Cada submódulo exporta solo las capacidades que necesita la composición superior. Los adaptadores concretos de repositorio se registran en módulos de persistencia y el resto del código consume sus puertos.
 
 ## Cómo trabajar aquí
 

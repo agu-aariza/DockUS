@@ -13,7 +13,7 @@ import {
 import { SectionCard } from "../../shared/components/ui/Layout";
 import { StatusBadge } from "../../shared/components/ui/StatusBadge";
 import { EmptyState } from "../../shared/components/EmptyState";
-import { DeliveryStatusBadge } from "../../features/deliveries/components/DeliveryStatusBadge";
+import { DeliveryStatusBadge } from "../../deliveries/components/DeliveryStatusBadge";
 import type {
   StudentProfileDelivery,
   StudentProfileProject,

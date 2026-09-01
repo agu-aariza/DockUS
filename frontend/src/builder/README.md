@@ -21,6 +21,10 @@ builder/
 └── utils.ts                              # Formateo compartido (duraciones, tamaños, estados)
 ```
 
+## API del dominio
+
+`api/builderApi.ts` es la fachada HTTP de runs, evidencias, cancelación y chat. El streaming SSE sigue encapsulado en `hooks/useBuilderRunStream.ts` y ambos reutilizan el transporte genérico de `shared/api/http.ts`.
+
 ## Fronteras
 
 - **No decide cuándo se lanza un run** — eso vive en `student/` (el alumno) y `deliveries/`/`projects/` (el profesor relanzando). Este directorio solo *observa* y *muestra* un run que ya existe.

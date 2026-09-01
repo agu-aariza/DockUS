@@ -4,8 +4,8 @@
  * @module DeliveryStatusBadge
  */
 
-import { StatusBadge, type StatusTone } from '../../../shared/components/ui/StatusBadge';
-import type { DeliveryStatus } from '../types';
+import { StatusBadge, type StatusTone } from '../../shared/components/ui/StatusBadge';
+import type { DeliveryStatus } from '../../features/deliveries/types';
 
 const STATUS_TONE: Record<DeliveryStatus, StatusTone> = {
   DRAFT: 'draft',

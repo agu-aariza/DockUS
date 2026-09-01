@@ -1,29 +1,29 @@
 # Tipos por dominio (`src/features/`)
 
-> **Resumen rápido:** Un espejo, en tipos TypeScript puros, de cada dominio del backend: `auth`, `builder`, `deliveries`, `groups`, `health`, `llm`, `projects`, `storage`, `students`. Sin lógica, sin llamadas a API — con una excepción pequeña y deliberada, ver más abajo.
+> **Resumen rápido:** Una capa de tipos TypeScript puros que refleja los contratos del backend por dominio. No contiene componentes React, llamadas HTTP, hooks ni lógica de presentación.
 
----
+## Regla de la capa
 
-## La regla (y su única excepción)
+`features/<dominio>/` solo puede declarar o reexportar tipos, enums y constantes de datos. Puede importar contratos compartidos y tipos transversales (por ejemplo, los tipos de sesión), pero nunca `react`, `react-dom`, una carpeta `api/` o una carpeta `hooks/`. ESLint mantiene estas restricciones para evitar que `features/` se convierta en una segunda implementación de cada dominio.
 
-`CLAUDE.md` la enuncia así: `features/<domain>/` son tipos/DTOs/constantes puros que reflejan los dominios del backend — nada de React, nada de llamadas a API, nada de UI. En la práctica, tres dominios (`builder/`, `deliveries/`, `projects/`) tienen una carpeta `components/` con un badge minúsculo (`BuilderOutcomeBadge.tsx`, `DeliveryOutcomeBadge.tsx`, `DeliveryStatusBadge.tsx`, `ProjectStatusBadge.tsx`) colocado junto al enum que renderiza — por ejemplo, `ProjectStatusBadge.tsx` mapea `ProjectStatus` a un `<StatusBadge tone=... />` de `shared/components/ui/`. Es una excepción deliberada y consistente (se repite igual en los tres dominios, no es un descuido aislado): mantener el mapeo enum→presentación pegado a la definición del enum evita que diverjan si el backend añade un valor nuevo. Cualquier lógica que no sea "un enum, un color, una etiqueta" no pertenece aquí — eso sí va al dominio (`<dominio>/components/`) o a `shared/components/`.
+La UI que representa un tipo vive en el dominio propietario: por ejemplo, los badges de estado están en `projects/components/`, `deliveries/components/` y `builder/components/`, no junto a los tipos.
 
 ## Los nueve dominios
 
 ```text
 features/
 ├── auth/types.ts          # SessionRecord, AuthResponse, UserStatus...
-├── builder/                 # BuildRunEntity, BuildRunEvent, BuilderOutcome... + components/BuilderOutcomeBadge.tsx
-├── deliveries/                 # DeliveryEntity, DeliveryStatus... + components/{Delivery,DeliveryStatus}Badge.tsx
-├── groups/types.ts               # CourseGroup, GroupEnrollment...
-├── health/types.ts                  # ReadinessDependency, ReadinessReport...
-├── llm/types.ts                        # LLM_PROVIDER_IDS, formas de configuración por proveedor
-├── projects/                             # Project, ProjectStatus... + components/ProjectStatusBadge.tsx
-├── storage/types.ts                         # StorageObjectEntity, DownloadUrlResponse...
-└── students/types.ts                           # Perfil/expediente del alumno
+├── builder/types.ts       # BuildRunEntity, BuildRunEvent, BuilderOutcome...
+├── deliveries/types.ts    # DeliveryEntity, DeliveryStatus...
+├── groups/types.ts        # CourseGroup, GroupEnrollment...
+├── health/types.ts        # ReadinessDependency, ReadinessReport...
+├── llm/types.ts           # LLM_PROVIDER_IDS y configuración por proveedor
+├── projects/types.ts      # Project, ProjectStatus...
+├── storage/types.ts       # StorageObjectEntity, DownloadUrlResponse...
+└── students/types.ts      # Perfil/expediente del alumno
 ```
 
-Cada `types.ts` re-exporta, con alias donde el nombre local difiere, tipos que en última instancia proceden de `@educodeai/contracts` (el paquete de tipos compartido con el backend) — no son una redefinición independiente y potencialmente divergente, son la forma local de consumir esos mismos contratos.
+Cada `types.ts` reexporta, con alias donde el nombre local difiere, tipos que en última instancia proceden de `@educodeai/contracts` (el paquete compartido con el backend). No se redefinen contratos de forma independiente.
 
 ## Cómo trabajar aquí
 
@@ -35,5 +35,5 @@ Al añadir un tipo nuevo, revisa primero si ya existe en `@educodeai/contracts` 
 
 ## Ver también
 
-- [`../shared/README.md`](../shared/README.md) — la otra mitad de la capa transversal (no tipada por dominio).
+- [`../shared/README.md`](../shared/README.md) — la capa transversal, que no conoce dominios.
 - [`../../../shared/contracts/README.md`](../../../shared/contracts/README.md) — la fuente de verdad de estos tipos, compartida con el backend.

@@ -8,7 +8,7 @@ import { RiCodeSSlashLine, RiArrowRightUpLine, RiStackLine, RiFolderChartLine, R
 import type { DeliveryEntity } from "../../features/deliveries/types";
 import { Tabs } from "../../shared/components/ui/Tabs";
 import { Button } from "../../shared/components/ui/Button";
-import { DeliveryStatusBadge } from "../../features/deliveries/components/DeliveryStatusBadge";
+import { DeliveryStatusBadge } from "./DeliveryStatusBadge";
 import { StatusBadge } from "../../shared/components/ui/StatusBadge";
 import { DetailTab } from "../hooks/useDeliveriesPanel";
 

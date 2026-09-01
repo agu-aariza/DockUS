@@ -14,6 +14,10 @@ users/
 └── userConstants.ts                      # Etiquetas e iconografía por rol/estado — fuente única de esos textos
 ```
 
+## API del dominio
+
+`api/usersApi.ts` es la fachada HTTP del CRUD de usuarios y sus cambios de estado. `useUserManagement.ts` la consume mediante React Query; el resto de la UI no importa `axios`.
+
 ## `userConstants.ts`: por qué existe
 
 Centraliza cómo se muestra cada `UserRole` (`STUDENT`/`TEACHER`/`ADMIN`) y `UserStatus` (`ACTIVE`/`INACTIVE`/`SUSPENDED`/`PENDING_VERIFICATION`) — icono, etiqueta legible y el "tono" de color (`StatusTone`, de `shared/components/ui/StatusBadge.tsx`) para cada valor. `UsersPanel.tsx` y `EditUserModal.tsx` comparten esta misma fuente en vez de que cada uno decida su propio texto/color para el mismo rol — así un cambio de terminología (p. ej. renombrar cómo se muestra `SUSPENDED`) se hace en un solo sitio.

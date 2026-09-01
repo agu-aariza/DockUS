@@ -10,8 +10,8 @@ import {
   RiFileTextLine,
   RiHistoryLine,
 } from "react-icons/ri";
-import { BuilderOutcomeBadge } from "../../../features/builder/components/BuilderOutcomeBadge";
-import { DeliveryStatusBadge } from "../../../features/deliveries/components/DeliveryStatusBadge";
+import { BuilderOutcomeBadge } from "../../../builder/components/BuilderOutcomeBadge";
+import { DeliveryStatusBadge } from "../../../deliveries/components/DeliveryStatusBadge";
 import { DataTable, type Column } from "../../../shared/components/ui/DataTable";
 import type { ProjectGradebookRow } from "../../../features/projects/types";
 import { extractLegacyAiEvidence } from "../../../deliveries/teacherReviewNavigation";

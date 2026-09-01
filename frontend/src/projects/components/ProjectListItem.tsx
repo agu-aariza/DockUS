@@ -6,7 +6,7 @@
 
 import { RiArrowRightSLine, RiFoldersLine, RiTeamFill } from "react-icons/ri";
 import type { ProjectEntity } from "../../features/projects/types";
-import { ProjectStatusBadge } from "../../features/projects/components/ProjectStatusBadge";
+import { ProjectStatusBadge } from "./ProjectStatusBadge";
 
 export interface ProjectListItemProps {
   project: ProjectEntity;

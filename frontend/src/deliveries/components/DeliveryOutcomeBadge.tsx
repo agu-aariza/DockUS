@@ -4,10 +4,10 @@
  * @module DeliveryOutcomeBadge
  */
 
-import { StatusBadge } from '../../../shared/components/ui/StatusBadge';
-import type { BuildRunEntity } from '../../builder/types';
-import type { DeliveryEntity } from '../types';
-import { resolveStudentRunOutcome } from '../../../student/studentWorkspaceInsights';
+import { StatusBadge } from '../../shared/components/ui/StatusBadge';
+import type { BuildRunEntity } from '../../features/builder/types';
+import type { DeliveryEntity } from '../../features/deliveries/types';
+import { resolveStudentRunOutcome } from '../../student/studentWorkspaceInsights';
 
 interface DeliveryOutcomeBadgeProps {
   delivery: DeliveryEntity;

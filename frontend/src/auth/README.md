@@ -33,6 +33,10 @@ Permitir el acceso a la plataforma y la creación de cuentas de estudiante.
 
 ---
 
+## API del dominio
+
+`api/authApi.ts` es la fachada HTTP de login y registro. Usa únicamente el transporte genérico de `shared/api/http.ts`; los componentes y hooks consumen esta fachada, no `axios`.
+
 ## Flujo de Trabajo / Arquitectura
 
 ```text

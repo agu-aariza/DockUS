@@ -87,6 +87,11 @@ export default [
                 '../../student/**',
                 '../../health/**',
                 '../../reporting/**',
+                '../../landing/**',
+                '../../runtime/**',
+                '../../student-profile/**',
+                '../../summary/**',
+                '../../test/**',
               ],
               message:
                 'shared/api is transport-only; domain APIs and types must live in their domain folder.',
@@ -128,10 +133,55 @@ export default [
                 '**/student/**',
                 '**/health/**',
                 '**/reporting/**',
+                '**/landing/**',
+                '**/runtime/**',
+                '**/student-profile/**',
+                '**/summary/**',
+                '**/test/**',
                 '**/app/**',
               ],
               message:
                 'shared is domain-agnostic; domain APIs and types must live in their owning folder.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // features/ es una capa de tipos puros: no debe convertirse en una segunda
+    // implementación de UI, hooks ni clientes HTTP de los dominios.
+    files: ['src/features/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'axios',
+              message: 'features is type-only; HTTP clients belong to the owning domain API.',
+            },
+            {
+              name: 'react',
+              message: 'features is type-only; React components belong to the owning domain.',
+            },
+            {
+              name: 'react-dom',
+              message: 'features is type-only; React components belong to the owning domain.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['react/**', 'react-dom/**'],
+              message: 'features is type-only; React components belong to the owning domain.',
+            },
+            {
+              group: ['**/api/**'],
+              message: 'features is type-only; HTTP clients belong to the owning domain API.',
+            },
+            {
+              group: ['**/hooks/**'],
+              message: 'features is type-only; hooks belong to the owning domain.',
             },
           ],
         },

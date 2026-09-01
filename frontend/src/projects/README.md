@@ -20,6 +20,10 @@ projects/
     └── projectManagement.utils.ts                     # Helpers puros compartidos entre los hooks
 ```
 
+## API del dominio
+
+`api/projectsApi.ts` concentra el CRUD y las consultas de proyectos. `api/assignmentsApi.ts` concentra asignaciones y matriculación relacionadas con proyectos; los hooks de `projects/` son sus consumidores.
+
 ## El eje central: un proyecto tiene rúbrica, tests y asignaciones — tres cosas distintas
 
 - **Rúbrica** (`components/RubricEditor.tsx`): los criterios que el LLM usa para evaluar. Se edita con `useProjectManagement.ts`.

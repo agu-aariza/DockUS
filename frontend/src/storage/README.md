@@ -12,7 +12,7 @@ storage/
 └── hooks/useStorageManagement.ts         # Queries de listado/filtro + mutaciones de borrado
 ```
 
-`useStorageManagement.ts` compone varias queries de React Query: el listado principal de objetos (`storageQuery`) y tres queries auxiliares que alimentan los desplegables de filtro (proyectos, asignaciones del profesor actual, entregas, runs) — el mismo patrón de "cascada de selectores con caché compartida" que usa `runtime/`. Las mutaciones `removeMutation`/`purgeMutation` llaman a los endpoints de borrado de `storage/`, del lado del backend.
+`api/storageApi.ts` es la fachada HTTP de objetos, descargas y borrados. `useStorageManagement.ts` compone varias queries de React Query: el listado principal de objetos (`storageQuery`) y tres queries auxiliares que alimentan los desplegables de filtro (proyectos, asignaciones del profesor actual, entregas, runs) — el mismo patrón de "cascada de selectores con caché compartida" que usa `runtime/`. Las mutaciones `removeMutation`/`purgeMutation` llaman a la fachada, no al transporte directamente.
 
 ## Qué muestra realmente esta tabla
 

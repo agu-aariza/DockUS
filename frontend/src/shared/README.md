@@ -31,6 +31,10 @@ shared/
 
 `shared/` es transversal a *toda* la aplicación y no conoce ningún dominio. Los componentes de negocio reutilizados por varias vistas viven en [`../reporting/README.md`](../reporting/README.md) o en su dominio propietario; [`../features/README.md`](../features/README.md) contiene los tipos puros de cada dominio. Un componente de `projects/` puede importar de `shared/` y `features/projects/`, pero la dirección nunca se invierte.
 
+## Frontera verificada por ESLint
+
+Todo fichero bajo `src/shared/` tiene prohibido importar `src/features/` o cualquier dominio de primer nivel (`auth/`, `projects/`, `student/`, `reporting/`, etc.). Las fachadas HTTP específicas viven en el dominio que representan; `shared/api/` solo contiene transporte genérico (`http.ts` y `query-params.ts`). Si una pieza transversal necesita datos de negocio, la dependencia está en el consumidor de dominio, no en `shared/`.
+
 ## Cómo trabajar aquí
 
 ```bash

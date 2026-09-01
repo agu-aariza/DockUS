@@ -28,6 +28,7 @@ src/
 ├── builder/                       # Visualización en vivo del pipeline del Builder — ver builder/README.md
 ├── runtime/                         # Inspección de entornos/runtimes Docker — ver runtime/README.md
 ├── llm/                               # Configuración de proveedores de IA por rol — ver llm/README.md
+├── health/                            # Estado de liveness/readiness del backend — ver health/README.md
 ├── storage/                            # Panel de objetos almacenados (admin) — ver storage/README.md
 ├── summary/                              # Dashboards/analíticas del cohorte — ver summary/README.md
 ├── users/                                  # Administración de usuarios (admin) — ver users/README.md
@@ -41,13 +42,13 @@ src/
 ## La regla de capas: `features/` vs. dominio vs. `shared/`
 
 ```text
-features/<dominio>/    → SOLO tipos/DTOs/constantes. Sin React, sin llamadas a API, sin UI.
+features/<dominio>/    → SOLO tipos/DTOs/constantes. Sin React, sin llamadas a API, hooks ni UI.
 <dominio>/               → Componentes, hooks y páginas de ESE dominio. Puede importar de features/ y shared/.
 reporting/                  → UI y utilidades de informes Builder. Puede importar tipos/API del Builder y piezas transversales.
 shared/                     → Cross-cutting: API, sesión, workspace, toasts, design system. No conoce ningún dominio.
 ```
 
-Un componente de `projects/` puede importar tipos de `features/projects/` y utilidades de `shared/`, pero `shared/` nunca importa de `projects/` ni de ningún otro dominio — misma regla de dependencia unidireccional que en el backend (`shared/` ↛ `modules/`).
+Un componente de `projects/` puede importar tipos de `features/projects/` y utilidades de `shared/`, pero `shared/` nunca importa de `features/` ni de ningún dominio de primer nivel — misma regla de dependencia unidireccional que en el backend (`shared/` ↛ `modules/`). ESLint verifica ambas fronteras y también impide que `features/` importe React, APIs o hooks.
 
 ## `App.tsx`: cómo se decide qué panel se muestra
 

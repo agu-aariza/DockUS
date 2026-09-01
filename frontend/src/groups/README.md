@@ -17,6 +17,10 @@ groups/
 └── groupsSelection.ts                       # Helpers puros de selección/filtrado de grupos (sin estado)
 ```
 
+## API del dominio
+
+`api/groupsApi.ts` concentra las llamadas de grupos y matriculaciones. `useGroupManagement.ts` es su consumidor React Query; la UI no conoce el transporte HTTP.
+
 ## Qué hay detrás de "matricular alumnos" en la UI
 
 `GroupDialogs.tsx` (matriculación masiva) llama a `POST /groups/:id/enrollments/bulk` — en el backend, eso dispara un evento de dominio (`GroupEnrollmentEventsService`) que `projects/assignments/` escucha para crear automáticamente las asignaciones de proyecto correspondientes. El frontend no ve ni gestiona ese paso intermedio: solo matricula, el backend se encarga del resto. Ver [`../../../backend/src/modules/academic/README.md`](../../../backend/src/modules/academic/README.md) si necesitas el detalle completo.

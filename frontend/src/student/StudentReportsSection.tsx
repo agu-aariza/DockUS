@@ -27,7 +27,7 @@ import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import { EvaluationProgressCard } from "./components/EvaluationProgressCard";
 import { StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
-import { DeliveryOutcomeBadge } from "../features/deliveries/components/DeliveryOutcomeBadge";
+import { DeliveryOutcomeBadge } from "../deliveries/components/DeliveryOutcomeBadge";
 import { resolveStudentRunOutcome } from "./studentWorkspaceInsights";
 import { ReportView } from "../reporting/components/ReportView";
 
