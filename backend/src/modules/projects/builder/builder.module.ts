@@ -14,10 +14,6 @@ import { BuilderAiModule } from './builder-ai.module';
 import { BuilderPersistenceModule } from './builder-persistence.module';
 import { BuilderPipelineModule } from './builder-pipeline.module';
 import { BuilderRuntimeModule } from './builder-runtime.module';
-import { BUILD_RUN_REPOSITORY } from './domain/repositories/build-run.repository.interface';
-import { BuilderQualityAggregationService } from './application/services/evaluation/builder-quality-aggregation.service';
-import { BuilderRunCommandsService } from './application/services/orchestration/builder-run-commands.service';
-import { BuilderRunLifecycleService } from './application/services/orchestration/builder-run-lifecycle.service';
 
 @Module({
   imports: [
@@ -27,11 +23,6 @@ import { BuilderRunLifecycleService } from './application/services/orchestration
     BuilderPipelineModule,
   ],
   controllers: [BuilderController],
-  exports: [
-    BuilderQualityAggregationService,
-    BuilderRunCommandsService,
-    BuilderRunLifecycleService,
-    BUILD_RUN_REPOSITORY,
-  ],
+  exports: [BuilderAiModule, BuilderPipelineModule, BuilderPersistenceModule],
 })
 export class BuilderModule {}
