@@ -18,6 +18,7 @@ const DEFAULT_MAX_TOKENS: Record<BuilderLlmPromptStage, number> = {
   facts: 4096,
   evaluation: 8192,
   quality: 8192,
+  reporting: 4096,
   chat: 8192,
 };
 
@@ -26,6 +27,7 @@ const DEFAULT_TEMPERATURE: Record<BuilderLlmPromptStage, number> = {
   facts: 0.1,
   evaluation: 0.2,
   quality: 0.3,
+  reporting: 0.3,
   chat: 0.5,
 };
 
@@ -36,6 +38,7 @@ const DEFAULT_TIMEOUT_MS: Record<BuilderLlmPromptStage, number> = {
   facts: 120_000,
   evaluation: 300_000,
   quality: 300_000,
+  reporting: 180_000,
   chat: 300_000,
 };
 

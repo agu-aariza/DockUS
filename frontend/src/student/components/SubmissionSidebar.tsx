@@ -5,7 +5,11 @@
  */
 
 import { formatAssignmentDate } from "../deadlineUtils";
-import { StudentKeyValueList, StudentSurface, StudentSurfaceHeader } from "./StudentWorkspaceSurface";
+import {
+  StudentKeyValueList,
+  StudentSurface,
+  StudentSurfaceHeader,
+} from "./StudentWorkspaceSurface";
 import { SubmissionCoachingPreview } from "../SubmissionCoachingPreview";
 import { StatusBadge } from "../../shared/components/ui/StatusBadge";
 import type { SubmissionFlowState } from "../hooks/useSubmissionFlow";
@@ -58,7 +62,9 @@ export function SubmissionSidebar({ flow }: Props) {
           eyebrow="Briefing de la practica"
           title={activeAssignment?.projectTitle ?? "Selecciona una práctica"}
           description="Antes de subir nada, confirma que esta es la convocatoria correcta y revisa si conviene reenviar ahora o esperar otro momento."
-          badge={<StatusBadge tone={workflow.tone}>{workflow.label}</StatusBadge>}
+          badge={
+            <StatusBadge tone={workflow.tone}>{workflow.label}</StatusBadge>
+          }
         />
         <StudentKeyValueList
           className="mt-6"
@@ -88,7 +94,8 @@ export function SubmissionSidebar({ flow }: Props) {
           ]}
         />
 
-        {(noRemainingDeliveries || notYetOpen || afterDeadline) && activeAssignment ? (
+        {(noRemainingDeliveries || notYetOpen || afterDeadline) &&
+        activeAssignment ? (
           <div className="mt-6 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm leading-6 text-warning-900 dark:border-warning-800 dark:bg-warning-950 dark:text-warning-300">
             {noRemainingDeliveries
               ? "Esta práctica ya no tiene intentos restantes. Puedes seguir revisando el informe y el historial, pero no se habilitará otra subida."
@@ -99,7 +106,7 @@ export function SubmissionSidebar({ flow }: Props) {
         ) : null}
       </StudentSurface>
 
-      {latestAssignmentRun?.report?.coaching ? (
+      {latestAssignmentRun?.reportSummary.hasReport ? (
         <SubmissionCoachingPreview
           run={latestAssignmentRun}
           remainingDeliveries={activeAssignment?.remainingDeliveries ?? 0}

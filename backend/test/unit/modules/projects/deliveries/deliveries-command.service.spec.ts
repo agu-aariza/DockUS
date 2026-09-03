@@ -194,6 +194,40 @@ describe('DeliveriesCommandService', () => {
       expect(result.id).toBe(delivery.id);
     });
 
+    it('registra si la propuesta IA se adopta con modificaciones', async () => {
+      const teacher = buildActor(UserRole.TEACHER, 'teacher-2');
+      const project = buildProject({ creatorId: 'teacher-1' });
+      const assignment = buildAssignment({ project });
+      const delivery = buildDelivery({ assignment });
+      const log = jest
+        .spyOn(
+          (service as unknown as { logger: { log: (value: string) => void } })
+            .logger,
+          'log',
+        )
+        .mockImplementation(() => undefined);
+
+      deliveriesQueryService.findEntityById.mockResolvedValue(delivery);
+      projectsRepository.isTeacherAssignedToProject.mockResolvedValue(true);
+      deliveriesRepository.save.mockResolvedValue(delivery);
+      deliveriesQueryService.toResponse.mockResolvedValue({
+        id: delivery.id,
+      } as any);
+
+      await service.updateGrading(
+        delivery.id,
+        { grade: 7, aiProposedGrade: 8 },
+        teacher,
+      );
+
+      expect(log).toHaveBeenCalledWith(
+        expect.stringContaining('"modifiedAfterAdoption":true'),
+      );
+      expect(log).toHaveBeenCalledWith(
+        expect.stringContaining('"adoptedWithoutModification":false'),
+      );
+    });
+
     it('rechaza calificar a un docente no asignado al proyecto', async () => {
       const teacher = buildActor(UserRole.TEACHER, 'teacher-3');
       const project = buildProject({ creatorId: 'teacher-1' });

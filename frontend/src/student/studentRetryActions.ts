@@ -16,7 +16,7 @@ export function deriveStudentRetryAction(
   delivery: DeliveryEntity | null | undefined,
   latestRun: BuildRunEntity | null | undefined,
 ): StudentRetryAction | null {
-  if (!delivery || !latestRun?.report?.coaching) {
+  if (!delivery || !latestRun?.reportSummary.hasReport) {
     return null;
   }
 
@@ -30,7 +30,7 @@ export function deriveStudentRetryAction(
   return {
     enabled: true,
     label:
-      latestRun.report.coaching.passReadiness === "BLOCKED"
+      latestRun.reportSummary.passReadiness === "BLOCKED"
         ? "Corregir y reenviar"
         : "Mejorar y subir nueva versión",
   };

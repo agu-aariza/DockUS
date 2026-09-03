@@ -33,12 +33,16 @@ export enum BuildRunArtifactType {
   LLM_QUALITY_RAW_RESPONSE = 'LLM_QUALITY_RAW_RESPONSE',
   LLM_QUALITY_PARSED = 'LLM_QUALITY_PARSED',
   LLM_QUALITY_ERROR = 'LLM_QUALITY_ERROR',
+  LLM_REPORT_PROMPT = 'LLM_REPORT_PROMPT',
+  LLM_REPORT_RAW_RESPONSE = 'LLM_REPORT_RAW_RESPONSE',
+  LLM_REPORT_PARSED = 'LLM_REPORT_PARSED',
+  LLM_REPORT_ERROR = 'LLM_REPORT_ERROR',
 }
 
 export function isStaffOnlyBuildRunArtifactType(
   type: BuildRunArtifactType,
 ): boolean {
-  return type.startsWith('LLM_');
+  return type === BuildRunArtifactType.REPORT_JSON || type.startsWith('LLM_');
 }
 
 /** Derivada, no mantenida a mano. Se conserva porque `builder-run-queries` la usa. */

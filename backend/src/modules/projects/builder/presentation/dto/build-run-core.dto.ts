@@ -6,6 +6,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BuildRunStatus } from '../../domain/entities/build-run.entity';
+import type { BuildRunReportSummary } from '@educodeai/contracts';
 
 export class EnqueueBuildRunResponseDto {
   @ApiProperty({
@@ -67,12 +68,12 @@ export class BuildRunResponseDto {
   })
   llmAssessment?: unknown;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description:
-      'Informe canónico derivado de la evaluación LLM final en taxonomía T/C/E.',
+      'Resumen ligero del informe; el documento completo se carga por su endpoint dedicado.',
     type: Object,
   })
-  report?: unknown;
+  reportSummary!: BuildRunReportSummary;
 
   @ApiPropertyOptional({
     description: 'Causa exacta de fallo (si aplica).',

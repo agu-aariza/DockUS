@@ -10,12 +10,7 @@ import type { DeliveryEntity } from "../../features/deliveries/types";
 import { Button } from "../../shared/components/ui/Button";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { TeacherReviewSummary } from "./TeacherReviewSummary";
-
-interface GradingFormValue {
-  id: string;
-  grade: string;
-  graderNotes: string;
-}
+import type { GradingForm } from "../hooks/deliveryManagement.types";
 
 export function DeliveryGrading({
   selectedDelivery,
@@ -28,10 +23,13 @@ export function DeliveryGrading({
 }: {
   selectedDelivery: DeliveryEntity;
   reportRun: BuildRunEntity | null;
-  selectedDeliveryReviewNotes: { manualNotes?: string | null; legacyBlocks?: string[] };
+  selectedDeliveryReviewNotes: {
+    manualNotes?: string | null;
+    legacyBlocks?: string[];
+  };
   canWrite: boolean;
-  gradingForm: GradingFormValue;
-  onSetGradingForm: (_updater: (_current: GradingFormValue) => GradingFormValue) => void;
+  gradingForm: GradingForm;
+  onSetGradingForm: (_updater: (_current: GradingForm) => GradingForm) => void;
   onHandleGradingUpdate: (_event: React.FormEvent<HTMLFormElement>) => void;
 }) {
   return (
@@ -54,13 +52,16 @@ export function DeliveryGrading({
               Consolida la nota oficial
             </h4>
             <p className="mt-1 text-sm leading-6 text-app-text-secondary">
-              La nota vive en la entrega, no en el run del builder. Usa este bloque para cerrar evaluación académica y feedback manual.
+              La nota vive en la entrega, no en el run del builder. Usa este
+              bloque para cerrar evaluación académica y feedback manual.
             </p>
           </div>
 
           <div className="mt-5 grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
             <div>
-              <label htmlFor="delivery-grading-grade" className="label-text">Nota oficial</label>
+              <label htmlFor="delivery-grading-grade" className="label-text">
+                Nota oficial
+              </label>
               <input
                 id="delivery-grading-grade"
                 type="number"
@@ -78,7 +79,9 @@ export function DeliveryGrading({
               />
             </div>
             <div>
-              <label htmlFor="delivery-grading-notes" className="label-text">Observaciones del corrector</label>
+              <label htmlFor="delivery-grading-notes" className="label-text">
+                Observaciones del corrector
+              </label>
               <textarea
                 id="delivery-grading-notes"
                 className="input-field min-h-[160px]"
@@ -100,9 +103,30 @@ export function DeliveryGrading({
                 ? "Aún no existe una nota oficial publicada."
                 : "La entrega ya tenía nota; este guardado la reemplazará."}
             </div>
-            <Button type="submit" variant="primary" size="sm">
-              Guardar calificación
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {reportRun?.llmAssessment?.recommendedGrade !== undefined ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    onSetGradingForm((current) => ({
+                      ...current,
+                      grade:
+                        reportRun.llmAssessment?.recommendedGrade?.toFixed(2) ??
+                        current.grade,
+                      aiProposedGrade:
+                        reportRun.llmAssessment?.recommendedGrade ?? null,
+                    }))
+                  }
+                >
+                  Usar propuesta de la IA
+                </Button>
+              ) : null}
+              <Button type="submit" variant="primary" size="sm">
+                Guardar calificación
+              </Button>
+            </div>
           </div>
         </form>
       ) : (

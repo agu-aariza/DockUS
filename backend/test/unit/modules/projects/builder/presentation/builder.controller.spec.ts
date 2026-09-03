@@ -130,14 +130,15 @@ describe('BuilderController', () => {
         builderRunQueriesService.listLatestRunsByDeliveryIds,
       ).toHaveBeenCalledWith(['delivery-a', 'delivery-b'], request.user);
       expect(response.data['delivery-b']).toBeNull();
-      // El actor STUDENT nunca debe recibir llmAssessment/report.teacherHighlights
-      // Mantiene la misma redacción por rol que el resto de endpoints de
-      // BuildRun.
+      // Los listados solo transportan un resumen; el informe completo vive en
+      // el endpoint de proyección por audiencia.
       expect(response.data['delivery-a']?.llmAssessment).toBeUndefined();
-      expect(
-        (response.data['delivery-a']?.report as any)?.teacherHighlights,
-      ).toBeUndefined();
-      expect((response.data['delivery-a']?.report as any)?.overallOutcome).toBe(
+      expect((response.data['delivery-a'] as any)?.report).toBeUndefined();
+      expect(response.data['delivery-a']?.reportSummary).toMatchObject({
+        overallOutcome: 'PASS',
+        hasReport: true,
+      });
+      expect(response.data['delivery-a']?.reportSummary.overallOutcome).toBe(
         'PASS',
       );
     });

@@ -5,7 +5,10 @@
  */
 
 import type { BuildRunEntity, BuildRunStatus } from "../features/builder/types";
-import type { DeliveryEntity, StudentWorkflowState } from "../features/deliveries/types";
+import type {
+  DeliveryEntity,
+  StudentWorkflowState,
+} from "../features/deliveries/types";
 import type { ProjectAssignmentEntity } from "../features/projects/types";
 import type { StatusTone } from "../shared/components/ui/StatusBadge";
 
@@ -64,11 +67,11 @@ export function deriveStudentWorkflowState(input: {
     return "RUNNING";
   }
 
-  if (latestRun.status === "FAILED" && !Boolean(latestRun.report)) {
+  if (latestRun.status === "FAILED" && !latestRun.reportSummary.hasReport) {
     return "BUILD_FAILED";
   }
 
-  const hasReadableTechnicalClosure = Boolean(latestRun.report);
+  const hasReadableTechnicalClosure = latestRun.reportSummary.hasReport;
 
   if (hasReadableTechnicalClosure) {
     return "REPORT_READY";

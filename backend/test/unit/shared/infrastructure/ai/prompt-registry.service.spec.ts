@@ -5,6 +5,8 @@ import {
   PromptBundle,
   renderPromptBundle,
 } from '@app/shared/infrastructure/ai/prompt.types';
+import { parseBuilderEvaluationContractV3 } from '@app/modules/projects/builder/domain/ai/builder-evaluation-contract-v3.parser';
+import { parseBuilderReportCopyContractV1 } from '@app/modules/projects/builder/domain/ai/builder-report-copy-contract.parser';
 
 describe('prompts.json', () => {
   function loadManifest(): Record<string, PromptBundle> {
@@ -21,7 +23,7 @@ describe('prompts.json', () => {
   it('stores each builder prompt as a structured bundle with stable sections', () => {
     const manifest = loadManifest();
 
-    for (const key of ['plan', 'eval', 'technical-feedback']) {
+    for (const key of ['plan', 'eval', 'reporting', 'technical-feedback']) {
       expect(manifest[key]).toEqual(
         expect.objectContaining({
           role: expect.any(String),
@@ -32,7 +34,9 @@ describe('prompts.json', () => {
         }),
       );
       expect(manifest[key].hard_rules.length).toBeGreaterThan(2);
-      expect(manifest[key].decision_policy?.length).toBeGreaterThan(1);
+      if (key !== 'reporting') {
+        expect(manifest[key].decision_policy?.length).toBeGreaterThan(1);
+      }
     }
   });
 
@@ -48,7 +52,7 @@ describe('prompts.json', () => {
     expect(renderedPlan).toContain('DECISION POLICY');
 
     expect(renderedEval).toContain('EXAMPLES');
-    expect(renderedEval).toContain('builder-llm/v2');
+    expect(renderedEval).toContain('builder-evaluation/v3');
     expect(renderedEval).toContain('expectedOutput');
   });
 
@@ -75,7 +79,7 @@ describe('prompts.json', () => {
   it('documents evidence-first adjudication and pedagogical review priorities', () => {
     const manifest = loadManifest();
 
-    expect(manifest.eval.hard_rules.join('\n')).toContain('observedEvidence');
+    expect(manifest.eval.hard_rules.join('\n')).toContain('evidenceRefs');
     expect(manifest.eval.hard_rules.join('\n')).toContain(
       'NUNCA inventes salida del programa',
     );
@@ -107,7 +111,7 @@ describe('prompts.json', () => {
     );
     expect(evalRules).toContain('recommendedGrade');
     expect(evalRules).toContain('VERDAD VACUA');
-    expect(evalRules).toContain('observedEvidence');
+    expect(evalRules).toContain('evidenceRefs');
     expect(evalPolicy).toContain('Antes de puntuar cualquier criterio');
     expect(evalPolicy).toContain('evaluativeState=E3');
     expect(evalPolicy).toContain('Archivos vacíos o stub');
@@ -123,6 +127,21 @@ describe('prompts.json', () => {
     expect(qualityRules).toContain('BUENA PR');
     expect(qualityPolicy).toContain('impacto de aprendizaje');
     expect(qualityPolicy).toContain('rubricCompliance');
+  });
+
+  it('keeps evaluation and reporting JSON examples compatible with their strict schemas', () => {
+    const manifest = loadManifest();
+    const evaluationExample = manifest.eval.json_examples?.[0];
+    const reportingExample = manifest.reporting.json_examples?.[0];
+
+    expect(evaluationExample).toBeDefined();
+    expect(reportingExample).toBeDefined();
+    expect(() =>
+      parseBuilderEvaluationContractV3(evaluationExample as string),
+    ).not.toThrow();
+    expect(() =>
+      parseBuilderReportCopyContractV1(reportingExample as string),
+    ).not.toThrow();
   });
 });
 /**

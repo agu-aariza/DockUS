@@ -42,6 +42,13 @@ export class BuilderConfigProvider {
     );
   }
 
+  get reportingMaxInputChars(): number {
+    return this.configService.get<number>(
+      'BUILDER_LLM_REPORTING_MAX_INPUT_CHARS',
+      16000,
+    );
+  }
+
   get maxExtractedFiles(): number {
     return this.configService.get<number>(
       'BUILDER_MAX_EXTRACTED_FILES',

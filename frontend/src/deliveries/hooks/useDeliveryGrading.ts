@@ -23,7 +23,10 @@ interface UseDeliveryGradingInput {
   selectedDeliveryReviewNotes: ReturnType<typeof extractLegacyAiEvidence>;
   setDelivery: (id: string, label?: string) => void;
   setEditorNotice: Dispatch<SetStateAction<NoticeState | null>>;
-  updateGrading: (id: string, payload: GradingPayload) => Promise<GradingResponse>;
+  updateGrading: (
+    id: string,
+    payload: GradingPayload,
+  ) => Promise<GradingResponse>;
 }
 
 export function useDeliveryGrading({
@@ -38,14 +41,18 @@ export function useDeliveryGrading({
     id: "",
     grade: "",
     graderNotes: "",
+    aiProposedGrade: null,
   });
 
   useEffect(() => {
     if (!selectedDelivery) return;
     setGradingForm({
       id: selectedDelivery.id,
-      grade: selectedDelivery.grade !== null ? String(selectedDelivery.grade) : "",
-      graderNotes: extractLegacyAiEvidence(selectedDelivery.graderNotes).manualNotes ?? "",
+      grade:
+        selectedDelivery.grade !== null ? String(selectedDelivery.grade) : "",
+      graderNotes:
+        extractLegacyAiEvidence(selectedDelivery.graderNotes).manualNotes ?? "",
+      aiProposedGrade: null,
     });
   }, [selectedDelivery]);
 
@@ -55,6 +62,9 @@ export function useDeliveryGrading({
     try {
       const response = await updateGrading(gradingForm.id.trim(), {
         grade: gradingForm.grade.trim() ? Number(gradingForm.grade) : null,
+        ...(gradingForm.aiProposedGrade !== null
+          ? { aiProposedGrade: gradingForm.aiProposedGrade }
+          : {}),
         graderNotes: mergeManualAndLegacyNotes(
           gradingForm.graderNotes,
           selectedDeliveryReviewNotes.legacyRaw,

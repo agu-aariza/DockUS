@@ -19,6 +19,7 @@ export enum PromptId {
   PLAN = 'plan',
   FACTS = 'facts',
   EVAL = 'eval',
+  REPORTING = 'reporting',
   TECHNICAL_FEEDBACK = 'technical-feedback',
   CHAT = 'chat',
 }

@@ -7,12 +7,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   AssignmentContext,
-  BuilderEvaluationContractV2,
+  BuilderEvaluationContractV3,
   BuilderExecutionResult,
   BuilderFactsContractV2,
   BuilderLlmStagePromptSnapshot,
   BuilderLlmStageTrace,
   BuilderPlanContractV2,
+  BuilderReportCopyContractV1,
 } from '../../../domain/builder.types';
 import { serializeExecutionResult } from '../../../domain/ai/builder-execution-result.util';
 import {
@@ -28,7 +29,8 @@ import { BuilderLlmDispatcherService } from './builder-llm-dispatcher.service';
 import { BuilderConfigProvider } from '../../../domain/builder-config.provider';
 import { BuilderLogTrimmer } from '../../../infrastructure/utils/builder-log-trimmer.util';
 import type { ComposedPromptPayload } from '../../../domain/ai/builder-prompt-composer';
-import { parseBuilderEvaluationContractV2 } from '../../../domain/ai/builder-evaluation-contract.parser';
+import { parseBuilderEvaluationContractV3 } from '../../../domain/ai/builder-evaluation-contract-v3.parser';
+import { parseBuilderReportCopyContractV1 } from '../../../domain/ai/builder-report-copy-contract.parser';
 import { parseBuilderFactsContractV2 } from '../../../domain/ai/builder-facts-contract.parser';
 import { parseBuilderPlanContractV2 } from '../../../domain/ai/builder-plan-contract.parser';
 import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
@@ -36,6 +38,7 @@ import {
   composeEvaluationPrompt,
   composeFactsPrompt,
   composePlanPrompt,
+  composeReportingPrompt,
 } from '../../../domain/ai/builder-prompt-composer';
 import {
   createPromptSnapshot,
@@ -71,9 +74,11 @@ export class BuilderLlmEvaluatorService {
   private readonly planMaxInputChars: number;
   private readonly factsMaxInputChars: number;
   private readonly evalMaxInputChars: number;
+  private readonly reportingMaxInputChars: number;
   private readonly systemPrompt: string;
   private readonly planSystemPrompt: string;
   private readonly factsSystemPrompt: string;
+  private readonly reportingSystemPrompt: string;
 
   constructor(
     private readonly builderConfigProvider: BuilderConfigProvider,
@@ -85,15 +90,20 @@ export class BuilderLlmEvaluatorService {
     this.planMaxInputChars = this.builderConfigProvider.planMaxInputChars;
     this.factsMaxInputChars = this.builderConfigProvider.factsMaxInputChars;
     this.evalMaxInputChars = this.builderConfigProvider.evalMaxInputChars;
+    this.reportingMaxInputChars =
+      this.builderConfigProvider.reportingMaxInputChars;
     this.systemPrompt = this.promptRegistry.getPrompt(PromptId.EVAL);
     this.planSystemPrompt = this.promptRegistry.getPrompt(PromptId.PLAN);
     this.factsSystemPrompt = this.promptRegistry.getPrompt(PromptId.FACTS);
+    this.reportingSystemPrompt = this.promptRegistry.getPrompt(
+      PromptId.REPORTING,
+    );
   }
 
   async evaluateWithTrace(
     input: EvaluatorInput,
     hooks?: BuilderLlmTraceHooks,
-  ): Promise<BuilderLlmStageTrace<BuilderEvaluationContractV2>> {
+  ): Promise<BuilderLlmStageTrace<BuilderEvaluationContractV3>> {
     const composedPrompt = composeEvaluationPrompt(
       input.sourceCodePayload,
       input.facts,
@@ -102,13 +112,32 @@ export class BuilderLlmEvaluatorService {
       this.evalMaxInputChars,
     );
 
-    return this.runContractStage<BuilderEvaluationContractV2>(
+    return this.runContractStage<BuilderEvaluationContractV3>(
       'evaluation',
       PromptId.EVAL,
       composedPrompt,
       this.systemPrompt,
-      parseBuilderEvaluationContractV2,
+      parseBuilderEvaluationContractV3,
       'del Evaluador',
+      hooks,
+    );
+  }
+
+  async reportWithTrace(
+    assessment: BuilderEvaluationContractV3,
+    hooks?: BuilderLlmTraceHooks,
+  ): Promise<BuilderLlmStageTrace<BuilderReportCopyContractV1>> {
+    const composedPrompt = composeReportingPrompt(
+      assessment,
+      this.reportingMaxInputChars,
+    );
+    return this.runContractStage<BuilderReportCopyContractV1>(
+      'reporting',
+      PromptId.REPORTING,
+      composedPrompt,
+      this.reportingSystemPrompt,
+      parseBuilderReportCopyContractV1,
+      'del redactor de informes',
       hooks,
     );
   }

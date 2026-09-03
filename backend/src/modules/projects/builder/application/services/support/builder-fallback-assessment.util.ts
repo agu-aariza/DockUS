@@ -7,11 +7,12 @@
 import { Logger } from '@nestjs/common';
 import {
   BuilderEvaluationContractV2,
+  BuilderEvaluationContractV3,
   BuilderCodeQualityContractV2,
   BuilderExecutionResult,
   BuilderPlanContractV2,
   BuilderLlmStageTrace,
-  BUILDER_LLM_SCHEMA_VERSION,
+  BUILDER_EVALUATION_SCHEMA_VERSION,
 } from '../../../domain/builder.types';
 import { serializeExecutionResult } from '../../../domain/ai/builder-execution-result.util';
 import { BuilderCodeQualityTrace } from '../ai/builder-code-quality.service';
@@ -20,7 +21,10 @@ import { BuilderHallucinationGuard } from '../evaluation/builder-hallucination-g
 const logger = new Logger('BuilderFallbackAssessment');
 
 export function requireParsedContract<
-  TContract extends BuilderPlanContractV2 | BuilderEvaluationContractV2,
+  TContract extends
+    | BuilderPlanContractV2
+    | BuilderEvaluationContractV2
+    | BuilderEvaluationContractV3,
 >(trace: BuilderLlmStageTrace<TContract>): TContract {
   if (trace.parsedContract) {
     return trace.parsedContract;
@@ -97,7 +101,7 @@ function buildFallbackEvaluationLimits(
  * la ejecución fallase).
  */
 function reconcileStateWithGradeBreakdown(
-  contract: BuilderEvaluationContractV2,
+  contract: BuilderEvaluationContractV2 | BuilderEvaluationContractV3,
 ): void {
   if (contract.evaluativeState !== 'E2') {
     return;
@@ -130,7 +134,23 @@ export function resolveEvaluationAssessment(
   execution: BuilderExecutionResult,
   expectedOutput: string | null,
   guard: BuilderHallucinationGuard,
-): BuilderEvaluationContractV2 {
+): BuilderEvaluationContractV2;
+export function resolveEvaluationAssessment(
+  trace: BuilderLlmStageTrace<BuilderEvaluationContractV3>,
+  planAssessment: BuilderPlanContractV2,
+  execution: BuilderExecutionResult,
+  expectedOutput: string | null,
+  guard: BuilderHallucinationGuard,
+): BuilderEvaluationContractV3;
+export function resolveEvaluationAssessment(
+  trace: BuilderLlmStageTrace<
+    BuilderEvaluationContractV2 | BuilderEvaluationContractV3
+  >,
+  planAssessment: BuilderPlanContractV2,
+  execution: BuilderExecutionResult,
+  expectedOutput: string | null,
+  guard: BuilderHallucinationGuard,
+): BuilderEvaluationContractV2 | BuilderEvaluationContractV3 {
   if (trace.parsedContract) {
     const hallucinationWarning = guard.detectOutputHallucination(
       trace.parsedContract,
@@ -182,7 +202,7 @@ export function resolveEvaluationAssessment(
   );
 
   return {
-    schemaVersion: BUILDER_LLM_SCHEMA_VERSION,
+    schemaVersion: BUILDER_EVALUATION_SCHEMA_VERSION,
     stage: 'evaluation',
     thought:
       'Evaluacion degradada por salida invalida del evaluador LLM. Se conserva la evidencia operativa para debugging.',
@@ -198,9 +218,7 @@ export function resolveEvaluationAssessment(
     rationale: `El evaluador LLM devolvio un contrato invalido: ${errorMessage}`,
     recommendedGrade: undefined,
     gradeBreakdown: [],
-    studentSummary:
-      'No se pudo generar un resumen porque el evaluador automatico fallo. Tu profesor revisara la entrega manualmente.',
-    teacherSummary: `Evaluacion degradada. El evaluador LLM devolvio un contrato invalido: ${errorMessage}. Revision manual recomendada.`,
+    criteria: [],
     externalRequirements: planAssessment.externalRequirements,
     runtime: planAssessment.runtime,
     recipe: planAssessment.recipe,
@@ -208,6 +226,17 @@ export function resolveEvaluationAssessment(
       'Evaluación degradada por salida inválida del evaluador LLM. Revisa los artefactos LLM_EVAL_* y los logs de ejecución.',
     observedEvidence,
     evaluationLimits,
+    evidence: observedEvidence.map((detail, index) => ({
+      id: `evidence_fallback_${index + 1}`,
+      kind: 'execution' as const,
+      summary:
+        index === 0 ? 'Evaluación automática degradada' : 'Evidencia operativa',
+      detail,
+      visibility: 'teacher' as const,
+    })),
+    findings: [],
+    limitations: evaluationLimits,
+    reviewFlags: ['MANUAL_REVIEW_REQUIRED'],
   };
 }
 

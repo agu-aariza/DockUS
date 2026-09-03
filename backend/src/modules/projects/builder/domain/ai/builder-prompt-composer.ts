@@ -7,6 +7,7 @@
 import type {
   AssignmentContext,
   BuilderEvaluationContractV2,
+  BuilderEvaluationContractV3,
   BuilderFactsContractV2,
   BuilderPlanContractV2,
 } from '../builder.types';
@@ -63,6 +64,11 @@ const QUALITY_PROMPT_MAX_SECTION_CHARS: Record<string, PromptSectionBudget> = {
   logs: { preferredChars: 4000, reserveChars: 120 },
 };
 
+const REPORTING_PROMPT_MAX_SECTION_CHARS: Record<string, PromptSectionBudget> =
+  {
+    evaluation: { preferredChars: 14000, reserveChars: 800 },
+  };
+
 /**
  * Renderiza la sección de rúbrica combinando las instrucciones docentes en
  * texto libre con los criterios ponderados estructurados (si existen). Los
@@ -97,7 +103,7 @@ export function renderRubricSection(
     parts.push(
       [
         'WEIGHTED RUBRIC CRITERIA. The maxPoints shown are already expressed on the 0-10 final scale and add up to 10.',
-        'In gradeBreakdown, reuse each criterion name and its maxPoints verbatim, and set awarded between 0 and maxPoints. recommendedGrade is the exact sum of the awarded values.',
+        'In criteria, reuse each criterion name and its maxPoints verbatim, and set awarded between 0 and maxPoints. recommendedGrade is the exact sum of the awarded values.',
         ...lines,
       ].join('\n'),
     );
@@ -259,7 +265,7 @@ export function composeQualityPrompt(
   sourceCodePayload: string,
   executionLogs: string,
   assignmentContext: AssignmentContext,
-  assessment: BuilderEvaluationContractV2,
+  assessment: BuilderEvaluationContractV2 | BuilderEvaluationContractV3,
   maxChars: number,
 ): ComposedPromptPayload {
   return composePromptSections(
@@ -291,6 +297,27 @@ export function composeQualityPrompt(
         content: executionLogs || 'No execution logs were captured.',
         priority: 'medium',
         budget: QUALITY_PROMPT_MAX_SECTION_CHARS.logs,
+      },
+    ],
+    maxChars,
+  );
+}
+
+/**
+ * La redacción recibe exclusivamente el contrato de evaluación ya validado.
+ * No se incluyen código, logs, oráculo ni prompts docentes en esta frontera.
+ */
+export function composeReportingPrompt(
+  assessment: BuilderEvaluationContractV3,
+  maxChars: number,
+): ComposedPromptPayload {
+  return composePromptSections(
+    [
+      {
+        label: 'VALIDATED EVALUATION',
+        content: JSON.stringify(assessment, null, 2),
+        priority: 'critical',
+        budget: REPORTING_PROMPT_MAX_SECTION_CHARS.evaluation,
       },
     ],
     maxChars,

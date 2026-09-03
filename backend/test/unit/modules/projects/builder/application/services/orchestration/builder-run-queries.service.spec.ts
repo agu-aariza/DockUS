@@ -14,8 +14,8 @@ import { BuilderRunQueriesService } from '@app/modules/projects/builder/applicat
 
 describe('BuilderRunQueriesService', () => {
   const buildRunId = 'run-1';
-  const visibleArtifact: EvidenceArtifactPublic = {
-    id: 'artifact-visible',
+  const reportArtifact: EvidenceArtifactPublic = {
+    id: 'artifact-report',
     type: BuildRunArtifactType.REPORT_JSON,
     contentType: 'application/json',
     sizeBytes: 120,
@@ -75,7 +75,7 @@ describe('BuilderRunQueriesService', () => {
     evidenceService = {
       listArtifacts: jest
         .fn()
-        .mockResolvedValue([visibleArtifact, hiddenArtifact]),
+        .mockResolvedValue([reportArtifact, hiddenArtifact]),
       createArtifactDownloadUrl: jest.fn().mockResolvedValue({
         downloadUrl: 'https://minio.test/download',
         expiresAt: '2026-05-05T11:00:00.000Z',
@@ -99,29 +99,32 @@ describe('BuilderRunQueriesService', () => {
       buildActor(UserRole.TEACHER, 'teacher-1'),
     );
 
-    expect(artifacts).toEqual([visibleArtifact, hiddenArtifact]);
+    expect(artifacts).toEqual([reportArtifact, hiddenArtifact]);
   });
 
-  it('hides LLM debug artifacts from students in evidence listings', async () => {
+  it('hides the canonical report and LLM artifacts from students', async () => {
     const artifacts = await service.listEvidenceArtifacts(
       buildRunId,
       buildActor(UserRole.STUDENT, 'student-1'),
     );
 
-    expect(artifacts).toEqual([visibleArtifact]);
+    expect(artifacts).toEqual([]);
   });
 
-  it('prevents students from requesting signed URLs for hidden debug artifacts', async () => {
-    await expect(
-      service.createEvidenceDownloadUrl(
-        buildRunId,
-        hiddenArtifact.id,
-        buildActor(UserRole.STUDENT, 'student-1'),
-      ),
-    ).rejects.toBeInstanceOf(NotFoundException);
+  it.each([hiddenArtifact, reportArtifact])(
+    'prevents students from requesting a signed URL for $type',
+    async (artifact) => {
+      await expect(
+        service.createEvidenceDownloadUrl(
+          buildRunId,
+          artifact.id,
+          buildActor(UserRole.STUDENT, 'student-1'),
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
 
-    expect(evidenceService.createArtifactDownloadUrl).not.toHaveBeenCalled();
-  });
+      expect(evidenceService.createArtifactDownloadUrl).not.toHaveBeenCalled();
+    },
+  );
 
   describe('listLatestRunsByDeliveryIds', () => {
     it('returns an empty map without querying the DB when no delivery ids are given', async () => {
@@ -165,9 +168,57 @@ describe('BuilderRunQueriesService', () => {
     // suite específica.
   });
 
+  describe('listRunEvents', () => {
+    it('removes internal artifacts and raw log payloads from the student feed', async () => {
+      (builderRunEventsService.list as jest.Mock).mockResolvedValue({
+        events: [
+          {
+            sequence: 1,
+            eventType: 'ARTIFACT_ADDED',
+            message: 'REPORT_JSON disponible',
+            payload: { type: BuildRunArtifactType.REPORT_JSON },
+          },
+          {
+            sequence: 2,
+            eventType: 'LOG_CHUNK',
+            message: 'Progreso público\nteacher test: ORACLE-SECRET-42',
+            payload: { text: 'ORACLE-SECRET-42', studentStage: 'testing' },
+          },
+        ],
+        latestSequence: 2,
+        hasMore: false,
+      });
+
+      const result = await service.listRunEvents(
+        buildRunId,
+        buildActor(UserRole.STUDENT, 'student-1'),
+      );
+
+      expect(result.events).toEqual([
+        expect.objectContaining({
+          sequence: 2,
+          message: 'Progreso público',
+          payload: { studentStage: 'testing' },
+        }),
+      ]);
+      expect(JSON.stringify(result)).not.toContain('ORACLE-SECRET-42');
+      expect(JSON.stringify(result)).not.toContain('REPORT_JSON');
+    });
+  });
+
   describe('streamRunEvents', () => {
-    const firstEvent = { sequence: 1, eventType: 'RUN_STATUS_CHANGED' } as any;
-    const secondEvent = { sequence: 2, eventType: 'RUN_COMPLETED' } as any;
+    const firstEvent = {
+      sequence: 1,
+      eventType: 'RUN_STATUS_CHANGED',
+      message: '',
+      payload: null,
+    } as any;
+    const secondEvent = {
+      sequence: 2,
+      eventType: 'RUN_COMPLETED',
+      message: '',
+      payload: null,
+    } as any;
 
     it('checks access once, emits ready with the backlog latestSequence, then the backlog events, then subscribes', async () => {
       (builderRunEventsService.list as jest.Mock).mockResolvedValueOnce({

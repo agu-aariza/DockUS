@@ -7,6 +7,8 @@
 import { Injectable } from '@nestjs/common';
 import {
   BuilderEvaluationContractV2,
+  BuilderEvaluationContractV3,
+  BuilderReportCopyContractV1,
   BuilderCodeQualityContractV2,
   CodeQualityFinding,
   BuilderReportEntity,
@@ -18,6 +20,8 @@ import {
   PedagogicalNarrativeKind,
   RubricCriterion,
   EVALUATIVE_STATE_SENTENCES,
+  BUILDER_REPORT_SCHEMA_VERSION,
+  RubricGradeItem,
 } from '../../../domain/builder.types';
 import {
   extractRecommendation,
@@ -36,7 +40,7 @@ export class BuilderReportComposer {
    * dominio de evaluación, no de composición del pipeline.
    */
   enrichGradeBreakdownWithRubric(
-    assessment: BuilderEvaluationContractV2,
+    assessment: BuilderEvaluationContractV2 | BuilderEvaluationContractV3,
     rubricCriteria: RubricCriterion[] | null,
   ): void {
     if (!rubricCriteria || rubricCriteria.length === 0) {
@@ -51,17 +55,77 @@ export class BuilderReportComposer {
       rubricCriteria.map((criterion) => [normalize(criterion.name), criterion]),
     );
 
-    assessment.gradeBreakdown = assessment.gradeBreakdown.map((item) => {
-      const match = criterionByName.get(normalize(item.criterion));
-      if (!match) {
-        return item;
-      }
-      return {
-        ...item,
-        weight: match.weight,
-        description: match.description,
-      };
-    });
+    const enrich = <T extends RubricGradeItem>(items: T[]): T[] =>
+      items.map((item) => {
+        const match = criterionByName.get(normalize(item.criterion));
+        if (!match) return item;
+        return {
+          ...item,
+          weight: match.weight,
+          description: match.description,
+        };
+      });
+    if (assessment.schemaVersion === 'builder-evaluation/v3') {
+      assessment.criteria = enrich(assessment.criteria);
+      assessment.gradeBreakdown = assessment.criteria;
+      return;
+    }
+    assessment.gradeBreakdown = enrich(assessment.gradeBreakdown);
+  }
+
+  composeReportV3(
+    assessment: BuilderEvaluationContractV3,
+    copy: BuilderReportCopyContractV1,
+    qualityFindings: BuilderCodeQualityContractV2,
+    pedagogicalItems: CodeQualityFinding[],
+    reporting: { usedFallback: boolean; errorCode: string | null },
+  ): BuilderReportEntity {
+    const technicalFeedback = this.toTechnicalFeedbackReport(qualityFindings);
+    const coaching = this.composeCoaching(
+      assessment,
+      technicalFeedback,
+      pedagogicalItems,
+    );
+    return {
+      schemaVersion: BUILDER_REPORT_SCHEMA_VERSION,
+      evaluation: assessment,
+      copy,
+      reporting: {
+        ...reporting,
+        generatedAt: new Date().toISOString(),
+      },
+      overallOutcome: this.resolveReportOutcome(assessment, coaching),
+      llmRecommendations: copy.studentNarrative.nextSteps.slice(0, 3),
+      technicalFeedback,
+      coaching,
+      learningObjective: this.inferLearningObjective(assessment.criteria),
+      professionalVerdict: this.buildProfessionalVerdict(assessment, coaching),
+      pedagogicalNarrative: [
+        ...copy.studentNarrative.achievements.map((content) => ({
+          kind: 'success' as const,
+          content,
+        })),
+        ...copy.studentNarrative.gaps.map((content) => ({
+          kind: 'gap' as const,
+          content,
+        })),
+        ...copy.studentNarrative.conceptBridges.map((content) => ({
+          kind: 'bridge' as const,
+          content,
+        })),
+        ...copy.studentNarrative.nextSteps.map((content) => ({
+          kind: 'action' as const,
+          content,
+        })),
+      ],
+      teacherHighlights: {
+        strengths: copy.teacherNarrative.strengths,
+        concerns: copy.teacherNarrative.concerns,
+        followUp: copy.teacherNarrative.followUp,
+      },
+      // No se persiste Markdown: los exports se generan desde la proyección
+      // autorizada y nunca desde el documento canónico.
+    };
   }
 
   composeReport(
@@ -120,7 +184,7 @@ export class BuilderReportComposer {
   }
 
   private composeCoaching(
-    assessment: BuilderEvaluationContractV2,
+    assessment: BuilderEvaluationContractV2 | BuilderEvaluationContractV3,
     technicalFeedback: BuilderTechnicalFeedbackReport,
     pedagogicalItems: CodeQualityFinding[],
   ): {
@@ -201,7 +265,7 @@ export class BuilderReportComposer {
   }
 
   private resolveReportOutcome(
-    assessment: BuilderEvaluationContractV2,
+    assessment: BuilderEvaluationContractV2 | BuilderEvaluationContractV3,
     coaching: { passReadiness: BuilderCoachingPassReadiness },
   ): BuilderOutcome {
     if (assessment.evaluativeState === 'E1') {
@@ -531,7 +595,7 @@ export class BuilderReportComposer {
   }
 
   private buildProfessionalVerdict(
-    assessment: BuilderEvaluationContractV2,
+    assessment: BuilderEvaluationContractV2 | BuilderEvaluationContractV3,
     coaching: { passReadiness: BuilderCoachingPassReadiness },
   ): string {
     const outcome =

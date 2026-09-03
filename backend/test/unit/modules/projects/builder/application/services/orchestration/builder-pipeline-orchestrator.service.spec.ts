@@ -172,7 +172,7 @@ describe('BuilderPipelineOrchestrator', () => {
         qualityFindings,
         usages: [],
       });
-      reportStageHandler.handle.mockResolvedValue({ report });
+      reportStageHandler.handle.mockResolvedValue({ report, usages: [] });
 
       const result = await orchestrator.runPipeline(
         buildRun(),
@@ -220,7 +220,7 @@ describe('BuilderPipelineOrchestrator', () => {
         qualityFindings: {},
         usages: [],
       });
-      reportStageHandler.handle.mockResolvedValue({ report: {} });
+      reportStageHandler.handle.mockResolvedValue({ report: {}, usages: [] });
 
       const result = await orchestrator.runPipeline(
         buildRun(),
@@ -288,7 +288,7 @@ describe('BuilderPipelineOrchestrator', () => {
         qualityFindings: {},
         usages: [],
       });
-      reportStageHandler.handle.mockResolvedValue({ report: {} });
+      reportStageHandler.handle.mockResolvedValue({ report: {}, usages: [] });
 
       await orchestrator.runPipeline(buildRun(), delivery);
 
@@ -333,7 +333,7 @@ describe('BuilderPipelineOrchestrator', () => {
         qualityFindings: {},
         usages: [],
       });
-      reportStageHandler.handle.mockResolvedValue({ report: {} });
+      reportStageHandler.handle.mockResolvedValue({ report: {}, usages: [] });
 
       await orchestrator.runPipeline(buildRun(), buildDelivery());
 
@@ -404,7 +404,7 @@ describe('BuilderPipelineOrchestrator', () => {
         qualityFindings: {},
         usages: [],
       });
-      reportStageHandler.handle.mockResolvedValue({ report: {} });
+      reportStageHandler.handle.mockResolvedValue({ report: {}, usages: [] });
 
       await orchestrator.runPipeline(buildRun(), buildDelivery());
 

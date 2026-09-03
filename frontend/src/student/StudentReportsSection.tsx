@@ -25,15 +25,16 @@ import type { DeliveryEntity } from "../features/deliveries/types";
 import { getErrorMessage } from "../shared/utils/errors";
 import { useWorkspaceSelection } from "../shared/workspace/WorkspaceContext";
 import { EvaluationProgressCard } from "./components/EvaluationProgressCard";
-import { StudentSurface, StudentSurfaceHeader } from "./components/StudentWorkspaceSurface";
+import {
+  StudentSurface,
+  StudentSurfaceHeader,
+} from "./components/StudentWorkspaceSurface";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import { DeliveryOutcomeBadge } from "../deliveries/components/DeliveryOutcomeBadge";
 import { resolveStudentRunOutcome } from "./studentWorkspaceInsights";
 import { ReportView } from "../reporting/components/ReportView";
 
-function computeMedianDurationMs(
-  runs: BuildRunEntity[],
-): number | null {
+function computeMedianDurationMs(runs: BuildRunEntity[]): number | null {
   const durations = runs
     .map((run) => {
       if (!run.startedAt || !run.finishedAt) {
@@ -83,10 +84,7 @@ function GradeTimeline({ deliveries }: { deliveries: DeliveryEntity[] }) {
           const grade = delivery.grade as number;
           const heightPct = Math.max(12, Math.round((grade / 10) * 100));
           const isLatest = index === graded.length - 1;
-          const color =
-            grade >= 5
-              ? "bg-success-400"
-              : "bg-danger";
+          const color = grade >= 5 ? "bg-success-400" : "bg-danger";
 
           return (
             <div
@@ -172,7 +170,7 @@ function ReportContainer({
   }, [delivery.id, hasLoaded, isOpen]);
 
   const outcome = resolveStudentRunOutcome(run ?? summaryRun);
-  const coaching = run?.report?.coaching ?? summaryRun?.report?.coaching ?? null;
+  const reportSummary = run?.reportSummary ?? summaryRun?.reportSummary ?? null;
 
   return (
     <div className="overflow-hidden rounded-lg border border-app-border bg-app-surface">
@@ -189,7 +187,10 @@ function ReportContainer({
               <h4 className="text-lg font-semibold text-app-text">
                 Entrega v{delivery.version}
               </h4>
-              <DeliveryOutcomeBadge delivery={delivery} summaryRun={summaryRun} />
+              <DeliveryOutcomeBadge
+                delivery={delivery}
+                summaryRun={summaryRun}
+              />
               {delivery.isLate ? (
                 <StatusBadge tone="warning">Fuera de plazo</StatusBadge>
               ) : null}
@@ -199,8 +200,8 @@ function ReportContainer({
               {new Date(delivery.createdAt).toLocaleString("es-ES")}
             </div>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-app-text-secondary">
-              {coaching
-                ? coaching.passReadiness === "BLOCKED"
+              {reportSummary?.hasReport
+                ? reportSummary.passReadiness === "BLOCKED"
                   ? "El informe detecta bloqueos claros antes de poder pasar. Abre el expediente para ver coaching, evidencia y checklist."
                   : "La entrega ya supera lo esencial y el informe se centra en mejoras de calidad, mantenibilidad y rubric compliance."
                 : summaryRun
@@ -212,7 +213,11 @@ function ReportContainer({
           </div>
         </div>
         <div className="shrink-0 pt-1 text-app-text-muted">
-          {isOpen ? <RiArrowUpSLine className="text-2xl" /> : <RiArrowDownSLine className="text-2xl" />}
+          {isOpen ? (
+            <RiArrowUpSLine className="text-2xl" />
+          ) : (
+            <RiArrowDownSLine className="text-2xl" />
+          )}
         </div>
       </button>
 
@@ -222,7 +227,9 @@ function ReportContainer({
             <article className="rounded-lg border border-app-border bg-app-surface p-4">
               <div className="ui-label">Estado de entrega</div>
               <div className="mt-3 text-sm font-semibold text-app-text">
-                {delivery.isLate ? "Registrada fuera de plazo" : "Registrada dentro de plazo"}
+                {delivery.isLate
+                  ? "Registrada fuera de plazo"
+                  : "Registrada dentro de plazo"}
               </div>
               <p className="mt-2 text-sm leading-6 text-app-text-secondary">
                 {delivery.isLate
@@ -240,8 +247,10 @@ function ReportContainer({
             <article className="rounded-lg border border-app-border bg-app-surface p-4">
               <div className="ui-label">Trayectoria de la versión</div>
               <p className="mt-3 text-sm leading-6 text-app-text-secondary">
-                {coaching
-                  ? `${coaching.mustFix.length} bloqueo(s), ${coaching.shouldImprove.length} mejora(s) y ${coaching.strengths.length} fortaleza(s) detectadas.`
+                {reportSummary?.hasReport
+                  ? reportSummary.passReadiness === "BLOCKED"
+                    ? "El informe contiene bloqueos y acciones prioritarias."
+                    : "El informe contiene mejoras opcionales y evidencia del resultado."
                   : summaryRun
                     ? "Existe un run técnico asociado listo para abrir."
                     : "Aún no hay run técnico completo para esta entrega."}
@@ -274,7 +283,11 @@ function ReportContainer({
               Esta entrega aún no tiene un informe técnico disponible.
             </div>
           ) : (
-            <ReportView run={run} deliveryVersion={delivery.version} mode="student" />
+            <ReportView
+              run={run}
+              deliveryVersion={delivery.version}
+              mode="student"
+            />
           )}
         </div>
       ) : null}
@@ -284,7 +297,8 @@ function ReportContainer({
 
 export function StudentReportsSection({ data }: Props): JSX.Element {
   const { selection } = useWorkspaceSelection();
-  const { assignments, deliveries, latestRunByDeliveryId, loading, error } = data;
+  const { assignments, deliveries, latestRunByDeliveryId, loading, error } =
+    data;
   const [displayLimit, setDisplayLimit] = useState(10);
 
   // Group and sort deliveries
@@ -292,7 +306,8 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
     () =>
       [...deliveries].sort(
         (left, right) =>
-          new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+          new Date(right.createdAt).getTime() -
+          new Date(left.createdAt).getTime(),
       ),
     [deliveries],
   );
@@ -300,25 +315,31 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
   // Extract unique projects from assignments and deliveries
   const projects = useMemo(() => {
     const map = new Map<string, { id: string; title: string }>();
-    
+
     // 1. Load from assigned projects
     assignments.forEach((asg) => {
       map.set(asg.projectId, { id: asg.projectId, title: asg.projectTitle });
     });
-    
+
     // 2. Load from deliveries (fallback)
     deliveries.forEach((d) => {
       if (d.projectId && !map.has(d.projectId)) {
-        map.set(d.projectId, { id: d.projectId, title: d.projectTitle || "Proyecto sin título" });
+        map.set(d.projectId, {
+          id: d.projectId,
+          title: d.projectTitle || "Proyecto sin título",
+        });
       }
     });
-    
+
     return Array.from(map.values());
   }, [assignments, deliveries]);
 
   // Selected project state
-  const defaultProjectId = sortedDeliveries[0]?.projectId ?? assignments[0]?.projectId;
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(defaultProjectId);
+  const defaultProjectId =
+    sortedDeliveries[0]?.projectId ?? assignments[0]?.projectId;
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    defaultProjectId,
+  );
 
   // Update selected project when workspace selection changes
   useEffect(() => {
@@ -335,9 +356,11 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
 
   const activeEvaluationRun = useMemo(() => {
     if (!selectedProjectId) return null;
-    return filteredDeliveries
-      .map((delivery) => latestRunByDeliveryId[delivery.id] ?? null)
-      .find((run) => Boolean(run && !run.isTerminal)) ?? null;
+    return (
+      filteredDeliveries
+        .map((delivery) => latestRunByDeliveryId[delivery.id] ?? null)
+        .find((run) => Boolean(run && !run.isTerminal)) ?? null
+    );
   }, [filteredDeliveries, latestRunByDeliveryId, selectedProjectId]);
 
   // Compute stats and insights for selected project
@@ -350,16 +373,19 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
         pendingEvaluations: 0,
       };
     }
-    
+
     const projectDeliveries = filteredDeliveries;
     const reportsReady = projectDeliveries.filter((d) => {
       const run = latestRunByDeliveryId[d.id];
       return run && run.status === "SUCCESS";
     }).length;
-    
+
     const blockedReports = projectDeliveries.filter((d) => {
       const run = latestRunByDeliveryId[d.id];
-      return run && run.report?.coaching?.passReadiness === "BLOCKED";
+      return (
+        run?.reportSummary.hasReport &&
+        run.reportSummary.passReadiness === "BLOCKED"
+      );
     }).length;
 
     const gradedDeliveries = projectDeliveries.filter((d) => d.grade !== null);
@@ -383,7 +409,8 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
       .slice(0, 10),
   );
 
-  const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
+  const selectedProject =
+    projects.find((p) => p.id === selectedProjectId) ?? null;
 
   if (loading) {
     return (
@@ -410,7 +437,9 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
   if (projects.length === 0) {
     return (
       <EmptyState
-        icon={<RiInboxArchiveLine className="text-4xl text-app-text-muted/40" />}
+        icon={
+          <RiInboxArchiveLine className="text-4xl text-app-text-muted/40" />
+        }
         title="Aún no hay informes"
         description="Cuando registres tu primera entrega, esta vista reunirá el historial técnico, las observaciones docentes y el coaching para la siguiente versión."
       />
@@ -423,16 +452,18 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
     <div className="space-y-6">
       {/* 1. Project Selector Section */}
       <div className="rounded-lg border border-app-border bg-app-surface p-6">
-        <h3 className="ui-label mb-4">
-          Selecciona un Proyecto
-        </h3>
+        <h3 className="ui-label mb-4">Selecciona un Proyecto</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => {
             const isSelected = selectedProjectId === project.id;
-            const projectDeliveries = sortedDeliveries.filter((d) => d.projectId === project.id);
+            const projectDeliveries = sortedDeliveries.filter(
+              (d) => d.projectId === project.id,
+            );
             const latestDelivery = projectDeliveries[0] ?? null;
-            const latestRun = latestDelivery ? (latestRunByDeliveryId[latestDelivery.id] ?? null) : null;
-            
+            const latestRun = latestDelivery
+              ? (latestRunByDeliveryId[latestDelivery.id] ?? null)
+              : null;
+
             return (
               <button
                 key={project.id}
@@ -454,9 +485,11 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
                 />
 
                 <div className="pl-2">
-                  <h4 className={`text-sm font-semibold text-app-text ${
-                    isSelected ? "text-primary" : ""
-                  }`}>
+                  <h4
+                    className={`text-sm font-semibold text-app-text ${
+                      isSelected ? "text-primary" : ""
+                    }`}
+                  >
                     {project.title}
                   </h4>
 
@@ -468,7 +501,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
                           ? "1 entrega"
                           : `${projectDeliveries.length} entregas`}
                     </span>
-                    
+
                     {latestDelivery && (
                       <DeliveryOutcomeBadge
                         delivery={latestDelivery}
@@ -497,7 +530,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
                 </Button>
               }
             />
-            
+
             <div className="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
               <MetricCard
                 label="Entregas"
@@ -511,7 +544,11 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
                 value={currentProjectInsights.reportsReady}
                 helper={`${currentProjectInsights.blockedReports} con bloqueos`}
                 icon={<RiFileTextLine />}
-                variant={currentProjectInsights.blockedReports > 0 ? "warning" : "success"}
+                variant={
+                  currentProjectInsights.blockedReports > 0
+                    ? "warning"
+                    : "success"
+                }
               />
               <MetricCard
                 label="Notas oficiales"
@@ -522,14 +559,22 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
                     : "Sin nota oficial aún"
                 }
                 icon={<RiLineChartLine />}
-                variant={filteredDeliveries.find((d) => d.grade !== null) ? "success" : "default"}
+                variant={
+                  filteredDeliveries.find((d) => d.grade !== null)
+                    ? "success"
+                    : "default"
+                }
               />
               <MetricCard
                 label="Pendientes"
                 value={currentProjectInsights.pendingEvaluations}
                 helper="Runs aún en seguimiento"
                 icon={<RiFileList3Line />}
-                variant={currentProjectInsights.pendingEvaluations > 0 ? "info" : "default"}
+                variant={
+                  currentProjectInsights.pendingEvaluations > 0
+                    ? "info"
+                    : "default"
+                }
               />
             </div>
           </StudentSurface>
@@ -549,20 +594,28 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
             {filteredDeliveries.length === 0 ? (
               <div className="rounded-lg border border-dashed border-app-border bg-app-surface px-6 py-12 text-center text-app-text-muted">
                 <RiInboxArchiveLine className="mx-auto text-4xl opacity-30 mb-2" />
-                <p className="text-sm font-semibold">No se han registrado entregas para este proyecto.</p>
-                <p className="text-xs opacity-75 mt-1">Utiliza el espacio de trabajo para subir tu código e iniciar la evaluación del sandbox.</p>
+                <p className="text-sm font-semibold">
+                  No se han registrado entregas para este proyecto.
+                </p>
+                <p className="text-xs opacity-75 mt-1">
+                  Utiliza el espacio de trabajo para subir tu código e iniciar
+                  la evaluación del sandbox.
+                </p>
               </div>
             ) : (
-              filteredDeliveries.slice(0, displayLimit).map((delivery) => (
-                <ReportContainer
-                  key={delivery.id}
-                  delivery={delivery}
-                  summaryRun={latestRunByDeliveryId[delivery.id] ?? null}
-                  defaultOpen={
-                    selection.deliveryId === delivery.id || filteredDeliveries.length === 1
-                  }
-                />
-              ))
+              filteredDeliveries
+                .slice(0, displayLimit)
+                .map((delivery) => (
+                  <ReportContainer
+                    key={delivery.id}
+                    delivery={delivery}
+                    summaryRun={latestRunByDeliveryId[delivery.id] ?? null}
+                    defaultOpen={
+                      selection.deliveryId === delivery.id ||
+                      filteredDeliveries.length === 1
+                    }
+                  />
+                ))
             )}
           </div>
 

@@ -12,7 +12,7 @@ import { BuilderHallucinationGuard } from '../evaluation/builder-hallucination-g
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import {
   AssignmentContext,
-  BuilderEvaluationContractV2,
+  BuilderEvaluationContractV3,
   BuilderExecutionResult,
   BuilderFactsContractV2,
   BuilderPlanContractV2,
@@ -34,7 +34,7 @@ interface EvaluationStageInput {
 }
 
 interface EvaluationStageOutput {
-  assessment: BuilderEvaluationContractV2;
+  assessment: BuilderEvaluationContractV3;
   usages: BuilderStageTokenUsage[];
 }
 

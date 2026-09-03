@@ -19,7 +19,7 @@ const insecureJwtPlaceholders = [
 ] as const;
 
 /**
- * Las cinco etapas reales del pipeline LLM del builder (ver
+ * Las seis etapas reales del pipeline LLM del builder (ver
  * `builder-llm-roles.ts`). Fuente única para las claves
  * `BUILDER_BEDROCK_<STAGE>_MODEL_ID` — listarlas a mano aquí dejó fuera
  * `FACTS` durante un tiempo, silenciosamente degradando esa etapa
@@ -30,6 +30,7 @@ const BUILDER_LLM_PROMPT_STAGES = [
   'FACTS',
   'EVALUATION',
   'QUALITY',
+  'REPORTING',
   'CHAT',
 ] as const;
 
@@ -42,6 +43,7 @@ const BUILDER_BEDROCK_STAGE_MODEL_DEFAULTS: Record<
   FACTS: 'anthropic.claude-3-5-haiku-20241022-v1:0',
   EVALUATION: 'anthropic.claude-sonnet-4-20250514-v1:0',
   QUALITY: 'anthropic.claude-sonnet-4-20250514-v1:0',
+  REPORTING: 'anthropic.claude-sonnet-4-20250514-v1:0',
   CHAT: 'anthropic.claude-sonnet-4-20250514-v1:0',
 };
 
@@ -167,6 +169,10 @@ export const envValidationSchema = Joi.object({
     .integer()
     .min(2000)
     .default(30000),
+  BUILDER_LLM_REPORTING_MAX_INPUT_CHARS: Joi.number()
+    .integer()
+    .min(2000)
+    .default(16000),
   BUILDER_DOCKER_BUILD_TIMEOUT_MS: Joi.number()
     .integer()
     .min(10000)

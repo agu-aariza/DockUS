@@ -8,7 +8,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   BuilderCodeQualityContractV2,
   BuilderLlmStagePromptSnapshot,
-  BuilderLlmContractV2,
   BuilderLlmStageTrace,
   BuilderCodeQualityPromptSnapshot,
   BuilderCodeQualityTrace,
@@ -70,7 +69,9 @@ export class BuilderArtifactPersister {
         ? BuildRunArtifactType.LLM_PLAN_PROMPT
         : snapshot.stage === 'facts'
           ? BuildRunArtifactType.LLM_FACTS_PROMPT
-          : BuildRunArtifactType.LLM_EVAL_PROMPT;
+          : snapshot.stage === 'reporting'
+            ? BuildRunArtifactType.LLM_REPORT_PROMPT
+            : BuildRunArtifactType.LLM_EVAL_PROMPT;
     const promptId = snapshot.promptId ?? `${snapshot.stage}-legacy`;
     const model = snapshot.model;
     const modelProfile = snapshot.modelProfile;
@@ -149,7 +150,7 @@ export class BuilderArtifactPersister {
     );
   }
 
-  async persistStageTraceArtifacts<TContract extends BuilderLlmContractV2>(
+  async persistStageTraceArtifacts<TContract>(
     buildRunId: string,
     trace: BuilderLlmStageTrace<TContract>,
   ): Promise<void> {
@@ -166,11 +167,17 @@ export class BuilderArtifactPersister {
               parsed: BuildRunArtifactType.LLM_FACTS_PARSED,
               error: BuildRunArtifactType.LLM_FACTS_ERROR,
             }
-          : {
-              raw: BuildRunArtifactType.LLM_EVAL_RAW_RESPONSE,
-              parsed: BuildRunArtifactType.LLM_EVAL_PARSED,
-              error: BuildRunArtifactType.LLM_EVAL_ERROR,
-            };
+          : trace.stage === 'reporting'
+            ? {
+                raw: BuildRunArtifactType.LLM_REPORT_RAW_RESPONSE,
+                parsed: BuildRunArtifactType.LLM_REPORT_PARSED,
+                error: BuildRunArtifactType.LLM_REPORT_ERROR,
+              }
+            : {
+                raw: BuildRunArtifactType.LLM_EVAL_RAW_RESPONSE,
+                parsed: BuildRunArtifactType.LLM_EVAL_PARSED,
+                error: BuildRunArtifactType.LLM_EVAL_ERROR,
+              };
 
     if (trace.rawResponse !== null) {
       await this.persistTextArtifact(

@@ -16,7 +16,7 @@ import {
 } from '../../domain/entities/build-run.entity';
 import {
   BuilderCodeQualityContractV2,
-  BuilderEvaluationContractV2,
+  BuilderEvaluationContractV3,
   BuilderExecutionResult,
   BuilderPlanContractV2,
   BuilderReportEntity,
@@ -50,7 +50,7 @@ export interface ExecuteBuildRunJobData {
 
 export interface BuilderPipelineResult {
   planAssessment: BuilderPlanContractV2;
-  assessment: BuilderEvaluationContractV2;
+  assessment: BuilderEvaluationContractV3;
   qualityFindings: BuilderCodeQualityContractV2;
   report: BuilderReportEntity;
   execution: BuilderExecutionResult;

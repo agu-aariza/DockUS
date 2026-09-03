@@ -5,7 +5,6 @@
  */
 
 import type { BuildRunEntity } from "../features/builder/types";
-import { CoachingSummary } from "../reporting/components/CoachingSummary";
 
 interface SubmissionCoachingPreviewProps {
   run: BuildRunEntity;
@@ -16,18 +15,18 @@ export function SubmissionCoachingPreview({
   run,
   remainingDeliveries,
 }: SubmissionCoachingPreviewProps): JSX.Element | null {
-  const coaching = run.report?.coaching;
-  if (!coaching) {
+  const summary = run.reportSummary;
+  if (!summary.hasReport) {
     return null;
   }
 
   return (
     <div className="space-y-3">
-      <CoachingSummary
-        coaching={coaching}
-        variant="compact"
-        runtimeFamily={run.llmAssessment?.runtime?.family}
-      />
+      <div className="rounded-lg border border-app-border bg-app-surface p-4 text-sm text-app-text-secondary">
+        {summary.passReadiness === "BLOCKED"
+          ? "El informe detecta bloqueos. Ábrelo para ver la evidencia y las acciones prioritarias."
+          : "El informe está listo y contiene mejoras opcionales para la siguiente versión."}
+      </div>
       {remainingDeliveries <= 0 ? (
         <div className="rounded-lg border border-app-border bg-app-bg-subtle px-4 py-3 text-sm text-app-text-secondary">
           Ya no quedan intentos para reenviar esta practica, pero puedes usar

@@ -34,7 +34,7 @@ export function TeacherReviewSummary({
       : null;
   const needsOfficialGrade =
     delivery.status === "EVALUATED" && officialGrade === null;
-  const technicalState = latestRun?.report?.overallOutcome ?? "UNKNOWN";
+  const technicalState = latestRun?.reportSummary.overallOutcome ?? "UNKNOWN";
 
   return (
     <div className="space-y-4">

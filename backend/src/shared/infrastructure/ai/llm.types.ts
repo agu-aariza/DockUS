@@ -11,7 +11,7 @@
  * infraestructura; al ser tipos puros, no introducen dependencias en runtime.
  */
 export type BuilderLlmPromptStage =
-  'plan' | 'facts' | 'evaluation' | 'quality' | 'chat';
+  'plan' | 'facts' | 'evaluation' | 'quality' | 'reporting' | 'chat';
 
 /** Proveedores de inferencia soportados por el router de generación. */
 export const LLM_PROVIDER_IDS = [

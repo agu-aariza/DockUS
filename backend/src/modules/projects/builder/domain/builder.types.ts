@@ -22,6 +22,11 @@ export type { BuilderRuntimeFamily };
 
 export const BUILDER_LLM_SCHEMA_VERSION = 'builder-llm/v2' as const;
 export type BuilderLlmSchemaVersion = typeof BUILDER_LLM_SCHEMA_VERSION;
+export const BUILDER_EVALUATION_SCHEMA_VERSION =
+  'builder-evaluation/v3' as const;
+export const BUILDER_REPORT_COPY_SCHEMA_VERSION =
+  'builder-report-copy/v1' as const;
+export const BUILDER_REPORT_SCHEMA_VERSION = 'builder-report/v3' as const;
 
 export const BUILDER_LLM_STAGES = ['plan', 'facts', 'evaluation'] as const;
 export type BuilderLlmStage = (typeof BUILDER_LLM_STAGES)[number];
@@ -177,6 +182,58 @@ export interface BuilderEvaluationContractV2 extends BuilderLlmContractV2Base {
   teacherSummary: string;
 }
 
+export type BuilderCriterionStatus =
+  'ACHIEVED' | 'PARTIAL' | 'NOT_ACHIEVED' | 'NOT_ASSESSED';
+
+export interface BuilderCriterionAssessmentV3 extends RubricGradeItem {
+  /** Identificador determinista asignado por backend; el modelo nunca lo emite. */
+  id: string;
+  status: BuilderCriterionStatus;
+  evidenceIds: string[];
+}
+
+export interface BuilderEvaluationEvidenceV3 {
+  /** Identificador determinista asignado por backend. */
+  id: string;
+  kind: 'execution' | 'source' | 'rubric';
+  summary: string;
+  detail: string;
+  /** La visibilidad es política del backend, no una decisión de la IA. */
+  visibility: 'student' | 'teacher';
+}
+
+export interface BuilderEvaluationFindingV3 {
+  /** Identificador determinista asignado por backend. */
+  id: string;
+  severity: FindingSeverity;
+  title: string;
+  explanation: string;
+  recommendation: string;
+  blocking: boolean;
+  evidenceIds: string[];
+  file?: string;
+  line?: number;
+}
+
+/**
+ * Evaluación canónica v3. Mantiene la taxonomía operativa de v2 para no
+ * romper compilación/quality, pero elimina por completo la redacción por
+ * audiencia: esa responsabilidad pertenece a `reporting`.
+ */
+export type BuilderEvaluationContractV3 = Omit<
+  BuilderEvaluationContractV2,
+  'schemaVersion' | 'studentSummary' | 'teacherSummary' | 'gradeBreakdown'
+> & {
+  schemaVersion: typeof BUILDER_EVALUATION_SCHEMA_VERSION;
+  criteria: BuilderCriterionAssessmentV3[];
+  evidence: BuilderEvaluationEvidenceV3[];
+  findings: BuilderEvaluationFindingV3[];
+  limitations: string[];
+  reviewFlags: string[];
+  /** Alias estructurado temporal para los consumidores de quality/grading. */
+  gradeBreakdown: BuilderCriterionAssessmentV3[];
+};
+
 export interface BuilderFactsContractV2 {
   schemaVersion: BuilderLlmSchemaVersion;
   stage: 'facts';
@@ -194,6 +251,30 @@ export interface BuilderFactsContractV2 {
 
 export type BuilderLlmContractV2 =
   BuilderPlanContractV2 | BuilderFactsContractV2 | BuilderEvaluationContractV2;
+
+export interface BuilderStudentNarrativeV1 {
+  headline: string;
+  achievements: string[];
+  gaps: string[];
+  conceptBridges: string[];
+  nextSteps: string[];
+}
+
+export interface BuilderTeacherNarrativeV1 {
+  executiveSummary: string;
+  strengths: string[];
+  concerns: string[];
+  followUp: string[];
+  reviewQuestions: string[];
+}
+
+/** Contrato de copy: deliberadamente no contiene estados ni puntuaciones. */
+export interface BuilderReportCopyContractV1 {
+  schemaVersion: typeof BUILDER_REPORT_COPY_SCHEMA_VERSION;
+  stage: 'reporting';
+  studentNarrative: BuilderStudentNarrativeV1;
+  teacherNarrative: BuilderTeacherNarrativeV1;
+}
 
 export interface BuilderLlmStagePromptSnapshot {
   stage: BuilderLlmPromptStage;
@@ -338,6 +419,14 @@ export interface BuilderReportCoaching {
 }
 
 export interface BuilderReportEntity {
+  schemaVersion?: typeof BUILDER_REPORT_SCHEMA_VERSION;
+  evaluation?: BuilderEvaluationContractV3;
+  copy?: BuilderReportCopyContractV1;
+  reporting?: {
+    usedFallback: boolean;
+    errorCode: string | null;
+    generatedAt: string;
+  };
   readableText?: string;
   llmRecommendations?: string[];
   overallOutcome?: BuilderOutcome;

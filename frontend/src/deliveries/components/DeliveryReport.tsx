@@ -20,13 +20,18 @@ export function DeliveryReport({
   reportLoading,
   selectedDeliveryReviewNotes,
   onHandleViewReport,
+  onUseAiGrade,
 }: {
   selectedDelivery: DeliveryEntity;
   reportRun: BuildRunEntity | null;
   reportDeliveryVersion: number | undefined;
   reportLoading: boolean;
-  selectedDeliveryReviewNotes: { manualNotes?: string | null; legacyBlocks?: string[] };
+  selectedDeliveryReviewNotes: {
+    manualNotes?: string | null;
+    legacyBlocks?: string[];
+  };
   onHandleViewReport: (_id?: string, _options?: { force?: boolean }) => void;
+  onUseAiGrade: (_grade: number) => void;
 }) {
   const { selection } = useWorkspaceSelection();
   const selectedDeliveryId = selection.deliveryId;
@@ -39,7 +44,8 @@ export function DeliveryReport({
             Dictamen de Evaluación Técnica
           </h4>
           <p className="mt-1 text-sm leading-6 text-app-text-secondary">
-            Se carga desde el último run disponible de la entrega y convive aquí con el contexto de corrección.
+            Se carga desde el último run disponible de la entrega y convive aquí
+            con el contexto de corrección.
           </p>
         </div>
         <Button
@@ -72,6 +78,7 @@ export function DeliveryReport({
             run={reportRun}
             deliveryVersion={reportDeliveryVersion}
             mode="teacher"
+            onUseAiGrade={onUseAiGrade}
           />
         ) : (
           <EmptyState

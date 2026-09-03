@@ -68,6 +68,17 @@ export class UpdateDeliveryGradingDto {
   grade?: number | null;
 
   @ApiPropertyOptional({
+    example: 8.75,
+    description:
+      'Propuesta IA aplicada desde la interfaz; solo se usa para métricas de adopción y no altera la evaluación canónica.',
+  })
+  @IsNumber({}, { message: 'La propuesta IA debe ser un número válido.' })
+  @Min(0)
+  @Max(10)
+  @IsOptional()
+  aiProposedGrade?: number;
+
+  @ApiPropertyOptional({
     example: 'Buen trabajo general; revisa la validación de entradas.',
     description: 'Observaciones manuales del profesorado sobre la entrega.',
     maxLength: 4000,

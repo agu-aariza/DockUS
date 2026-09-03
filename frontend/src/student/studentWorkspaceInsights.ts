@@ -22,10 +22,8 @@ interface StudentWorkspaceInsights {
 
 const ACTIVE_BUILD_STATUSES = new Set(["QUEUED", "RUNNING"]);
 
-function hasTechnicalReport(
-  run: BuildRunEntity | null | undefined,
-): boolean {
-  return Boolean(run?.report || run?.llmAssessment);
+function hasTechnicalReport(run: BuildRunEntity | null | undefined): boolean {
+  return Boolean(run?.reportSummary.hasReport);
 }
 
 export function resolveStudentRunOutcome(
@@ -35,8 +33,8 @@ export function resolveStudentRunOutcome(
     return null;
   }
 
-  if (run.report?.overallOutcome) {
-    return run.report.overallOutcome;
+  if (run.reportSummary.overallOutcome) {
+    return run.reportSummary.overallOutcome;
   }
 
   if (run.status === "SUCCESS") {
@@ -69,11 +67,17 @@ export function deriveStudentWorkspaceInsights(
 
     if (run && ACTIVE_BUILD_STATUSES.has(run.status)) {
       pendingEvaluations += 1;
-    } else if (!run && (delivery.status === "SUBMITTED" || delivery.status === "IN_REVIEW")) {
+    } else if (
+      !run &&
+      (delivery.status === "SUBMITTED" || delivery.status === "IN_REVIEW")
+    ) {
       pendingEvaluations += 1;
     }
 
-    if (run?.report?.coaching?.passReadiness === "BLOCKED") {
+    if (
+      run?.reportSummary.hasReport &&
+      run.reportSummary.passReadiness === "BLOCKED"
+    ) {
       blockedReports += 1;
     }
 
@@ -86,13 +90,17 @@ export function deriveStudentWorkspaceInsights(
     deliveries.find((delivery) => delivery.grade !== null)?.grade ?? null;
 
   return {
-    activeAssignments: assignments.filter((assignment) => !assignment.revokedAt).length,
-    revokedAssignments: assignments.filter((assignment) => Boolean(assignment.revokedAt)).length,
+    activeAssignments: assignments.filter((assignment) => !assignment.revokedAt)
+      .length,
+    revokedAssignments: assignments.filter((assignment) =>
+      Boolean(assignment.revokedAt),
+    ).length,
     totalDeliveries: deliveries.length,
     reportsReady,
     pendingEvaluations,
     blockedReports,
-    officialGrades: deliveries.filter((delivery) => delivery.grade !== null).length,
+    officialGrades: deliveries.filter((delivery) => delivery.grade !== null)
+      .length,
     latestGrade,
     passedRuns,
   };

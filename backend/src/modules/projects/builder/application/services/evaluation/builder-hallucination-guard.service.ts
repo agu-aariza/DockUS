@@ -7,6 +7,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   BuilderEvaluationContractV2,
+  BuilderEvaluationContractV3,
   BuilderExecutionResult,
 } from '../../../domain/builder.types';
 
@@ -24,7 +25,7 @@ export class BuilderHallucinationGuard {
    * tipado, `stdout`/`stderr` ya vienen separados.
    */
   detectOutputHallucination(
-    assessment: BuilderEvaluationContractV2,
+    assessment: BuilderEvaluationContractV2 | BuilderEvaluationContractV3,
     execution: BuilderExecutionResult,
     expectedOutput: string | null,
   ): string | null {

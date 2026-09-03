@@ -10,6 +10,7 @@ import {
   AssignmentContext,
   BuilderCodeQualityContractV2,
   BuilderEvaluationContractV2,
+  BuilderEvaluationContractV3,
   BuilderExecutionResult,
   BuilderLlmStagePromptSnapshot,
   BuilderLlmStageTrace,
@@ -35,7 +36,7 @@ interface CodeQualityInput {
   sourceCodePayload: string;
   execution: BuilderExecutionResult;
   assignmentContext: AssignmentContext;
-  assessment: BuilderEvaluationContractV2;
+  assessment: BuilderEvaluationContractV2 | BuilderEvaluationContractV3;
 }
 
 type BuilderCodeQualityPromptSnapshot = BuilderLlmStagePromptSnapshot;

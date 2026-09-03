@@ -6,7 +6,10 @@
 
 import { http } from "../../shared/api/http";
 import { toParams } from "../../shared/api/query-params";
-import type { DeliveryEntity, DeliveryStatus } from "../../features/deliveries/types";
+import type {
+  DeliveryEntity,
+  DeliveryStatus,
+} from "../../features/deliveries/types";
 import type { PaginatedResponse } from "../../shared/types";
 
 export const deliveriesApi = {
@@ -74,6 +77,7 @@ export const deliveriesApi = {
     payload: Partial<{
       grade: number | null;
       graderNotes: string;
+      aiProposedGrade: number;
     }>,
   ): Promise<DeliveryEntity> {
     const { data } = await http.patch<DeliveryEntity>(

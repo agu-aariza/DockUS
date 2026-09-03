@@ -15,6 +15,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
@@ -43,6 +44,8 @@ import { DeliveryStatusService } from './delivery-status.service';
 
 @Injectable()
 export class DeliveriesCommandService {
+  private readonly logger = new Logger(DeliveriesCommandService.name);
+
   constructor(
     @Inject(DELIVERY_REPOSITORY)
     private readonly deliveriesRepository: IDeliveryRepository,
@@ -205,6 +208,22 @@ export class DeliveriesCommandService {
     }
 
     const saved = await this.deliveriesRepository.save(delivery);
+    if (dto.aiProposedGrade !== undefined && dto.grade !== undefined) {
+      const modified =
+        dto.grade === null ||
+        Math.abs(dto.grade - dto.aiProposedGrade) > Number.EPSILON;
+      this.logger.log(
+        JSON.stringify({
+          event: 'builder_ai_grade_adoption',
+          deliveryId: saved.id,
+          actorId: actor.userId,
+          adoptedWithoutModification: !modified,
+          modifiedAfterAdoption: modified,
+          proposedGrade: dto.aiProposedGrade,
+          officialGrade: dto.grade,
+        }),
+      );
+    }
     const enriched = await this.deliveriesQueryService.findEntityById(
       saved.id,
       actor,

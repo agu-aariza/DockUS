@@ -1,562 +1,70 @@
-/**
- * @fileoverview Vista de informes Builder de EduCodeAI (ReportView).
- *
- * @module ReportView
- */
-
-import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { builderApi } from "../../builder/api/builderApi";
-import { queryKeys } from "../../shared/query/queryKeys";
-import type { BuilderReportEntity, BuilderRuntimeFamily, BuildRunEntity, TechnicalFeedbackItem } from "../../features/builder/types";
-import {
-  RiAlarmWarningLine,
-  RiCheckLine,
-  RiCloseLine,
-  RiCodeSSlashLine,
-  RiDashboardLine,
-  RiFileList3Line,
-  RiInformationLine,
-  RiLightbulbFlashLine,
-  RiPrinterLine,
-  RiShieldCheckLine,
-  RiSparklingLine,
-  RiTerminalBoxLine,
-} from "react-icons/ri";
-
-import { AssessmentContextSummary } from "./AssessmentContextSummary";
-import { CoachingSummary } from "./CoachingSummary";
-import { GlossaryTerm } from "../../shared/components/Glossary";
-import { GradeBreakdownChart } from "./GradeBreakdownChart";
-import { MarkdownContent } from "../../shared/components/MarkdownContent";
-import { PedagogicalReport } from "./PedagogicalReport";
-import { TeacherHighlights } from "./TeacherHighlights";
-import { TerminalViewer } from "../../shared/components/TerminalViewer";
-import { TutorChatBlock } from "../../builder/components/TutorChatBlock";
-import { normalizeTechnicalFeedbackItem } from "../utils/technicalFeedback";
-import {
-  confidenceLabel,
-  evaluativeStateLabel,
-  structuralTypeLabel,
-} from "../../shared/data/builderTaxonomy";
-import { ReportCard } from "./report/ReportCard";
-import { ReportHeader } from "./report/ReportHeader";
-import { TechnicalFindingCard } from "./report/TechnicalFindingCard";
+import type { BuildRunEntity } from "../../features/builder/types";
+import { getErrorMessage } from "../../shared/utils/errors";
+import { StudentReportView } from "./StudentReportView";
+import { TeacherReportView } from "./TeacherReportView";
 
 interface ReportViewProps {
   run: BuildRunEntity;
   deliveryVersion?: number;
   mode?: "student" | "teacher";
-}
-
-const AXIS_ICON: Record<string, typeof RiShieldCheckLine> = {
-  Seguridad: RiShieldCheckLine,
-  Arquitectura: RiCodeSSlashLine,
-  Calidad: RiSparklingLine,
-  "Calidad y Estilo": RiSparklingLine,
-  "Cumplimiento de rubrica": RiInformationLine,
-  Rubrica: RiInformationLine,
-};
-
-/** Recuento por eje y severidad: lo que el profesor mira antes de abrir nada. */
-function feedbackAxisSummary(feedback: {
-  security: TechnicalFeedbackItem[];
-  architecture: TechnicalFeedbackItem[];
-  quality: TechnicalFeedbackItem[];
-  rubricCompliance: TechnicalFeedbackItem[];
-}): string {
-  const all = [
-    ...feedback.security,
-    ...feedback.architecture,
-    ...feedback.quality,
-    ...feedback.rubricCompliance,
-  ];
-  const high = all.filter((item) => item.severity === "high").length;
-  const counts = [
-    `Seguridad ${feedback.security.length}`,
-    `Arquitectura ${feedback.architecture.length}`,
-    `Calidad ${feedback.quality.length}`,
-    `Rúbrica ${feedback.rubricCompliance.length}`,
-  ].join(" · ");
-
-  return `${all.length} hallazgos (${high} de severidad alta) — ${counts}`;
-}
-
-function FeedbackAxis({
-  title,
-  items,
-  runtimeFamily,
-}: {
-  title: string;
-  items: TechnicalFeedbackItem[];
-  runtimeFamily?: BuilderRuntimeFamily;
-}): JSX.Element | null {
-  if (items.length === 0) {
-    return null;
-  }
-
-  const AxisIcon = AXIS_ICON[title] ?? RiInformationLine;
-  const normalizedItems = items.map((item) => normalizeTechnicalFeedbackItem(item));
-
-  const highItems = normalizedItems.filter((i) => i.severity === "high");
-  const lowerItems = normalizedItems.filter((i) => i.severity !== "high");
-
-  return (
-    <div className="mt-6">
-      <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
-        <AxisIcon className="text-base" aria-hidden="true" />
-        {title}
-      </h4>
-      <div className="space-y-3">
-        {highItems.map((item, index) => (
-          <TechnicalFindingCard
-            key={`high-${item.title}-${index}`}
-            item={item}
-            runtimeFamily={runtimeFamily}
-          />
-        ))}
-        {lowerItems.length > 0 ? (
-          <details className="rounded-xl border border-app-border bg-white">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-500 hover:text-slate-900">
-              {lowerItems.length} observaci{lowerItems.length === 1 ? "ón" : "ones"} de prioridad media/baja
-            </summary>
-            <div className="space-y-3 px-4 pb-4 pt-1">
-              {lowerItems.map((item, index) => (
-                <TechnicalFindingCard
-                  key={`lower-${item.title}-${index}`}
-                  item={item}
-                  runtimeFamily={runtimeFamily}
-                />
-              ))}
-            </div>
-          </details>
-        ) : null}
-      </div>
-    </div>
-  );
+  onUseAiGrade?: (grade: number) => void;
 }
 
 export function ReportView({
   run,
-  deliveryVersion,
   mode = "teacher",
+  onUseAiGrade,
 }: ReportViewProps): JSX.Element {
-  const report: BuilderReportEntity = run.report ?? {};
-  const [techOpen, setTechOpen] = useState(mode === "teacher");
-  const [activeTab, setActiveTab] = useState<"overview" | "coaching" | "technical" | "logs">("overview");
-  const [printOpen, setPrintOpen] = useState<boolean>(false);
-
-  // Reconstruye el log completo drenando todas las páginas de eventos: es una
-  // única operación de cara a la UI (no hay "cargar más"), así que el paginado
-  // vive dentro del queryFn de un useQuery normal, no en useInfiniteQuery.
-  const logsQuery = useQuery({
-    queryKey: queryKeys.builderRuns.logs(run.id),
-    queryFn: async () => {
-      let allEvents: any[] = [];
-      let afterSequence = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const response = await builderApi.listEvents({
-          buildRunId: run.id,
-          afterSequence,
-          limit: 500,
-        });
-
-        allEvents = [...allEvents, ...response.events];
-        afterSequence = response.latestSequence;
-        hasMore = response.hasMore && response.events.length > 0;
-      }
-
-      return allEvents
-        .filter((event) => event.eventType === "LOG_CHUNK")
-        .map((event) =>
-          typeof event.payload?.text === "string" ? event.payload.text : ""
-        )
-        .filter(Boolean)
-        .join("");
-    },
-    enabled: !report.readableText,
+  const reportQuery = useQuery({
+    queryKey: ["builder-report-v3", run.id, mode],
+    queryFn: () => builderApi.report(run.id),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
-  useEffect(() => {
-    if (logsQuery.isError) console.error("Error loading execution logs:", logsQuery.error);
-  }, [logsQuery.isError, logsQuery.error]);
-
-  const logs = report.readableText || (logsQuery.data ?? "");
-  const loadingLogs = !report.readableText && logsQuery.isPending;
-
-  const coaching = report.coaching ?? null;
-  const runtimeFamily = run.llmAssessment?.runtime?.family;
-  const techFeedback = report.technicalFeedback ?? {
-    security: [],
-    architecture: [],
-    quality: [],
-    rubricCompliance: [],
+  const download = async (audience?: "student" | "teacher") => {
+    const blob = await builderApi.exportReport(run.id, audience);
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `informe-${run.id}-${audience ?? mode}.md`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
-  const primarySummary =
-    mode === "student"
-      ? run.llmAssessment?.studentSummary
-      : run.llmAssessment?.teacherSummary;
-  const secondarySummary =
-    mode === "student"
-      ? null
-      : run.llmAssessment?.studentSummary;
-  const hasFeedback =
-    techFeedback.security.length > 0 ||
-    techFeedback.architecture.length > 0 ||
-    techFeedback.quality.length > 0 ||
-    techFeedback.rubricCompliance.length > 0;
 
-  const tabs = [
-    { id: "overview", label: "Resumen y Notas", icon: RiDashboardLine },
-    { id: "coaching", label: "Plan de Acción", icon: RiFileList3Line },
-    { id: "technical", label: "Feedback Técnico", icon: RiCodeSSlashLine },
-    { id: "logs", label: "Logs de Ejecución", icon: RiTerminalBoxLine },
-  ] as const;
+  if (reportQuery.isPending) {
+    return (
+      <div className="rounded-lg border border-app-border bg-app-surface p-10 text-center text-sm text-app-text-muted">
+        Cargando la proyección autorizada del informe…
+      </div>
+    );
+  }
+
+  if (reportQuery.isError) {
+    return (
+      <div className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-sm text-danger-800 dark:text-danger-300">
+        No se pudo cargar el informe: {getErrorMessage(reportQuery.error)}
+      </div>
+    );
+  }
+
+  const report = reportQuery.data;
+  if (report.audience === "student") {
+    return (
+      <StudentReportView
+        report={report}
+        onExport={() => void download("student")}
+      />
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <ReportHeader run={run} deliveryVersion={deliveryVersion} mode={mode} />
-
-      {/* Tabs Navigation */}
-      <div className="flex flex-wrap items-center justify-between border-b border-app-border gap-1">
-        <div className="flex flex-wrap gap-1">
-          {tabs.map((tab) => {
-            const TabIcon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-3 px-4 text-xs font-bold uppercase tracking-wider transition-all duration-200 border-b-2 -mb-[2px] ${
-                  isActive
-                    ? "border-primary text-primary font-bold"
-                    : "border-transparent text-slate-400 hover:text-slate-900 hover:border-app-border"
-                }`}
-              >
-                <TabIcon className="text-base" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        {report.printableMarkdown ? (
-          <button
-            type="button"
-            onClick={() => setPrintOpen(true)}
-            className="flex items-center gap-2 py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-primary transition-colors"
-          >
-            <RiPrinterLine className="text-base" />
-            <span className="hidden sm:inline">Vista de impresión</span>
-          </button>
-        ) : null}
-      </div>
-
-      {/* Tab Panels */}
-      <div className="space-y-6">
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            {mode === "student" && report.pedagogicalNarrative?.length ? (
-              <PedagogicalReport
-                items={report.pedagogicalNarrative}
-                learningObjective={report.learningObjective}
-              />
-            ) : null}
-
-            {mode === "teacher" && report.teacherHighlights ? (
-              <TeacherHighlights highlights={report.teacherHighlights} />
-            ) : null}
-
-            {primarySummary && !(
-              (mode === "student" && report.pedagogicalNarrative?.length) ||
-              (mode === "teacher" && report.teacherHighlights)
-            ) ? (
-              <ReportCard
-                tone="default"
-                title={mode === "student" ? "Resumen pedagógico" : "Resumen docente"}
-                description={
-                  mode === "student"
-                    ? "Qué significa este resultado para tu aprendizaje"
-                    : "Lectura curada para consolidar la revisión"
-                }
-              >
-                {run.llmAssessment?.evaluativeState ? (
-                  <div className="mb-4">
-                    <span className="inline-flex rounded-full border border-app-border bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500">
-                      <GlossaryTerm term={run.llmAssessment.evaluativeState}>
-                        {evaluativeStateLabel(run.llmAssessment.evaluativeState)}
-                      </GlossaryTerm>
-                    </span>
-                  </div>
-                ) : null}
-                <div className="text-slate-500">
-                  <MarkdownContent content={primarySummary} />
-                </div>
-                {secondarySummary ? (
-                  <details className="mt-5 rounded-xl border border-app-border bg-white px-4 py-3">
-                    <summary className="cursor-pointer text-sm font-semibold text-primary">
-                      {mode === "student"
-                        ? "Ver lectura para profesorado"
-                        : "Ver lectura pensada para el alumno"}
-                    </summary>
-                    <div className="mt-3 text-slate-500">
-                      <MarkdownContent content={secondarySummary} />
-                    </div>
-                  </details>
-                ) : null}
-              </ReportCard>
-            ) : null}
-
-            {run.llmAssessment?.gradeBreakdown?.length ? (
-              <GradeBreakdownChart items={run.llmAssessment.gradeBreakdown} />
-            ) : null}
-
-            {mode === "teacher" && run.llmAssessment ? (
-              <ReportCard tone="default" title="Resumen del run">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {[
-                    {
-                      label: "Tipo de proyecto",
-                      term: run.llmAssessment.structuralType,
-                      display: run.llmAssessment.structuralType
-                        ? structuralTypeLabel(run.llmAssessment.structuralType)
-                        : null,
-                    },
-                    {
-                      label: "Estado de la evaluación",
-                      term: run.llmAssessment.evaluativeState,
-                      display: run.llmAssessment.evaluativeState
-                        ? evaluativeStateLabel(run.llmAssessment.evaluativeState)
-                        : null,
-                    },
-                    {
-                      label: "Confianza",
-                      term: undefined,
-                      display: run.llmAssessment.confidence
-                        ? confidenceLabel(run.llmAssessment.confidence)
-                        : null,
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="rounded-xl border border-app-border bg-slate-50 p-4"
-                    >
-                      <span className="text-xs uppercase tracking-wider text-slate-400">
-                        {item.label}
-                      </span>
-                      <div className="mt-1 font-semibold text-slate-900">
-                        {item.display ? (
-                          item.term ? (
-                            <GlossaryTerm term={item.term}>
-                              {item.display}
-                            </GlossaryTerm>
-                          ) : (
-                            item.display
-                          )
-                        ) : (
-                          "—"
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {run.llmAssessment.rationale ? (
-                  <div className="mt-5 rounded-xl border border-app-border bg-slate-50 p-4 text-slate-500">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Rationale
-                    </p>
-                    <div className="mt-3">
-                      <MarkdownContent content={run.llmAssessment.rationale} />
-                    </div>
-                  </div>
-                ) : null}
-                {secondarySummary ? (
-                  <details className="mt-5 rounded-xl border border-app-border bg-white px-4 py-3">
-                    <summary className="cursor-pointer text-sm font-semibold text-primary">
-                      Ver lectura pensada para el alumno
-                    </summary>
-                    <div className="mt-3 text-slate-500">
-                      <MarkdownContent content={secondarySummary} />
-                    </div>
-                  </details>
-                ) : null}
-              </ReportCard>
-            ) : null}
-
-            <TutorChatBlock buildRunId={run.id} report={run.report} />
-          </div>
-        )}
-
-        {activeTab === "coaching" && (
-          <div className="space-y-6">
-            {coaching ? (
-              <CoachingSummary
-                coaching={coaching}
-                mode={mode}
-                rubricItems={techFeedback.rubricCompliance}
-                runtimeFamily={runtimeFamily}
-              />
-            ) : null}
-
-            {!coaching && report.llmRecommendations?.length ? (
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-6">
-                <div className="mb-4 flex items-center gap-2 text-primary-hover">
-                  <RiLightbulbFlashLine className="text-xl" aria-hidden="true" />
-                  <h3 className="text-sm font-semibold uppercase tracking-wider">
-                    {mode === "student"
-                      ? "Siguiente paso recomendado"
-                      : "Recomendaciones"}
-                  </h3>
-                </div>
-                <ul className="space-y-3 text-sm leading-relaxed text-primary-hover">
-                  {report.llmRecommendations.map((recommendation, index) => (
-                    <li
-                      key={`${recommendation}-${index}`}
-                      className="rounded-xl border border-primary/10 bg-white p-3"
-                    >
-                      <MarkdownContent content={recommendation} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        )}
-
-        {activeTab === "technical" && (
-          <div className="space-y-6">
-            {/* El análisis por ejes es la vista del profesor: los hallazgos sin
-                el filtro pedagógico del plan de acción. El alumno se queda con
-                la evidencia curada, que es lo que puede accionar. */}
-            {mode === "teacher" && hasFeedback ? (
-              <ReportCard
-                tone="default"
-                title="Análisis técnico por ejes"
-                description={feedbackAxisSummary(techFeedback)}
-              >
-                <FeedbackAxis
-                  title="Seguridad"
-                  items={techFeedback.security}
-                  runtimeFamily={runtimeFamily}
-                />
-                <FeedbackAxis
-                  title="Arquitectura"
-                  items={techFeedback.architecture}
-                  runtimeFamily={runtimeFamily}
-                />
-                <FeedbackAxis
-                  title="Calidad y Estilo"
-                  items={techFeedback.quality}
-                  runtimeFamily={runtimeFamily}
-                />
-                <FeedbackAxis
-                  title="Cumplimiento de rubrica"
-                  items={techFeedback.rubricCompliance}
-                  runtimeFamily={runtimeFamily}
-                />
-              </ReportCard>
-            ) : null}
-
-            {run.llmAssessment ? (
-              <AssessmentContextSummary llmAssessment={run.llmAssessment} mode={mode} />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-xl border border-dashed border-app-border text-center">
-                <RiShieldCheckLine className="text-4xl text-success-500 mb-2" aria-hidden="true" />
-                <p className="text-sm font-semibold text-slate-500">
-                  No se ha registrado un resumen curado de evidencia para este run.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "logs" && (
-          <div className="space-y-6">
-            {loadingLogs ? (
-              <div className="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-xl border border-dashed border-app-border text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mb-3"></div>
-                <p className="text-sm font-medium text-slate-500">
-                  Cargando logs de ejecución...
-                </p>
-              </div>
-            ) : logs ? (
-              <div className="rounded-xl border border-app-border bg-white p-6">
-                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
-                  {mode === "student"
-                    ? "Comentarios adicionales y logs"
-                    : "Informe de compilación y pruebas"}
-                </h3>
-                <TerminalViewer
-                  content={logs}
-                  title="docker-runner build logs"
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-xl border border-dashed border-app-border text-center">
-                <RiTerminalBoxLine className="text-4xl text-slate-400 mb-2" aria-hidden="true" />
-                <p className="text-sm font-semibold text-slate-500">
-                  No hay logs de compilación registrados para esta ejecución.
-                </p>
-              </div>
-            )}
-
-            {run.warnings?.length ? (
-              <details className="group rounded-xl border border-app-border bg-white" open={mode === "teacher"}>
-                <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-900">
-                  <RiInformationLine className="text-slate-400 group-hover:text-primary" aria-hidden="true" />
-                  {mode === "student"
-                    ? "Ver registros técnicos del pipeline (avanzado)"
-                    : `Avisos del pipeline (${run.warnings.length})`}
-                </summary>
-                <div className="border-t border-app-border bg-slate-50 p-4 text-xs font-mono text-slate-500">
-                  <ul className="list-disc space-y-2 pl-4">
-                    {run.warnings.map((warning, index) => (
-                      <li key={`${warning}-${index}`}>{warning}</li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-            ) : null}
-          </div>
-        )}
-      </div>
-
-      {printOpen && report.printableMarkdown ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-3xl border border-app-border bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-app-border px-6 py-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-                Informe imprimible
-              </h3>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(report.printableMarkdown ?? "");
-                  }}
-                  className="rounded-xl px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5"
-                >
-                  Copiar Markdown
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrintOpen(false)}
-                  className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
-                  aria-label="Cerrar"
-                >
-                  <RiCloseLine className="text-xl" />
-                </button>
-              </div>
-            </div>
-            <div className="overflow-auto p-6">
-              <div className="prose prose-slate max-w-none">
-                <MarkdownContent content={report.printableMarkdown ?? ""} />
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </div>
+    <TeacherReportView
+      report={report}
+      onExport={() => void download("teacher")}
+      onExportStudent={() => void download("student")}
+      onUseAiGrade={onUseAiGrade}
+    />
   );
 }

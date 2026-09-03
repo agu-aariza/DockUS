@@ -13,7 +13,12 @@ export type {
   BuildRunEvent,
   BuildRunEventsPage,
   ChatMessageResponse as BuildRunChatMessage,
+  BuildRunReportSummary,
+  BuilderReportView,
+  StudentReportView,
+  TeacherReportView,
 } from "@educodeai/contracts";
+import type { BuildRunReportSummary } from "@educodeai/contracts";
 
 export type BuilderOutcome = "PASS" | "FAIL" | "PARTIAL" | "UNKNOWN";
 export type QualityInsightCategory =
@@ -38,7 +43,11 @@ export type EvidenceArtifactType =
   | "LLM_QUALITY_PROMPT"
   | "LLM_QUALITY_RAW_RESPONSE"
   | "LLM_QUALITY_PARSED"
-  | "LLM_QUALITY_ERROR";
+  | "LLM_QUALITY_ERROR"
+  | "LLM_REPORT_PROMPT"
+  | "LLM_REPORT_RAW_RESPONSE"
+  | "LLM_REPORT_PARSED"
+  | "LLM_REPORT_ERROR";
 
 export interface EvidenceArtifactDto {
   id: string;
@@ -152,6 +161,7 @@ export interface BuildRunEntity {
     recipe?: unknown;
   } | null;
   report?: BuilderReportEntity | null;
+  reportSummary: BuildRunReportSummary;
   failureReason?: string | null;
   warnings: string[];
   inputTokens?: number;

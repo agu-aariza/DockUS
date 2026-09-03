@@ -127,6 +127,23 @@ export class BuilderRunLifecycleService {
       run.outputTokens = cost.outputTokens;
       run.executionCostUsd = cost.costUsd;
 
+      const reportingUsages = pipelineResult.llmUsages.filter(
+        (usage) => usage.stage === 'reporting',
+      );
+      if (reportingUsages.length > 0) {
+        const reportingCost =
+          await this.builderRunCostService.summarize(reportingUsages);
+        this.logger.log(
+          JSON.stringify({
+            event: 'builder_reporting_cost',
+            runId: run.id,
+            inputTokens: reportingCost.inputTokens,
+            outputTokens: reportingCost.outputTokens,
+            costUsd: reportingCost.costUsd,
+          }),
+        );
+      }
+
       this.builderRunMetricsService.logRunMetrics(
         run.id,
         this.promptVersion,

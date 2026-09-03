@@ -5,16 +5,15 @@
  */
 
 import { useMemo } from "react";
-import {
-  RiInboxArchiveLine,
-  RiStackFill,
-  RiUser3Fill,
-} from "react-icons/ri";
+import { RiInboxArchiveLine, RiStackFill, RiUser3Fill } from "react-icons/ri";
 import { EmptyState } from "../shared/components/EmptyState";
 import { CodePreviewModal } from "../shared/components/CodePreviewModal";
 import { TeacherGradingStudio } from "./components/TeacherGradingStudio";
 import { VisualPickerOption } from "../shared/components/ui/VisualPicker";
-import { ProjectSelectionHub, type ProjectHubOption } from "../projects/components/ProjectSelectionHub";
+import {
+  ProjectSelectionHub,
+  type ProjectHubOption,
+} from "../projects/components/ProjectSelectionHub";
 import { getErrorMessage } from "../shared/utils/errors";
 import { useToast } from "../shared/toast/ToastContext";
 import { PageHeader } from "../shared/components/ui/PageHeader";
@@ -30,34 +29,47 @@ export function TeacherDeliveriesPanel(): JSX.Element {
   const panel = useDeliveriesPanel();
   const { pushToast } = useToast();
 
-  const projectOptions: VisualPickerOption[] = useMemo(() => 
-    panel.dc.projects.map(p => ({
-      id: p.id,
-      label: p.title,
-      description: p.contextAcademico ? (p.contextAcademico.slice(0, 60) + (p.contextAcademico.length > 60 ? '...' : '')) : 'Sin descripción',
-      icon: <RiStackFill />,
-      badge: p.status,
-    })), [panel.dc.projects]);
+  const projectOptions: VisualPickerOption[] = useMemo(
+    () =>
+      panel.dc.projects.map((p) => ({
+        id: p.id,
+        label: p.title,
+        description: p.contextAcademico
+          ? p.contextAcademico.slice(0, 60) +
+            (p.contextAcademico.length > 60 ? "..." : "")
+          : "Sin descripción",
+        icon: <RiStackFill />,
+        badge: p.status,
+      })),
+    [panel.dc.projects],
+  );
 
-  const assignmentOptions: VisualPickerOption[] = useMemo(() => 
-    panel.dc.assignments.map(a => ({
-      id: a.id,
-      label: a.studentName,
-      description: a.studentEmail,
-      icon: <RiUser3Fill />,
-      badge: `${a.deliveryCount} entregas`,
-    })), [panel.dc.assignments]);
+  const assignmentOptions: VisualPickerOption[] = useMemo(
+    () =>
+      panel.dc.assignments.map((a) => ({
+        id: a.id,
+        label: a.studentName,
+        description: a.studentEmail,
+        icon: <RiUser3Fill />,
+        badge: `${a.deliveryCount} entregas`,
+      })),
+    [panel.dc.assignments],
+  );
 
-  const hubProjects: ProjectHubOption[] = useMemo(() => 
-    panel.dc.projects.map(p => ({
-      id: p.id,
-      title: p.title,
-      description: p.contextAcademico || "Sin descripción operativa disponible.",
-      studentCount: p.assignmentCount ?? 0,
-      activeRuns: 0,
-      status: p.status === 'ACTIVE' ? 'READY' : 'HALTED',
-      teachers: p.teachers,
-    })), [panel.dc.projects]);
+  const hubProjects: ProjectHubOption[] = useMemo(
+    () =>
+      panel.dc.projects.map((p) => ({
+        id: p.id,
+        title: p.title,
+        description:
+          p.contextAcademico || "Sin descripción operativa disponible.",
+        studentCount: p.assignmentCount ?? 0,
+        activeRuns: 0,
+        status: p.status === "ACTIVE" ? "READY" : "HALTED",
+        teachers: p.teachers,
+      })),
+    [panel.dc.projects],
+  );
 
   if (!panel.dc.selectedProjectId) {
     return (
@@ -90,7 +102,7 @@ export function TeacherDeliveriesPanel(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
+      <PageHeader
         title="Gestión de Entregas"
         subtitle="Auditoría de entregas, flujo de calificación técnica y evaluación de evidencia académica."
         icon={<RiInboxArchiveLine />}
@@ -128,13 +140,23 @@ export function TeacherDeliveriesPanel(): JSX.Element {
         <section className="space-y-6">
           {!panel.selectedDelivery ? (
             <EmptyState
-              icon={<RiInboxArchiveLine className="text-3xl text-app-text-muted" />}
+              icon={
+                <RiInboxArchiveLine className="text-3xl text-app-text-muted" />
+              }
               title="Terminal de Auditoría de Entregas"
               description="Seleccione un registro de la cola operativa para iniciar el proceso de revisión técnica y académica."
-              actionLabel={panel.visibleDeliveries[0] ? "Empezar con la primera entrega" : undefined}
+              actionLabel={
+                panel.visibleDeliveries[0]
+                  ? "Empezar con la primera entrega"
+                  : undefined
+              }
               onAction={
                 panel.visibleDeliveries[0]
-                  ? () => panel.openDelivery(panel.visibleDeliveries[0].id, "overview")
+                  ? () =>
+                      panel.openDelivery(
+                        panel.visibleDeliveries[0].id,
+                        "overview",
+                      )
                   : undefined
               }
             />
@@ -159,7 +181,9 @@ export function TeacherDeliveriesPanel(): JSX.Element {
                   selectedDelivery={panel.selectedDelivery}
                   selectedProject={panel.selectedProject}
                   selectedAssignment={panel.selectedAssignment}
-                  selectedDeliveryReviewNotes={panel.dc.selectedDeliveryReviewNotes}
+                  selectedDeliveryReviewNotes={
+                    panel.dc.selectedDeliveryReviewNotes
+                  }
                   canWrite={panel.dc.canWrite}
                   onRefreshDeliveries={() => void panel.dc.refreshDeliveries()}
                   onSetDetailTab={(tab) => {
@@ -176,7 +200,9 @@ export function TeacherDeliveriesPanel(): JSX.Element {
                 <DeliveryGrading
                   selectedDelivery={panel.selectedDelivery}
                   reportRun={panel.dc.reportRun}
-                  selectedDeliveryReviewNotes={panel.dc.selectedDeliveryReviewNotes}
+                  selectedDeliveryReviewNotes={
+                    panel.dc.selectedDeliveryReviewNotes
+                  }
                   canWrite={panel.dc.canWrite}
                   gradingForm={panel.dc.gradingForm}
                   onSetGradingForm={panel.dc.setGradingForm}
@@ -190,8 +216,20 @@ export function TeacherDeliveriesPanel(): JSX.Element {
                   reportRun={panel.dc.reportRun}
                   reportDeliveryVersion={panel.dc.reportDelivery?.version}
                   reportLoading={panel.dc.reportLoading}
-                  selectedDeliveryReviewNotes={panel.dc.selectedDeliveryReviewNotes}
-                  onHandleViewReport={(id, options) => void panel.dc.handleViewReport(id, options)}
+                  selectedDeliveryReviewNotes={
+                    panel.dc.selectedDeliveryReviewNotes
+                  }
+                  onHandleViewReport={(id, options) =>
+                    void panel.dc.handleViewReport(id, options)
+                  }
+                  onUseAiGrade={(grade) => {
+                    panel.dc.setGradingForm((current) => ({
+                      ...current,
+                      grade: grade.toFixed(2),
+                      aiProposedGrade: grade,
+                    }));
+                    panel.setDetailTab("grading");
+                  }}
                 />
               )}
             </>
@@ -235,7 +273,11 @@ export function TeacherDeliveriesPanel(): JSX.Element {
           isOpen={panel.isPreviewModalOpen}
           onClose={() => panel.setIsPreviewModalOpen(false)}
           title="Explorador de Entrega"
-          subtitle={panel.selectedDelivery ? `v${panel.selectedDelivery.version} — ${panel.selectedDelivery.studentName}` : ""}
+          subtitle={
+            panel.selectedDelivery
+              ? `v${panel.selectedDelivery.version} — ${panel.selectedDelivery.studentName}`
+              : ""
+          }
           isLoading={panel.isLoadingPreview}
           files={panel.previewFiles}
         />

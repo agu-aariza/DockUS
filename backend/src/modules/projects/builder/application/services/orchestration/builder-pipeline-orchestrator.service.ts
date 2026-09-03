@@ -17,7 +17,7 @@ import { BuildRun } from '../../../domain/entities/build-run.entity';
 import {
   AssignmentContext,
   BuilderCodeQualityContractV2,
-  BuilderEvaluationContractV2,
+  BuilderEvaluationContractV3,
   BuilderExecutionResult,
   BuilderPlanContractV2,
   BuilderReportEntity,
@@ -131,7 +131,7 @@ export class BuilderPipelineOrchestrator {
 
       await this.builderRunCancellationService.assertNotCancelled(run.id);
 
-      const report = await this.runReportStage(
+      const { report, usages: reportingUsages } = await this.runReportStage(
         run.id,
         assessment,
         qualityFindings,
@@ -147,7 +147,12 @@ export class BuilderPipelineOrchestrator {
         warnings: workspace.warnings,
         // El coste no se puede derivar de la suma de tokens: cada etapa puede
         // haber corrido en un proveedor distinto, así que se propaga el detalle.
-        llmUsages: [...planUsages, ...evaluationUsages, ...qualityUsages],
+        llmUsages: [
+          ...planUsages,
+          ...evaluationUsages,
+          ...qualityUsages,
+          ...reportingUsages,
+        ],
       };
     } finally {
       await this.builderWorkspaceService.cleanup(workspace);
@@ -248,7 +253,7 @@ export class BuilderPipelineOrchestrator {
     assignmentContext: AssignmentContext,
     planAssessment: BuilderPlanContractV2,
   ): Promise<{
-    assessment: BuilderEvaluationContractV2;
+    assessment: BuilderEvaluationContractV3;
     usages: BuilderStageTokenUsage[];
   }> {
     const result = await this.builderEvaluationStageHandler.handle({
@@ -268,7 +273,7 @@ export class BuilderPipelineOrchestrator {
     sourceCodePayload: string,
     execution: BuilderExecutionResult,
     assignmentContext: AssignmentContext,
-    assessment: BuilderEvaluationContractV2,
+    assessment: BuilderEvaluationContractV3,
     delivery: Delivery,
   ): Promise<{
     qualityFindings: BuilderCodeQualityContractV2;
@@ -288,17 +293,20 @@ export class BuilderPipelineOrchestrator {
 
   private async runReportStage(
     runId: string,
-    assessment: BuilderEvaluationContractV2,
+    assessment: BuilderEvaluationContractV3,
     qualityFindings: BuilderCodeQualityContractV2,
     execution: BuilderExecutionResult,
-  ): Promise<BuilderReportEntity> {
-    const { report } = await this.builderReportStageHandler.handle({
+  ): Promise<{
+    report: BuilderReportEntity;
+    usages: BuilderStageTokenUsage[];
+  }> {
+    const { report, usages } = await this.builderReportStageHandler.handle({
       runId,
       assessment,
       qualityFindings,
       execution,
     });
 
-    return report;
+    return { report, usages };
   }
 }

@@ -5,7 +5,11 @@ vi.mock("@/projects/api/assignmentsApi", () => ({
   assignmentsApi: { listMine: vi.fn(), listByProject: vi.fn() },
 }));
 vi.mock("@/builder/api/builderApi", () => ({
-  builderApi: { listByDelivery: vi.fn(), detail: vi.fn(), listLatestRunsByDeliveries: vi.fn() },
+  builderApi: {
+    listByDelivery: vi.fn(),
+    detail: vi.fn(),
+    listLatestRunsByDeliveries: vi.fn(),
+  },
 }));
 vi.mock("@/deliveries/api/deliveriesApi", () => ({
   deliveriesApi: {
@@ -26,7 +30,12 @@ vi.mock("@/projects/api/projectsApi", () => ({
 // importa useSession del mismo módulo, así que también queda cubierto.
 vi.mock("@/shared/session/SessionContext", () => ({
   useSession: () => ({
-    activeSession: { id: "session-1", role: "TEACHER", accessToken: "t", refreshToken: "r" },
+    activeSession: {
+      id: "session-1",
+      role: "TEACHER",
+      accessToken: "t",
+      refreshToken: "r",
+    },
     activeSessionId: "session-1",
   }),
 }));
@@ -34,7 +43,10 @@ vi.mock("@/shared/session/SessionContext", () => ({
 import { deliveriesApi } from "@/deliveries/api/deliveriesApi";
 import { projectsApi } from "@/projects/api/projectsApi";
 import { DEFAULT_SELECTION } from "@/shared/workspace/WorkspaceSelectionContext";
-import { createTestQueryClient, renderHookWithProviders } from "@test/support/renderWithProviders";
+import {
+  createTestQueryClient,
+  renderHookWithProviders,
+} from "@test/support/renderWithProviders";
 import { useDeliveryManagement } from "@/deliveries/hooks/useDeliveryManagement";
 
 describe("useDeliveryManagement — flujo de calificación del profesor", () => {
@@ -55,7 +67,12 @@ describe("useDeliveryManagement — flujo de calificación del profesor", () => 
     // canWrite viene de la sesión TEACHER mockeada arriba y es verdadero aquí;
     // este test cubre el otro guard de handleGradingUpdate (`!gradingForm.id`).
     act(() => {
-      result.current.setGradingForm({ id: "", grade: "8", graderNotes: "" });
+      result.current.setGradingForm({
+        id: "",
+        grade: "8",
+        graderNotes: "",
+        aiProposedGrade: null,
+      });
     });
 
     await act(async () => {
@@ -85,6 +102,7 @@ describe("useDeliveryManagement — flujo de calificación del profesor", () => 
         id: "delivery-1",
         grade: "8.5",
         graderNotes: "Buen trabajo, revisa los tests de borde.",
+        aiProposedGrade: 8.5,
       });
     });
 
@@ -97,6 +115,7 @@ describe("useDeliveryManagement — flujo de calificación del profesor", () => 
     expect(deliveriesApi.updateGrading).toHaveBeenCalledWith("delivery-1", {
       grade: 8.5,
       graderNotes: "Buen trabajo, revisa los tests de borde.",
+      aiProposedGrade: 8.5,
     });
     expect(result.current.editorNotice).toMatchObject({
       text: "Calificación actualizada.",
@@ -121,6 +140,7 @@ describe("useDeliveryManagement — flujo de calificación del profesor", () => 
         id: "delivery-1",
         grade: "",
         graderNotes: "Pendiente de revisión manual.",
+        aiProposedGrade: null,
       });
     });
 
@@ -149,6 +169,7 @@ describe("useDeliveryManagement — flujo de calificación del profesor", () => 
         id: "delivery-1",
         grade: "9",
         graderNotes: "",
+        aiProposedGrade: null,
       });
     });
 
@@ -169,7 +190,10 @@ describe("useDeliveryManagement — caché de la lista de entregas entre remount
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    vi.mocked(projectsApi.list).mockResolvedValue({ data: [], meta: {} as any });
+    vi.mocked(projectsApi.list).mockResolvedValue({
+      data: [],
+      meta: {} as any,
+    });
   });
 
   it("reentrar a la pestaña con la misma asignación dentro de la ventana de staleTime no vuelve a pedir la lista al servidor", async () => {
@@ -186,7 +210,10 @@ describe("useDeliveryManagement — caché de la lista de entregas entre remount
         assignmentLabel: "Asignación 1",
       }),
     );
-    vi.mocked(deliveriesApi.list).mockResolvedValue({ data: [], meta: {} as any });
+    vi.mocked(deliveriesApi.list).mockResolvedValue({
+      data: [],
+      meta: {} as any,
+    });
 
     // Mismo QueryClient reutilizado entre el primer render y el remount: es lo
     // que persiste la caché a través de un desmontaje, tal como ocurre en la
@@ -195,12 +222,18 @@ describe("useDeliveryManagement — caché de la lista de entregas entre remount
     // desmonta).
     const queryClient = createTestQueryClient();
 
-    const first = renderHookWithProviders(() => useDeliveryManagement(), { queryClient });
+    const first = renderHookWithProviders(() => useDeliveryManagement(), {
+      queryClient,
+    });
     await waitFor(() => expect(deliveriesApi.list).toHaveBeenCalledTimes(1));
     first.unmount();
 
-    const second = renderHookWithProviders(() => useDeliveryManagement(), { queryClient });
-    await waitFor(() => expect(second.result.current.deliveries).not.toBeNull());
+    const second = renderHookWithProviders(() => useDeliveryManagement(), {
+      queryClient,
+    });
+    await waitFor(() =>
+      expect(second.result.current.deliveries).not.toBeNull(),
+    );
 
     expect(deliveriesApi.list).toHaveBeenCalledTimes(1);
   });

@@ -27,6 +27,7 @@ import { BuilderHallucinationGuard } from './application/services/evaluation/bui
 import { BuilderPedagogicalService } from './application/services/evaluation/builder-pedagogical.service';
 import { BuilderQualityAggregationService } from './application/services/evaluation/builder-quality-aggregation.service';
 import { BuilderReportComposer } from './application/services/evaluation/builder-report-composer.service';
+import { BuilderReportProjectionService } from './application/services/evaluation/builder-report-projection.service';
 import { BuilderRunQueriesService } from './application/services/orchestration/builder-run-queries.service';
 import { BuilderSpendQuotaService } from './application/services/orchestration/builder-spend-quota.service';
 import { BuilderRunEventsService } from './infrastructure/events/builder-run-events.service';
@@ -53,6 +54,7 @@ import { BuilderLogTrimmer } from './infrastructure/utils/builder-log-trimmer.ut
     BuilderHallucinationGuard,
     BuilderPedagogicalService,
     BuilderReportComposer,
+    BuilderReportProjectionService,
     BuilderQualityAggregationService,
     BuilderRunQueriesService,
     BuilderRunEventsService,
@@ -71,6 +73,7 @@ import { BuilderLogTrimmer } from './infrastructure/utils/builder-log-trimmer.ut
     BuilderHallucinationGuard,
     BuilderPedagogicalService,
     BuilderReportComposer,
+    BuilderReportProjectionService,
     BuilderQualityAggregationService,
     BuilderRunQueriesService,
     BuilderRunEventsService,

@@ -8,7 +8,12 @@
  * @module BuilderRunQueriesService
  */
 
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { buildPaginationMeta } from '../../../../../../shared/utils/pagination.util';
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
 import { UserRole } from '../../../../../users/entities/user.entity';
@@ -20,12 +25,17 @@ import {
   BuilderRunEvent,
   EvidenceArtifactPublic,
 } from '../../../domain/builder.types';
-import { isStaffOnlyBuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
+import {
+  BuildRunArtifactType,
+  isStaffOnlyBuildRunArtifactType,
+} from '../../../domain/entities/build-run-artifact.entity';
 import { EvidenceService } from '../../../infrastructure/evidence/evidence.service';
 import { ListBuildRunsDto } from '../../../presentation/dto/list-build-runs.dto';
 import { BuilderAccessService } from '../workspace/builder-access.service';
 import type { PaginatedBuildRunsResponse } from '../builder-application.types';
 import { BuilderQualityAggregationService } from '../evaluation/builder-quality-aggregation.service';
+import { BuilderReportProjectionService } from '../evaluation/builder-report-projection.service';
+import type { BuilderReportView } from '@educodeai/contracts';
 
 /**
  * Tope de páginas al drenar el backlog inicial del stream de eventos (200
@@ -67,7 +77,33 @@ export class BuilderRunQueriesService {
     private readonly builderRunEventsService: BuilderRunEventsService,
     private readonly evidenceService: EvidenceService,
     private readonly builderQualityAggregationService: BuilderQualityAggregationService,
+    @Optional()
+    private readonly builderReportProjectionService?: BuilderReportProjectionService,
   ) {}
+
+  async getReportView(
+    buildRunId: string,
+    actor: AuthenticatedUser,
+    audience?: 'student' | 'teacher',
+  ): Promise<BuilderReportView> {
+    const run = await this.getRunById(buildRunId, actor);
+    if (!this.builderReportProjectionService) {
+      throw new Error('BuilderReportProjectionService no está disponible.');
+    }
+    return this.builderReportProjectionService.project(run, actor, audience);
+  }
+
+  async exportReportMarkdown(
+    buildRunId: string,
+    actor: AuthenticatedUser,
+    audience?: 'student' | 'teacher',
+  ): Promise<string> {
+    const report = await this.getReportView(buildRunId, actor, audience);
+    if (!this.builderReportProjectionService) {
+      throw new Error('BuilderReportProjectionService no está disponible.');
+    }
+    return this.builderReportProjectionService.toMarkdown(report);
+  }
 
   async getRunById(
     buildRunId: string,
@@ -151,7 +187,15 @@ export class BuilderRunQueriesService {
     limit = 100,
   ) {
     await this.getRunById(buildRunId, actor);
-    return this.builderRunEventsService.list(buildRunId, afterSequence, limit);
+    const page = await this.builderRunEventsService.list(
+      buildRunId,
+      afterSequence,
+      limit,
+    );
+    return {
+      ...page,
+      events: this.projectEventsForActor(page.events, actor),
+    };
   }
 
   async subscribeRunEvents(
@@ -160,7 +204,11 @@ export class BuilderRunQueriesService {
     listener: (event: BuilderRunEvent) => void,
   ): Promise<() => void> {
     await this.getRunById(buildRunId, actor);
-    return this.builderRunEventsService.subscribe(buildRunId, listener);
+    return this.builderRunEventsService.subscribe(buildRunId, (event) => {
+      for (const projected of this.projectEventsForActor([event], actor)) {
+        listener(projected);
+      }
+    });
   }
 
   /**
@@ -186,7 +234,7 @@ export class BuilderRunQueriesService {
     );
     let latestSequence = Math.max(afterSequence, firstPage.latestSequence);
     sink.onReady(latestSequence);
-    for (const event of firstPage.events) {
+    for (const event of this.projectEventsForActor(firstPage.events, actor)) {
       sink.onEvent(event);
     }
 
@@ -201,7 +249,7 @@ export class BuilderRunQueriesService {
       latestSequence = Math.max(latestSequence, page.latestSequence);
       hasMore = page.hasMore;
       drainedPages += 1;
-      for (const event of page.events) {
+      for (const event of this.projectEventsForActor(page.events, actor)) {
         sink.onEvent(event);
       }
     }
@@ -210,7 +258,9 @@ export class BuilderRunQueriesService {
       buildRunId,
       (event) => {
         latestSequence = Math.max(latestSequence, event.sequence);
-        sink.onEvent(event);
+        for (const projected of this.projectEventsForActor([event], actor)) {
+          sink.onEvent(projected);
+        }
       },
     );
 
@@ -291,4 +341,46 @@ export class BuilderRunQueriesService {
       (artifact) => !isStaffOnlyBuildRunArtifactType(artifact.type),
     );
   }
+
+  private projectEventsForActor(
+    events: BuilderRunEvent[],
+    actor: AuthenticatedUser,
+  ): BuilderRunEvent[] {
+    if (actor.role === UserRole.ADMIN || actor.role === UserRole.TEACHER) {
+      return events;
+    }
+    return events.flatMap((event) => {
+      const artifactType = event.payload?.type;
+      if (
+        event.eventType === 'ARTIFACT_ADDED' &&
+        typeof artifactType === 'string' &&
+        isStaffOnlyBuildRunArtifactType(artifactType as BuildRunArtifactType)
+      ) {
+        return [];
+      }
+      const studentStage = event.payload?.studentStage;
+      return [
+        {
+          ...event,
+          message: sanitizeStudentEventText(event.message),
+          // Lista permitida. El texto bruto de LOG_CHUNK puede contener salida
+          // de tests docentes u oráculos y nunca cruza esta frontera.
+          payload: typeof studentStage === 'string' ? { studentStage } : null,
+        },
+      ];
+    });
+  }
+}
+
+function sanitizeStudentEventText(value: string | null | undefined): string {
+  return (value ?? '')
+    .split(/\r?\n/u)
+    .filter(
+      (line) =>
+        !/(?:hidden|oculto|oracle|oráculo|teacher[ _-]?test|test docente|prompt)/iu.test(
+          line,
+        ),
+    )
+    .join('\n')
+    .trim();
 }

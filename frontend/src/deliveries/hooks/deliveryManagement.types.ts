@@ -30,4 +30,5 @@ export interface GradingForm {
   id: string;
   grade: string;
   graderNotes: string;
+  aiProposedGrade: number | null;
 }

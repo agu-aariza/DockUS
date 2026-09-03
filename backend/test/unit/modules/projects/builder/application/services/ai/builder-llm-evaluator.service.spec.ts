@@ -62,7 +62,7 @@ const validFactsResponse = JSON.stringify({
 });
 
 const validEvaluationResponse = JSON.stringify({
-  schemaVersion: 'builder-llm/v2',
+  schemaVersion: 'builder-evaluation/v3',
   stage: 'evaluation',
   thought: 'Eval valida.',
   structuralType: 'T4',
@@ -93,12 +93,25 @@ const validEvaluationResponse = JSON.stringify({
     service: null,
   },
   evidenceSummary: 'Todo correcto.',
-  observedEvidence: [
-    'requirements.txt detectado.',
-    'python app.py respondio sin error.',
-    'pytest completo 2/2 tests.',
+  criteria: [
+    {
+      name: 'Funcionalidad',
+      maxPoints: 10,
+      awarded: 8,
+      justification: 'La ejecución principal es correcta.',
+      evidenceRefs: [0],
+    },
   ],
-  evaluationLimits: [],
+  evidence: [
+    {
+      kind: 'execution',
+      summary: 'Ejecución correcta',
+      detail: 'pytest completo 2/2 tests.',
+    },
+  ],
+  findings: [],
+  limitations: [],
+  reviewFlags: [],
 });
 
 describe('BuilderLlmEvaluatorService', () => {
@@ -317,7 +330,7 @@ describe('BuilderLlmEvaluatorService', () => {
     expect(trace.parsedContract).toEqual(
       expect.objectContaining({
         stage: 'evaluation',
-        schemaVersion: 'builder-llm/v2',
+        schemaVersion: 'builder-evaluation/v3',
       }),
     );
     expect(llmService.generate).toHaveBeenCalledWith(
@@ -369,7 +382,7 @@ describe('BuilderLlmEvaluatorService', () => {
     expect(trace.error).toEqual(
       expect.objectContaining({
         name: 'Error',
-        message: 'La salida del evaluador LLM no es JSON válido.',
+        message: 'La salida del evaluador LLM v3 no es JSON válido.',
       }),
     );
     expect(errorSpy).toHaveBeenCalledWith(

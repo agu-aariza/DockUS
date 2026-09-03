@@ -17,30 +17,25 @@
 // Uniones base (equivalen a los enums/const del backend por valor)
 // ---------------------------------------------------------------------------
 
-export type DeliveryStatus = 'DRAFT' | 'SUBMITTED' | 'IN_REVIEW' | 'EVALUATED';
+export type DeliveryStatus = "DRAFT" | "SUBMITTED" | "IN_REVIEW" | "EVALUATED";
 
-export type BuilderOutcome = 'PASS' | 'FAIL' | 'PARTIAL' | 'UNKNOWN';
+export type BuilderOutcome = "PASS" | "FAIL" | "PARTIAL" | "UNKNOWN";
 
 export type CodeQualityCategory =
-  | 'security'
-  | 'architecture'
-  | 'quality'
-  | 'rubricCompliance';
+  "security" | "architecture" | "quality" | "rubricCompliance";
 
-export type FindingSeverity = 'low' | 'medium' | 'high';
+export type FindingSeverity = "low" | "medium" | "high";
 
-export type ReconcileOperationalIssueMode = 'dry-run' | 'apply';
+export type ReconcileOperationalIssueMode = "dry-run" | "apply";
 
 export type ReconcileOperationalIssueCategory =
-  | 'orphanAssignments'
-  | 'orphanDeliveries'
-  | 'orphanStorageObjects';
+  "orphanAssignments" | "orphanDeliveries" | "orphanStorageObjects";
 
-export type OperationalIssueCategory = 'assignment' | 'delivery' | 'storage';
+export type OperationalIssueCategory = "assignment" | "delivery" | "storage";
 
-export type OperationalIssueSeverity = 'warning' | 'error';
+export type OperationalIssueSeverity = "warning" | "error";
 
-export type StorageAssetRole = 'STUDENT_SOURCE' | 'TEACHER_TESTS';
+export type StorageAssetRole = "STUDENT_SOURCE" | "TEACHER_TESTS";
 
 // ---------------------------------------------------------------------------
 // Entrega (delivery)
@@ -237,7 +232,7 @@ export interface ProjectOperationalIssuesReconcileAction {
   category: ReconcileOperationalIssueCategory;
   targetId: string;
   action: string;
-  outcome: 'would_apply' | 'applied' | 'failed';
+  outcome: "would_apply" | "applied" | "failed";
   detail: string;
 }
 
@@ -273,11 +268,7 @@ export interface ProjectQualityInsightsSummary {
 // ---------------------------------------------------------------------------
 
 export type BuildRunStatusRef =
-  | 'QUEUED'
-  | 'RUNNING'
-  | 'SUCCESS'
-  | 'FAILED'
-  | 'CANCELLED';
+  "QUEUED" | "RUNNING" | "SUCCESS" | "FAILED" | "CANCELLED";
 
 export interface StudentProfileRun {
   id: string;
@@ -342,18 +333,17 @@ export interface StudentProfileResponse {
 // Builder — Eventos de ejecuciones y chat del Tutor IA
 // ---------------------------------------------------------------------------
 
-
 export type BuildRunEventType =
-  | 'RUN_ENQUEUED'
-  | 'RUN_STARTED'
-  | 'RUN_STATUS_CHANGED'
-  | 'LOG_CHUNK'
-  | 'WARNING_ADDED'
-  | 'ARTIFACT_ADDED'
-  | 'REPORT_READY'
-  | 'RUN_COMPLETED'
-  | 'RUN_FAILED'
-  | 'RUN_CANCELLED';
+  | "RUN_ENQUEUED"
+  | "RUN_STARTED"
+  | "RUN_STATUS_CHANGED"
+  | "LOG_CHUNK"
+  | "WARNING_ADDED"
+  | "ARTIFACT_ADDED"
+  | "REPORT_READY"
+  | "RUN_COMPLETED"
+  | "RUN_FAILED"
+  | "RUN_CANCELLED";
 
 export interface BuildRunEvent {
   id: string;
@@ -372,7 +362,152 @@ export interface BuildRunEventsPage {
   hasMore: boolean;
 }
 
-export type ChatMessageSender = 'user' | 'assistant';
+// ---------------------------------------------------------------------------
+// Builder — informes v3 por audiencia
+// ---------------------------------------------------------------------------
+
+export type ReportAudience = "student" | "teacher";
+export type ReportGradeStatus = "PROVISIONAL" | "OFFICIAL";
+export type ReportCriterionStatus =
+  "ACHIEVED" | "PARTIAL" | "NOT_ACHIEVED" | "NOT_ASSESSED";
+
+export interface BuildRunReportSummary {
+  schemaVersion: "builder-report/v3";
+  overallOutcome: BuilderOutcome;
+  passReadiness: "BLOCKED" | "READY_WITH_SUGGESTIONS";
+  provisionalGrade: number | null;
+  hasReport: boolean;
+}
+
+export interface ReportCriterionView {
+  id: string;
+  name: string;
+  maxPoints: number;
+  awarded: number;
+  status: ReportCriterionStatus;
+  explanation: string;
+  evidenceIds: string[];
+  weight?: number;
+  description?: string | null;
+}
+
+export interface ReportEvidenceView {
+  id: string;
+  kind: "execution" | "source" | "rubric" | "quality";
+  summary: string;
+  detail?: string;
+  file?: string | null;
+  line?: number | null;
+}
+
+export interface ReportFindingView {
+  id: string;
+  category: CodeQualityCategory | "evaluation";
+  severity: FindingSeverity;
+  title: string;
+  explanation: string;
+  recommendation: string;
+  blocking: boolean;
+  evidenceIds: string[];
+  file?: string | null;
+  line?: number | null;
+  codeSnippet?: string;
+}
+
+export interface StudentReportNarrative {
+  headline: string;
+  achievements: string[];
+  gaps: string[];
+  conceptBridges: string[];
+  nextSteps: string[];
+}
+
+export interface TeacherReportNarrative {
+  executiveSummary: string;
+  strengths: string[];
+  concerns: string[];
+  followUp: string[];
+  reviewQuestions: string[];
+}
+
+export interface ReportComparison {
+  baselineRunId: string;
+  baselineDeliveryVersion: number;
+  improvedCriteria: string[];
+  regressedCriteria: string[];
+  resolvedBlockers: string[];
+  persistentBlockers: string[];
+  newBlockers: string[];
+}
+
+export interface ReportComparisonUnavailable {
+  reason:
+    | "FIRST_ATTEMPT"
+    | "NO_COMPLETED_PREVIOUS_RUN"
+    | "LEGACY_REPORT_NOT_COMPARABLE";
+}
+
+export type ReportComparisonView =
+  ReportComparison | ReportComparisonUnavailable | null;
+
+export interface StudentReportView {
+  schemaVersion: "builder-report/v3";
+  audience: "student";
+  buildRunId: string;
+  deliveryId: string;
+  deliveryVersion: number;
+  generatedAt: string;
+  outcome: BuilderOutcome;
+  grade: {
+    value: number | null;
+    status: ReportGradeStatus;
+  };
+  narrative: StudentReportNarrative;
+  rubric: ReportCriterionView[];
+  evidence: ReportEvidenceView[];
+  blockers: ReportFindingView[];
+  nextSteps: string[];
+  limitations: string[];
+  comparison: ReportComparisonView;
+  advanced: {
+    findings: ReportFindingView[];
+    warnings: string[];
+  };
+}
+
+export interface TeacherReportView {
+  schemaVersion: "builder-report/v3";
+  audience: "teacher";
+  buildRunId: string;
+  deliveryId: string;
+  deliveryVersion: number;
+  generatedAt: string;
+  outcome: BuilderOutcome;
+  grade: {
+    provisional: number | null;
+    official: number | null;
+    delta: number | null;
+  };
+  confidence: "low" | "medium" | "high";
+  narrative: TeacherReportNarrative;
+  rubric: ReportCriterionView[];
+  evidence: ReportEvidenceView[];
+  findings: ReportFindingView[];
+  limitations: string[];
+  reviewFlags: string[];
+  comparison: ReportComparisonView;
+  studentPreview: StudentReportView;
+  audit: {
+    evaluationSchemaVersion: string;
+    reportCopySchemaVersion: string;
+    usedNarrativeFallback: boolean;
+    promptVersion: string | null;
+  };
+}
+
+export type BuilderReportView = StudentReportView | TeacherReportView;
+
+export type ChatMessageSender = "user" | "assistant";
 
 export interface ChatMessageResponse {
   id: string;

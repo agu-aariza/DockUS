@@ -14,6 +14,7 @@ import {
 } from '../../domain/entities/build-run.entity';
 import { UserRole } from '../../../../users/entities/user.entity';
 import { BuildRunResponseDto } from './build-run-core.dto';
+import { buildRunReportSummary } from '../../application/services/evaluation/builder-report-projection.service';
 
 export {
   BuildRunResponseDto,
@@ -33,6 +34,9 @@ export function toBuildRunResponseDto(
 ): BuildRunResponseDto {
   const isStaff =
     actorRole === UserRole.ADMIN || actorRole === UserRole.TEACHER;
+  const warnings = isStaff
+    ? run.warnings
+    : run.warnings.map(sanitizeStudentRunText).filter(Boolean);
   return {
     id: run.id,
     deliveryId: run.deliveryId,
@@ -46,13 +50,14 @@ export function toBuildRunResponseDto(
       BuildRunStatus.FAILED,
       BuildRunStatus.CANCELLED,
     ].includes(run.status),
-    // El contrato LLM completo (thought/rationale/teacherSummary) y
-    // report.teacherHighlights son material interno/docente: nunca deben
-    // cruzar al rol STUDENT.
+    // El contrato de evaluación completo sigue siendo exclusivamente docente.
     llmAssessment: isStaff ? run.llmAssessment : undefined,
-    report: redactReportForRole(run.report, isStaff),
-    failureReason: run.failureReason,
-    warnings: run.warnings,
+    reportSummary: buildRunReportSummary(run),
+    failureReason:
+      isStaff || !run.failureReason
+        ? run.failureReason
+        : 'La evaluación no pudo completarse. Revisa el estado del run o consulta con tu profesor.',
+    warnings,
     startedAt: run.startedAt?.toISOString() ?? null,
     finishedAt: run.finishedAt?.toISOString() ?? null,
     createdAt: run.createdAt.toISOString(),
@@ -63,11 +68,15 @@ export function toBuildRunResponseDto(
   };
 }
 
-function redactReportForRole(report: unknown, isStaff: boolean): unknown {
-  if (isStaff || !report || typeof report !== 'object') {
-    return report;
-  }
-  const { teacherHighlights: _teacherHighlights, ...studentSafeReport } =
-    report as Record<string, unknown>;
-  return studentSafeReport;
+function sanitizeStudentRunText(value: string): string {
+  return value
+    .split(/\r?\n/u)
+    .filter(
+      (line) =>
+        !/(?:hidden|oculto|oracle|oráculo|teacher[ _-]?test|test docente|prompt|secret)/iu.test(
+          line,
+        ),
+    )
+    .join('\n')
+    .trim();
 }

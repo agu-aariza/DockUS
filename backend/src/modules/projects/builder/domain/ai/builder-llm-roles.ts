@@ -24,6 +24,7 @@ const STAGE_TO_ROLE: Record<BuilderLlmPromptStage, BuilderLlmRole> = {
   facts: 'eval',
   evaluation: 'eval',
   quality: 'quality',
+  reporting: 'eval',
   chat: 'chatbot',
 };
 

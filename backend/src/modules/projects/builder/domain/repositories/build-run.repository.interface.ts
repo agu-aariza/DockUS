@@ -67,6 +67,11 @@ export interface StaleQueuedRunRef {
 
 export interface IBuildRunRepository {
   findById(id: string): Promise<BuildRun | null>;
+  findByIdWithDeliveryContext(id: string): Promise<BuildRun | null>;
+  findLatestSuccessfulBeforeDeliveryVersion(
+    assignmentId: string,
+    version: number,
+  ): Promise<BuildRun | null>;
 
   /** Crea y persiste un run nuevo en QUEUED. */
   createQueuedRun(input: {

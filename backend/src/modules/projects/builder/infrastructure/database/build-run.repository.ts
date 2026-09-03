@@ -34,6 +34,30 @@ export class BuildRunRepository implements IBuildRunRepository {
     return this.repository.findOne({ where: { id } });
   }
 
+  findByIdWithDeliveryContext(id: string): Promise<BuildRun | null> {
+    return this.repository.findOne({
+      where: { id },
+      relations: { delivery: { assignment: true } },
+    });
+  }
+
+  findLatestSuccessfulBeforeDeliveryVersion(
+    assignmentId: string,
+    version: number,
+  ): Promise<BuildRun | null> {
+    return this.repository
+      .createQueryBuilder('run')
+      .innerJoinAndSelect('run.delivery', 'delivery')
+      .innerJoinAndSelect('delivery.assignment', 'assignment')
+      .where('delivery.assignmentId = :assignmentId', { assignmentId })
+      .andWhere('delivery.version < :version', { version })
+      .andWhere('run.status = :status', { status: BuildRunStatus.SUCCESS })
+      .orderBy('delivery.version', 'DESC')
+      .addOrderBy('run.finishedAt', 'DESC', 'NULLS LAST')
+      .addOrderBy('run.createdAt', 'DESC')
+      .getOne();
+  }
+
   async claimQueuedRun(id: string, startedAt: Date): Promise<boolean> {
     const result = await this.repository
       .createQueryBuilder()

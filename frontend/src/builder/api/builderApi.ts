@@ -5,10 +5,17 @@
  */
 
 import { http } from "../../shared/api/http";
-import type { BuildRunEntity, BuildRunEventsPage, EvidenceArtifactDto, EnqueueBuildRunResponse, BuildRunChatMessage } from "../../features/builder/types";
+import type {
+  BuildRunEntity,
+  BuildRunEventsPage,
+  EvidenceArtifactDto,
+  EnqueueBuildRunResponse,
+  BuildRunChatMessage,
+} from "../../features/builder/types";
 import type { DownloadUrlResponse } from "../../features/storage/types";
 import type { PaginatedResponse } from "../../shared/types";
 import { toParams } from "../../shared/api/query-params";
+import type { BuilderReportView, ReportAudience } from "@educodeai/contracts";
 
 export const builderApi = {
   async runForDelivery(deliveryId: string): Promise<EnqueueBuildRunResponse> {
@@ -21,6 +28,27 @@ export const builderApi = {
   async detail(buildRunId: string): Promise<BuildRunEntity> {
     const { data } = await http.get<BuildRunEntity>(
       `/builder/runs/${buildRunId}`,
+    );
+    return data;
+  },
+
+  async report(buildRunId: string): Promise<BuilderReportView> {
+    const { data } = await http.get<BuilderReportView>(
+      `/builder/runs/${buildRunId}/report`,
+    );
+    return data;
+  },
+
+  async exportReport(
+    buildRunId: string,
+    audience?: ReportAudience,
+  ): Promise<Blob> {
+    const { data } = await http.get<Blob>(
+      `/builder/runs/${buildRunId}/report/export`,
+      {
+        params: toParams({ format: "markdown", audience }),
+        responseType: "blob",
+      },
     );
     return data;
   },

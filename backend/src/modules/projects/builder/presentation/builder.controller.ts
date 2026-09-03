@@ -10,6 +10,7 @@
 
 import {
   Body,
+  BadRequestException,
   Controller,
   DefaultValuePipe,
   Get,
@@ -76,6 +77,7 @@ import {
   toChatMessageResponseDto,
 } from './dto/chat-message.dto';
 import { toCorrelationId } from '../../../../shared/config/logger.config';
+import type { BuilderReportView } from '@educodeai/contracts';
 
 const DELIVERY_ID_PARAM = {
   name: 'deliveryId',
@@ -188,6 +190,55 @@ export class BuilderController {
       request.user,
     );
     return toBuildRunResponseDto(run, request.user.role);
+  }
+
+  @ApiOperation({
+    summary: 'Obtener el informe proyectado para la audiencia autenticada',
+  })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Get('runs/:buildRunId/report')
+  async getRunReport(
+    @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<BuilderReportView> {
+    return this.builderRunQueriesService.getReportView(
+      buildRunId,
+      request.user,
+    );
+  }
+
+  @ApiOperation({ summary: 'Exportar una proyección autorizada del informe' })
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @Get('runs/:buildRunId/report/export')
+  async exportRunReport(
+    @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
+    @Query('format') format: string | undefined,
+    @Query('audience') audience: string | undefined,
+    @Req() request: AuthenticatedRequest,
+    @Res() response: Response,
+  ): Promise<void> {
+    if (format !== undefined && format !== 'markdown') {
+      throw new BadRequestException('El único formato soportado es markdown.');
+    }
+    if (
+      audience !== undefined &&
+      audience !== 'student' &&
+      audience !== 'teacher'
+    ) {
+      throw new BadRequestException('audience debe ser student o teacher.');
+    }
+    const markdown = await this.builderRunQueriesService.exportReportMarkdown(
+      buildRunId,
+      request.user,
+      audience,
+    );
+    response.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="report-${buildRunId}-${audience ?? 'authorized'}.md"`,
+    );
+    response.setHeader('Cache-Control', 'private, no-store');
+    response.send(markdown);
   }
 
   @ApiOperation({

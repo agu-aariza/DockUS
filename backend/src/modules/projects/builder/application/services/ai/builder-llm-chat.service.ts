@@ -12,57 +12,21 @@ import {
 } from '@nestjs/common';
 import { BuildRunChatMessage } from '../../../domain/entities/build-run-chat-message.entity';
 import { BuildRun } from '../../../domain/entities/build-run.entity';
-import { BuildRunArtifactType } from '../../../domain/entities/build-run-artifact.entity';
 import type { IBuildRunRepository } from '../../../domain/repositories/build-run.repository.interface';
 import { BUILD_RUN_REPOSITORY } from '../../../domain/repositories/build-run.repository.interface';
 import type { IBuildRunChatMessageRepository } from '../../../domain/repositories/build-run-chat-message.repository.interface';
 import { BUILD_RUN_CHAT_MESSAGE_REPOSITORY } from '../../../domain/repositories/build-run-chat-message.repository.interface';
-import type { IBuildRunArtifactRepository } from '../../../domain/repositories/build-run-artifact.repository.interface';
-import { BUILD_RUN_ARTIFACT_REPOSITORY } from '../../../domain/repositories/build-run-artifact.repository.interface';
 import { BuilderLlmDispatcherService } from './builder-llm-dispatcher.service';
 import {
   PromptRegistryService,
   PromptId,
 } from '../../../../../../shared/infrastructure/ai/prompt-registry.service';
-import type { IObjectStorage } from '../../../domain/ports/object-storage.port';
-import { OBJECT_STORAGE } from '../../../domain/ports/object-storage.port';
-import { BuilderLlmConfigService } from '../config/builder-llm-config.service';
 import { BuilderRunCostService } from './builder-run-cost.service';
-import {
-  BuilderEvaluationContractV2,
-  BuilderReportEntity,
-  BuilderStageTokenUsage,
-} from '../../../domain/builder.types';
+import { BuilderStageTokenUsage } from '../../../domain/builder.types';
 import type { AuthenticatedUser } from '../../../../../auth/interfaces/authenticated-user.interface';
 import { BuilderRunQueriesService } from '../orchestration/builder-run-queries.service';
 import { toErrorMessage } from '../../../../../../shared/utils/error-message.util';
-
-// Secciones del prompt de evaluación que contienen la clave de corrección del
-// docente. El artefacto LLM_EVAL_PROMPT se reutiliza como contexto del Tutor IA
-// (visible por el alumno), así que estos bloques se enmascaran antes de
-// construir el prompt del tutor: basta un prompt injection para que el modelo
-// repita en el chat cualquier texto que reciba como contexto.
-const ANSWER_KEY_SECTION_LABELS = ['EXPECTED OUTPUT ORACLE'];
-
-// Etiquetas de sección que emite el compositor (builder-prompt-composer.ts)
-// con el formato `ETIQUETA\n<contenido>` separadas por una línea en blanco.
-// Se usan como frontera al recortar la sección sensible: el contenido del
-// oráculo es texto libre del docente y puede contener líneas en mayúsculas,
-// así que no sirve cualquier línea en mayúsculas como fin de sección.
-const KNOWN_SECTION_LABELS = [
-  'RUNTIME CATALOG',
-  'PROFESSOR EXPECTATIONS',
-  'EXPECTED OUTPUT ORACLE',
-  'RUBRIC INSTRUCTIONS',
-  'STUDENT WORKSPACE',
-  'FEW-SHOT EXAMPLES',
-  'EXECUTION LOGS',
-  'SOURCE EXCERPTS',
-  'VERIFIED FACTS',
-  'PLANNER HYPOTHESIS SUMMARY',
-  'ASSIGNMENT CONTEXT',
-  'CURRENT ACADEMIC ASSESSMENT',
-];
+import type { StudentReportView } from '@educodeai/contracts';
 
 // Tope de preguntas de alumno por run: sin esto, POST /builder/runs/:id/chat
 // solo cae en el bucket generico de rate limiting (no especifico), y cada
@@ -84,29 +48,41 @@ const MAX_HISTORY_MESSAGES = 20;
  */
 const MAX_EVALUATION_CONTEXT_CHARS = 8_000;
 
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+function buildStudentEvaluationContext(report: StudentReportView): string {
+  const formatList = (items: string[]): string =>
+    items.length > 0
+      ? items.map((item) => `- ${item}`).join('\n')
+      : '- Ninguno.';
+  const rubric = report.rubric.map(
+    (criterion) =>
+      `- ${criterion.name} [${criterion.status}]: ${criterion.explanation}`,
+  );
+  const evidence = report.evidence.map(
+    (item) => `- ${item.summary}${item.detail ? `: ${item.detail}` : ''}`,
+  );
 
-/**
- * Sustituye el contenido de las secciones con la clave de corrección por un
- * marcador, conservando la etiqueta para que el tutor sepa que la sección
- * existe pero no tenga acceso a su contenido.
- */
-function redactAnswerKeySections(promptText: string): string {
-  const boundary = KNOWN_SECTION_LABELS.map(escapeRegExp).join('|');
-  let redacted = promptText;
-  for (const label of ANSWER_KEY_SECTION_LABELS) {
-    const pattern = new RegExp(
-      `(^|\\n\\n)${escapeRegExp(label)}\\n[\\s\\S]*?(?=\\n\\n(?:${boundary})\\n|$)`,
-      'g',
-    );
-    redacted = redacted.replace(
-      pattern,
-      `$1${label}\n[Redactado: la clave de corrección no se comparte con el Tutor IA.]`,
-    );
-  }
-  return redacted;
+  return [
+    `Resultado: ${report.outcome}`,
+    `Nota ${report.grade.status === 'OFFICIAL' ? 'oficial' : 'provisional'}: ${report.grade.value ?? 'Sin nota'} / 10`,
+    '',
+    'LOGROS:',
+    formatList(report.narrative.achievements),
+    '',
+    'BLOQUEOS:',
+    formatList(report.blockers.map((item) => item.title)),
+    '',
+    'PRÓXIMOS PASOS:',
+    formatList(report.nextSteps),
+    '',
+    'RÚBRICA EXPLICADA:',
+    rubric.length > 0 ? rubric.join('\n') : '- No disponible.',
+    '',
+    'EVIDENCIA SEGURA:',
+    evidence.length > 0 ? evidence.join('\n') : '- No disponible.',
+    '',
+    'LIMITACIONES:',
+    formatList(report.limitations),
+  ].join('\n');
 }
 
 @Injectable()
@@ -118,13 +94,8 @@ export class BuilderLlmChatService {
     private readonly chatMessageRepository: IBuildRunChatMessageRepository,
     @Inject(BUILD_RUN_REPOSITORY)
     private readonly buildRunRepository: IBuildRunRepository,
-    @Inject(BUILD_RUN_ARTIFACT_REPOSITORY)
-    private readonly artifactRepository: IBuildRunArtifactRepository,
     private readonly llmDispatcher: BuilderLlmDispatcherService,
     private readonly promptRegistryService: PromptRegistryService,
-    @Inject(OBJECT_STORAGE)
-    private readonly objectStorage: IObjectStorage,
-    private readonly llmConfigService: BuilderLlmConfigService,
     private readonly runCostService: BuilderRunCostService,
     private readonly builderRunQueriesService: BuilderRunQueriesService,
   ) {}
@@ -167,6 +138,7 @@ export class BuilderLlmChatService {
         run,
         history,
         messageText,
+        actor,
       );
 
       const assistantMessage = this.chatMessageRepository.create({
@@ -219,68 +191,29 @@ export class BuilderLlmChatService {
     run: BuildRun,
     history: BuildRunChatMessage[],
     newUserMessage: string,
+    actor: AuthenticatedUser,
   ): Promise<{ text: string; usage: BuilderStageTokenUsage | null }> {
-    let evaluationContext = '';
+    let evaluationContext: string;
     try {
-      const evalPromptArtifact =
-        await this.artifactRepository.findOneByBuildRunAndType(
-          run.id,
-          BuildRunArtifactType.LLM_EVAL_PROMPT,
-        );
-      if (evalPromptArtifact) {
-        const buffer = await this.objectStorage.getObjectBuffer(
-          evalPromptArtifact.bucket,
-          evalPromptArtifact.objectKey,
-        );
-        const fullPromptText = buffer.toString('utf8');
-        const userPromptStart = fullPromptText.indexOf('[USER PROMPT]');
-        const rawContext =
-          userPromptStart !== -1
-            ? fullPromptText.substring(userPromptStart)
-            : fullPromptText;
-        evaluationContext = redactAnswerKeySections(rawContext);
+      // El Tutor IA es una superficie de alumno incluso si lo abre un docente.
+      // Su contexto procede únicamente de la proyección pública allowlist.
+      const report = await this.builderRunQueriesService.getReportView(
+        run.id,
+        actor,
+        'student',
+      );
+      if (report.audience !== 'student') {
+        throw new Error('La proyección del Tutor IA no es de alumno.');
       }
+      evaluationContext = buildStudentEvaluationContext(report);
     } catch (error) {
       this.logger.warn(
-        `Could not load LLM_EVAL_PROMPT artifact: ${toErrorMessage(error)}. Using fallback.`,
+        `Could not load student report projection for Tutor IA: ${toErrorMessage(error)}. Using safe fallback.`,
       );
+      evaluationContext = `Resultado técnico del run: ${run.status}. El informe pedagógico seguro no está disponible todavía; orienta al alumno sin inventar datos de evaluación.`;
     }
 
-    if (!evaluationContext) {
-      const report = run.report as BuilderReportEntity | undefined;
-      const llmAssessment = run.llmAssessment as
-        BuilderEvaluationContractV2 | undefined;
-      const formatList = (items: unknown[]): string =>
-        items.length > 0
-          ? items
-              .map(
-                (item, i) =>
-                  `${i + 1}. ${typeof item === 'string' ? item : JSON.stringify(item)}`,
-              )
-              .join('\n')
-          : 'Ninguno.';
-      const mustFix: unknown[] = report?.coaching?.mustFix ?? [];
-      const shouldImprove: unknown[] = report?.coaching?.shouldImprove ?? [];
-      const strengths: unknown[] = report?.coaching?.strengths ?? [];
-      evaluationContext =
-        `Resultado final: ${report?.overallOutcome ?? run.status}
-Nota sugerida: ${llmAssessment?.recommendedGrade ?? 'Sin nota'} / 10
-
-BLOQUEOS QUE IMPIDEN APROBAR:
-${formatList(mustFix)}
-
-MEJORAS SUGERIDAS:
-${formatList(shouldImprove)}
-
-FORTALEZAS IDENTIFICADAS:
-${formatList(strengths)}
-
-RESUMEN PEDAGÓGICO:
-${llmAssessment?.studentSummary ?? 'No disponible.'}`.trim();
-    }
-
-    // El truncado se aplica siempre después de `redactAnswerKeySections`: cortar
-    // solo puede eliminar texto, nunca revelar una sección redactada.
+    // El truncado se aplica sobre una proyección ya segura y solo elimina texto.
     if (evaluationContext.length > MAX_EVALUATION_CONTEXT_CHARS) {
       evaluationContext = `${evaluationContext.slice(
         0,

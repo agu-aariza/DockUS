@@ -11,7 +11,7 @@ import { BuilderRunSupportService } from '../orchestration/builder-run-support.s
 import { BuildRunStatus } from '../../../domain/entities/build-run.entity';
 import {
   AssignmentContext,
-  BuilderEvaluationContractV2,
+  BuilderEvaluationContractV3,
   BuilderCodeQualityContractV2,
   BuilderExecutionResult,
   BuilderStudentStage,
@@ -32,7 +32,7 @@ interface QualityStageInput {
   sourceCodePayload: string;
   execution: BuilderExecutionResult;
   assignmentContext: AssignmentContext;
-  assessment: BuilderEvaluationContractV2;
+  assessment: BuilderEvaluationContractV3;
   delivery: Delivery;
 }
 

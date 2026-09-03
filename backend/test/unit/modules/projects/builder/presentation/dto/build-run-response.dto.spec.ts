@@ -58,7 +58,7 @@ function buildRunFixture(): BuildRun {
 }
 
 describe('toBuildRunResponseDto', () => {
-  it('preserves rich llm assessment fields used by the student frontend', () => {
+  it('preserves the full assessment for staff and returns only a report summary', () => {
     const dto = toBuildRunResponseDto(buildRunFixture(), UserRole.TEACHER);
 
     expect(dto.llmAssessment).toMatchObject({
@@ -67,22 +67,27 @@ describe('toBuildRunResponseDto', () => {
       teacherSummary: 'Resumen para docente',
     });
     expect((dto.llmAssessment as any).gradeBreakdown).toHaveLength(1);
-    expect((dto.report as any).coaching.mustFix[0]).toMatchObject({
-      title: 'Falta main.py',
-      codeSnippet: 'print("hola")',
-      conceptExplanation: 'El entrypoint permite arrancar el programa.',
+    expect(dto.reportSummary).toMatchObject({
+      hasReport: true,
+      passReadiness: 'BLOCKED',
     });
+    expect((dto as any).report).toBeUndefined();
   });
 
-  it('redacts llmAssessment and teacherHighlights for STUDENT role', () => {
-    const dto = toBuildRunResponseDto(buildRunFixture(), UserRole.STUDENT);
+  it('never returns the canonical report or llmAssessment to a student', () => {
+    const run = buildRunFixture();
+    run.failureReason = 'teacher test failed: EXPECTED_VALUE_42';
+    run.warnings = [
+      'Aviso público.',
+      'LLM prompt contiene el oráculo EXPECTED_VALUE_42',
+    ];
+    const dto = toBuildRunResponseDto(run, UserRole.STUDENT);
 
     expect(dto.llmAssessment).toBeUndefined();
-    expect(dto.report).toBeDefined();
-    expect((dto.report as any).teacherHighlights).toBeUndefined();
-    expect((dto.report as any).coaching.mustFix[0]).toMatchObject({
-      title: 'Falta main.py',
-    });
+    expect((dto as any).report).toBeUndefined();
+    expect(dto.reportSummary.hasReport).toBe(true);
+    expect(dto.warnings).toEqual(['Aviso público.']);
+    expect(dto.failureReason).not.toContain('EXPECTED_VALUE_42');
   });
 
   it('keeps full payload for ADMIN role', () => {
@@ -91,16 +96,14 @@ describe('toBuildRunResponseDto', () => {
     expect(dto.llmAssessment).toMatchObject({
       teacherSummary: 'Resumen para docente',
     });
-    expect((dto.report as any).teacherHighlights).toEqual([
-      'Sospecha de copia en la funcion principal',
-    ]);
+    expect((dto as any).report).toBeUndefined();
   });
 
   it('fails closed when actor role is omitted', () => {
     const dto = toBuildRunResponseDto(buildRunFixture());
 
     expect(dto.llmAssessment).toBeUndefined();
-    expect((dto.report as any).teacherHighlights).toBeUndefined();
+    expect((dto as any).report).toBeUndefined();
   });
 
   it('does not mutate the original report object when redacting', () => {
