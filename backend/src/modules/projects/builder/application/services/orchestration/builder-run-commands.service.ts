@@ -194,12 +194,12 @@ export class BuilderRunCommandsService {
     // de revision es lo que evita que quede colgada; el estado real del
     // intento se lee del BuildRun (CANCELLED), no del Delivery.
     //
-    // Nota de alcance (plan_de_accion.md P0.2): esto no es una transaccion
+    // Nota de alcance: esto no es una transaccion
     // atomica con el UPDATE de `cancelIfActive` de mas arriba — un crash justo
     // entre ambas dejaria Delivery en IN_REVIEW pese a BuildRun=CANCELLED,
     // igual que ya podia pasar (sin cierre alguno) antes de este cambio. El
-    // diseno con outbox/transaccion cruzada que lo cerraria del todo queda
-    // fuera de esta tanda; ver reports/plan_de_accion.md.
+    // diseño con outbox/transacción cruzada que lo cerraría del todo requiere
+    // una decisión arquitectónica y una migración propia.
     await this.deliveryStatusService.updateStatusInternal(
       run.deliveryId,
       DeliveryStatus.EVALUATED,

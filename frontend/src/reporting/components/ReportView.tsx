@@ -55,6 +55,7 @@ export function ReportView({
       <StudentReportView
         report={report}
         onExport={() => void download("student")}
+        buildRunId={run.id}
       />
     );
   }

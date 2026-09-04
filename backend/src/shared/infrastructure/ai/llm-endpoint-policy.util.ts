@@ -20,7 +20,7 @@
  * caliente si un endpoint ya guardado y legítimo cambia de IP después por
  * DNS rebinding entre el guardado y una llamada posterior; eso requeriría
  * validar la IP resuelta en el propio cliente HTTP de cada proveedor, fuera
- * del alcance de esta tanda (ver plan_de_accion.md, P1.1).
+ * del alcance actual de esta política.
  *
  * @module llm-endpoint-policy
  */

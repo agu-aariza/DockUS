@@ -106,6 +106,11 @@ export interface BuilderExecutionResult {
   exitCode: number | null;
   /** Solo tiene sentido cuando `ran` es `false`. */
   skippedReason?: string;
+  /** Resultado verificable de la suite docente, si Builder la ejecutó. */
+  teacherSuite?: {
+    runner: 'c' | 'python';
+    passed: boolean;
+  };
 }
 
 export interface CapabilityAssessment {

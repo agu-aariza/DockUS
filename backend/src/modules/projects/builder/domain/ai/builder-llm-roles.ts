@@ -1,9 +1,9 @@
 /**
  * @fileoverview Roles de IA configurables y su correspondencia con las etapas.
  *
- * Un rol es lo que el profesor asigna a un proveedor en la pestaña "Modelos de
- * IA"; una etapa es lo que ejecuta el pipeline. `facts` y `evaluation` comparten
- * el rol `eval` porque ambas son la fase de corrección.
+ * Un rol es lo que el administrador asigna a un proveedor en la pestaña "Modelos de
+ * IA"; una etapa es lo que ejecuta el pipeline. `facts`, `evaluation` y
+ * `reporting` comparten el rol `eval`, aunque sean llamadas internas distintas.
  *
  * @module BuilderLlmRoles
  */

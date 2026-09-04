@@ -85,6 +85,37 @@ describe('parseBuilderEvaluationContractV3', () => {
     expect(first).not.toHaveProperty('teacherSummary');
   });
 
+  it('repairs an E3 grade cap while keeping the criteria total coherent', () => {
+    const parsed = parseBuilderEvaluationContractV3(
+      JSON.stringify(
+        payload({
+          evaluativeState: 'E3',
+          recommendedGrade: 3,
+          criteria: [
+            {
+              name: 'Funcionalidad',
+              maxPoints: 10,
+              awarded: 3,
+              justification: 'Solo hay logs de compilación.',
+              evidenceRefs: [0],
+            },
+          ],
+        }),
+      ),
+    );
+
+    expect(parsed.evaluativeState).toBe('E3');
+    expect(parsed.recommendedGrade).toBe(2);
+    expect(parsed.criteria[0].awarded).toBe(2);
+    expect(
+      parsed.gradeBreakdown.reduce((sum, item) => sum + item.awarded, 0),
+    ).toBe(2);
+    expect(parsed.confidence).toBe('low');
+    expect(parsed.evaluationLimits).toContainEqual(
+      expect.stringContaining('INVALID_CONTRACT_REPAIRED'),
+    );
+  });
+
   it('rejects evidence references that do not exist', () => {
     expect(() =>
       parseBuilderEvaluationContractV3(

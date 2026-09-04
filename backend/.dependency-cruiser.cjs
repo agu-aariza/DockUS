@@ -41,12 +41,8 @@ module.exports = {
       comment:
         'Same intent as no-domain-infra, split out for the /infrastructure/ half specifically. ' +
         'llm.types.ts is exempt for the same reason as in no-presentation-infra: zero imports, zero classes, ' +
-        'pure type/const module — "import type" from it erases at compile time and is the tolerated case the ' +
-        'audit itself carved out for builder.types.ts / builder-config.provider.ts (see audit/areas/arquitectura ' +
-        'ARQ-019). The former narrow exception for domain/ai/parsers/plan-contract.parser.ts (audit/04 ARQ-002, ' +
-        'then tracked as ARQ-018 in a later pass) was closed by moving the offending import (toPosixPath) to ' +
-        'shared/utils/path.util.ts — the parser no longer imports from /infrastructure/ at all, so this rule ' +
-        'now applies to it with no carve-out. See ARQ-018/P0-1. ' +
+        'pure type/const module — "import type" from it erases at compile time and is the only tolerated case. ' +
+        'The parser layer must not import infrastructure; shared path helpers are the permitted abstraction. ' +
         'docker.types.ts is exempt for the same reason as llm.types.ts (Fase 1, P1-1): zero imports, zero ' +
         'classes, pure type/const module — builder/domain/ports/container-runtime.port.ts imports ' +
         '`DockerRunOptions` from it as `import type` only.',
@@ -64,12 +60,9 @@ module.exports = {
       name: 'no-presentation-infra',
       comment:
         'Controllers must not talk to Docker/MinIO/Redis/Bedrock directly — that orchestration belongs ' +
-        'in application/ services (CLAUDE.md: "NestJS controllers never contain business logic or ' +
-        'orchestrate Docker/MinIO/LLM calls directly"). Covers both shared/infrastructure/ and a module\'s ' +
-        'own local infrastructure/ (widened by ARQ-024/P1-3 — the original pattern only matched ' +
-        'shared/infrastructure/ and missed builder/infrastructure/, which is how BuilderLlmConfigService/ ' +
-        'BuilderLlmProviderTester ended up imported straight into builder.controller.ts; both are now ' +
-        'application/ use cases). Pure constant/type modules with zero side effects (no class, no ' +
+        'in application/ services. Covers both shared/infrastructure/ and a module\'s own local ' +
+        'infrastructure/ so controllers cannot bypass application use cases. Pure constant/type modules ' +
+        'with zero side effects (no class, no ' +
         'Injectable, no client) are exempt: importing a shared enum of provider ids to build a DTO ' +
         'validator is not the coupling this rule exists to catch.',
       severity: 'error',
@@ -87,7 +80,7 @@ module.exports = {
         'Un adaptador de repositorio concreto (infrastructure/database/*.repository.ts) solo lo importa ' +
         'un *.module.ts, para su registro `useClass`. El resto del código (application/, domain/, ' +
         'presentation/, otro *.module.ts) consume el puerto — interfaz + token — que exporta el módulo ' +
-        'dueño, nunca la clase directamente (ARQ-022). dependency-cruiser no soporta backreferences entre ' +
+        'dueño, nunca la clase directamente. dependency-cruiser no soporta backreferences entre ' +
         '`from`/`to`, así que esto no compara "módulo A" contra "módulo B": es más estricto y más simple — ' +
         'ningún fichero que no sea un *.module.ts puede importar una clase adaptadora, ni siquiera la de su ' +
         'propio módulo. Tras P1-1, `grep -rn "provide: [A-Z_]*REPOSITORY" src --include="*.module.ts" | wc -l` ' +

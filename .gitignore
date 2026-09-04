@@ -24,17 +24,5 @@ backend/.env
 
 # Casos de uso
 graphify-out/
-.agents/
-.codex/
-AGENTS.md
-audit/*
-memoria_tfg.zip
-prompts/
-CLAUDE.md
-.claude/
-features.md
-FINDING_NAME.md
-test_educode/
 .graphifyignore
-docs/
-memoria_tfg/*
+corpus/

@@ -106,7 +106,7 @@ export class DockerContainerService {
       String(options.pidsLimit ?? SANDBOX_DEFAULTS.pidsLimit),
       ...(options.user ? ['--user', options.user] : []),
       '--tmpfs',
-      '/tmp',
+      options.allowTmpfsExecution ? '/tmp:rw,nosuid,nodev,exec' : '/tmp',
       ...buildDockerLabelArgs(options.labels),
       '--cpus',
       options.cpus ?? SANDBOX_DEFAULTS.cpus,

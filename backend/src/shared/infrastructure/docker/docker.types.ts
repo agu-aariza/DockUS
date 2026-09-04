@@ -32,6 +32,11 @@ export interface DockerContainerRunOptions extends DockerLabelledTimeoutOptions 
   user?: string;
   /** Deja el sistema de ficheros raíz en solo lectura (los binds no se ven afectados). */
   readOnlyRootfs?: boolean;
+  /**
+   * Permite ejecutar binarios temporales cuando una suite docente C los
+   * compila en `/tmp`. El valor por defecto mantiene `noexec`.
+   */
+  allowTmpfsExecution?: boolean;
   ports?: Array<{
     containerPort: number;
     hostPort?: number;

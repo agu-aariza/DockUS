@@ -31,6 +31,7 @@ import {
   normalizeGrade,
   assertEvaluationSemanticConsistency,
   assertGradeStateConsistency,
+  maxGradeForEvaluativeState,
 } from './parsers/evaluation-contract.parser';
 
 export function parseBuilderEvaluationContractV2(
@@ -114,6 +115,8 @@ export function parseBuilderEvaluationContractV2(
 
   // `gradeBreakdown` es la fuente de verdad verificable. El total se recalcula
   // para corregir posibles errores aritméticos del LLM.
+  let breakdownMaxTotal = 0;
+  let breakdownUsesNonDecimalScale = false;
   if (contract.gradeBreakdown.length > 0) {
     const awarded = contract.gradeBreakdown.reduce(
       (sum, item) => sum + item.awarded,
@@ -131,6 +134,8 @@ export function parseBuilderEvaluationContractV2(
     // más convertiría cualquier desglose en un sobresaliente, y en silencio.
     const usesNonDecimalScale = maxTotal > 0 && Math.abs(maxTotal - 10) > 0.5;
     const computed = usesNonDecimalScale ? (awarded / maxTotal) * 10 : awarded;
+    breakdownMaxTotal = maxTotal;
+    breakdownUsesNonDecimalScale = usesNonDecimalScale;
 
     if (usesNonDecimalScale) {
       contract.evaluationLimits = [
@@ -150,6 +155,47 @@ export function parseBuilderEvaluationContractV2(
     contract.recommendedGrade = roundToTwoDecimals(
       Math.min(10, Math.max(0, computed)),
     );
+  }
+
+  // El modelo puede entender E3/E4 correctamente y aun así dejar una nota
+  // residual de criterios estáticos por encima del límite. No descartamos por
+  // completo ese contrato (lo que provocaba `invalid_contract` y una
+  // evaluación degradada): conservamos la evidencia, reducimos la nota a la
+  // zona suspensa y dejamos una marca explícita para revisión docente.
+  const maximumGrade = maxGradeForEvaluativeState(contract.evaluativeState);
+  if (
+    contract.recommendedGrade !== undefined &&
+    contract.recommendedGrade > maximumGrade
+  ) {
+    const inconsistentGrade = contract.recommendedGrade;
+
+    if (contract.gradeBreakdown.length > 0) {
+      contract.gradeBreakdown = capGradeBreakdown(
+        contract.gradeBreakdown,
+        maximumGrade,
+        breakdownMaxTotal,
+        breakdownUsesNonDecimalScale,
+      );
+      const cappedAwarded = contract.gradeBreakdown.reduce(
+        (sum, item) => sum + item.awarded,
+        0,
+      );
+      const cappedComputed =
+        breakdownUsesNonDecimalScale && breakdownMaxTotal > 0
+          ? (cappedAwarded / breakdownMaxTotal) * 10
+          : cappedAwarded;
+      contract.recommendedGrade = roundToTwoDecimals(
+        Math.min(maximumGrade, Math.max(0, cappedComputed)),
+      );
+    } else {
+      contract.recommendedGrade = maximumGrade;
+    }
+
+    contract.evaluationLimits = [
+      ...contract.evaluationLimits,
+      `INVALID_CONTRACT_REPAIRED: evaluativeState=${contract.evaluativeState} llegó con recommendedGrade=${inconsistentGrade}, por encima del máximo ${maximumGrade}; el backend la ajustó a ${contract.recommendedGrade} y requiere revisión manual.`,
+    ];
+    contract.confidence = 'low';
   }
 
   contract.capabilities = alignCapabilitiesWithRecipe(
@@ -189,6 +235,113 @@ export function parseBuilderEvaluationContractV2(
  */
 function roundToTwoDecimals(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function capGradeBreakdown(
+  items: RubricGradeItem[],
+  targetGrade: number,
+  maxTotal: number,
+  usesNonDecimalScale: boolean,
+): RubricGradeItem[] {
+  const safeMaxTotal = finiteNonNegative(maxTotal);
+  const awardedTotal = items.reduce(
+    (sum, item) => sum + finiteNonNegative(item.awarded),
+    0,
+  );
+  const targetInBreakdownScale =
+    usesNonDecimalScale && safeMaxTotal > 0
+      ? (targetGrade / 10) * safeMaxTotal
+      : targetGrade;
+  const targetAwarded = roundToTwoDecimals(
+    Math.min(safeMaxTotal, Math.max(0, targetInBreakdownScale)),
+  );
+
+  if (awardedTotal <= 0 || targetAwarded <= 0) {
+    return rebalanceGradeBreakdown(
+      items.map((item) => ({
+        ...item,
+        maxPoints: finiteNonNegative(item.maxPoints),
+        awarded: 0,
+      })),
+      0,
+    );
+  }
+
+  const scale = Math.min(1, targetAwarded / awardedTotal);
+  const scaledItems = items.map((item) => {
+    const maxPoints = finiteNonNegative(item.maxPoints);
+    const awarded = finiteNonNegative(item.awarded);
+    return {
+      ...item,
+      maxPoints,
+      awarded: roundToTwoDecimals(
+        Math.min(maxPoints, Math.max(0, awarded * scale)),
+      ),
+    };
+  });
+
+  // Trabajar en centésimas evita que el redondeo independiente de cada
+  // criterio vuelva a romper la igualdad recommendedGrade = suma(awarded).
+  return rebalanceGradeBreakdown(scaledItems, targetAwarded);
+}
+
+function rebalanceGradeBreakdown(
+  items: RubricGradeItem[],
+  targetTotal: number,
+): RubricGradeItem[] {
+  const capacityCents = items.reduce(
+    (sum, item) => sum + toCents(item.maxPoints),
+    0,
+  );
+  const targetCents = Math.min(
+    capacityCents,
+    Math.max(0, Math.round(targetTotal * 100)),
+  );
+  const awardedCents = items.map((item) =>
+    Math.min(toCents(item.maxPoints), toCents(item.awarded)),
+  );
+  const currentCents = awardedCents.reduce((sum, value) => sum + value, 0);
+
+  if (currentCents > targetCents) {
+    let remaining = currentCents - targetCents;
+    for (
+      let index = awardedCents.length - 1;
+      index >= 0 && remaining > 0;
+      index -= 1
+    ) {
+      const reduction = Math.min(awardedCents[index], remaining);
+      awardedCents[index] -= reduction;
+      remaining -= reduction;
+    }
+  } else if (currentCents < targetCents) {
+    let remaining = targetCents - currentCents;
+    for (
+      let index = 0;
+      index < awardedCents.length && remaining > 0;
+      index += 1
+    ) {
+      const capacity = Math.max(
+        0,
+        toCents(items[index].maxPoints) - awardedCents[index],
+      );
+      const addition = Math.min(capacity, remaining);
+      awardedCents[index] += addition;
+      remaining -= addition;
+    }
+  }
+
+  return items.map((item, index) => ({
+    ...item,
+    awarded: awardedCents[index] / 100,
+  }));
+}
+
+function finiteNonNegative(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
+function toCents(value: number): number {
+  return Math.round(finiteNonNegative(value) * 100);
 }
 
 /**

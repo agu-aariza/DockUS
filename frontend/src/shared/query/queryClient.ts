@@ -20,7 +20,7 @@ export const queryDefaultOptions: DefaultOptions = {
     // http.ts ya normaliza cualquier error a ApiErrorPayload antes de que React Query lo vea,
     // así que no hace falta axios.isAxiosError aquí. No tiene sentido reintentar un 4xx.
     retry: (failureCount, error) => !isClientError(error) && failureCount < 2,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   },
   mutations: {

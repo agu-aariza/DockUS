@@ -132,6 +132,10 @@ export class BuilderExecutionStageHandler {
       },
       networkMode: 'none',
       readOnlyRootfs: true,
+      // Los runners docentes C del corpus compilan su binario temporal en
+      // `/tmp`; se habilita exec solo para esa ruta explícita, no para todas
+      // las ejecuciones del sandbox.
+      allowTmpfsExecution: compiled.teacherSuiteRunner === 'c',
       pidsLimit: this.builderConfigProvider.executionPidsLimit,
       user: containerUser,
       memory: this.builderConfigProvider.executionMemoryLimit,
@@ -188,6 +192,12 @@ export class BuilderExecutionStageHandler {
         stdout: execResult.stdout,
         stderr: execResult.stderr,
         exitCode: execResult.exitCode,
+        teacherSuite: compiled.teacherSuiteRunner
+          ? {
+              runner: compiled.teacherSuiteRunner,
+              passed: execResult.exitCode === 0,
+            }
+          : undefined,
       },
     };
   }

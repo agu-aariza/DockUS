@@ -6,16 +6,30 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "shared/**"
+      - "corpus/**"
+      - "docs/**"
       - "README.md"
+      - "ARCHITECTURE.md"
       - ".env.example"
+      - "docker-compose.yml"
+      - ".gitignore"
+      - "scripts/**"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     branches: [main, "feature/*"]
     paths:
       - "backend/**"
       - "frontend/**"
+      - "shared/**"
+      - "corpus/**"
+      - "docs/**"
       - "README.md"
+      - "ARCHITECTURE.md"
       - ".env.example"
+      - "docker-compose.yml"
+      - ".gitignore"
+      - "scripts/**"
       - ".github/workflows/backend-ci.yml"
 
 jobs:

@@ -19,5 +19,8 @@ export function serializeExecutionResult(
   if (!result.ran) {
     return `EL LLM DETERMINO QUE EL PROYECTO NO ES EJECUTABLE (${result.skippedReason ?? 'RECETA VACIA'}).`;
   }
-  return `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}\nEXIT CODE: ${result.exitCode}`;
+  const teacherSuite = result.teacherSuite
+    ? `\nTEACHER SUITE: ${result.teacherSuite.passed ? 'PASS' : 'FAIL'} (${result.teacherSuite.runner})`
+    : '';
+  return `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}\nEXIT CODE: ${result.exitCode}${teacherSuite}`;
 }

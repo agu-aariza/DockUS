@@ -114,6 +114,19 @@ describe('BuilderHallucinationGuard', () => {
     expect(result).toBeNull();
   });
 
+  it('acepta una suite docente aprobada aunque sus logs no repitan el oraculo', () => {
+    const result = guard.detectOutputHallucination(
+      buildAssessment('E1'),
+      buildExecution({
+        stdout: 'caso-basico: OK\nRESULTADO: 4 OK, 0 fallos',
+        teacherSuite: { runner: 'python', passed: true },
+      }),
+      'Salida exacta esperada:\nTOTAL: 42',
+    );
+
+    expect(result).toBeNull();
+  });
+
   it('detecta alucinacion por desajuste numerico contra la salida exacta esperada del oraculo', () => {
     // La linea de contexto debe aparecer tal cual en stdout para superar el
     // check 2 (alguna linea del oraculo presente) y llegar al check 3

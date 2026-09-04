@@ -12,12 +12,20 @@ import type {
 
 /**
  * El propio prompt del evaluador exige esta correlación ("Logs solo de
- * compilación: evaluativeState=E3, recommendedGrade≤2") pero solo como guía
- * de prompt — nada la hacía cumplir. E3/E4 se traducen a `overallOutcome`
- * FAIL para el alumno; sin esta comprobación el informe podía mostrar
- * "APTO" (E1/E2) junto a una nota suspensa, o "NO APTO" junto a un 9/10.
+ * compilación: evaluativeState=E3, recommendedGrade≤2"). E3/E4 se traducen
+ * a `overallOutcome` FAIL para el alumno; sin esta comprobación el informe
+ * podía mostrar "APTO" (E1/E2) junto a una nota suspensa, o "NO APTO" junto
+ * a un 9/10.
  */
 const MAX_GRADE_FOR_FAILING_STATE = 2;
+
+export function maxGradeForEvaluativeState(
+  evaluativeState: EvaluativeState,
+): number {
+  return evaluativeState === 'E3' || evaluativeState === 'E4'
+    ? MAX_GRADE_FOR_FAILING_STATE
+    : 10;
+}
 
 export function normalizeGrade(value: unknown): number | undefined {
   if (value === undefined || value === null) return undefined;
@@ -35,23 +43,28 @@ export function normalizeGrade(value: unknown): number | undefined {
 /**
  * La comprobación se mantiene separada de `assertEvaluationSemanticConsistency`
  * porque esta invariante no depende de `recipe`/`capabilities`/
- * `observedEvidence`, campos que un contrato genuinamente truncado puede no haber emitido. Por
- * eso debe exigirse siempre, incluso cuando el contrato se marca truncado y
- * el resto de comprobaciones semánticas se omite; de lo contrario un
- * `runtime`/`recipe` inválido (no ausente) bastaba para desactivar la única
- * regla que impide "E3/E4 con nota aprobatoria".
+ * `observedEvidence`, campos que un contrato genuinamente truncado puede no
+ * haber emitido. Por eso debe exigirse siempre, incluso cuando el contrato se
+ * marca truncado y el resto de comprobaciones semánticas se omite; de lo
+ * contrario un `runtime`/`recipe` inválido (no ausente) bastaba para
+ * desactivar la única regla que impide "E3/E4 con nota aprobatoria".
+ *
+ * El parser puede reparar una respuesta del LLM antes de llegar aquí, pero
+ * esta aserción permanece como guardia final para que ninguna ruta futura
+ * pueda devolver una evaluación incompatible.
  */
 export function assertGradeStateConsistency(
   evaluativeState: EvaluativeState,
   recommendedGrade: number | undefined,
 ): void {
+  const maximumGrade = maxGradeForEvaluativeState(evaluativeState);
   if (
     recommendedGrade !== undefined &&
-    (evaluativeState === 'E3' || evaluativeState === 'E4') &&
-    recommendedGrade > MAX_GRADE_FOR_FAILING_STATE
+    recommendedGrade > maximumGrade &&
+    maximumGrade < 10
   ) {
     throw new Error(
-      `evaluativeState=${evaluativeState} es incompatible con recommendedGrade=${recommendedGrade} (máximo ${MAX_GRADE_FOR_FAILING_STATE}).`,
+      `evaluativeState=${evaluativeState} es incompatible con recommendedGrade=${recommendedGrade} (máximo ${maximumGrade}).`,
     );
   }
 }

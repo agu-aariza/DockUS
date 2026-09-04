@@ -149,7 +149,7 @@ describe('parseBuilderEvaluationContractV2', () => {
     );
   });
 
-  it('fails when evaluativeState=E3 (fail) is paired with a passing recommendedGrade', () => {
+  it('repairs an E3 contract whose recommendedGrade exceeds the failing limit', () => {
     const raw = JSON.stringify(
       buildEvaluationPayload({
         evaluativeState: 'E3',
@@ -157,12 +157,16 @@ describe('parseBuilderEvaluationContractV2', () => {
       }),
     );
 
-    expect(() => parseBuilderEvaluationContractV2(raw)).toThrow(
-      'evaluativeState=E3 es incompatible con recommendedGrade=7 (máximo 2).',
+    const contract = parseBuilderEvaluationContractV2(raw);
+
+    expect(contract.recommendedGrade).toBe(2);
+    expect(contract.confidence).toBe('low');
+    expect(contract.evaluationLimits).toContainEqual(
+      expect.stringContaining('INVALID_CONTRACT_REPAIRED'),
     );
   });
 
-  it('fails when evaluativeState=E4 (fail) is paired with a passing recommendedGrade', () => {
+  it('repairs an E4 contract whose recommendedGrade exceeds the failing limit', () => {
     const raw = JSON.stringify(
       buildEvaluationPayload({
         evaluativeState: 'E4',
@@ -170,8 +174,12 @@ describe('parseBuilderEvaluationContractV2', () => {
       }),
     );
 
-    expect(() => parseBuilderEvaluationContractV2(raw)).toThrow(
-      'evaluativeState=E4 es incompatible con recommendedGrade=9 (máximo 2).',
+    const contract = parseBuilderEvaluationContractV2(raw);
+
+    expect(contract.recommendedGrade).toBe(2);
+    expect(contract.confidence).toBe('low');
+    expect(contract.evaluationLimits).toContainEqual(
+      expect.stringContaining('INVALID_CONTRACT_REPAIRED'),
     );
   });
 
@@ -208,7 +216,7 @@ describe('parseBuilderEvaluationContractV2', () => {
     expect(() => parseBuilderEvaluationContractV2(raw)).toThrow();
   });
 
-  it('a genuinely absent runtime/recipe (key missing) still enforces the grade/state invariant', () => {
+  it('repairs the grade/state invariant even when runtime/recipe are absent', () => {
     const payload = buildEvaluationPayload({
       evaluativeState: 'E4',
       recommendedGrade: 9,
@@ -216,10 +224,12 @@ describe('parseBuilderEvaluationContractV2', () => {
     delete (payload as Record<string, unknown>).runtime;
     delete (payload as Record<string, unknown>).recipe;
 
-    expect(() =>
-      parseBuilderEvaluationContractV2(JSON.stringify(payload)),
-    ).toThrow(
-      'evaluativeState=E4 es incompatible con recommendedGrade=9 (máximo 2).',
+    const contract = parseBuilderEvaluationContractV2(JSON.stringify(payload));
+
+    expect(contract.recommendedGrade).toBe(2);
+    expect(contract.confidence).toBe('low');
+    expect(contract.evaluationLimits).toContainEqual(
+      expect.stringContaining('INVALID_CONTRACT_REPAIRED'),
     );
   });
 

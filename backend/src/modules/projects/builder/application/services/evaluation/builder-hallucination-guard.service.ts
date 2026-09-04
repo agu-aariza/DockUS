@@ -61,7 +61,13 @@ export class BuilderHallucinationGuard {
     }
 
     // If expectedOutput has content but none of its lines appear in execution logs
-    if (expectedOutput?.trim() && assessment.evaluativeState === 'E1') {
+    const verifiedTeacherSuite = execution.teacherSuite?.passed === true;
+
+    if (
+      expectedOutput?.trim() &&
+      assessment.evaluativeState === 'E1' &&
+      !verifiedTeacherSuite
+    ) {
       const oracleLines = expectedOutput
         .split('\n')
         .filter((l) => l.trim().length > 5);
@@ -82,7 +88,8 @@ export class BuilderHallucinationGuard {
     if (
       expectedOutput?.trim() &&
       (assessment.evaluativeState === 'E1' ||
-        assessment.evaluativeState === 'E2')
+        assessment.evaluativeState === 'E2') &&
+      !verifiedTeacherSuite
     ) {
       const actualStdout = execution.stdout.trim();
 

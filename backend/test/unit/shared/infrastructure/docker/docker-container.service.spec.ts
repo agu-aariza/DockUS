@@ -80,6 +80,27 @@ describe('DockerContainerService', () => {
     );
   });
 
+  it('permite exec en tmpfs solo cuando una suite docente lo necesita', async () => {
+    mockedRunCommand.mockResolvedValueOnce({
+      exitCode: 0,
+      stdout: 'suite ok',
+      stderr: '',
+      timedOut: false,
+    });
+
+    await service.runEphemeralContainer({
+      containerName: 'teacher-suite-c-123',
+      imageTag: 'gcc:13-bookworm',
+      command: ['sh', '-c', 'run-suite'],
+      runtime: 'runc',
+      allowTmpfsExecution: true,
+      timeoutMs: 15_000,
+    });
+
+    const [, args] = mockedRunCommand.mock.calls[0];
+    expect(args).toContain('/tmp:rw,nosuid,nodev,exec');
+  });
+
   it('fuerza la eliminacion del contenedor cuando la ejecucion hace timeout', async () => {
     mockedRunCommand
       .mockResolvedValueOnce({

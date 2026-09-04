@@ -25,6 +25,8 @@ describe('envValidationSchema', () => {
       'anthropic.claude-sonnet-4-20250514-v1:0',
     );
     expect(value.BUILDER_LLM_QUALITY_MAX_INPUT_CHARS).toBe(30000);
+    expect(value.BUILDER_LLM_FACTS_MAX_INPUT_CHARS).toBe(18000);
+    expect(value.BUILDER_PROMPT_VERSION).toBe('2026.07-chain-of-verification');
   });
 
   it('derives BUILDER_BEDROCK_FACTS_MODEL_ID from the stage list instead of leaving it undefined', () => {

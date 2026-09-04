@@ -338,15 +338,29 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
   const defaultProjectId =
     sortedDeliveries[0]?.projectId ?? assignments[0]?.projectId;
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    defaultProjectId,
+    defaultProjectId ?? null,
   );
 
-  // Update selected project when workspace selection changes
+  // El alumno no tiene WorkspaceBar: cuando las consultas terminan, la primera
+  // renderización con datos llega después del `useState` inicial. Sin este
+  // efecto el selector se pinta, pero no se abre ningún expediente y el informe
+  // (incluido el Tutor IA) queda inaccesible hasta que se selecciona a mano.
   useEffect(() => {
-    if (selection.projectId) {
+    if (
+      selection.projectId &&
+      projects.some((project) => project.id === selection.projectId)
+    ) {
       setSelectedProjectId(selection.projectId);
+      return;
     }
-  }, [selection.projectId]);
+
+    setSelectedProjectId((current) => {
+      if (current && projects.some((project) => project.id === current)) {
+        return current;
+      }
+      return defaultProjectId ?? null;
+    });
+  }, [defaultProjectId, projects, selection.projectId]);
 
   // Filter deliveries and active run by selected project
   const filteredDeliveries = useMemo(() => {

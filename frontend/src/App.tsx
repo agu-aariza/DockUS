@@ -1,5 +1,5 @@
 /**
- * @fileoverview Componente raíz de enrutamiento y disposición de la aplicación React (React Router 7).
+ * @fileoverview Componente raíz de enrutamiento y disposición de la aplicación React (React Router 8).
  *
  * @description
  * Enruta las vistas principales según el rol del usuario autenticado (`STUDENT`, `TEACHER`, `ADMIN`).

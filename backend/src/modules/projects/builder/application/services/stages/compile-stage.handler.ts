@@ -43,6 +43,7 @@ export class BuilderCompileStageHandler {
     const compiled = this.builderRecipeCompiler.compile(
       planAssessment,
       workspace.runtimeFiles,
+      workspace.teacherTestRuntimeFiles,
     );
 
     if (!compiled.executable) {

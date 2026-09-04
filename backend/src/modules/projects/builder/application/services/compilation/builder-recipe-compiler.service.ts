@@ -23,6 +23,48 @@ const DEPENDENCY_MANAGERS = new Set<string>(
   Object.values(RUNTIME_CATALOG).flatMap((entry) => entry.dependencyManagers),
 );
 
+type TeacherSuiteRunner = 'c' | 'python';
+
+/**
+ * Runners que el workspace de Builder presenta con una ruta estable. Solo se
+ * reconocen estos entrypoints concretos: el resto de archivos de una suite no
+ * se convierten en comandos ejecutables automáticamente.
+ */
+const TEACHER_SUITE_ROOT = '.educodeai/teacher-tests';
+
+function findTeacherSuiteRunner(
+  teacherTestFiles: Array<{ relativePath: string }>,
+  runtimeFamily: string | null,
+): { runner: TeacherSuiteRunner; command: string } | null {
+  const paths = new Set(
+    teacherTestFiles.map((file) =>
+      file.relativePath.replace(/\\/g, '/').replace(/^\.\//u, ''),
+    ),
+  );
+
+  if (
+    runtimeFamily === 'c' &&
+    paths.has(`${TEACHER_SUITE_ROOT}/run_suite.sh`)
+  ) {
+    return {
+      runner: 'c',
+      command: `sh /app/${TEACHER_SUITE_ROOT}/run_suite.sh /app`,
+    };
+  }
+
+  if (
+    runtimeFamily === 'python' &&
+    paths.has(`${TEACHER_SUITE_ROOT}/run_suite.py`)
+  ) {
+    return {
+      runner: 'python',
+      command: `python /app/${TEACHER_SUITE_ROOT}/run_suite.py /app`,
+    };
+  }
+
+  return null;
+}
+
 export interface CompiledRecipe {
   executable: boolean;
   unsupportedReason?: string;
@@ -44,6 +86,7 @@ export interface CompiledRecipe {
   runtimeFamily: string | null;
   workingDirectory: string | null;
   environment: Record<string, string> | null;
+  teacherSuiteRunner: TeacherSuiteRunner | null;
 }
 
 @Injectable()
@@ -51,6 +94,7 @@ export class BuilderRecipeCompiler {
   compile(
     planAssessment: BuilderPlanContractV2,
     workspaceFiles: Array<{ relativePath: string }>,
+    teacherTestFiles: Array<{ relativePath: string }> = [],
   ): CompiledRecipe {
     const recipe = adaptPlanToRuntimeRecipe(planAssessment);
 
@@ -73,6 +117,7 @@ export class BuilderRecipeCompiler {
         runtimeFamily: null,
         workingDirectory: null,
         environment: null,
+        teacherSuiteRunner: null,
       };
     }
 
@@ -137,11 +182,22 @@ export class BuilderRecipeCompiler {
       .map((f) => f.relativePath)
       .find((p) => STDIN_FILE_PATTERN.test(p));
     const runCmdWithStdin = stdinFile ? `${runCmd} < ${stdinFile}` : runCmd;
+    const teacherSuiteRunner = recipe.servicePort
+      ? null
+      : findTeacherSuiteRunner(teacherTestFiles, recipe.runtimeFamily);
 
-    const testCmd =
+    const testCmd = [
+      // Las suites docentes se mantienen fuera del workspace del alumno y
+      // se montan en una ruta estable. En un CLI sustituyen a la ejecución
+      // sin stdin, que no aporta una evidencia útil y puede devolver error
+      // antes de que arranquen los casos de la suite.
+      teacherSuiteRunner?.command,
       recipe.test && recipe.test.length > 0
         ? recipe.test.map((cmd) => cmd.join(' ')).join(' && ')
-        : '';
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' && ');
     const healthcheckCmd =
       recipe.healthcheck && recipe.healthcheck.length > 0
         ? recipe.healthcheck.join(' ')
@@ -166,7 +222,11 @@ export class BuilderRecipeCompiler {
         .filter(Boolean)
         .join(' && ');
     } else {
-      orchestratedCmd = [buildCmd, runCmdWithStdin, testCmd]
+      orchestratedCmd = [
+        buildCmd,
+        teacherSuiteRunner ? '' : runCmdWithStdin,
+        testCmd,
+      ]
         .filter(Boolean)
         .join(' && ');
     }
@@ -191,6 +251,7 @@ export class BuilderRecipeCompiler {
       runtimeFamily: recipe.runtimeFamily,
       workingDirectory: recipe.workingDirectory,
       environment: recipe.environment,
+      teacherSuiteRunner: teacherSuiteRunner?.runner ?? null,
     };
   }
 }

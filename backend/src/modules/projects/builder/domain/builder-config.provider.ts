@@ -38,7 +38,7 @@ export class BuilderConfigProvider {
   get evalMaxInputChars(): number {
     return this.configService.get<number>(
       'BUILDER_LLM_EVAL_MAX_INPUT_CHARS',
-      15000,
+      25000,
     );
   }
 

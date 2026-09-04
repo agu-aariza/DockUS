@@ -7,6 +7,12 @@ import type {
 import { StudentReportView } from "@/reporting/components/StudentReportView";
 import { TeacherReportView } from "@/reporting/components/TeacherReportView";
 
+vi.mock("@/builder/components/TutorChatBlock", () => ({
+  TutorChatBlock: ({ buildRunId }: { buildRunId: string }) => (
+    <div data-testid="tutor-chat">Tutor IA {buildRunId}</div>
+  ),
+}));
+
 const studentReport: StudentReport = {
   schemaVersion: "builder-report/v3",
   audience: "student",
@@ -99,7 +105,11 @@ describe("report views v3", () => {
   it("puts student actions and evidence first and keeps technical details closed", () => {
     const onExport = vi.fn();
     const { container } = render(
-      <StudentReportView report={studentReport} onExport={onExport} />,
+      <StudentReportView
+        report={studentReport}
+        onExport={onExport}
+        buildRunId={studentReport.buildRunId}
+      />,
     );
 
     const actions = screen.getByText("Tus próximos pasos");
@@ -110,6 +120,7 @@ describe("report views v3", () => {
     ).toBeTruthy();
     expect(container.querySelector("details")).not.toHaveAttribute("open");
     expect(screen.getByText("Provisional")).toBeInTheDocument();
+    expect(screen.getByTestId("tutor-chat")).toHaveTextContent("Tutor IA run-1");
 
     fireEvent.click(screen.getByRole("button", { name: "Exportar Markdown" }));
     expect(onExport).toHaveBeenCalledOnce();

@@ -161,6 +161,10 @@ export const envValidationSchema = Joi.object({
     .integer()
     .min(2000)
     .default(15000),
+  BUILDER_LLM_FACTS_MAX_INPUT_CHARS: Joi.number()
+    .integer()
+    .min(2000)
+    .default(18000),
   BUILDER_LLM_EVAL_MAX_INPUT_CHARS: Joi.number()
     .integer()
     .min(2000)
@@ -173,6 +177,9 @@ export const envValidationSchema = Joi.object({
     .integer()
     .min(2000)
     .default(16000),
+  BUILDER_PROMPT_VERSION: Joi.string()
+    .trim()
+    .default('2026.07-chain-of-verification'),
   BUILDER_DOCKER_BUILD_TIMEOUT_MS: Joi.number()
     .integer()
     .min(10000)
