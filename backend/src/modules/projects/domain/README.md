@@ -24,7 +24,7 @@ Nota importante para quien llega de otros lenguajes/arquitecturas: **esto no es 
 
 ## Convención: las transacciones viven en el adaptador, no en la aplicación
 
-Una operación que debe ser atómica (p. ej. matricular 30 alumnos a la vez) se expresa como **un único método** en la interfaz del puerto — la transacción concreta (`queryRunner`, `manager.transaction(...)`) vive dentro del adaptador de `infrastructure/database/` que implementa ese método, nunca en la capa de aplicación que lo llama. Ver `docs/DESIGN_DECISIONS.md` (decisión D-15); el caso de referencia es `IGroupEnrollmentRepository.bulkEnroll` en `academic/`.
+Una operación que debe ser atómica (p. ej. matricular 30 alumnos a la vez) se expresa como **un único método** en la interfaz del puerto — la transacción concreta (`queryRunner`, `manager.transaction(...)`) vive dentro del adaptador de `infrastructure/database/` que implementa ese método, nunca en la capa de aplicación que lo llama. El caso de referencia es `IGroupEnrollmentRepository.bulkEnroll` en `academic/`.
 
 ## Cómo trabajar aquí
 

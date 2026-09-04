@@ -12,6 +12,8 @@ Todos protegidos con `JwtAuthGuard` + `RolesGuard`; el rol requerido varía por 
 | --- | --- | --- | --- |
 | `POST` | `deliveries/:deliveryId/run` | ADMIN/TEACHER/STUDENT | Encola una ejecución nueva (`202 Accepted`). `409` si ya hay una activa para la entrega. |
 | `GET` | `runs/:buildRunId` | ADMIN/TEACHER/STUDENT | Estado actual de un run. |
+| `GET` | `runs/:buildRunId/report` | ADMIN/TEACHER/STUDENT | Informe proyectado para el rol autenticado. |
+| `GET` | `runs/:buildRunId/report/export` | ADMIN/TEACHER/STUDENT | Exportación descargable del informe. |
 | `GET` | `runs/:buildRunId/events` | ADMIN/TEACHER/STUDENT | Historial de eventos — `@SkipThrottle({ burst: true })`, porque el *fallback* a polling del frontend golpea este endpoint con más frecuencia de lo normal cuando el SSE falla. |
 | `GET` | `runs/:buildRunId/stream` | ADMIN/TEACHER/STUDENT | El stream SSE en vivo — ver detalle abajo. |
 | `GET` | `deliveries/latest-runs` | ADMIN/TEACHER/STUDENT | Último run por cada entrega de un lote (usado por `runtime/`, `storage/` en el frontend). |
@@ -65,4 +67,4 @@ npm run test -- test/unit/modules/projects/builder/presentation
 
 - [`../application/services/orchestration/README.md`](../application/services/orchestration/README.md) — `BuilderRunCommandsService`/`BuilderRunLifecycleService`, a quienes delega este controlador y processor.
 - [`../infrastructure/README.md`](../infrastructure/README.md) — `BuilderRunEventsService`, el origen de los eventos del stream SSE.
-- [`../../../../../frontend/src/builder/README.md`](../../../../../frontend/src/builder/README.md) — el consumidor del stream en el frontend.
+- [`../../../../../../frontend/src/builder/README.md`](../../../../../../frontend/src/builder/README.md) — el consumidor del stream en el frontend.

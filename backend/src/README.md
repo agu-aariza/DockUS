@@ -10,7 +10,7 @@ Este directorio contiene absolutamente todo el backend: desde los controladores 
 
 1. Una petición HTTP entra por `main.ts` → `ApiModule` → un controlador en `modules/<dominio>/presentation/`.
 2. El controlador delega en un *application service* de `modules/<dominio>/application/`, que contiene la lógica de negocio.
-3. Ese servicio habla con `domain/` (entidades e interfaces de repositorio) y, para acceder a recursos externos, con `shared/infrastructure/` (Postgres, Redis, Docker, MinIO, Bedrock/Gemini) a través de las implementaciones en `modules/<dominio>/infrastructure/`.
+3. Ese servicio habla con `domain/` (entidades e interfaces de repositorio) y, para acceder a recursos externos, con `shared/infrastructure/` (Postgres, Redis, Docker, MinIO y proveedores LLM) a través de las implementaciones en `modules/<dominio>/infrastructure/`.
 4. Si la operación es pesada (evaluar una entrega), en vez de ejecutarla en el proceso API se encola un job BullMQ que recoge el proceso **Worker** (`worker.ts` → `WorkerModule`), corriendo en un contenedor/proceso separado.
 
 ## Estructura interna

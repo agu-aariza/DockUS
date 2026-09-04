@@ -17,7 +17,7 @@ Ambos comparten el mismo límite de tamaño (`MAX_FILE_SIZE_BYTES = 50 MB`), def
 
 Dos decisiones no obvias documentadas en el propio código (`upload-multer.config.ts`), que vale la pena conocer antes de "optimizar" esto:
 
-1. **Multer usa almacenamiento en disco, no en memoria.** Con ficheros de hasta 50 MB, cien subidas simultáneas en memoria son >5 GB de heap — suficiente para tumbar el proceso API entero por falta de memoria, afectando a *todos* los usuarios conectados, no solo a quien subía. Ver incidente documentado como `ESC-ALTO-05`.
+1. **Multer usa almacenamiento en disco, no en memoria.** Con ficheros de hasta 50 MB, cien subidas simultáneas en memoria son >5 GB de heap — suficiente para tumbar el proceso API entero por falta de memoria, afectando a *todos* los usuarios conectados, no solo a quien subía.
 2. **No se usa una URL `PUT` prefirmada directa a MinIO** (que evitaría el tránsito por la API). El motivo: el hash SHA-256 que se guarda como huella de integridad del objeto lo calcula el **servidor**, sobre los bytes que realmente terminan almacenados — depender de un hash calculado por el cliente rompería esa garantía. Cambiar esto exigiría decidir antes qué fuente de verdad usar en su lugar (el `ETag` de MinIO, o un cálculo diferido desde el Worker), así que se ha dejado así deliberadamente.
 
 ## Estructura interna
@@ -53,7 +53,7 @@ StorageObject
 └── uploaderId                                      # Quién lo subió
 ```
 
-Un índice único (`projectId, deliveryId, assetRole, logicalPath`) impide subir el mismo fichero lógico dos veces en el mismo contexto. Nota de rendimiento documentada en el propio código (`ESC-ALTO-07`): ese índice empieza por `projectId`, así que una búsqueda "dame todos los objetos de esta entrega" no puede aprovecharlo — por eso existe además `IDX_storage_objects_delivery` como índice secundario dedicado.
+Un índice único (`projectId, deliveryId, assetRole, logicalPath`) impide subir el mismo fichero lógico dos veces en el mismo contexto. Ese índice empieza por `projectId`, así que una búsqueda "dame todos los objetos de esta entrega" no puede aprovecharlo — por eso existe además `IDX_storage_objects_delivery` como índice secundario dedicado.
 
 ## Cómo trabajar aquí
 

@@ -4,11 +4,11 @@
 
 ---
 
-## Los diez ficheros
+## Los once ficheros
 
 | Fichero | Qué hace |
 | --- | --- |
-| `builder-run-commands.service.ts` | Punto de entrada para **encolar** un run nuevo (`POST /builder/deliveries/:id/run`). Descrito en `CLAUDE.md` como "todavía el nodo de mayor grado del backend" — es el que más otros servicios conoce. Usa `throwIfUniqueViolation` para convertir el índice único `UQ_build_runs_delivery_active` en un `409` limpio si ya hay un run activo para esa entrega. |
+| `builder-run-commands.service.ts` | Punto de entrada para **encolar** un run nuevo (`POST /builder/deliveries/:id/run`). Usa `throwIfUniqueViolation` para convertir el índice único `UQ_build_runs_delivery_active` en un `409` limpio si ya hay un run activo para esa entrega. |
 | `builder-pipeline-orchestrator.service.ts` | Compone las seis etapas del pipeline (`../stages/`) en orden y **es la única pieza autorizada a marcar un run como `FAILED`** — cada etapa debe lanzar, no capturar, sus errores. |
 | `builder-run-lifecycle.service.ts` | Las transiciones de estado válidas de `BuildRunStatus` (`QUEUED → RUNNING → SUCCESS/FAILED/CANCELLED`). |
 | `builder-run-cancellation.service.ts` | Cancelación **cooperativa**: no mata el proceso Docker a la fuerza, marca una señal (vía el puerto `distributed-cache.port.ts`) que las etapas comprueban en puntos seguros. |

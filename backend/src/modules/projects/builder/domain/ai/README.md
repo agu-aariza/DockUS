@@ -1,12 +1,12 @@
 # Dominio de IA del Builder (`builder/domain/ai/`)
 
-> **Resumen rápido:** La composición de prompts y el *parseo defensivo* de las respuestas del LLM en cada etapa del pipeline. Vive en `domain/` (no en `infrastructure/`) porque es lógica de negocio pura sobre texto — no habla con Bedrock/Gemini directamente, eso lo hace `application/services/ai/`.
+> **Resumen rápido:** La composición de prompts y el *parseo defensivo* de las respuestas del LLM en cada etapa del pipeline. Vive en `domain/` (no en `infrastructure/`) porque es lógica de negocio pura sobre texto — no habla con proveedores directamente, eso lo hace `application/services/ai/`.
 
 ---
 
 ## La regla de oro: nunca confíes en que el LLM responda un JSON perfecto
 
-Todo parser de este directorio (`builder-plan-contract.parser.ts`, `builder-facts-contract.parser.ts`, `builder-evaluation-contract.parser.ts`, `builder-code-quality-contract.parser.ts`) está escrito asumiendo que el LLM puede devolver JSON mal formado, campos ausentes, o texto extra alrededor del JSON. Cada parser hace *safe-parsing* con *fallbacks* explícitos en vez de asumir una forma perfecta — si el contrato viene inválido, el pipeline debe degradar con gracia (ver `application/services/support/builder-fallback-assessment.util.ts`), nunca lanzar una excepción no controlada que tumbe el run entero por un problema de formato.
+Los parsers de este directorio están escritos asumiendo que el LLM puede devolver JSON mal formado, campos ausentes o texto extra alrededor del JSON. Hacen parseo defensivo, pero un contrato inválido todavía puede producir un error cuando no existe una degradación válida; la política de fallback la decide la etapa consumidora. No debe confundirse parseo defensivo con garantía de que ninguna excepción sea posible.
 
 ## Qué hay dentro
 
@@ -21,6 +21,8 @@ ai/
 ├── builder-plan-contract.parser.ts                  # Parser defensivo del contrato de la etapa "plan"
 ├── builder-facts-contract.parser.ts                   # Parser defensivo del contrato de "hechos" (facts)
 ├── builder-evaluation-contract.parser.ts                # Parser defensivo del contrato de evaluación (parseBuilderEvaluationContractV2)
+├── builder-evaluation-contract-v3.parser.ts              # Parser de la versión v3 del contrato de evaluación
+├── builder-report-copy-contract.parser.ts                # Parser del texto estructurado de copia del informe
 ├── builder-code-quality-contract.parser.ts                # Parser defensivo del contrato de calidad
 └── parsers/                                                   # Utilidades de parseo compartidas entre los parsers de arriba
     ├── contract-parser.utils.ts                                  # Helpers genéricos de safe-parsing reutilizados por todos
@@ -30,7 +32,7 @@ ai/
 
 ## `builder-llm-roles.ts`: la diferencia entre "rol" y "etapa"
 
-Un **rol** (`planner`, `eval`, `quality`, `chatbot`) es lo que un profesor elige en la pestaña "Modelos de IA" del frontend — a qué proveedor/modelo concreto se le asigna esa responsabilidad. Una **etapa** (`plan`, `facts`, `evaluation`, `quality`, `chat`) es lo que el pipeline ejecuta internamente. `roleForStage()` traduce de una a otra; nótese que `facts` y `evaluation` comparten el rol `eval` porque ambas son, en esencia, la misma fase de corrección — el profesor no configura dos modelos distintos para "extraer hechos" y "evaluar", aunque internamente sean dos llamadas separadas al LLM.
+Un **rol** (`planner`, `eval`, `quality`, `chatbot`) es lo que un administrador elige en la pestaña "Modelos de IA" del frontend — a qué proveedor/modelo concreto se le asigna esa responsabilidad. Una **etapa** (`plan`, `facts`, `evaluation`, `quality`, `reporting`, `chat`) es lo que el pipeline ejecuta internamente. `roleForStage()` traduce de una a otra; `facts`, `evaluation` y `reporting` comparten el rol `eval`, aunque sean llamadas y contratos internos distintos.
 
 ## `pricing.utility.ts`: por qué existe una tabla de precios aquí
 
@@ -50,5 +52,5 @@ Si el LLM empieza a devolver un contrato con un campo nuevo o distinto, el parse
 
 ## Ver también
 
-- [`../../../../../shared/infrastructure/ai/README.md`](../../../../../shared/infrastructure/ai/README.md) — el cliente Bedrock/Gemini real y `prompts.json`.
+- [`../../../../../shared/infrastructure/ai/README.md`](../../../../../shared/infrastructure/ai/README.md) — el router, los adaptadores y `prompts.json`.
 - [`../../application/services/README.md`](../../application/services/README.md) — `ai/` (subcarpeta de servicios) es quien realmente invoca al LLM usando lo que compone/parsea este directorio.

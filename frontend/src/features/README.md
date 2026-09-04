@@ -23,7 +23,7 @@ features/
 └── students/types.ts      # Perfil/expediente del alumno
 ```
 
-Cada `types.ts` reexporta, con alias donde el nombre local difiere, tipos que en última instancia proceden de `@educodeai/contracts` (el paquete compartido con el backend). No se redefinen contratos de forma independiente.
+Cada `types.ts` reexporta tipos de `@educodeai/contracts` cuando existe un contrato de red equivalente; el resto son tipos locales de lectura, estado de UI o configuración del frontend. No debe duplicarse de forma independiente un contrato que ya cruce la API.
 
 ## Cómo trabajar aquí
 

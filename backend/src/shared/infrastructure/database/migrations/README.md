@@ -1,6 +1,6 @@
 # Migraciones (`shared/infrastructure/database/migrations/`)
 
-> **Resumen rápido:** Cinco migraciones versionadas (timestamp + nombre) que evolucionan el esquema de PostgreSQL de forma controlada. El progreso aplicado se registra en la tabla `dockus_migrations`/`educodeai_migrations` de la propia base de datos, gestionada por TypeORM.
+> **Resumen rápido:** Seis migraciones versionadas (timestamp + nombre) que evolucionan el esquema de PostgreSQL de forma controlada. El progreso aplicado se registra en la tabla `educodeai_migrations` de la propia base de datos, gestionada por TypeORM.
 
 ---
 
@@ -12,6 +12,7 @@
 1784818513497-RemoveSelfHealingArtifactType.ts        # Retira un tipo de artefacto que dejó de emitirse
 1784895385789-AddBuildRunVersionColumn.ts               # Añade la columna de versión de concurrencia optimista a build_runs
 1785356773922-RemoveUnusedBuildRunArtifactTypes.ts         # Limpia valores de enum sin ningún productor real
+1788460800000-AddReportingArtifacts.ts                      # Añade tipos de artefacto para el informe y sus proyecciones
 ```
 
 El patrón de nombre (`<timestamp>-<Descripción>.ts`) lo genera automáticamente `npm run migration:generate`/`migration:create` — no lo escribas a mano, para evitar colisiones de orden.

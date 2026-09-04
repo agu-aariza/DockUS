@@ -15,8 +15,8 @@
 | `ai/` | Los servicios que realmente llaman al LLM: dispatcher con *failover* entre proveedores, evaluador, chat pedagógico, análisis de calidad, coste por ejecución. | [Sí](ai/README.md) |
 | `compilation/` | `builder-recipe-compiler.service.ts` — traduce la `Recipe` inferida en la etapa de plan a los comandos Docker concretos que ejecutará `ExecutionStage`. | [Sí](compilation/README.md) |
 | `artifacts/` | `builder-artifact-persister.service.ts` — guarda los artefactos generados durante la ejecución (logs, ficheros de salida) como `BuildRunArtifact` en storage. | [Sí](artifacts/README.md) |
-| `config/` | `builder-llm-config.service.ts` / `builder-llm-provider-tester.service.ts` — CRUD de la configuración de proveedores LLM por rol (pestaña "Modelos de IA" del profesor) y prueba de conectividad. Antes vivía en `infrastructure/` pero se movió aquí porque es un caso de uso (lee/escribe vía el puerto `ILlmConfigurationRepository`), no infraestructura cruda. | [Sí](config/README.md) |
-| `support/` | `builder-fallback-assessment.util.ts` — construye una evaluación degradada de emergencia cuando el LLM falla o devuelve un contrato inválido, para que el pipeline nunca se quede sin informe. | [Sí](support/README.md) |
+| `config/` | `builder-llm-config.service.ts` / `builder-llm-provider-tester.service.ts` — CRUD de la configuración de proveedores LLM por rol (pestaña "Modelos de IA" del administrador) y prueba de conectividad. Antes vivía en `infrastructure/` pero se movió aquí porque es un caso de uso (lee/escribe vía el puerto `ILlmConfigurationRepository`), no infraestructura cruda. | [Sí](config/README.md) |
+| `support/` | Utilidades de evaluación degradada y fallback de copia de informe cuando el LLM falla o devuelve un contrato inválido. | [Sí](support/README.md) |
 
 ## Cómo encajan entre sí en una ejecución típica
 
@@ -52,4 +52,4 @@ Antes de añadir un servicio nuevo, decide a cuál de estas nueve responsabilida
 
 ## Ver también
 
-- [`../README.md`](../README.md), [`../../README.md`](../../README.md) — visión general del Builder.
+- [`../../README.md`](../../README.md) — visión general del Builder.

@@ -6,9 +6,9 @@
 
 ## La regla que define esta carpeta
 
-Es explícita en `CLAUDE.md`: **`shared/components/ui/` son componentes dumb, agnósticos de negocio/API — ningún import de `api/` ni lógica de dominio aquí.** Un componente de esta carpeta recibe todo lo que necesita por props; si necesita pedir datos o conocer qué es un `Project`, no pertenece a `ui/` — pertenece a la raíz de `shared/components/` o a un dominio concreto.
+**`shared/components/ui/` son componentes dumb, agnósticos de negocio/API — ningún import de `api/` ni lógica de dominio aquí.** Un componente de esta carpeta recibe todo lo que necesita por props; si necesita pedir datos o conocer qué es un `Project`, no pertenece a `ui/` — pertenece a la raíz de `shared/components/` o a un dominio concreto.
 
-## Los trece componentes
+## Los doce componentes
 
 | Componente | Qué es |
 | --- | --- |

@@ -15,7 +15,7 @@ Estos cuatro términos aparecen por todo el módulo; sin ellos el resto no tiene
 
 ## ¿Por qué es tan grande este módulo?
 
-Porque hace, en secuencia, seis cosas muy distintas para una sola entrega: entender qué es el código subido, compilarlo/prepararlo, ejecutarlo de forma aislada, extraer hechos verificables de lo que pasó, evaluarlo pedagógicamente con un LLM, analizar su calidad estática, y componer un informe final — todo ello con reintentos, cuotas de gasto, cancelación cooperativa, recuperación ante caídas, y sin jamás dejar que el LLM alucine una nota que los logs no respaldan. Cada una de esas responsabilidades tiene su propio servicio; de ahí el volumen.
+Porque coordina seis etapas para una sola entrega: entender qué es el código subido, prepararlo, ejecutarlo de forma aislada, evaluar los hechos observables, analizar su calidad estática y componer un informe final. La evaluación incluye la extracción de hechos y el juicio pedagógico, y todo el flujo incorpora reintentos, cuotas de gasto, cancelación cooperativa y recuperación ante caídas. Cada responsabilidad tiene su propio servicio; de ahí el volumen.
 
 ## Las dos puertas de entrada
 
@@ -35,7 +35,7 @@ Porque hace, en secuencia, seis cosas muy distintas para una sola entrega: enten
 └─────────────────────────────┘        └──────────────────────────────────┘
 ```
 
-`builder.controller.ts` (14 endpoints bajo `/builder`) solo encola trabajo y consulta estado — nunca ejecuta el pipeline en el proceso API. El pipeline real solo corre dentro de `builder.processor.ts`, en el proceso **Worker** (ver `../../README.md` para la distinción API/Worker). La cola se llama `builder-runs` (BullMQ) y tiene dos prioridades (`BUILDER_JOB_PRIORITY`: `INTERACTIVE=1` para reejecuciones manuales de un profesor, `BATCH=2` para entregas de alumnos) — en BullMQ, menor número es mayor prioridad, así que un profesor revisando una entrega en directo no espera detrás de una avalancha de entregas de última hora. No es un mecanismo de justicia entre alumnos: dentro de cada prioridad se respeta el orden de llegada.
+`builder.controller.ts` (18 endpoints bajo `/builder`) solo encola trabajo y consulta estado — nunca ejecuta el pipeline en el proceso API. El pipeline real solo corre dentro de `builder.processor.ts`, en el proceso **Worker** (ver `../../README.md` para la distinción API/Worker). La cola se llama `builder-runs` (BullMQ) y tiene dos prioridades (`BUILDER_JOB_PRIORITY`: `INTERACTIVE=1` para reejecuciones manuales de un profesor, `BATCH=2` para entregas de alumnos) — en BullMQ, menor número es mayor prioridad, así que un profesor revisando una entrega en directo no espera detrás de una avalancha de entregas de última hora. No es un mecanismo de justicia entre alumnos: dentro de cada prioridad se respeta el orden de llegada.
 
 ## El pipeline de seis etapas
 
@@ -50,7 +50,7 @@ PlanStage → CompileStage → ExecutionStage → EvaluationStage → QualitySta
   └─ Infiere el entorno de ejecución (Recipe) a partir del código subido
 ```
 
-`BuilderPipelineOrchestrator` (en `application/services/orchestration/`) compone estas seis etapas y es **la única pieza que puede marcar un run como `FAILED`** — cada `*-stage.handler.ts` debe propagar sus fallos, nunca tragárselos, para que el orquestador decida. Cada etapa mapea a un **rol de IA** configurable por el profesor (`domain/ai/builder-llm-roles.ts`): `plan→planner`, `facts`/`evaluation→eval` (comparten rol porque ambas son la fase de corrección), `quality→quality`, `chat→chatbot`.
+`BuilderPipelineOrchestrator` (en `application/services/orchestration/`) compone estas seis etapas y coordina el resultado del run. Las etapas de calidad e informe tienen degradaciones controladas: pueden persistir un resultado vacío o un fallback honesto cuando el proveedor LLM falla, mientras que los errores no recuperables se propagan al orquestador. Cada etapa mapea a un **rol de IA** configurable por el administrador (`domain/ai/builder-llm-roles.ts`): `plan→planner`, `facts`/`evaluation`/`reporting→eval`, `quality→quality` y `chat→chatbot`. `reporting` es una etapa interna y no un quinto rol configurable.
 
 ## Regla que nunca se rompe: el alumno nunca ve el razonamiento crudo del LLM
 
@@ -65,7 +65,7 @@ builder/
 ├── builder-runtime.module.ts     # Configuración, workspace, Docker, storage y runtime bindings
 ├── builder-ai.module.ts          # Servicios LLM, evaluación, composición pedagógica y consultas/eventos usados por chat
 ├── builder-pipeline.module.ts    # Cola, stages, orquestador y recuperación worker-side
-├── application/services/       # Toda la lógica — ver application/README.md y application/services/README.md
+├── application/services/       # Toda la lógica — ver application/services/README.md
 ├── domain/                       # BuildRun y entidades relacionadas, puertos, catálogo de runtimes, IA — ver domain/README.md
 ├── infrastructure/                  # Adaptadores TypeORM, eventos, evidencias — ver infrastructure/README.md
 └── presentation/                       # builder.controller.ts (API) + builder.processor.ts (Worker) + DTOs
@@ -79,13 +79,13 @@ builder/
 npm run test -- test/unit/modules/projects/builder
 ```
 
-Si añades una etapa nueva o modificas una existente, debe seguir siendo ejecutable de forma aislada del resto (input/output tipados propios) y **propagar** los fallos, no capturarlos silenciosamente — es el orquestador quien decide qué hacer con un fallo, no la etapa.
+Si añades una etapa nueva o modificas una existente, debe seguir siendo ejecutable de forma aislada del resto (input/output tipados propios). Los fallos deben tener una política explícita: propagarse si son irrecuperables o degradarse con un fallback documentado y verificable; nunca deben ocultarse silenciosamente.
 
 ## Ver también
 
-- [`application/README.md`](application/README.md), [`application/services/README.md`](application/services/README.md)
+- [`application/services/README.md`](application/services/README.md)
 - [`domain/README.md`](domain/README.md), [`domain/ai/README.md`](domain/ai/README.md)
 - [`infrastructure/README.md`](infrastructure/README.md)
 - [`presentation/README.md`](presentation/README.md) — los 18 endpoints REST y el consumidor BullMQ.
 - [`../../../shared/infrastructure/docker/README.md`](../../../shared/infrastructure/docker/README.md) — el aislamiento real de Docker.
-- [`../../../shared/infrastructure/ai/README.md`](../../../shared/infrastructure/ai/README.md) — el cliente LLM (Bedrock/Gemini) que este módulo consume.
+- [`../../../shared/infrastructure/ai/README.md`](../../../shared/infrastructure/ai/README.md) — el router, adaptadores y failover LLM que este módulo consume.

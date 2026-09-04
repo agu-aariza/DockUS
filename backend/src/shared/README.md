@@ -25,11 +25,10 @@ shared/
 ├── http/                       # Constantes y utilidades de respuesta HTTP transversales.
 ├── utils/                       # Funciones puras sin DI de NestJS (hashing, backoff, paginación, parsing).
 └── infrastructure/                # Adaptadores concretos a servicios externos — ver infrastructure/*/README.md
-    ├── ai/                          # BedrockGenerationService + PromptRegistryService. Prompts en prompts.json, nunca inline.
+    ├── ai/                          # Router, circuit breaker, adaptadores LLM y PromptRegistryService. Prompts en prompts.json.
     ├── cache/                        # RedisClientService — conexión Redis SEPARADA de la de BullMQ, para health checks.
     ├── database/                      # Conexión TypeORM real + migraciones versionadas.
     ├── docker/                         # DockerExecutionService/DockerContainerService/DockerNetworkService — CLI `docker`, no dockerode.
-    ├── queue/                           # Abstracciones genéricas de BullMQ (sin lógica de negocio de ningún job concreto).
     ├── security/                         # Throttling (@nestjs/throttler) y cifrado de secretos.
     ├── seed/                              # Seeders idempotentes de datos de desarrollo/demo (nunca en producción).
     └── storage/                            # MinioStorageService — almacenamiento S3-compatible con URLs firmadas.
@@ -47,7 +46,7 @@ Implementación del puerto en su propio infrastructure/
 shared/infrastructure/*  (DockerExecutionService, BedrockGenerationService, MinioStorageService, ...)
    │
    ▼
-Servicio externo real (Docker daemon, AWS Bedrock, MinIO, PostgreSQL, Redis)
+Servicio externo real (Docker daemon, proveedores LLM, MinIO, PostgreSQL, Redis)
 ```
 
 `shared/` nunca decide *cuándo* se llama a Docker o al LLM — eso es responsabilidad de `application/` dentro del módulo de dominio. `shared/` solo sabe *cómo* hablar con esos sistemas de forma segura y reutilizable.
@@ -63,5 +62,5 @@ Antes de añadir algo nuevo aquí, pregúntate: ¿esto es un adaptador genérico
 ## Ver también
 
 - [`config/README.md`](config/README.md), [`application/README.md`](application/README.md), [`database/README.md`](database/README.md), [`dto/README.md`](dto/README.md), [`http/README.md`](http/README.md), [`utils/README.md`](utils/README.md)
-- [`infrastructure/ai/README.md`](infrastructure/ai/README.md), [`infrastructure/docker/README.md`](infrastructure/docker/README.md), [`infrastructure/database/README.md`](infrastructure/database/README.md), [`infrastructure/cache/README.md`](infrastructure/cache/README.md), [`infrastructure/queue/README.md`](infrastructure/queue/README.md), [`infrastructure/security/README.md`](infrastructure/security/README.md), [`infrastructure/seed/README.md`](infrastructure/seed/README.md), [`infrastructure/storage/README.md`](infrastructure/storage/README.md)
+- [`infrastructure/ai/README.md`](infrastructure/ai/README.md), [`infrastructure/docker/README.md`](infrastructure/docker/README.md), [`infrastructure/database/README.md`](infrastructure/database/README.md), [`infrastructure/cache/README.md`](infrastructure/cache/README.md), [`infrastructure/security/README.md`](infrastructure/security/README.md), [`infrastructure/seed/README.md`](infrastructure/seed/README.md), [`infrastructure/storage/README.md`](infrastructure/storage/README.md)
 - [`../README.md`](../README.md) — el código fuente del backend en conjunto.

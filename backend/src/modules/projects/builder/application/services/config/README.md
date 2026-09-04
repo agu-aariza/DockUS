@@ -1,6 +1,6 @@
 # Configuración de proveedores LLM (`application/services/config/`)
 
-> **Resumen rápido:** La fuente de verdad de qué proveedor y modelo atiende cada rol del pipeline (`planner`/`eval`/`quality`/`chatbot`), gestionada por el profesor desde la pestaña "Modelos de IA". Vive en `application/` — no en `infrastructure/`, pese a hablar con la base de datos — porque es un caso de uso: solo toca TypeORM a través del puerto `ILlmConfigurationRepository`, igual que cualquier otro servicio de aplicación del Builder (ver la nota `ARQ-024` referenciada en `infrastructure/README.md`).
+> **Resumen rápido:** La fuente de verdad de qué proveedor y modelo atiende cada rol del pipeline (`planner`/`eval`/`quality`/`chatbot`), gestionada por un administrador desde la pestaña "Modelos de IA". Vive en `application/` — no en `infrastructure/`, pese a hablar con la base de datos — porque es un caso de uso: solo toca TypeORM a través del puerto `ILlmConfigurationRepository`.
 
 ---
 
@@ -8,11 +8,11 @@
 
 `BuilderLlmConfigService` traduce la configuración persistida (`LlmConfiguration`, una fila por rol) a `LlmModelProfile` + `LlmProviderCredentials`, que es exactamente lo que consume `LlmGenerationRouter` (`shared/infrastructure/ai/`). Tres reglas de negocio importantes:
 
-- **Si un rol no tiene proveedor asignado, cae al perfil de Bedrock por variables de entorno** (`BUILDER_BEDROCK_<STAGE>_MODEL_ID`) — el sistema nunca se queda sin un proveedor utilizable para un rol simplemente porque nadie lo configuró explícitamente.
-- **Las claves de API se cifran antes de guardarse** (`SecretCipherService`, AES-256-GCM) y **nunca vuelven a salir en claro** — la vista solo expone `hasApiKey: boolean` y los últimos 4 caracteres, suficiente para que el profesor reconozca cuál configuró sin poder leerla de vuelta.
-- **`resolvePricing(providerId, modelId)`** es el método que usa `ai/builder-run-cost.service.ts` para calcular coste — prioriza la tarifa que el propio profesor declaró al configurar el proveedor sobre la tabla de respaldo de `domain/ai/pricing.utility.ts`.
+- **Si un rol no tiene proveedor asignado, cae al perfil de Bedrock por variables de entorno** (`BUILDER_BEDROCK_<STAGE>_MODEL_ID`) — existe un perfil de respaldo, aunque seguirá necesitando credenciales AWS y un modelo disponible.
+- **Las claves de API se cifran antes de guardarse** (`SecretCipherService`, AES-256-GCM) y **nunca vuelven a salir en claro** — la vista solo expone `hasApiKey: boolean` y los últimos 4 caracteres, suficiente para que el administrador reconozca cuál configuró sin poder leerla de vuelta.
+- **`resolvePricing(providerId, modelId)`** es el método que usa `ai/builder-run-cost.service.ts` para calcular coste — prioriza la tarifa que el propio administrador declaró al configurar el proveedor sobre la tabla de respaldo de `domain/ai/pricing.utility.ts`.
 
-Antes de aceptar un endpoint personalizado (proveedores compatibles con OpenAI que apuntan a una URL propia), valida con `assertSafeLlmEndpoint` (`shared/infrastructure/ai/llm-endpoint-policy.util.ts`) que no apunte a una dirección interna/privada — una protección contra SSRF: sin esa validación, un profesor (o una cuenta comprometida) podría configurar un "proveedor" que en realidad apunte a un servicio interno de la infraestructura.
+Antes de aceptar un endpoint personalizado (proveedores compatibles con OpenAI que apuntan a una URL propia), valida con `assertSafeLlmEndpoint` (`shared/infrastructure/ai/llm-endpoint-policy.util.ts`) que no apunte a una dirección interna/privada. Ollama es la excepción explícita porque su uso previsto incluye hosts locales; el objetivo es reducir SSRF y exfiltración de credenciales desde una cuenta de administración comprometida.
 
 ## `builder-llm-provider-tester.service.ts`
 

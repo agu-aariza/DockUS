@@ -6,7 +6,7 @@
 
 ## `env.validation.ts` — por qué falla rápido
 
-Este esquema Joi se evalúa al arrancar el proceso (API o Worker), antes de que NestJS termine de construir el grafo de inyección de dependencias. Si falta una variable requerida o tiene un formato inválido, el proceso **no arranca** — falla con un error claro en vez de arrancar a medias y fallar de forma confusa más tarde, la primera vez que algo intente usar esa variable. De los 62 vars validadas aquí, 5 no tienen un consumidor textual directo en el código (4 de ellas se usan indirectamente: `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN` los recoge la cadena de credenciales por defecto del SDK de AWS, `DOCKER_HOST` lo lee el propio CLI `docker`). Este fichero es la lista autoritativa de configuración — no reintroduzcas en la documentación una variable como "funcional" sin verificar primero que algo la consume aquí.
+Este esquema Joi se evalúa al arrancar el proceso (API o Worker), antes de que NestJS termine de construir el grafo de inyección de dependencias. Si falta una variable requerida o tiene un formato inválido, el proceso **no arranca**. El esquema contiene variables generales y seis claves dinámicas de modelo (`BUILDER_BEDROCK_{PLAN,FACTS,EVALUATION,QUALITY,REPORTING,CHAT}_MODEL_ID`); por eso no conviene mantener un número total escrito a mano. Este fichero, junto con `.env.example` y `docker-compose.yml`, es la lista autoritativa de configuración.
 
 ## `logger.config.ts` — trazabilidad entre API y Worker
 
@@ -31,7 +31,7 @@ config/
 npm run test -- test/unit/shared/config
 ```
 
-Al añadir una variable de entorno nueva: (1) añádela al esquema Joi aquí con su tipo/default, (2) documenta su propósito en `.env.example` (raíz del repo), (3) si es opcional con comportamiento condicional, indícalo en el `CLAUDE.md` raíz solo si es relevante para quien trabaje en el repo, no solo aquí.
+Al añadir una variable de entorno nueva: (1) añádela al esquema Joi aquí con su tipo/default, (2) documenta su propósito en `.env.example` (raíz del repo), (3) actualiza `docker-compose.yml` si la inyecta o sobrescribe y (4) añade la explicación operativa en [`docs/development.md`](../../../../docs/development.md) si afecta al arranque o al despliegue.
 
 ## Ver también
 

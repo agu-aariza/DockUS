@@ -6,7 +6,7 @@
 
 ## `builder-llm-dispatcher.service.ts`: la pieza más importante de esta carpeta
 
-El sistema soporta seis proveedores (Bedrock, OpenAI, Azure, Ollama, Anthropic, Gemini) con un proveedor asignado por rol, pero durante mucho tiempo esa redundancia **no se aprovechaba ante un fallo**: si el proveedor titular de un rol empezaba a devolver *rate limit*, el run entero fallaba con los otros cinco proveedores configurados y ociosos. `BuilderLlmDispatcherService.dispatch(...)` resuelve esto: intenta primero el proveedor asignado por el profesor y solo recurre a los demás candidatos configurados cuando el titular está indisponible.
+El sistema soporta seis proveedores (Bedrock, OpenAI, Azure, Ollama, Anthropic, Gemini) con un proveedor asignado por rol, pero durante mucho tiempo esa redundancia **no se aprovechaba ante un fallo**: si el proveedor titular de un rol empezaba a devolver *rate limit*, el run entero fallaba con los otros cinco proveedores configurados y ociosos. `BuilderLlmDispatcherService.dispatch(...)` resuelve esto: intenta primero el proveedor asignado por el administrador y solo recurre a los demás candidatos configurados cuando el titular está indisponible.
 
 Importa mucho **qué cuenta como "indisponible"** — deliberadamente un conjunto reducido:
 
@@ -21,7 +21,7 @@ const PROVIDER_UNAVAILABLE_CODES = new Set(['throttling', 'connectivity']);
 
 | Fichero | Qué hace |
 | --- | --- |
-| `builder-llm-evaluator.service.ts` | Ejecuta las llamadas LLM de las etapas `plan`, `facts` y `evaluation`: compone el prompt (`domain/ai/builder-prompt-composer.ts`), despacha vía `BuilderLlmDispatcherService`, parsea el contrato con los parsers defensivos de `domain/ai/`. |
+| `builder-llm-evaluator.service.ts` | Ejecuta las llamadas LLM de las etapas `plan`, `facts`, `evaluation` y `reporting`: compone el prompt (`domain/ai/builder-prompt-composer.ts`), despacha vía `BuilderLlmDispatcherService`, parsea el contrato con los parsers defensivos de `domain/ai/`. |
 | `builder-code-quality.service.ts` | Lo mismo para la etapa `quality` — prompt, despacho, parseo del contrato de calidad. |
 | `builder-llm-chat.service.ts` | El chat pedagógico post-evaluación (rol `chatbot`): valida que el mensaje no intente extraer directamente "la clave de corrección" de secciones sensibles del prompt de evaluación, persiste la conversación (`BuildRunChatMessage`) y contabiliza su coste. |
 | `builder-run-cost.service.ts` | `summarize(usages)` — suma el coste en USD de un `BuildRun` **etapa a etapa**, con la tarifa del proveedor real de *esa* etapa. Calcularlo con la tarifa de una sola etapa para todos los tokens produciría cifras falsas en cuanto hay más de un proveedor configurado en el mismo run (algo que el *failover* de arriba hace posible). |
@@ -29,7 +29,7 @@ const PROVIDER_UNAVAILABLE_CODES = new Set(['throttling', 'connectivity']);
 
 ## Por qué estos servicios viven en `application/` y no en `shared/infrastructure/ai/`
 
-Cada uno necesita `BuilderLlmConfigService` (`../config/`) para resolver la cadena de proveedores configurada por el profesor para ese rol — es una dependencia del propio dominio del Builder, no infraestructura genérica reutilizable por cualquier módulo. `shared/infrastructure/ai/` sabe *cómo* hablar con un proveedor; esta carpeta sabe *a quién preguntar* y *qué hacer con la respuesta* específicamente para una evaluación del Builder.
+Cada uno necesita `BuilderLlmConfigService` (`../config/`) para resolver la cadena de proveedores configurada por el administrador para ese rol — es una dependencia del propio dominio del Builder, no infraestructura genérica reutilizable por cualquier módulo. `shared/infrastructure/ai/` sabe *cómo* hablar con un proveedor; esta carpeta sabe *a quién preguntar* y *qué hacer con la respuesta* específicamente para una evaluación del Builder.
 
 ## Cómo trabajar aquí
 

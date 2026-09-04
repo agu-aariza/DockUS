@@ -1,6 +1,6 @@
 # Etapas del pipeline (`.../services/stages/`)
 
-> **Resumen rápido:** Los seis `handler`, uno por etapa del pipeline de evaluación, más un utilitario de logs. Cada handler recibe una entrada tipada, hace su trabajo, y devuelve una salida tipada — deben ser ejecutables de forma aislada del resto y **nunca capturar** sus propios errores (eso es responsabilidad exclusiva de `BuilderPipelineOrchestrator`, ver [`../orchestration/README.md`](../orchestration/README.md)).
+> **Resumen rápido:** Los seis `handler`, uno por etapa del pipeline de evaluación, más un utilitario de logs. Cada handler recibe una entrada tipada, hace su trabajo y devuelve una salida tipada. Deben ser ejecutables de forma aislada y aplicar una política explícita de error: propagar los fallos no recuperables o devolver una degradación documentada cuando la etapa lo permita.
 
 ---
 
@@ -24,8 +24,8 @@
 5. quality-stage.handler.ts     Análisis estático de calidad de código (rol "quality"), independiente
                                  de si el programa funcionó o no.
 
-6. report-stage.handler.ts      Consolida todo lo anterior en el informe final que ve el profesor
-                                 (y, en su forma reducida, el alumno).
+6. report-stage.handler.ts      Consolida todo lo anterior en el informe final y genera la
+                                 proyección que ve cada rol (profesor o alumno).
 ```
 
 `builder-execution-log-batcher.ts` no es una etapa — es un utilitario que usa `execution-stage.handler.ts` para agrupar líneas de log antes de emitirlas (por SSE al frontend, y a persistencia), en vez de emitir/escribir una a una.
@@ -33,8 +33,8 @@
 ## El contrato que todo handler respeta
 
 - Input y output **tipados propios** (no comparten el objeto `BuildRun` completo mutable entre etapas — cada uno declara justo lo que necesita y justo lo que produce).
-- **Nunca atrapan sus propios fallos.** Si el contenedor Docker se cae, si el LLM devuelve JSON inválido, si se agota el timeout: el handler deja que la excepción suba. El orquestador (`BuilderPipelineOrchestrator`) es quien decide si eso significa `FAILED`, un reintento, o una degradación controlada (ver `support/builder-fallback-assessment.util.ts` para el caso "el LLM falló pero necesitamos entregar algo").
-- Cada etapa que llama al LLM usa el rol correspondiente de `domain/ai/builder-llm-roles.ts` (`plan→planner`, `facts`/`evaluation→eval`, `quality→quality`), nunca hardcodea qué proveedor/modelo usar — eso lo resuelve `ai/builder-llm-dispatcher.service.ts` según la configuración que el profesor eligió para ese rol.
+- **La política depende de la etapa.** Los fallos no recuperables suben al orquestador (`BuilderPipelineOrchestrator`), que decide si el run termina en `FAILED`, `CANCELLED` o se reintenta. `quality-stage.handler.ts` y `report-stage.handler.ts` tienen además degradaciones controladas: persisten advertencias, contratos vacíos o copias fallback cuando todavía pueden producir un resultado honesto.
+- Cada etapa que llama al LLM usa el rol correspondiente de `domain/ai/builder-llm-roles.ts` (`plan→planner`, `facts`/`evaluation`/`reporting→eval`, `quality→quality`), nunca hardcodea qué proveedor/modelo usar — eso lo resuelve `ai/builder-llm-dispatcher.service.ts` según la configuración que el administrador eligió para ese rol.
 
 ## Cómo trabajar aquí
 
@@ -42,7 +42,7 @@
 npm run test -- test/unit/modules/projects/builder/application/services/stages
 ```
 
-Si necesitas añadir una etapa nueva al pipeline (poco frecuente): créala aquí siguiendo el mismo patrón (`handle(input): Promise<Output>`, sin capturar errores), y regístrala en el orden correcto dentro de `BuilderPipelineOrchestrator`.
+Si necesitas añadir una etapa nueva al pipeline (poco frecuente): créala aquí siguiendo el mismo patrón (`handle(input): Promise<Output>`), define su política de degradación si procede y regístrala en el orden correcto dentro de `BuilderPipelineOrchestrator`.
 
 ## Ver también
 

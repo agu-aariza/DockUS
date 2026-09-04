@@ -26,8 +26,8 @@ Es la única interfaz de usuario de EduCodeAI: no hay una app separada para prof
 ```text
 frontend/
 ├── src/                  # Todo el código fuente — ver src/README.md
-├── public/               # Estáticos servidos tal cual (favicon, logos) — ver public/README.md
-├── build/                # Salida de `vite build` (generada, gitignored) — ver build/README.md
+├── public/               # Estáticos servidos tal cual (favicon, logos) — ver docs/frontend-assets.md
+├── build/                # Salida de `vite build` (generada, gitignored; no contiene documentación fuente)
 ├── test/                 # Tests unitarios y soporte de Vitest + Testing Library
 ├── index.html            # Punto de entrada HTML de Vite
 ├── vite.config.ts        # outDir: 'build', plugins (React, análisis de bundle)
@@ -56,10 +56,11 @@ npm test                     # Vitest (test/unit/**/*.spec.tsx / *.spec.ts)
 npm run coverage                # vitest run --coverage
 ```
 
-La forma recomendada de levantar el stack completo (frontend + backend + infraestructura) es `docker compose --profile dev up --build` desde la raíz del repo.
+La forma recomendada de levantar el stack completo (frontend + backend + infraestructura) es `docker compose --profile dev up --build` desde la raíz del repo. `VITE_API_BASE_URL` se incorpora durante el build/dev server; en producción debe apuntar a la URL pública de la API, no a `localhost`.
 
 ## Ver también
 
 - [`src/README.md`](src/README.md) — organización del código fuente.
+- [`docs/frontend-assets.md`](../docs/frontend-assets.md) — política de `public/` y assets estáticos.
 - Raíz del repo: [`../README.md`](../README.md) y [`../ARCHITECTURE.md`](../ARCHITECTURE.md) para la visión de sistema completa (incluye el backend).
 - [`../backend/README.md`](../backend/README.md) — la API que este frontend consume.

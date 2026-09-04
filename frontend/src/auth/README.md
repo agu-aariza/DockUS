@@ -58,9 +58,9 @@ Sus 9 tests de hook están en [`../../test/unit/auth/hooks/useAuthForm.spec.ts`]
 - **El membrete y el escudo van `lg:hidden`**: en escritorio ya están en `AuthAsidePanel`, y repetirlos robaba alto al formulario. El panel, a su vez, es `hidden lg:flex` — en móvil la columna del formulario se basta sola, así que no queda ningún hueco vacío.
 - **Comparte tokens y controles con el resto de la app** (`app-*`, `primary`, `accent`, `.input-field`, `.btn-primary`) y el escudo institucional con `src/landing/` — ver su README.
 
-### Deuda conocida
+### Regla de validación
 
-El front solo exige 8 caracteres (`validatePassword`), pero el `RegisterDto` del backend exige además mayúscula, minúscula y dígito o carácter especial. Una contraseña como `abcdefgh` pasa la validación de cliente y el servidor responde 400. El checklist del medidor es informativo y no bloquea el envío.
+El backend es la autoridad para aceptar una contraseña. El frontend debe reflejar sus requisitos de mayúscula, minúscula y dígito o carácter especial además de la longitud mínima; si ambos validadores divergen, el formulario puede mostrar un error antes del `POST`, pero nunca debe considerarse la validación de cliente una garantía de autorización.
 
 ---
 

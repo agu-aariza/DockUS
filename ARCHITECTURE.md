@@ -2,7 +2,7 @@
 
 EduCodeAI is an academic platform for the automated evaluation of programming assignments. Teachers configure projects, course groups, and grading guidelines; students submit source code archives; the system executes each submission in an isolated, network-less Docker container, performs static quality analysis, and evaluates code logic with LLM assistance, producing structured pedagogical feedback that a teacher reviews before finalizing marks.
 
-This document serves as the authoritative architectural blueprint for developers and maintainers working on the codebase.
+This document is the authoritative architectural blueprint for developers and maintainers working on the codebase. Operational procedures, security limits and testing commands live in [`docs/`](docs/README.md); when those documents conflict with the code, the code and generated API schema are authoritative.
 
 ---
 
@@ -14,7 +14,7 @@ The API and the evaluation worker share a single codebase, a single node environ
 
 - **API Process (`backend/src/main.ts`)**: Boots an HTTP server via `bootstrap.ts` and `api.module.ts`, exposing REST controllers, handling JWT authentication, and serving client requests.
 - **Worker Process (`backend/src/worker.ts`)**: Boots a non-HTTP Dependency Injection application context via `bootstrap.ts` and `worker.module.ts`, listening to BullMQ queues on Redis to execute builder jobs.
-- **Process Role Selection (`backend/src/process-role.module.ts`)**: Dynamically resolves the root NestJS module graph depending on the environment role (`PROCESS_ROLE=api` vs `PROCESS_ROLE=worker`).
+- **Process Role Selection (`backend/src/process-role.module.ts`)**: Injects the process role while resolving the root NestJS module graph. The API and Worker entry points select their respective root modules; they are not interchangeable at runtime.
 
 This paradigm delivers the primary benefit of microservices (**independent scaling of API throughput and execution workloads**) without data model fragmentation, distributed transactions, or service discovery overhead.
 
@@ -44,8 +44,8 @@ flowchart TB
     end
 
     subgraph Sandbox["Execution Sandbox & External AI"]
-        LLM["LLM Providers<br/>(Gemini, Bedrock, Anthropic, OpenAI)"]
-        DOCKER["Docker Engine<br/>(Ephem. gVisor / runc Containers)"]
+        LLM["LLM Providers<br/>(6 provider IDs, 4 adapters)"]
+        DOCKER["Docker Engine<br/>(runc by default, runsc/gVisor when configured)"]
     end
 
     SPA -->|"HTTPS / REST (Axios)"| API
@@ -79,7 +79,7 @@ sequenceDiagram
     participant Q as Redis / BullMQ
     participant W as Worker Process
     participant D as Docker Sandbox
-    participant LLM as LLM Provider (Gemini/Bedrock)
+    participant LLM as LLM Provider (configured provider)
 
     S->>API: POST /deliveries (Upload ZIP Payload)
     API->>S3: Upload archive via MinioStorageService
@@ -119,8 +119,8 @@ sequenceDiagram
 ├── backend/                  # NestJS API & Worker codebase
 ├── frontend/                 # React 19 SPA client
 ├── shared/contracts/         # @educodeai/contracts (Shared types-only package)
-├── audit/                    # Technical audit reports (Phases 01 to 04)
-├── prompts/                  # AI System Prompts and evaluation templates
+├── docs/                     # Development, operations, security, testing and API guides
+├── corpus/                   # Evaluation fixtures, when included in the repository
 ├── docker-compose.yml        # Development & production container orchestration
 └── ARCHITECTURE.md           # This document
 ```
@@ -182,7 +182,7 @@ flowchart LR
 ### Key Engineering Patterns in Builder:
 - **Chain-of-Verification (Fact vs. Judgment)**: Phase 1 LLM call extracts verifiable facts from real execution logs without grading. Phase 2 grades *strictly from those extracted facts*.
 - **Deterministic Hallucination Guard**: `BuilderHallucinationGuardService` cross-checks LLM assertions against log outputs programmatically without using an LLM.
-- **Resilient Multi-Provider LLM Router**: `LlmCircuitBreakerService` routes requests to configured providers (Gemini, Bedrock, Anthropic, OpenAI) with automatic fallback and circuit breaking.
+- **Resilient Multi-Provider LLM Integration**: `LlmGenerationRouter` selects one of six provider IDs (`bedrock`, `azure`, `openai`, `anthropic`, `gemini`, `ollama`) and maps them to four technical adapters. `BuilderLlmDispatcherService` applies configured fallback candidates; `LlmCircuitBreakerService` prevents repeated calls to unhealthy providers.
 - **Execution Cost Tracking**: Each `BuildRun` measures `inputTokens`, `outputTokens`, and `executionCostUsd` aggregated stage-by-stage.
 
 ---
@@ -207,12 +207,12 @@ Project ──> ProjectAssignment ──┘
 
 ## 7. Security & Isolation Model
 
-Student submission code is treated as **untrusted** and executed under strict multi-layer sandboxing:
+Student submission code is treated as **untrusted** and executed under multiple configurable isolation layers. These controls reduce risk but do not turn a Docker host into a security boundary by themselves; deployment requirements and residual risks are documented in [`docs/security.md`](docs/security.md).
 
 1. **Process Isolation**: Code never runs in the API or worker Node.js process.
 2. **Network Isolation**: Contenedors execute with `--network none` during compilation and testing.
-3. **Capability & Privilege Reduction**: `--cap-drop ALL`, `--read-only` root filesystem, `--pids-limit 100`, non-root user execution (`nobody`).
-4. **gVisor / System Call Interception**: Production environments execute containers using gVisor (`runsc`) to sandbox Linux kernel syscalls.
+3. **Capability & Privilege Reduction**: `--cap-drop ALL`, `--read-only` root filesystem, a configurable process limit (`BUILDER_EXEC_PIDS_LIMIT`, 256 by default), and non-root user execution (`nobody`).
+4. **Optional System Call Interception**: Deployments may select gVisor (`runsc`) to add syscall isolation. The current Compose defaults use `runc` unless `BUILDER_DOCKER_RUNTIME` is changed and the host provides the runtime.
 5. **Separate Bind Mounts**: Student code workspace is mounted read-write; teacher test suites are mounted as read-only (`:ro`) outside the student workspace.
 
 ---
@@ -221,11 +221,11 @@ Student submission code is treated as **untrusted** and executed under strict mu
 
 | Layer | Primary Technology |
 |---|---|
-| **Frontend** | React 19 · Vite 8 · TypeScript · Tailwind CSS · React Router 7 |
+| **Frontend** | React 19 · Vite 8 · TypeScript · Tailwind CSS · React Router 8 |
 | **Backend** | NestJS 11 · TypeScript · TypeORM · Express |
 | **Database** | PostgreSQL 16 |
 | **Queue & Cache** | Redis 7 · BullMQ 5 · ioredis |
 | **Object Storage** | MinIO (S3-compatible API) |
-| **AI / LLM** | Google Gemini · AWS Bedrock · Anthropic · OpenAI-compatible |
-| **Sandbox** | Docker Engine · `runsc` (gVisor) / `runc` |
+| **AI / LLM** | Bedrock · Azure · OpenAI · Anthropic · Gemini · Ollama (4 adapters) |
+| **Sandbox** | Docker Engine · `runc` by default · optional `runsc` (gVisor) |
 | **Runtime** | Node.js 22 LTS |

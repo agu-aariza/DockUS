@@ -1,6 +1,6 @@
 # Entregas — vista de profesor (`src/deliveries/`)
 
-> **Resumen rápido:** El panel donde un profesor revisa, filtra y califica las entregas de sus alumnos: `TeacherDeliveriesPanel.tsx` como página, más nueve componentes de detalle/calificación y dos hooks que hablan con `/deliveries` vía React Query.
+> **Resumen rápido:** El panel donde un profesor revisa, filtra y califica las entregas de sus alumnos: `TeacherDeliveriesPanel.tsx` como página, once componentes de detalle/calificación y dos hooks que hablan con `/deliveries` vía React Query.
 
 ---
 
@@ -16,6 +16,9 @@ deliveries/
 │   ├── DeliveryOverview.tsx                  # Resumen del contenido/estado de la entrega
 │   ├── DeliveryReport.tsx                      # El informe de evaluación consolidado (lo que produjo el Builder)
 │   ├── DeliveryGrading.tsx                       # Formulario de calificación manual/override del profesor
+│   ├── DeliveryOutcomeBadge.tsx                    # Resultado general de la evaluación
+│   ├── DeliveryStatusBadge.tsx                     # Estado operativo de la entrega
+│   ├── TeacherGradingStudio.tsx                    # Espacio de revisión y calificación del profesor
 │   ├── TeacherReviewSummary.tsx                    # Resumen de la cola de revisión pendiente
 │   └── AssignmentLabel.tsx                           # Etiqueta reutilizable de a qué asignación pertenece
 ├── hooks/

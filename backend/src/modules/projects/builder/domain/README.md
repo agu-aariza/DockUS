@@ -1,10 +1,10 @@
 # Dominio del Builder (`builder/domain/`)
 
-> **Resumen rápido:** Las entidades reales (`BuildRun` y las cuatro tablas relacionadas), sus puertos de persistencia, los puertos hexagonales hacia Docker/MinIO/Redis, el catálogo de entornos de ejecución soportados, y el subdominio de IA (parsers de contrato LLM). Sin dependencias de TypeORM más allá de los decoradores de las propias entidades.
+> **Resumen rápido:** Las entidades reales (`BuildRun` y cinco entidades relacionadas), sus puertos de persistencia, los puertos hexagonales hacia Docker/MinIO/Redis, el catálogo de entornos de ejecución soportados y el subdominio de IA (parsers de contrato LLM). Sin dependencias de TypeORM fuera de los decoradores de las propias entidades.
 
 ---
 
-## Las cinco entidades (`entities/`)
+## Las seis entidades (`entities/`)
 
 ```text
 build-run.entity.ts              # BuildRun — la entidad central, ver abajo
@@ -51,7 +51,7 @@ npm run test -- test/unit/modules/projects/builder/domain
 npm run boundaries   # domain/ no puede importar TypeORM/ioredis salvo en las propias entidades
 ```
 
-Si necesitas que el Builder soporte un lenguaje/framework nuevo, `runtime-catalog.ts` es el punto de partida — es la fuente única de verdad de imágenes/versiones soportadas (antes había duplicados en `builder.constants.ts`, se consolidó a propósito, ver comentario ARQ-010 en ese fichero).
+Si necesitas que el Builder soporte un lenguaje/framework nuevo, `runtime-catalog.ts` es el punto de partida — es la fuente única de verdad de imágenes/versiones soportadas. Si la decisión requiere contexto histórico, registra una ADR en [`docs/adr/README.md`](../../../../../../docs/adr/README.md) en vez de enlazar a un documento local no versionado.
 
 ## Ver también
 

@@ -1,6 +1,6 @@
 # Adaptadores de proveedores LLM (`shared/infrastructure/ai/providers/`)
 
-> **Resumen rápido:** Tres adaptadores HTTP (Anthropic, Gemini, cualquier API compatible con el formato OpenAI) que comparten una clase base común. Bedrock **no** vive aquí — usa el SDK de AWS directamente (`../bedrock-generation.service.ts`), no HTTP genérico, así que no encaja en esta base.
+> **Resumen rápido:** Tres adaptadores HTTP (Anthropic, Gemini y cualquier API compatible con el formato OpenAI) que comparten una clase base común. Cubren los identificadores `anthropic`, `gemini`, `openai`, `azure` y `ollama`; Bedrock **no** vive aquí porque usa el SDK de AWS directamente.
 
 ---
 
@@ -13,7 +13,7 @@ HttpLlmProviderBase (abstracta: timeouts, reintentos, cabeceras comunes)
         │
         ├── AnthropicGenerationService          # API nativa de Anthropic
         ├── GeminiGenerationService                # API de Google Gemini
-        └── OpenAiCompatibleGenerationService         # Cualquier endpoint que hable el formato de chat de OpenAI
+        └── OpenAiCompatibleGenerationService         # openai, azure y ollama, si hablan el formato compatible
 ```
 
 ## Por qué "OpenAI-compatible" y no solo "OpenAI"

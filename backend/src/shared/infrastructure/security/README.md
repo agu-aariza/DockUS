@@ -6,7 +6,7 @@
 
 ## `throttler.config.ts`: por qué se cuenta por usuario/email, no por IP
 
-Dos de los cuatro cubos de límite (`global`, `burst`) cuentan **por identidad autenticada, no por IP**. La razón, documentada en el propio código como `ESC-C02`: un aula entera tras el NAT del campus comparte una única dirección IP — con conteo por IP, el undécimo alumno del minuto ni siquiera podía iniciar sesión, porque los diez anteriores ya habían agotado el cupo compartido de esa IP. La IP se conserva solo como respaldo para peticiones anónimas sin otra clave disponible.
+Dos de los cuatro cubos de límite (`global`, `burst`) cuentan **por identidad autenticada, no por IP**. Esto evita que un aula entera tras el NAT del campus comparta un único cupo de rate limiting. La IP se conserva solo como respaldo para peticiones anónimas sin otra clave disponible.
 
 Los cuatro cubos:
 
@@ -19,7 +19,7 @@ Los cuatro cubos:
 
 `auth-identity` y `refresh-identity` son la protección real contra fuerza bruta: un atacante que rote de IP sigue chocando contra el mismo cubo, porque la clave es el correo o el token, no el origen de red. `global`/`burst` se relajan específicamente en los endpoints de autenticación (`authThrottleOverrides`) a valores compatibles con un aula completa, precisamente porque la protección de verdad la aportan los otros dos cubos, no estos.
 
-`refresh-identity` existe porque `/auth/refresh` no manda `email` en el cuerpo — sin este cubo dedicado, ese endpoint corría solo con `global`/`burst` relajados, sin ninguna protección real por identidad (documentado como `INF-002`). No se verifica la firma del JWT para extraer esta clave — sería una superficie nueva de verificación para un beneficio marginal, dado que un refresh token es un secreto de alta entropía (no adivinable por fuerza bruta), y lo que realmente importa frenar es la reutilización repetida de un token concreto robado, no una enumeración.
+`refresh-identity` existe porque `/auth/refresh` no manda `email` en el cuerpo — sin este cubo dedicado, ese endpoint correría solo con `global`/`burst` relajados, sin protección por identidad. No se verifica la firma del JWT para extraer esta clave; la clave se deriva del refresh token concreto y el backend sigue siendo quien decide si el token es válido.
 
 ## `educodeai-throttler.guard.ts`
 

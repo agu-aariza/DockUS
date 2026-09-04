@@ -35,5 +35,4 @@ Los componentes de `components/` son mayormente de presentación (reciben datos 
 
 ## Ver también
 
-- [`components/README.md`](components/README.md)
 - [`../deliveries/README.md`](../deliveries/README.md) — a dónde lleva `ReviewQueue.tsx` al seleccionar una entrega.

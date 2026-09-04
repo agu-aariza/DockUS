@@ -36,11 +36,13 @@ interface CompiledRecipe {
 plan-stage.handler.ts (LLM infiere BuilderPlanContractV2)
         │
         ▼
-BuilderRecipeCompilerService.compile(plan)  →  CompiledRecipe
+BuilderRecipeCompilerService.compile(plan, studentFiles, teacherTestFiles)  →  CompiledRecipe
         │
         ├──▶ workspace/builder-environment-image.service.ts   (usa dependencyInstallCmd + image)
         └──▶ compile-stage.handler.ts / execution-stage.handler.ts  (usa buildCmd)
 ```
+
+Cuando `teacherTestFiles` contiene `run_suite.sh` o `run_suite.py` bajo `.educodeai/teacher-tests` y el runtime es el correspondiente, la receta ejecuta esa suite como verificación del CLI y no lanza antes el programa sin stdin.
 
 ## Cómo trabajar aquí
 

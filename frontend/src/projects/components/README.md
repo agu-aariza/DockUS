@@ -4,7 +4,7 @@
 
 ---
 
-## Los siete ficheros
+## Los nueve ficheros
 
 | Fichero | Qué muestra |
 | --- | --- |
@@ -12,6 +12,8 @@
 | `ProjectDetailHeader.tsx` | Cabecera del panel de detalle: título, estado, fechas, acciones rápidas. |
 | `ProjectOverview.tsx` | Resumen del proyecto seleccionado — punto de entrada del panel de detalle. |
 | `ProjectSubPanels.tsx` | Contenedor de pestañas/secciones secundarias del detalle. |
+| `ProjectSelectionHub.tsx` | Selector y punto de entrada para navegar entre proyectos. |
+| `ProjectStatusBadge.tsx` | Insignia reutilizable del estado del proyecto. |
 | `RubricEditor.tsx` | Editor interactivo de los criterios de rúbrica que se envían al LLM evaluador. |
 | `ProjectSuiteSection.tsx` | Subida y gestión de la suite de tests del profesor (`TEACHER_TESTS`). |
 | `ProjectTeachersSection.tsx` | Añadir/quitar profesores con permiso de administración sobre el proyecto (`POST/DELETE /projects/:id/teachers/:teacherId`). |

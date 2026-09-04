@@ -11,7 +11,7 @@ Presentar la plataforma y llevar al formulario de acceso.
 - **`LandingPage.tsx`** — ruta `/`. Cuatro secciones y pie: tesis + recorrido del pipeline, propuesta de valor, lenguajes soportados y proveedores de modelo compatibles. Las llamadas a la acción van a `/acceso` y `/acceso?modo=crear`, con la **misma etiqueta y el mismo aspecto** arriba y abajo.
 - **`pipelineStages.ts`** — las seis etapas con su resumen y su explicación larga. Fuente única: la comparten la landing y `auth/AuthAsidePanel`.
 - **`components/PipelineStageList.tsx`** — la lista de etapas. El resumen se ve siempre; el detalle se despliega al pasar el cursor, al recibir foco de teclado y al tocar. Prop `compact` para la columna lateral de `/acceso`.
-- **`components/LogoPlate.tsx`** — placa para logos de terceros; resuelve el fondo según el tema (ver más abajo).
+- **`../shared/components/ui/LogoPlate.tsx`** — placa para logos de terceros; resuelve el fondo según el tema (ver más abajo).
 - **`components/UniversityCrest.tsx`** — escudo oficial de la Universidad de Sevilla, sobre `LogoPlate`.
 
 ---
@@ -75,4 +75,4 @@ Las dos rutas son públicas, así que no hace falta sembrar sesión:
 npm run dev     # http://localhost:5173/  y  /acceso
 ```
 
-Comprobaciones que importan: sin desbordamiento horizontal a 375px, el primer pliegue de la landing y el formulario de login completos a 1366×768, modo oscuro legible (el granate sube a `#BE4452`), y cero animaciones con `prefers-reduced-motion`. Ver la skill `verify` del repo para conducirlo en un navegador.
+Comprobaciones que importan: sin desbordamiento horizontal a 375px, el primer pliegue de la landing y el formulario de login completos a 1366×768, modo oscuro legible (el granate sube a `#BE4452`), y cero animaciones con `prefers-reduced-motion`. Usa la checklist de [`docs/testing.md`](../../../docs/testing.md) para la verificación manual; no depende de una skill local no versionada.

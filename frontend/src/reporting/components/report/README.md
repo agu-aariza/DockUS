@@ -28,5 +28,5 @@ Si necesitas un nuevo tono de severidad o resultado, añádelo a `StatusTone` en
 
 ## Ver también
 
-- [`../ui/README.md`](../ui/README.md) — `StatusBadge`, la base de estos componentes.
-- [`../../data/README.md`](../../data/README.md) — la taxonomía de códigos del contrato del builder que alimenta estos badges.
+- [`../../../shared/components/ui/README.md`](../../../shared/components/ui/README.md) — `StatusBadge`, la base de estos componentes.
+- [`../../../shared/data/README.md`](../../../shared/data/README.md) — la taxonomía de códigos del contrato del builder que alimenta estos badges.

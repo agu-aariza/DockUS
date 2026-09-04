@@ -6,7 +6,7 @@
 
 ## ¿Qué es esto y por qué existe?
 
-Si nunca has visto este repositorio: EduCodeAI es una plataforma donde un profesor sube un proyecto con unas reglas de evaluación, un alumno entrega su código, y el sistema lo ejecuta de forma aislada (sin acceso a la red, sin privilegios) dentro de un contenedor Docker, analiza los resultados y usa un LLM (AWS Bedrock, con Gemini como *fallback*) para producir un informe pedagógico con nota y feedback. Este directorio (`backend/`) es el servidor que hace todo eso posible: recibe las peticiones HTTP del frontend, guarda el estado en PostgreSQL, encola el trabajo pesado (ejecución + IA) en Redis/BullMQ, y expone el resultado de vuelta.
+Si nunca has visto este repositorio: EduCodeAI es una plataforma donde un profesor sube un proyecto con unas reglas de evaluación, un alumno entrega su código, y el sistema lo ejecuta de forma aislada (sin red y sin privilegios) dentro de un contenedor Docker, analiza los resultados y usa un proveedor LLM configurado para producir un informe pedagógico con nota y feedback. Este directorio (`backend/`) es el servidor que hace eso posible: recibe las peticiones HTTP del frontend, guarda el estado en PostgreSQL, encola el trabajo pesado (ejecución + IA) en Redis/BullMQ, y expone el resultado de vuelta.
 
 El backend **no es un único proceso**: el mismo código se arranca de dos formas distintas según el rol (ver `src/main.ts` vs `src/worker.ts`, más abajo). Esto es clave para entender por qué el código está organizado como está.
 
@@ -15,7 +15,7 @@ El backend **no es un único proceso**: el mismo código se arranca de dos forma
 - Exponer la API REST consumida por el frontend (`src/modules/*/presentation/`), documentada automáticamente en Swagger (`/api/docs` en desarrollo).
 - Implementar la lógica de negocio de dominio: autenticación y roles, proyectos y entregas, grupos académicos, y el motor de evaluación ("Builder").
 - Orquestar la ejecución aislada de código de alumnos en contenedores Docker (`shared/infrastructure/docker/`, invocado vía CLI `docker`, nunca `dockerode`).
-- Integrar proveedores LLM (AWS Bedrock Runtime como primario, Gemini como *failover*) para planificar la ejecución, extraer hechos, evaluar y generar feedback pedagógico.
+- Integrar seis identificadores de proveedor LLM (`bedrock`, `azure`, `openai`, `anthropic`, `gemini`, `ollama`) para planificar la ejecución, extraer hechos, evaluar y generar feedback pedagógico. El dispatcher aplica el failover entre candidatos configurados y el router selecciona el adaptador técnico.
 - Persistir el estado del sistema en PostgreSQL vía TypeORM y ficheros/binarios en MinIO (S3-compatible).
 - Procesar trabajos pesados (ejecución del Builder) de forma asíncrona mediante colas BullMQ sobre Redis, para no bloquear peticiones HTTP.
 
@@ -70,9 +70,9 @@ Todo el backend comparte el mismo `CoreModule` (auth, users, academic, projects/
                               └──────────────────────────┘
 ```
 
-Un alumno hace `POST` a un endpoint de entregas → el controlador (proceso API) valida y encola un job → el proceso **Worker** (que puede vivir en otro contenedor, otra máquina, o replicarse N veces) lo recoge, levanta el contenedor Docker, llama al LLM y persiste el resultado. El frontend se entera del progreso vía SSE (Server-Sent Events) que el proceso API sirve leyendo el estado que el Worker va escribiendo en PostgreSQL/Redis — nunca hay comunicación directa API↔Worker fuera de la base de datos y la cola.
+Un alumno hace `POST` a un endpoint de entregas → el controlador (proceso API) valida y encola un job → el proceso **Worker** (que puede vivir en otro contenedor, otra máquina, o replicarse N veces) lo recoge, levanta el contenedor Docker, llama al LLM y persiste el resultado. El frontend se entera del progreso vía SSE (Server-Sent Events) que el proceso API sirve leyendo el estado que el Worker va escribiendo en PostgreSQL/Redis. No hay RPC directo entre API y Worker, pero sí hay coordinación mediante PostgreSQL, BullMQ y Redis Pub/Sub para los eventos en vivo.
 
-`docker-compose.yml` (en la raíz del repo) levanta ambos procesos como servicios separados (`educodeai-backend` y `educodeai-worker`) a partir de la misma imagen, diferenciados por el comando de arranque.
+`docker-compose.yml` (en la raíz del repo) levanta ambos procesos como servicios separados (`educodeai-backend` y `educodeai-worker`) a partir de la misma imagen, diferenciados por el comando de arranque. Solo el Worker recibe el socket de Docker; la API consulta el estado del daemon publicado en Redis.
 
 ## Arquitectura hexagonal (resumen)
 
@@ -128,4 +128,7 @@ npm run migration:revert     # revierte la última migración
 - [`src/shared/README.md`](src/shared/README.md) — infraestructura transversal (DB, Docker, IA, seguridad).
 - [`src/modules/projects/builder/README.md`](src/modules/projects/builder/README.md) — el motor de evaluación, el subsistema más grande e importante del backend.
 - [`test/README.md`](test/README.md) — organización de tests unitarios, soporte y e2e.
+- [`../docs/development.md`](../docs/development.md) — configuración local, migraciones y comandos.
+- [`../docs/operations.md`](../docs/operations.md) — despliegue, almacenamiento y recuperación.
+- [`../docs/security.md`](../docs/security.md) — límites de aislamiento y seguridad operativa.
 - Raíz del repo: [`../README.md`](../README.md) y [`../ARCHITECTURE.md`](../ARCHITECTURE.md) para la visión global del sistema (incluye el frontend).

@@ -1,6 +1,6 @@
 # Integración con Docker (`shared/infrastructure/docker/`)
 
-> **Resumen rápido:** El único punto del backend que habla con el daemon Docker — siempre a través del binario CLI `docker` vía `child_process.spawn` (nunca la librería `dockerode`), para control fino sobre timeouts, runtime (`runc`/`runsc`) y streaming de logs. Es la barrera de aislamiento real entre el código de un alumno y el resto del sistema.
+> **Resumen rápido:** El único punto del backend que habla con el daemon Docker — siempre a través del binario CLI `docker` vía `child_process.spawn` (nunca la librería `dockerode`), para control fino sobre timeouts, runtime (`runc`/`runsc`) y streaming de logs. Es la integración de ejecución entre el código de un alumno y el resto del sistema; la seguridad final también depende del host y del daemon.
 
 ---
 
@@ -8,7 +8,7 @@
 
 Usar el binario `docker` directamente da control explícito sobre cada flag de seguridad (red desactivada, usuario sin privilegios, límites de recursos, runtime `gVisor`/`runsc` cuando está disponible) y sobre el streaming de stdout/stderr en tiempo real, sin depender de cómo una librería de terceros decida exponer esas opciones. `command-runner.util.ts` (`runCommand`) es el único wrapper de `spawn` — todos los demás ficheros de esta carpeta lo reutilizan en vez de invocar `child_process` por su cuenta.
 
-## Los seis servicios
+## Los cinco servicios y la utilidad de ejecución
 
 | Fichero | Responsabilidad |
 | --- | --- |
@@ -23,7 +23,7 @@ Usar el binario `docker` directamente da control explícito sobre cada flag de s
 
 ## El aislamiento real, en una frase
 
-Sin red (el contenedor no tiene acceso a internet ni a la red interna), sin privilegios (usuario no-root dentro del contenedor), preferiblemente con `runsc`/gVisor en vez de `runc` estándar (una capa de sandboxing adicional a nivel de syscalls, no solo de namespaces). Esta es la garantía de seguridad más importante de todo el proyecto: el código de un alumno nunca corre en el proceso del servidor ni con privilegios reales sobre el host.
+Sin red (el contenedor no tiene acceso a internet ni a la red interna), sin privilegios (usuario no-root dentro del contenedor) y, cuando el host lo soporta, con `runsc`/gVisor en vez de `runc` estándar. `/tmp` se monta con `noexec` por defecto; una suite docente C reconocida puede solicitar explícitamente un tmpfs ejecutable para compilar su harness temporal. Son capas de reducción de riesgo, no una garantía absoluta: el acceso al daemon Docker y el hardening del host siguen siendo críticos. El código de un alumno no corre en el proceso del servidor.
 
 ## Estructura interna
 

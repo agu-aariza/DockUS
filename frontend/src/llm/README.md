@@ -1,6 +1,6 @@
 # Configuración de proveedores de IA (`src/llm/`)
 
-> **Resumen rápido:** El panel donde un profesor/admin elige qué proveedor LLM (Bedrock, Gemini, Anthropic, compatible con OpenAI) usa cada rol del pipeline (`planner`/`eval`/`quality`/`chatbot`), introduce sus credenciales y prueba la conexión antes de guardarlas.
+> **Resumen rápido:** El panel donde un administrador elige qué proveedor LLM (`bedrock`, `azure`, `openai`, `anthropic`, `gemini` u `ollama`) usa cada rol del pipeline (`planner`/`eval`/`quality`/`chatbot`), introduce sus credenciales y prueba la conexión antes de guardarlas.
 
 ---
 
@@ -28,7 +28,7 @@ llm/
 
 ## Las credenciales nunca se guardan en claro
 
-Lo que este panel envía se cifra en el backend con AES-256-GCM antes de persistirse (`shared/infrastructure/security/secret-cipher.service.ts`) — el frontend solo las manda una vez por HTTPS al guardar; no hay ninguna vista que las vuelva a mostrar en claro después.
+Lo que este panel envía se cifra en el backend con AES-256-GCM antes de persistirse (`shared/infrastructure/security/secret-cipher.service.ts`) — el frontend solo las manda una vez por HTTPS al guardar; no hay ninguna vista que las vuelva a mostrar en claro después. La configuración y la rotación del secreto maestro están descritas en [`docs/security.md`](../../../docs/security.md).
 
 ## Cómo trabajar aquí
 

@@ -14,7 +14,7 @@ storage/
 
 ## Un caso real de "la infraestructura deliberadamente no hace más de lo que le corresponde"
 
-`MinioStorageService` **verifica** al arrancar que la regla de retención del bucket de evidencias esté configurada, pero **no la aplica** él mismo. El motivo, documentado en el propio código: el MinIO desplegado en producción rechaza la escritura de reglas de ciclo de vida (*lifecycle*) hecha por el SDK de AWS v3, porque exige una cabecera `Content-Md5` que ese SDK no envía. La regla real se establece una única vez, manualmente, con `mc ilm rule add <alias>/<bucket> --prefix "runs/" --expire-days <N>` — este servicio solo **avisa en el arranque** con el comando exacto a ejecutar si detecta que la regla no está puesta.
+`MinioStorageService` **verifica** al arrancar que la regla de retención del bucket de evidencias esté configurada, pero **no la aplica** él mismo. En el Compose del repositorio, `minio-init` crea el bucket y añade automáticamente la regla `runs/` cuando `STORAGE_EVIDENCE_RETENTION_DAYS` es mayor que cero. En un MinIO externo o en producción sin ese servicio de inicialización, la regla debe establecerse manualmente con `mc ilm rule add <alias>/<bucket> --prefix "runs/" --expire-days <N>`; el backend avisa si no la detecta.
 
 Detalle no obvio y ya corregido una vez en este repo: el prefijo de las evidencias es **`runs/`**, no `evidence/` — un nombre parecido pero equivocado que en su momento hizo que la regla de retención se aplicara sobre un prefijo que no existía en el bucket, sin expirar nunca la evidencia real. Si tocas `STORAGE_EVIDENCE_RETENTION_DAYS` o la lógica de este aviso, verifica que el prefijo siga siendo `runs/`.
 

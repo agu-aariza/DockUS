@@ -1,6 +1,6 @@
 # Soporte de evaluación (`application/services/support/`)
 
-> **Resumen rápido:** Un único fichero, `builder-fallback-assessment.util.ts` — funciones puras que garantizan que el pipeline **siempre** produce una evaluación, incluso cuando el LLM falla o devuelve un contrato inválido. Es la red de seguridad final antes de que un `BuildRun` se marque `FAILED` sin más explicación.
+> **Resumen rápido:** Dos utilidades de fallback que mantienen un resultado honesto cuando el LLM falla o devuelve un contrato inválido. No garantizan que todos los runs terminen correctamente: los fallos irrecuperables siguen pudiendo marcar un `BuildRun` como `FAILED`.
 
 ---
 
@@ -8,7 +8,7 @@
 
 Un LLM puede fallar de formas que no son "el proveedor está caído": puede devolver JSON malformado, omitir campos requeridos, o simplemente no completar la respuesta a tiempo. Sin este módulo, cualquiera de esos casos propagaría un error crudo hasta el alumno/profesor sin ningún veredicto útil. En su lugar, estas funciones construyen una evaluación **degradada pero honesta** a partir de lo que sí se sabe con certeza (el Trace real de ejecución), en vez de fallar sin más.
 
-## Las siete funciones
+## Las utilidades
 
 | Función | Qué hace |
 | --- | --- |
@@ -19,6 +19,7 @@ Un LLM puede fallar de formas que no son "el proveedor está caído": puede devo
 | `resolveEvaluationAssessment(...)` | El punto de entrada principal: decide si usar el contrato real del LLM o construir uno degradado, y devuelve la evaluación final que consume `evaluation-stage.handler.ts`. |
 | `buildEmptyCodeQualityContract()` | Un `BuilderCodeQualityContractV2` vacío pero válido, para cuando la etapa de calidad falla — el informe muestra "sin hallazgos disponibles" en vez de romperse. |
 | `resolveCodeQualityFindings(...)` | Resuelve la lista final de hallazgos de calidad, real o vacía según corresponda. |
+| `builder-report-copy-fallback.util.ts` | Construye una copia estructurada mínima del informe cuando no se puede obtener la respuesta LLM de reporting. |
 
 ## Por qué es `support/` y no `evaluation/`
 

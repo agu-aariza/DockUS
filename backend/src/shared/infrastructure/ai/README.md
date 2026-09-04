@@ -1,12 +1,12 @@
 # Integración de IA (`shared/infrastructure/ai/`)
 
-> **Resumen rápido:** El cliente LLM real del sistema — un router con *failover* entre cuatro proveedores (Bedrock, Gemini, Anthropic, OpenAI-compatible), un disyuntor (circuit breaker) por proveedor, y el lector de `prompts.json`. Todo lo que `builder/domain/ai/` compone y parsea, este directorio es quien realmente lo envía y recibe.
+> **Resumen rápido:** El cliente LLM real del sistema — seis identificadores de proveedor (`bedrock`, `azure`, `openai`, `anthropic`, `gemini`, `ollama`) mapeados a cuatro adaptadores técnicos, un disyuntor por proveedor y el lector de `prompts.json`. El router selecciona el adaptador; el dispatcher del Builder aplica el *failover* entre candidatos.
 
 ---
 
 ## `llm-generation.router.ts`: el punto de entrada único
 
-Ningún servicio de dominio del Builder depende de Bedrock (ni de ningún proveedor) directamente — todos dependen de `LlmGenerationRouter`, que elige el adaptador concreto según `profile.providerId` (el perfil sale de la configuración que el profesor eligió en la pestaña "Modelos de IA" para ese rol: `planner`/`eval`/`quality`/`chatbot`). Detalle de seguridad importante: **las credenciales viajan en la petición, nunca en el perfil** — el perfil sí se persiste (en los *snapshots* de prompt de cada `BuildRun`, para poder reproducir exactamente qué se le pidió al modelo), así que si las credenciales vivieran ahí quedarían filtradas en el historial.
+Ningún servicio de dominio del Builder depende de Bedrock (ni de ningún proveedor) directamente — todos dependen de `LlmGenerationRouter`, que elige el adaptador concreto según `profile.providerId` (el perfil sale de la configuración que el administrador eligió en la pestaña "Modelos de IA" para ese rol: `planner`/`eval`/`quality`/`chatbot`). Detalle de seguridad importante: **las credenciales viajan en la petición, nunca en el perfil** — el perfil sí se persiste (en los *snapshots* de prompt de cada `BuildRun`, para poder reproducir exactamente qué se le pidió al modelo), así que si las credenciales vivieran ahí quedarían filtradas en el historial.
 
 ```text
 Servicio de dominio (p. ej. BuilderLlmEvaluatorService)
@@ -16,13 +16,13 @@ LlmGenerationRouter.generate(request, profile)
         │  profile.providerId decide el adaptador
         ├─ 'bedrock' ──▶ BedrockGenerationService (AWS SDK directo, @aws-sdk/client-bedrock-runtime)
         ├─ 'anthropic' ─▶ providers/anthropic-generation.service.ts  ┐
-        ├─ 'gemini' ────▶ providers/gemini-generation.service.ts      ├─ todos extienden HttpLlmProviderBase
-        └─ 'openai-compatible' ▶ providers/openai-compatible-generation.service.ts ┘
+        ├─ 'gemini' ────▶ providers/gemini-generation.service.ts      ├─ extienden HttpLlmProviderBase
+        └─ 'openai'/'azure'/'ollama' ─▶ openai-compatible-generation.service.ts
 ```
 
 ## `llm-circuit-breaker.service.ts`: por qué existe además del router
 
-El router decide *qué* proveedor usar según configuración; el circuit breaker decide *si* ese proveedor está sano ahora mismo. Si un proveedor falla repetidamente, el breaker se abre (`llm_circuit_opened`, con `cooldownSeconds`) y las siguientes peticiones a ese proveedor fallan rápido en vez de esperar un timeout completo cada vez — dándole tiempo a recuperarse y evitando que una degradación de Bedrock, por ejemplo, ralentice cada evaluación en curso. Se configura vía `LLM_CIRCUIT_BREAKER_*`.
+El router decide qué adaptador usar según configuración; el circuit breaker decide si ese proveedor está sano ahora mismo. El *failover* entre candidatos configurados ocurre en `BuilderLlmDispatcherService`, que solo reintenta categorías de error recuperables. Si un proveedor falla repetidamente, el breaker se abre (`llm_circuit_opened`, con `cooldownSeconds`) y las siguientes peticiones fallan rápido en vez de esperar un timeout completo. Se configura vía `LLM_CIRCUIT_BREAKER_*`.
 
 ## `prompt-registry.service.ts`: dónde vive el texto de los prompts
 
@@ -32,14 +32,14 @@ Lee `prompts.json` (en esta misma carpeta) y expone cada prompt como un `PromptB
 
 ```text
 ai/
-├── ai.module.ts                    # Registra router, breaker, prompt registry y los 4 adaptadores
-├── llm-generation.router.ts          # El despachador con failover — ver arriba
+├── ai.module.ts                    # Registra router, breaker, prompt registry y los adaptadores
+├── llm-generation.router.ts          # Selecciona el adaptador; no implementa el failover
 ├── llm-generation.token.ts             # Interfaz ILlmGenerationService + token de inyección
 ├── llm.types.ts                          # LlmGenerateRequest/Result, LlmProviderId, LlmUsage...
 ├── llm-circuit-breaker.service.ts          # Disyuntor por proveedor
 ├── llm-endpoint-policy.util.ts                # Política de timeouts/reintentos por endpoint
 ├── llm-request.util.ts                          # LlmRequestError + helpers de construcción de petición
-├── bedrock-generation.service.ts                  # Adaptador AWS Bedrock (proveedor primario, SDK directo)
+├── bedrock-generation.service.ts                  # Adaptador AWS Bedrock (SDK directo)
 ├── bedrock-request.util.ts                          # Helpers específicos de la petición a Bedrock
 ├── prompt-registry.service.ts                         # Lee prompts.json — ver arriba
 ├── prompt.types.ts                                      # PromptBundle, PromptManifest, interpolación
