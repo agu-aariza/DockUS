@@ -9,6 +9,7 @@ import {
   BuilderLlmStagePromptSnapshot,
   BuilderLlmStageErrorInfo,
   BuilderLlmStageTrace,
+  BuilderLlmStageAttempt,
   BuilderStageTokenUsage,
   BUILDER_LLM_SCHEMA_VERSION,
 } from '../../../domain/builder.types';
@@ -66,6 +67,7 @@ export function buildTrace<TContract>(
   error: BuilderLlmStageErrorInfo | null,
   parsedContract: TContract | null = null,
   usage?: LlmUsage,
+  attempts?: BuilderLlmStageAttempt[],
 ): BuilderLlmStageTrace<TContract> {
   return {
     schemaVersion: BUILDER_LLM_SCHEMA_VERSION,
@@ -74,6 +76,7 @@ export function buildTrace<TContract>(
     parsedContract,
     error,
     usage,
+    ...(attempts && attempts.length > 0 ? { attempts } : {}),
   };
 }
 

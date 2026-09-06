@@ -301,6 +301,14 @@ export interface BuilderLlmStageErrorInfo {
   timestamp: string;
 }
 
+export interface BuilderLlmStageAttempt {
+  attempt: number;
+  rawResponse: string | null;
+  error: BuilderLlmStageErrorInfo | null;
+  usage?: LlmUsage;
+  modelProfile?: LlmModelProfile;
+}
+
 export interface BuilderLlmStageTrace<
   TContract = BuilderLlmContractV2,
 > extends BuilderLlmStagePromptSnapshot {
@@ -309,6 +317,7 @@ export interface BuilderLlmStageTrace<
   parsedContract: TContract | null;
   error: BuilderLlmStageErrorInfo | null;
   usage?: LlmUsage;
+  attempts?: BuilderLlmStageAttempt[];
 }
 
 /**

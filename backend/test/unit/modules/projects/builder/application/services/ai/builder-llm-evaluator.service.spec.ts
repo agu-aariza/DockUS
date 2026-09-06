@@ -419,6 +419,18 @@ describe('BuilderLlmEvaluatorService', () => {
 
     expect(trace.parsedContract).not.toBeNull();
     expect(trace.usage).toEqual({ inputTokens: 220, outputTokens: 60 });
+    expect(trace.attempts).toBeDefined();
+    expect(trace.attempts).toHaveLength(2);
+    expect(trace.attempts![0].attempt).toBe(1);
+    expect(trace.attempts![0].rawResponse).toBe('primer-intento-invalido');
+    expect(trace.attempts![0].error).toEqual(
+      expect.objectContaining({
+        code: 'invalid_contract',
+      }),
+    );
+    expect(trace.attempts![1].attempt).toBe(2);
+    expect(trace.attempts![1].rawResponse).toBe(validEvaluationResponse);
+    expect(trace.attempts![1].error).toBeNull();
   });
 
   it('serializes stage errors using prompt id and model profile metadata', async () => {

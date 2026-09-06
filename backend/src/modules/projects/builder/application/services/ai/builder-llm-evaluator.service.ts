@@ -10,6 +10,7 @@ import {
   BuilderEvaluationContractV3,
   BuilderExecutionResult,
   BuilderFactsContractV2,
+  BuilderLlmStageAttempt,
   BuilderLlmStagePromptSnapshot,
   BuilderLlmStageTrace,
   BuilderPlanContractV2,
@@ -285,67 +286,169 @@ export class BuilderLlmEvaluatorService {
         serializedError,
         this.logger,
       );
-      return buildTrace<TContract>(fallbackSnapshot, null, serializedError);
+      const attempts: BuilderLlmStageAttempt[] = [
+        {
+          attempt: 1,
+          rawResponse: null,
+          error: serializedError,
+          usage: undefined,
+          modelProfile: fallbackSnapshot.modelProfile,
+        },
+      ];
+      return buildTrace<TContract>(
+        fallbackSnapshot,
+        null,
+        serializedError,
+        null,
+        undefined,
+        attempts,
+      );
     }
 
+    const firstAttemptRaw = response.text;
+    const firstAttemptUsage = response.usage;
+    const firstAttemptProfile = profile;
+
     try {
+      const parsed = parse(response.text);
+      const attempts: BuilderLlmStageAttempt[] = [
+        {
+          attempt: 1,
+          rawResponse: response.text,
+          error: null,
+          usage: response.usage,
+          modelProfile: profile,
+        },
+      ];
       return buildTrace<TContract>(
         snapshot!,
         response.text,
         null,
-        parse(response.text),
+        parsed,
         response.usage,
+        attempts,
       );
-    } catch {
+    } catch (firstParseError) {
+      const serializedFirstError = serializeError(
+        firstParseError,
+        'invalid_contract',
+      );
       this.logger.warn(
         JSON.stringify({
           event: 'builder_llm_contract_retry',
           stage,
           promptId,
           modelId: profile.modelId,
+          error: serializedFirstError.message,
         }),
       );
-    }
 
-    // Segundo y último intento.
-    const firstAttemptUsage = response.usage;
-    try {
-      ({ response, profile } = await attempt());
-    } catch (error: unknown) {
-      const serializedError = serializeError(error);
-      logStageError(stage, promptId, profile, serializedError, this.logger);
-      return buildTrace<TContract>(
-        snapshot!,
-        null,
-        serializedError,
-        null,
-        firstAttemptUsage,
-      );
-    }
+      // Segundo y último intento.
+      try {
+        ({ response, profile } = await attempt());
+      } catch (secondError: unknown) {
+        const serializedSecondError = serializeError(secondError);
+        logStageError(
+          stage,
+          promptId,
+          profile,
+          serializedSecondError,
+          this.logger,
+        );
+        const attempts: BuilderLlmStageAttempt[] = [
+          {
+            attempt: 1,
+            rawResponse: firstAttemptRaw,
+            error: serializedFirstError,
+            usage: firstAttemptUsage,
+            modelProfile: firstAttemptProfile,
+          },
+          {
+            attempt: 2,
+            rawResponse: null,
+            error: serializedSecondError,
+            usage: undefined,
+            modelProfile: profile,
+          },
+        ];
+        return buildTrace<TContract>(
+          snapshot!,
+          null,
+          serializedSecondError,
+          null,
+          firstAttemptUsage,
+          attempts,
+        );
+      }
 
-    try {
-      return buildTrace<TContract>(
-        snapshot!,
-        response.text,
-        null,
-        parse(response.text),
-        // ambos intentos se facturan; el trace final debe reflejar
-        // el consumo de los dos, no solo el del segundo.
-        sumUsage(firstAttemptUsage, response.usage),
-      );
-    } catch (parseError) {
-      const serializedError = serializeError(parseError, 'invalid_contract');
-      logStageError(stage, promptId, profile, serializedError, this.logger);
-      this.logger.error(
-        `Fallo al parsear respuesta ${parseErrorLabel} tras dos intentos. Respuesta bruta: ${response.text}`,
-      );
-      return buildTrace<TContract>(
-        snapshot!,
-        response.text,
-        serializedError,
-        null,
-        sumUsage(firstAttemptUsage, response.usage),
-      );
+      try {
+        const parsed = parse(response.text);
+        const attempts: BuilderLlmStageAttempt[] = [
+          {
+            attempt: 1,
+            rawResponse: firstAttemptRaw,
+            error: serializedFirstError,
+            usage: firstAttemptUsage,
+            modelProfile: firstAttemptProfile,
+          },
+          {
+            attempt: 2,
+            rawResponse: response.text,
+            error: null,
+            usage: response.usage,
+            modelProfile: profile,
+          },
+        ];
+        return buildTrace<TContract>(
+          snapshot!,
+          response.text,
+          null,
+          parsed,
+          // ambos intentos se facturan; el trace final debe reflejar
+          // el consumo de los dos, no solo el del segundo.
+          sumUsage(firstAttemptUsage, response.usage),
+          attempts,
+        );
+      } catch (secondParseError) {
+        const serializedSecondError = serializeError(
+          secondParseError,
+          'invalid_contract',
+        );
+        logStageError(
+          stage,
+          promptId,
+          profile,
+          serializedSecondError,
+          this.logger,
+        );
+        this.logger.error(
+          `Fallo al parsear respuesta ${parseErrorLabel} tras dos intentos. Respuesta bruta: ${response.text}`,
+        );
+        const attempts: BuilderLlmStageAttempt[] = [
+          {
+            attempt: 1,
+            rawResponse: firstAttemptRaw,
+            error: serializedFirstError,
+            usage: firstAttemptUsage,
+            modelProfile: firstAttemptProfile,
+          },
+          {
+            attempt: 2,
+            rawResponse: response.text,
+            error: serializedSecondError,
+            usage: response.usage,
+            modelProfile: profile,
+          },
+        ];
+        return buildTrace<TContract>(
+          snapshot!,
+          response.text,
+          serializedSecondError,
+          null,
+          sumUsage(firstAttemptUsage, response.usage),
+          attempts,
+        );
+      }
     }
   }
 }

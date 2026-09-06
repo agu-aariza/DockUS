@@ -2,6 +2,7 @@ import {
   composeEvaluationPrompt,
   composePlanPrompt,
   composeQualityPrompt,
+  composeReportingPrompt,
   renderRubricSection,
 } from '@app/modules/projects/builder/domain/ai/builder-prompt-composer';
 
@@ -192,5 +193,144 @@ describe('builder prompt composer', () => {
       'SOURCE EXCERPTS',
       'EXECUTION LOGS',
     ]);
+  });
+
+  it('preserves weighted criteria at the beginning when rubric instructions are lengthy', () => {
+    const rendered = renderRubricSection({
+      expectedType: 'PYTHON_CLI',
+      rubricInstructions: 'Instrucciones docentes extensas. '.repeat(150),
+      expectedOutput: 'ok',
+      rubricCriteria: [
+        {
+          name: 'CRITERIO_CANONICO',
+          weight: 100,
+          description: 'Comprobar la salida.',
+        },
+      ],
+    });
+
+    // The weighted criteria block must come before the instructions
+    const criteriaPos = rendered.indexOf('CRITERIO_CANONICO');
+    const instructionsPos = rendered.indexOf('Instrucciones docentes extensas.');
+    expect(criteriaPos).toBeGreaterThan(-1);
+    expect(instructionsPos).toBeGreaterThan(-1);
+    expect(criteriaPos).toBeLessThan(instructionsPos);
+  });
+
+  it('preserves exitCode and essential fields when facts contains large stdout', () => {
+    const payload = composeEvaluationPrompt(
+      'print("ok")',
+      {
+        schemaVersion: 'builder-llm/v2',
+        stage: 'facts',
+        thought: 'Hechos con salida muy grande.',
+        observedStdout: ['x'.repeat(7000)],
+        observedStderr: [],
+        exitCode: 42,
+        compilationStatus: 'not_applicable',
+        matchesOracle: false,
+        discrepancies: [],
+        filesPresent: ['main.py'],
+        executionSummary: 'Salida masiva observada.',
+        evidenceLimits: [],
+      },
+      {
+        expectedType: 'PYTHON_CLI',
+        rubricInstructions: 'Comprobar salida.',
+        rubricCriteria: null,
+        expectedOutput: 'ok',
+      },
+      undefined,
+      25000,
+    );
+
+    expect(payload.prompt).toContain('"exitCode": 42');
+    expect(payload.prompt).toContain('"compilationStatus": "not_applicable"');
+    const factsSection = payload.sections.find(
+      (s) => s.label === 'VERIFIED FACTS',
+    );
+    expect(factsSection).toBeDefined();
+  });
+
+  it('generates valid JSON with findings preserved when reporting assessment has long reasoning', () => {
+    const payload = composeReportingPrompt(
+      {
+        schemaVersion: 'builder-evaluation/v3',
+        stage: 'evaluation',
+        thought: 'Razonamiento sintético extenso. '.repeat(500),
+        structuralType: 'T4',
+        capabilities: {
+          C1: { status: 'yes', rationale: 'ok' },
+          C2: { status: 'yes', rationale: 'ok' },
+          C3: { status: 'no', rationale: 'ok' },
+          C4: { status: 'yes', rationale: 'ok' },
+          C5: { status: 'no', rationale: 'ok' },
+          C6: { status: 'no', rationale: 'ok' },
+        },
+        evaluativeState: 'E1',
+        confidence: 'high',
+        rationale: 'Evaluacion completa.',
+        recommendedGrade: 8,
+        externalRequirements: [],
+        runtime: {
+          family: 'python',
+          version: '3.11',
+        },
+        recipe: {
+          install: [],
+          run: ['python', 'app.py'],
+          test: [],
+          systemPackages: [],
+          cwd: '/app',
+          environment: null,
+          service: null,
+        },
+        evidenceSummary: 'Todo correcto.',
+        criteria: [
+          {
+            id: 'crit-1',
+            criterion: 'Funcionalidad',
+            maxPoints: 10,
+            awarded: 8,
+            status: 'pass',
+            justification: 'Cumple los requisitos principales.',
+            evidenceIds: ['ev-1'],
+          },
+        ],
+        gradeBreakdown: [],
+        evidence: [
+          {
+            id: 'ev-1',
+            kind: 'execution',
+            summary: 'Salida esperada.',
+            detail: 'Salida coincide con el oraculo.',
+            visibility: 'student',
+          },
+        ],
+        findings: [
+          {
+            id: 'find-1',
+            severity: 'low',
+            title: 'Refactorización menor',
+            explanation: 'Variables podrían nombrarse más descriptivamente.',
+            recommendation: 'Usar nombres significativos.',
+            blocking: false,
+            evidenceIds: ['ev-1'],
+          },
+        ],
+        limitations: [],
+        reviewFlags: [],
+      },
+      16000,
+    );
+
+    // Extract the JSON content of the VALIDATED EVALUATION section
+    const jsonStart = payload.prompt.indexOf('{');
+    const jsonString = payload.prompt.slice(jsonStart);
+    const parsed = JSON.parse(jsonString);
+    expect(parsed.schemaVersion).toBe('builder-evaluation/v3');
+    expect(parsed.findings).toHaveLength(1);
+    expect(parsed.findings[0].title).toBe('Refactorización menor');
+    expect(parsed.criteria).toHaveLength(1);
   });
 });

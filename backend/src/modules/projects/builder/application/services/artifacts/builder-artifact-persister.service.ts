@@ -212,8 +212,31 @@ export class BuilderArtifactPersister {
           timestamp: trace.error.timestamp,
           error: trace.error,
           rawResponseCaptured: trace.rawResponse !== null,
+          attempts: trace.attempts,
         },
         `Error ${trace.stage} persistido para debugging.`,
+      );
+    } else if (trace.attempts && trace.attempts.some((att) => att.error !== null)) {
+      const failedAttempt = trace.attempts.find((att) => att.error !== null);
+      await this.persistJsonArtifact(
+        buildRunId,
+        artifactTypes.error,
+        {
+          stage: trace.stage,
+          promptId: trace.promptId ?? `${trace.stage}-legacy`,
+          model: trace.model,
+          modelProfile: trace.modelProfile,
+          sections: trace.sections ?? [],
+          code: failedAttempt?.error?.code ?? 'recovered_on_retry',
+          httpStatus: failedAttempt?.error?.httpStatus ?? null,
+          timestamp:
+            failedAttempt?.error?.timestamp ?? new Date().toISOString(),
+          error: failedAttempt?.error ?? null,
+          rawResponseCaptured: failedAttempt?.rawResponse !== null,
+          attempts: trace.attempts,
+          recoveredOnRetry: true,
+        },
+        `Error previo ${trace.stage} recuperado en reintento persistido para debugging.`,
       );
     }
   }

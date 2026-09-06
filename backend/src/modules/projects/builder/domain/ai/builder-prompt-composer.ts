@@ -80,11 +80,6 @@ export function renderRubricSection(
 ): string {
   const parts: string[] = [];
 
-  const instructions = assignmentContext.rubricInstructions?.trim();
-  if (instructions) {
-    parts.push(instructions);
-  }
-
   const criteria = assignmentContext.rubricCriteria;
   if (criteria && criteria.length > 0) {
     // Los pesos se expresan al modelo directamente en puntos sobre 10, no en
@@ -103,6 +98,11 @@ export function renderRubricSection(
         ...lines,
       ].join('\n'),
     );
+  }
+
+  const instructions = assignmentContext.rubricInstructions?.trim();
+  if (instructions) {
+    parts.push(instructions);
   }
 
   return parts.length > 0
@@ -222,7 +222,10 @@ export function composeEvaluationPrompt(
     [
       {
         label: 'VERIFIED FACTS',
-        content: JSON.stringify(facts, null, 2),
+        content: serializeFactsForPrompt(
+          facts,
+          EVAL_PROMPT_MAX_SECTION_CHARS.facts.preferredChars ?? 6000,
+        ),
         priority: 'critical',
         budget: EVAL_PROMPT_MAX_SECTION_CHARS.facts,
       },
@@ -264,6 +267,14 @@ export function composeQualityPrompt(
   assessment: BuilderEvaluationContractV2 | BuilderEvaluationContractV3,
   maxChars: number,
 ): ComposedPromptPayload {
+  const serializedAssessment =
+    'criteria' in assessment && Array.isArray(assessment.criteria)
+      ? serializeAssessmentForReporting(
+          assessment as BuilderEvaluationContractV3,
+          QUALITY_PROMPT_MAX_SECTION_CHARS.assessment.preferredChars ?? 7000,
+        )
+      : JSON.stringify(assessment, null, 2);
+
   return composePromptSections(
     [
       {
@@ -278,7 +289,7 @@ export function composeQualityPrompt(
       },
       {
         label: 'CURRENT ACADEMIC ASSESSMENT',
-        content: JSON.stringify(assessment, null, 2),
+        content: serializedAssessment,
         priority: 'high',
         budget: QUALITY_PROMPT_MAX_SECTION_CHARS.assessment,
       },
@@ -311,13 +322,152 @@ export function composeReportingPrompt(
     [
       {
         label: 'VALIDATED EVALUATION',
-        content: JSON.stringify(assessment, null, 2),
+        content: serializeAssessmentForReporting(
+          assessment,
+          REPORTING_PROMPT_MAX_SECTION_CHARS.evaluation.preferredChars ?? 14000,
+        ),
         priority: 'critical',
         budget: REPORTING_PROMPT_MAX_SECTION_CHARS.evaluation,
       },
     ],
     maxChars,
   );
+}
+
+/**
+ * Serializa los hechos verificados de ejecución para el prompt del evaluador.
+ * Si el contenido excede el presupuesto de la sección, trunca el texto libre
+ * de logs (stdout/stderr) y razonamiento interno conservando intactas las
+ * propiedades estructurales críticas (exitCode, compilationStatus, matchesOracle,
+ * archivos y discrepancias) y garantizando que el resultado sea siempre un JSON válido.
+ */
+export function serializeFactsForPrompt(
+  facts: BuilderFactsContractV2,
+  maxChars: number,
+): string {
+  const raw = JSON.stringify(facts, null, 2);
+  if (raw.length <= maxChars) {
+    return raw;
+  }
+
+  const trimmed: BuilderFactsContractV2 = {
+    ...facts,
+    evidenceLimits: [...(facts.evidenceLimits || [])],
+  };
+
+  if (trimmed.thought && trimmed.thought.length > 300) {
+    trimmed.thought = truncateContent(trimmed.thought, 300);
+  }
+  if (JSON.stringify(trimmed, null, 2).length <= maxChars) {
+    return JSON.stringify(trimmed, null, 2);
+  }
+
+  if (trimmed.executionSummary && trimmed.executionSummary.length > 300) {
+    trimmed.executionSummary = truncateContent(trimmed.executionSummary, 300);
+  }
+  if (JSON.stringify(trimmed, null, 2).length <= maxChars) {
+    return JSON.stringify(trimmed, null, 2);
+  }
+
+  const trimLines = (lines: string[], targetLength: number): string[] => {
+    if (!lines || lines.length === 0) return [];
+    const joined = lines.join('\n');
+    if (joined.length <= targetLength) return lines;
+    return [truncateContent(joined, targetLength)];
+  };
+
+  const allowedLogsChars = Math.max(200, maxChars - 1500);
+  trimmed.observedStdout = trimLines(
+    trimmed.observedStdout ?? [],
+    Math.floor(allowedLogsChars * 0.7),
+  );
+  trimmed.observedStderr = trimLines(
+    trimmed.observedStderr ?? [],
+    Math.floor(allowedLogsChars * 0.3),
+  );
+
+  if (!trimmed.evidenceLimits.includes('logs_truncated_for_context')) {
+    trimmed.evidenceLimits.push('logs_truncated_for_context');
+  }
+
+  if (JSON.stringify(trimmed, null, 2).length <= maxChars) {
+    return JSON.stringify(trimmed, null, 2);
+  }
+
+  if (trimmed.filesPresent && trimmed.filesPresent.length > 20) {
+    trimmed.filesPresent = trimmed.filesPresent.slice(0, 20);
+  }
+
+  return JSON.stringify(trimmed, null, 2);
+}
+
+/**
+ * Serializa la evaluación validada para la etapa de redacción de informes (reporting).
+ * Si el contenido excede el presupuesto, trunca la narrativa y razonamiento interno
+ * conservando los criterios estructurados, hallazgos y evidencias intactos en un JSON válido.
+ */
+export function serializeAssessmentForReporting(
+  assessment: BuilderEvaluationContractV3,
+  maxChars: number,
+): string {
+  const raw = JSON.stringify(assessment, null, 2);
+  if (raw.length <= maxChars) {
+    return raw;
+  }
+
+  const trimmed: BuilderEvaluationContractV3 = {
+    ...assessment,
+  };
+
+  if (trimmed.thought && trimmed.thought.length > 400) {
+    trimmed.thought = truncateContent(trimmed.thought, 400);
+  }
+  if (JSON.stringify(trimmed, null, 2).length <= maxChars) {
+    return JSON.stringify(trimmed, null, 2);
+  }
+
+  if (Array.isArray(trimmed.evidence)) {
+    trimmed.evidence = trimmed.evidence.map((ev) => ({
+      ...ev,
+      detail:
+        ev.detail && ev.detail.length > 250
+          ? truncateContent(ev.detail, 250)
+          : ev.detail,
+    }));
+  }
+  if (JSON.stringify(trimmed, null, 2).length <= maxChars) {
+    return JSON.stringify(trimmed, null, 2);
+  }
+
+  if (Array.isArray(trimmed.findings)) {
+    trimmed.findings = trimmed.findings.map((f) => ({
+      ...f,
+      explanation:
+        f.explanation && f.explanation.length > 250
+          ? truncateContent(f.explanation, 250)
+          : f.explanation,
+      recommendation:
+        f.recommendation && f.recommendation.length > 250
+          ? truncateContent(f.recommendation, 250)
+          : f.recommendation,
+    }));
+  }
+  if (JSON.stringify(trimmed, null, 2).length <= maxChars) {
+    return JSON.stringify(trimmed, null, 2);
+  }
+
+  if (Array.isArray(trimmed.criteria)) {
+    trimmed.criteria = trimmed.criteria.map((c) => ({
+      ...c,
+      justification:
+        c.justification && c.justification.length > 200
+          ? truncateContent(c.justification, 200)
+          : c.justification,
+    }));
+    trimmed.gradeBreakdown = trimmed.criteria;
+  }
+
+  return JSON.stringify(trimmed, null, 2);
 }
 
 function composePromptSections(
