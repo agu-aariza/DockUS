@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { builderApi } from "../../builder/api/builderApi";
 import type { BuildRunEntity } from "../../features/builder/types";
@@ -18,18 +19,25 @@ export function ReportView({
   mode = "teacher",
   onUseAiGrade,
 }: ReportViewProps): JSX.Element {
+  const [activeMode, setActiveMode] = useState<"student" | "teacher">(mode);
+
+  useEffect(() => {
+    setActiveMode(mode);
+  }, [mode]);
+
   const reportQuery = useQuery({
-    queryKey: queryKeys.builderRuns.reportV3(run.id, mode),
-    queryFn: () => builderApi.report(run.id),
+    queryKey: queryKeys.builderRuns.reportV3(run.id, activeMode),
+    queryFn: () => builderApi.report(run.id, activeMode),
     staleTime: 30_000,
   });
 
   const download = async (audience?: "student" | "teacher") => {
-    const blob = await builderApi.exportReport(run.id, audience);
+    const targetAudience = audience ?? activeMode;
+    const blob = await builderApi.exportReport(run.id, targetAudience);
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `informe-${run.id}-${audience ?? mode}.md`;
+    anchor.download = `informe-${run.id}-${targetAudience}.md`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
@@ -53,11 +61,25 @@ export function ReportView({
   const report = reportQuery.data;
   if (report.audience === "student") {
     return (
-      <StudentReportView
-        report={report}
-        onExport={() => void download("student")}
-        buildRunId={run.id}
-      />
+      <div className="space-y-4">
+        {mode === "teacher" && (
+          <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary-subtle px-4 py-3 text-sm text-primary">
+            <span>Previsualizando el informe tal y como lo verá el estudiante.</span>
+            <button
+              type="button"
+              onClick={() => setActiveMode("teacher")}
+              className="font-semibold underline hover:text-primary-dark"
+            >
+              Volver a la vista docente
+            </button>
+          </div>
+        )}
+        <StudentReportView
+          report={report}
+          onExport={() => void download("student")}
+          buildRunId={run.id}
+        />
+      </div>
     );
   }
 
@@ -66,6 +88,7 @@ export function ReportView({
       report={report}
       onExport={() => void download("teacher")}
       onExportStudent={() => void download("student")}
+      onPreviewStudent={() => setActiveMode("student")}
       onUseAiGrade={onUseAiGrade}
     />
   );

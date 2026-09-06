@@ -350,6 +350,12 @@ export function ProgressDashboard({
   const delivered = summary?.deliveredAtLeastOnce ?? 0;
   const rate = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
+  const hasActiveFilters =
+    statusFilter !== "ALL" ||
+    outcomeFilter !== "ALL" ||
+    lateOnly ||
+    deferredSearch.trim().length > 0;
+
   return (
     <div className="space-y-8">
       {!embedded ? (
@@ -368,7 +374,14 @@ export function ProgressDashboard({
       {summary ? (
         <div className="space-y-8">
           <div className="space-y-5">
-            <p className="ui-label">Estado general</p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="ui-label">Estado general de la cohorte ({total} asignaciones)</p>
+              {hasActiveFilters && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-subtle px-3 py-1 text-xs font-medium text-primary">
+                  Filtros activos en Gradebook: {deferredRows.length} de {gradebook.length} alumnos
+                </span>
+              )}
+            </div>
             <ProgressStatsPanel summary={summary} />
             <ParticipationProgress rate={rate} delivered={delivered} total={total} />
             <DistributionCharts summary={summary} total={total} />
@@ -437,16 +450,23 @@ export function ProgressDashboard({
                     Gradebook del proyecto
                   </h3>
                   <p className="mt-2 text-sm text-app-text-secondary">
-                    {deferredRows.length} alumno(s) visibles tras aplicar filtros.
+                    {hasActiveFilters
+                      ? `Mostrando ${deferredRows.length} de ${gradebook.length} alumno(s) según los filtros activos. La exportación CSV reflejará estos mismos filtros.`
+                      : `Mostrando todos los alumnos matriculados (${deferredRows.length}).`}
                   </p>
                 </div>
                 <button
                   className="btn-secondary"
                   onClick={() => void exportCsv()}
-                  disabled={exporting}
+                  disabled={exporting || deferredRows.length === 0}
+                  title={
+                    hasActiveFilters
+                      ? `Exportar ${deferredRows.length} fila(s) filtrada(s)`
+                      : "Exportar CSV completo"
+                  }
                 >
                   <RiDownload2Line />
-                  {exporting ? "Exportando..." : "Exportar CSV"}
+                  {exporting ? "Exportando..." : `Exportar CSV (${deferredRows.length})`}
                 </button>
               </div>
 

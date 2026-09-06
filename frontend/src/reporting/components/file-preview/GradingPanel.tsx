@@ -30,7 +30,22 @@ export function GradingPanel({
   const [graderNotes, setGraderNotes] = useState(initialNotes);
   const [isSaving, setIsSaving] = useState(false);
 
-  const assessment = reportRun?.llmAssessment;
+  const aiTitle =
+    (reportRun?.llmAssessment ? structuralTypeLabel(reportRun.llmAssessment.structuralType) : null) ??
+    (reportRun?.reportSummary?.provisionalGrade !== undefined && reportRun.reportSummary.provisionalGrade !== null
+      ? `Propuesta IA: ${reportRun.reportSummary.provisionalGrade.toFixed(2)} pts`
+      : null);
+
+  const aiRationale =
+    reportRun?.llmAssessment?.rationale ??
+    reportRun?.reportSummary?.summaryText ??
+    reportRun?.report?.coaching?.overallFeedback ??
+    null;
+
+  const provisionalGrade =
+    reportRun?.reportSummary?.provisionalGrade ??
+    reportRun?.llmAssessment?.recommendedGrade ??
+    null;
 
   const handleSaveGrading = async () => {
     setIsSaving(true);
@@ -44,17 +59,30 @@ export function GradingPanel({
   return (
     <section className="flex w-[480px] flex-col overflow-hidden border-l border-app-border bg-white">
       <div className="flex-1 space-y-6 overflow-y-auto p-6">
-        {assessment ? (
+        {aiTitle || aiRationale ? (
           <article className="rounded-lg border border-warning-200 bg-warning-50/30 p-4">
             <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-warning-800">
               Dictamen de la Inteligencia Artificial
             </div>
-            <h4 className="text-base font-bold text-slate-900">
-              {structuralTypeLabel(assessment.structuralType)}
-            </h4>
-            <p className="mt-2 text-xs leading-relaxed text-slate-500">
-              {assessment.rationale}
-            </p>
+            {aiTitle && (
+              <h4 className="text-base font-bold text-slate-900">
+                {aiTitle}
+              </h4>
+            )}
+            {aiRationale && (
+              <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                {aiRationale}
+              </p>
+            )}
+            {provisionalGrade !== null && !grade && (
+              <button
+                type="button"
+                onClick={() => setGrade(String(provisionalGrade))}
+                className="mt-3 block text-xs font-semibold text-primary underline hover:text-primary-dark"
+              >
+                Adoptar nota propuesta ({provisionalGrade.toFixed(2)})
+              </button>
+            )}
           </article>
         ) : null}
 

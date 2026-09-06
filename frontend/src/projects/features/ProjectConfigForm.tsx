@@ -121,6 +121,12 @@ export function ProjectConfigForm({
     () => new Set(["section-settings"]),
   );
 
+  const isInvalidDateWindow = Boolean(
+    editForm.opensAt &&
+    editForm.closesAt &&
+    new Date(editForm.opensAt) >= new Date(editForm.closesAt)
+  );
+
   const toggleSection = (id: string) => {
     setOpenSections((prev) => {
       const next = new Set(prev);
@@ -242,7 +248,7 @@ export function ProjectConfigForm({
               <input
                 id="project-config-opens-at"
                 type="datetime-local"
-                className="input-field"
+                className={`input-field ${isInvalidDateWindow ? "border-danger focus:border-danger focus:ring-danger/20" : ""}`}
                 value={editForm.opensAt}
                 onChange={e => setEditForm(prev => ({ ...prev, opensAt: e.target.value }))}
               />
@@ -252,11 +258,16 @@ export function ProjectConfigForm({
               <input
                 id="project-config-closes-at"
                 type="datetime-local"
-                className="input-field"
+                className={`input-field ${isInvalidDateWindow ? "border-danger focus:border-danger focus:ring-danger/20" : ""}`}
                 value={editForm.closesAt}
                 onChange={e => setEditForm(prev => ({ ...prev, closesAt: e.target.value }))}
               />
             </div>
+            {isInvalidDateWindow && (
+              <p className="col-span-full text-xs text-danger -mt-2">
+                La fecha de apertura debe ser anterior a la fecha de cierre.
+              </p>
+            )}
             <div className="space-y-1.5 lg:col-span-2">
               <label htmlFor="project-config-rubric-instructions" className="label-text">Instrucciones de la rúbrica</label>
               <textarea
@@ -318,6 +329,7 @@ export function ProjectConfigForm({
               type="submit"
               variant="primary"
               className="flex-1 sm:flex-none shadow-sm"
+              disabled={isInvalidDateWindow}
             >
               <RiCheckFill />
               Guardar configuración

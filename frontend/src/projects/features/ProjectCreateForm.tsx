@@ -42,6 +42,12 @@ export function ProjectCreateForm({
   handleCreate,
   onCancel,
 }: ProjectCreateFormProps): JSX.Element {
+  const isInvalidDateWindow = Boolean(
+    createForm.opensAt &&
+    createForm.closesAt &&
+    new Date(createForm.opensAt) >= new Date(createForm.closesAt)
+  );
+
   return (
     <SectionCard
       title="Parametrización de Práctica Académica"
@@ -122,7 +128,7 @@ export function ProjectCreateForm({
             <input
               id="new-project-opens-at"
               type="datetime-local"
-              className="input-field"
+              className={`input-field ${isInvalidDateWindow ? "border-danger focus:border-danger focus:ring-danger/20" : ""}`}
               value={createForm.opensAt}
               onChange={(e) => setCreateForm(prev => ({ ...prev, opensAt: e.target.value }))}
             />
@@ -132,11 +138,16 @@ export function ProjectCreateForm({
             <input
               id="new-project-closes-at"
               type="datetime-local"
-              className="input-field"
+              className={`input-field ${isInvalidDateWindow ? "border-danger focus:border-danger focus:ring-danger/20" : ""}`}
               value={createForm.closesAt}
               onChange={(e) => setCreateForm(prev => ({ ...prev, closesAt: e.target.value }))}
             />
           </div>
+          {isInvalidDateWindow && (
+            <p className="col-span-full text-xs text-danger -mt-3">
+              La fecha de apertura debe ser anterior a la fecha de cierre.
+            </p>
+          )}
         </div>
         <div>
           <label htmlFor="new-project-expected-output" className="label-text">Salida esperada (Oracle)</label>
@@ -273,7 +284,12 @@ export function ProjectCreateForm({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 border-t border-app-border pt-5">
-          <Button type="submit" variant="primary" className="shadow-sm">
+          <Button
+            type="submit"
+            variant="primary"
+            className="shadow-sm"
+            disabled={isInvalidDateWindow}
+          >
             <RiFolderAddLine />
             Crear proyecto
           </Button>

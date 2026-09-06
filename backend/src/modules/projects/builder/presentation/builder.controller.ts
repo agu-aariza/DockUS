@@ -199,11 +199,20 @@ export class BuilderController {
   @Get('runs/:buildRunId/report')
   async getRunReport(
     @Param('buildRunId', ParseUUIDPipe) buildRunId: string,
+    @Query('audience') audience: string | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<BuilderReportView> {
+    if (
+      audience !== undefined &&
+      audience !== 'student' &&
+      audience !== 'teacher'
+    ) {
+      throw new BadRequestException('audience debe ser student o teacher.');
+    }
     return this.builderRunQueriesService.getReportView(
       buildRunId,
       request.user,
+      audience,
     );
   }
 

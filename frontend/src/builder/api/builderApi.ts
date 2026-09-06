@@ -32,9 +32,15 @@ export const builderApi = {
     return data;
   },
 
-  async report(buildRunId: string): Promise<BuilderReportView> {
+  async report(
+    buildRunId: string,
+    audience?: ReportAudience,
+  ): Promise<BuilderReportView> {
     const { data } = await http.get<BuilderReportView>(
       `/builder/runs/${buildRunId}/report`,
+      {
+        params: toParams({ audience }),
+      },
     );
     return data;
   },

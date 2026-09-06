@@ -6,6 +6,7 @@ import {
   RiCalendarLine,
   RiCheckboxCircleLine,
   RiDownload2Line,
+  RiEyeLine,
   RiFlagLine,
   RiInformationLine,
   RiLineChartLine,
@@ -111,11 +112,13 @@ export function TeacherReportView({
   report,
   onExport,
   onExportStudent,
+  onPreviewStudent,
   onUseAiGrade,
 }: {
   report: TeacherReport;
   onExport: () => void;
   onExportStudent: () => void;
+  onPreviewStudent?: () => void;
   onUseAiGrade?: (grade: number) => void;
 }): JSX.Element {
   const confidenceLabel =
@@ -170,6 +173,12 @@ export function TeacherReportView({
             </div>
           </div>
           <div className="flex flex-wrap gap-2 lg:justify-end">
+            {onPreviewStudent && (
+              <Button variant="secondary" size="sm" onClick={onPreviewStudent}>
+                <RiEyeLine aria-hidden="true" />
+                Previsualizar vista alumno
+              </Button>
+            )}
             <Button variant="secondary" size="sm" onClick={onExportStudent}>
               <RiDownload2Line aria-hidden="true" />
               Exportar vista alumno

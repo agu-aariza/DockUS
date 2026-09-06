@@ -42,7 +42,13 @@ export function TeacherGradingStudio({
 
   if (!isOpen) return null;
 
-  const assessment = reportRun?.llmAssessment;
+  const recommendedGrade =
+    reportRun?.reportSummary?.provisionalGrade ??
+    reportRun?.llmAssessment?.recommendedGrade ??
+    null;
+  const evaluativeState =
+    reportRun?.reportSummary?.evaluativeState ??
+    reportRun?.llmAssessment?.evaluativeState;
 
   const header = (
     <header className="flex items-center justify-between border-b border-app-border bg-white px-6 py-4">
@@ -61,14 +67,14 @@ export function TeacherGradingStudio({
       </div>
 
       <div className="flex items-center gap-4">
-        {assessment ? (
+        {recommendedGrade !== null || evaluativeState ? (
           <div className="hidden items-center gap-3 rounded-lg border border-warning-200 bg-warning-50/50 px-4 py-1 lg:flex">
             <span className="text-xs font-bold text-warning-700">
-              Nota IA: {assessment.recommendedGrade?.toFixed(2) ?? "N/A"}
+              Nota IA: {recommendedGrade !== null ? recommendedGrade.toFixed(2) : "N/A"}
             </span>
             <div className="h-3 w-px bg-warning-300" />
             <span className="text-xs font-bold text-warning-800">
-              Estado: {evaluativeStateLabel(assessment.evaluativeState, "sin estado")}
+              Estado: {evaluativeStateLabel(evaluativeState, "Evaluada")}
             </span>
           </div>
         ) : null}

@@ -204,6 +204,16 @@ export function useProjectManagement() {
       return;
     }
 
+    const opensAtIso = normalizeOptionalDateTime(createForm.opensAt);
+    const closesAtIso = normalizeOptionalDateTime(createForm.closesAt);
+    if (opensAtIso && closesAtIso && new Date(opensAtIso) >= new Date(closesAtIso)) {
+      setEditorNotice({
+        text: "La fecha de apertura debe ser anterior a la de cierre.",
+        tone: "warning",
+      });
+      return;
+    }
+
     try {
       const response = await createMutation.mutateAsync({
         title: createForm.title,
@@ -214,13 +224,18 @@ export function useProjectManagement() {
         expectedOutput: normalizeOptionalText(createForm.expectedOutput),
         rubricInstructions: normalizeOptionalText(createForm.rubricInstructions),
         rubricCriteria,
-        opensAt: normalizeOptionalDateTime(createForm.opensAt),
-        closesAt: normalizeOptionalDateTime(createForm.closesAt),
+        opensAt: opensAtIso,
+        closesAt: closesAtIso,
         assignedGroupIds: createForm.assignedGroupIds,
       });
 
+      let suiteUploadFailed = false;
       if (createForm.suiteFile) {
-        await projectsApi.uploadTestSuite(response.id, createForm.suiteFile);
+        try {
+          await projectsApi.uploadTestSuite(response.id, createForm.suiteFile);
+        } catch {
+          suiteUploadFailed = true;
+        }
       }
 
       setCreateForm({
@@ -238,9 +253,17 @@ export function useProjectManagement() {
         suiteFile: null,
       });
       setDebugPayload(response);
-      setEditorNotice({ text: "Proyecto creado correctamente.", tone: "info" });
-      await refreshProjects("Listado actualizado tras crear el proyecto.");
       setSelectedProjectId(response.id);
+      await refreshProjects("Listado actualizado tras crear el proyecto.");
+
+      if (suiteUploadFailed) {
+        setEditorNotice({
+          text: "Proyecto creado, pero falló la carga de la suite de pruebas. Por favor, súbela desde la sección de Tests.",
+          tone: "warning",
+        });
+      } else {
+        setEditorNotice({ text: "Proyecto creado correctamente.", tone: "info" });
+      }
     } catch (error) {
       setEditorNotice({ text: getErrorMessage(error), tone: "warning" });
     }
@@ -254,6 +277,16 @@ export function useProjectManagement() {
     if (rubricCriteria && sumRubricWeights(rubricCriteria) !== 100) {
       setEditorNotice({
         text: "Los pesos de la rúbrica deben sumar 100.",
+        tone: "warning",
+      });
+      return;
+    }
+
+    const opensAtIso = normalizeOptionalDateTime(editForm.opensAt);
+    const closesAtIso = normalizeOptionalDateTime(editForm.closesAt);
+    if (opensAtIso && closesAtIso && new Date(opensAtIso) >= new Date(closesAtIso)) {
+      setEditorNotice({
+        text: "La fecha de apertura debe ser anterior a la de cierre.",
         tone: "warning",
       });
       return;
