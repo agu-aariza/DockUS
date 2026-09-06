@@ -22,6 +22,7 @@ import { Button } from "../shared/components/ui/Button";
 import { StatusBadge } from "../shared/components/ui/StatusBadge";
 import { MetricCard } from "../shared/components/MetricCard";
 import { SkeletonTable } from "../shared/components/Skeleton";
+import { getErrorMessage } from "../shared/utils/errors";
 import type { StudentWorkspaceData } from "./hooks/useStudentWorkspaceData";
 import {
   deriveStudentWorkflowState,
@@ -131,14 +132,17 @@ export function StudentDeliveriesSection({
 }: Props): JSX.Element {
   const { setDelivery, setAssignment, setProject } = useWorkspaceSelection();
   const [launchingId, setLaunchingId] = useState<string | null>(null);
+  const [launchError, setLaunchError] = useState<string | null>(null);
 
   const handleLaunchEvaluation = async (deliveryId: string) => {
     setLaunchingId(deliveryId);
+    setLaunchError(null);
     try {
       await builderApi.runForDelivery(deliveryId);
       await data.refresh();
     } catch (err) {
       console.error(err);
+      setLaunchError(getErrorMessage(err));
     } finally {
       setLaunchingId(null);
     }
@@ -244,6 +248,14 @@ export function StudentDeliveriesSection({
 
   return (
     <div className="space-y-6">
+      {launchError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-danger/30 bg-danger-subtle p-4 text-sm text-danger-800 dark:text-danger-200"
+        >
+          {launchError}
+        </div>
+      ) : null}
       <div className="grid gap-4 md:grid-cols-4">
         <MetricCard
           label="Versiones"
@@ -325,6 +337,12 @@ export function StudentDeliveriesSection({
           <p className="mt-2 text-sm text-app-text-secondary">
             No has realizado ninguna entrega para este proyecto.
           </p>
+          <div className="mt-4 flex justify-center">
+            <Button variant="primary" onClick={() => onNavigate("subir")}>
+              <RiUploadCloud2Line aria-hidden="true" />
+              Nueva entrega
+            </Button>
+          </div>
         </div>
       ) : (
         <>

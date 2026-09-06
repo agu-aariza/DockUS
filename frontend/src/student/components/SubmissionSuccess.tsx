@@ -165,12 +165,12 @@ export function SubmissionSuccess({ flow, onNavigate }: Props) {
               {
                 label: "Informes",
                 value: buildLaunched
-                  ? "Esperar el nuevo informe tecnico"
-                  : "Consultar informes anteriores o seguir mas tarde",
+                  ? "Esperar el nuevo informe técnico"
+                  : "Consultar informes anteriores o seguir más tarde",
               },
               {
                 label: "Resumen",
-                value: "Volver al command center del alumno",
+                value: "Volver al panel principal del alumno",
               },
             ]}
           />

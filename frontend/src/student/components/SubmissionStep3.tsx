@@ -64,7 +64,7 @@ export function SubmissionStep3({ flow }: Props) {
               value: file ? formatBytes(file.size) : "Sin archivo",
             },
             {
-              label: "Intentos despues del envio",
+              label: "Intentos después del envío",
               value: String(
                 Math.max(0, (activeAssignment?.remainingDeliveries ?? 1) - 1),
               ),
@@ -151,6 +151,11 @@ export function SubmissionStep3({ flow }: Props) {
                 aria-hidden="true"
               />
               Enviando...
+            </>
+          ) : status === "error" ? (
+            <>
+              <RiUploadCloud2Line aria-hidden="true" />
+              Reintentar subida
             </>
           ) : (
             <>

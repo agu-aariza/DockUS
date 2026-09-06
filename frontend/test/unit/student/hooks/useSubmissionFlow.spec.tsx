@@ -277,4 +277,116 @@ describe("useSubmissionFlow", () => {
     expect(result.current.buildLaunched).toBe(false);
     expect(result.current.buildError).toBeTruthy();
   });
+
+  it("reuses pending delivery on upload failure retry without calling create twice", async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+    const data = buildWorkspaceData({ refresh });
+    vi.mocked(deliveriesApi.create).mockResolvedValue({
+      id: "delivery-resilient",
+      version: 1,
+    } as any);
+    vi.mocked(storageApi.upload)
+      .mockRejectedValueOnce(new Error("Network disconnect during upload"))
+      .mockResolvedValueOnce({} as any);
+
+    const { result } = renderHook(() => useSubmissionFlow(data), { wrapper });
+
+    act(() => {
+      result.current.handleFileSelection(
+        new File(["contenido"], "entrega.zip", { type: "application/zip" }),
+      );
+    });
+
+    // First attempt fails at storageApi.upload
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(deliveriesApi.create).toHaveBeenCalledTimes(1);
+    expect(storageApi.upload).toHaveBeenCalledTimes(1);
+    expect(result.current.status).toBe("error");
+    expect(result.current.errorMessage).toContain("Network disconnect during upload");
+    expect(result.current.pendingDelivery).toEqual({ id: "delivery-resilient", version: 1 });
+
+    // Retry handleSubmit: must reuse existing delivery without calling deliveriesApi.create again
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(deliveriesApi.create).toHaveBeenCalledTimes(1);
+    expect(storageApi.upload).toHaveBeenCalledTimes(2);
+    expect(storageApi.upload).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        deliveryId: "delivery-resilient",
+      }),
+    );
+    expect(result.current.status).toBe("success");
+    expect(result.current.step).toBe(4);
+    expect(result.current.pendingDelivery).toBeNull();
+  });
+
+  it("clears error state when navigating back to step 1 or step 2", async () => {
+    const data = buildWorkspaceData();
+    vi.mocked(deliveriesApi.create).mockRejectedValue(new Error("Fallo transitorio"));
+
+    const { result } = renderHook(() => useSubmissionFlow(data), { wrapper });
+
+    act(() => {
+      result.current.handleFileSelection(
+        new File(["contenido"], "entrega.zip", { type: "application/zip" }),
+      );
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(result.current.status).toBe("error");
+    expect(result.current.errorMessage).toBeTruthy();
+
+    act(() => {
+      result.current.setStep(2);
+    });
+
+    expect(result.current.step).toBe(2);
+    expect(result.current.status).toBe("idle");
+    expect(result.current.errorMessage).toBe("");
+  });
+
+  it("resets pending delivery and errors when switching selected assignment", async () => {
+    const data = buildWorkspaceData({
+      assignments: [
+        buildAssignment({ id: "assignment-1", projectTitle: "P1" }),
+        buildAssignment({ id: "assignment-2", projectTitle: "P2" }),
+      ],
+    });
+    vi.mocked(deliveriesApi.create).mockResolvedValue({
+      id: "delivery-old",
+      version: 1,
+    } as any);
+    vi.mocked(storageApi.upload).mockRejectedValue(new Error("Fallo red"));
+
+    const { result } = renderHook(() => useSubmissionFlow(data), { wrapper });
+
+    act(() => {
+      result.current.handleFileSelection(
+        new File(["contenido"], "entrega.zip", { type: "application/zip" }),
+      );
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(result.current.pendingDelivery).toEqual({ id: "delivery-old", version: 1 });
+
+    act(() => {
+      result.current.setSelectedAssignmentId("assignment-2");
+    });
+
+    expect(result.current.selectedAssignmentId).toBe("assignment-2");
+    expect(result.current.pendingDelivery).toBeNull();
+    expect(result.current.errorMessage).toBe("");
+    expect(result.current.status).toBe("idle");
+  });
 });

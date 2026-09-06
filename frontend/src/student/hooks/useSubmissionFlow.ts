@@ -108,6 +108,7 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
   const [errorMessage, setErrorMessage] = useState("");
   const [createdVersion, setCreatedVersion] = useState<number | null>(null);
   const [createdDeliveryId, setCreatedDeliveryId] = useState<string | null>(null);
+  const [pendingDelivery, setPendingDelivery] = useState<{ id: string; version: number } | null>(null);
   const [createdBuildRunId, setCreatedBuildRunId] = useState<string | null>(null);
   const [buildLaunched, setBuildLaunched] = useState(false);
   const [buildLaunching, setBuildLaunching] = useState(false);
@@ -220,7 +221,7 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
       setPreviewFiles([]);
       setPreviewLoading(false);
       setPreviewError(
-        "La vista previa cliente-side solo esta disponible para archivos .zip en esta fase.",
+        "La vista previa en el navegador solo está disponible para archivos .zip en esta fase.",
       );
       return () => {
         cancelled = true;
@@ -259,14 +260,29 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
     };
   }, [file]);
 
+  const handleSetStep = (nextStep: Step) => {
+    if (nextStep < 3 && status === "error") {
+      setStatus("idle");
+      setErrorMessage("");
+    }
+    setStep(nextStep);
+  };
+
+  const handleSelectAssignment = (assignmentId?: string) => {
+    setSelectedAssignmentId(assignmentId);
+    setPendingDelivery(null);
+    setStatus("idle");
+    setErrorMessage("");
+  };
+
   const handleNextStep = () => {
     if (step === 1 && canContinueFromStep1) {
-      setStep(2);
+      handleSetStep(2);
       return;
     }
 
     if (step === 2 && file) {
-      setStep(3);
+      handleSetStep(3);
     }
   };
 
@@ -280,6 +296,9 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
 
     setFileSizeError(false);
     setPreviewError(null);
+    setStatus("idle");
+    setErrorMessage("");
+    setPendingDelivery(null);
     setFile(selectedFile);
   };
 
@@ -308,9 +327,14 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
     setErrorMessage("");
 
     try {
-      const delivery = await deliveriesApi.create({
-        assignmentId: selectedAssignmentId,
-      });
+      let delivery = pendingDelivery;
+      if (!delivery) {
+        const created = await deliveriesApi.create({
+          assignmentId: selectedAssignmentId,
+        });
+        delivery = { id: created.id, version: created.version };
+        setPendingDelivery(delivery);
+      }
 
       const hash = await computeSha256Hex(file);
 
@@ -331,10 +355,11 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
       setDelivery(delivery.id, `v${delivery.version}`);
       setCreatedVersion(delivery.version);
       setCreatedDeliveryId(delivery.id);
+      setPendingDelivery(null);
 
       await refresh();
       setStatus("success");
-      setStep(4);
+      handleSetStep(4);
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
       setStatus("error");
@@ -363,15 +388,16 @@ export function useSubmissionFlow(data: StudentWorkspaceData) {
 
   return {
     step,
-    setStep,
+    setStep: handleSetStep,
     selectedAssignmentId,
-    setSelectedAssignmentId,
+    setSelectedAssignmentId: handleSelectAssignment,
     file,
     fileSizeError,
     isDragging,
     status,
     errorMessage,
     createdVersion,
+    pendingDelivery,
     buildLaunched,
     buildLaunching,
     buildError,

@@ -34,10 +34,10 @@ export function SubmissionStep1({ flow }: Props) {
       <div>
         <div className="eyebrow">Paso 1 · Convocatoria</div>
         <h3 className="mt-2 font-display text-3xl leading-tight text-app-text">
-          Elige la practica que vas a entregar
+          Elige la práctica que vas a entregar
         </h3>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-app-text-secondary">
-          El asistente se queda con la practica seleccionada para reutilizar
+          El asistente se queda con la práctica seleccionada para reutilizar
           el contexto en entregas, informes y coaching.
         </p>
       </div>
@@ -92,7 +92,7 @@ export function SubmissionStep1({ flow }: Props) {
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-app-text-muted">
                   <span className="rounded-full border border-app-border px-2.5 py-1">
-                    {assignment.remainingDeliveries} intento(s) disponibles
+                    {assignment.remainingDeliveries} intento(s) disponible(s)
                   </span>
                   <span className="rounded-full border border-app-border px-2.5 py-1">
                     Abre {formatAssignmentDate(assignment.opensAt)}
