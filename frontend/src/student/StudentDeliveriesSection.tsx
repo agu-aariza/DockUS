@@ -37,8 +37,33 @@ interface Props {
   onNavigate: (_tab: StudentTab) => void;
 }
 
-function renderGradeBadge(grade: number | null): JSX.Element {
+function renderGradeBadge(
+  grade: number | null,
+  provisionalGrade?: number | null,
+): JSX.Element {
   if (grade === null) {
+    if (typeof provisionalGrade === "number") {
+      let badgeClasses: string;
+      if (provisionalGrade >= 9.0) {
+        badgeClasses = "bg-success-50 text-success-700 border border-dashed border-success-300 dark:bg-success-950 dark:text-success-400 dark:border-success-800";
+      } else if (provisionalGrade >= 7.0) {
+        badgeClasses = "bg-success-50 text-success-700 border border-dashed border-success-300 dark:bg-success-950 dark:text-success-400 dark:border-success-800";
+      } else if (provisionalGrade >= 5.0) {
+        badgeClasses = "bg-warning-50 text-warning-700 border border-dashed border-warning-300 dark:bg-warning-950 dark:text-warning-400 dark:border-warning-800";
+      } else {
+        badgeClasses = "bg-danger-50 text-danger-700 border border-dashed border-danger-300 dark:bg-danger-950 dark:text-danger-400 dark:border-danger-800";
+      }
+      return (
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${badgeClasses}`}
+          title="Nota provisional calculada automáticamente por el evaluador"
+        >
+          <span>{provisionalGrade.toFixed(2)}</span>
+          <span className="text-[10px] font-semibold uppercase opacity-75">(IA)</span>
+        </span>
+      );
+    }
+
     return (
       <span className="inline-flex items-center gap-1.5 text-sm italic text-app-text-muted">
         <span className="relative flex h-2 w-2">
@@ -155,10 +180,19 @@ export function StudentDeliveriesSection({
     filteredDeliveries,
     latestRunByDeliveryId,
   );
-  const filteredLatestGrade =
-    filteredDeliveries.find((delivery) => delivery.grade !== null)?.grade ?? null;
+  const latestGradedDelivery =
+    filteredDeliveries.find((delivery) => delivery.grade !== null) ?? null;
+  const filteredLatestGrade = latestGradedDelivery?.grade ?? null;
 
   const handleSelectReport = (delivery: DeliveryEntity) => {
+    const assignment =
+      assignments.find((candidate) => candidate.id === delivery.assignmentId) ?? null;
+    if (assignment) {
+      setProject(assignment.projectId, assignment.projectTitle);
+      setAssignment(assignment.id, assignment.projectTitle);
+    } else {
+      setProject(delivery.projectId, delivery.projectTitle);
+    }
     setDelivery(delivery.id, `v${delivery.version}`);
     onNavigate("informes");
   };
@@ -235,7 +269,11 @@ export function StudentDeliveriesSection({
         <MetricCard
           label="Última nota"
           value={filteredLatestGrade !== null ? filteredLatestGrade.toFixed(2) : "—"}
-          helper={`${scopedInsights.officialGrades} nota(s) oficiales`}
+          helper={
+            latestGradedDelivery
+              ? `Nota oficial (v${latestGradedDelivery.version})`
+              : "Sin nota oficial aún"
+          }
           icon={<RiFileTextLine />}
           variant={filteredLatestGrade !== null ? "success" : "default"}
         />
@@ -419,7 +457,10 @@ export function StudentDeliveriesSection({
                         </p>
                       </td>
                       <td className="px-5 py-5">
-                        {renderGradeBadge(delivery.grade)}
+                        {renderGradeBadge(
+                          delivery.grade,
+                          latestRun?.reportSummary?.provisionalGrade,
+                        )}
                       </td>
                       <td className="px-5 py-5 text-sm text-app-text-muted">
                         {new Date(delivery.createdAt).toLocaleString()}
@@ -430,7 +471,7 @@ export function StudentDeliveriesSection({
                             <RiFileTextLine />
                             Ver informe
                           </Button>
-                          {!latestRun && (
+                          {(!latestRun || latestRun.status === "FAILED") && (
                             <Button
                               variant="primary"
                               className="text-xs"
@@ -442,7 +483,9 @@ export function StudentDeliveriesSection({
                               ) : (
                                 <RiRocketLine />
                               )}
-                              Evaluar ahora
+                              {latestRun?.status === "FAILED"
+                                ? "Reintentar evaluación"
+                                : "Evaluar ahora"}
                             </Button>
                           )}
                           {retryAction?.enabled ? (

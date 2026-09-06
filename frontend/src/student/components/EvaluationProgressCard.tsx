@@ -95,7 +95,7 @@ export function EvaluationProgressCard({
           <h3 className="mt-2 text-lg font-semibold text-app-text">
             {isActive
               ? `Fase actual: ${progress.label}`
-              : run.status === "SUCCESS"
+              : progress.completed || run.status === "SUCCESS"
                 ? "La evaluación ya terminó"
                 : "La evaluación ya no está activa"}
           </h3>

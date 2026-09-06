@@ -41,6 +41,8 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
 
   useEffect(() => {
     activeRunIdRef.current = buildRunId;
+    setMessages([]);
+    setError(null);
   }, [buildRunId]);
 
   // Solo la carga inicial del historial pasa por React Query; el flujo de
@@ -100,6 +102,8 @@ export function TutorChatBlock({ buildRunId, report }: TutorChatBlockProps) {
       setError("No se pudo enviar el mensaje. Inténtalo de nuevo.");
       // Remove temp message on error so state stays clean
       setMessages((prev) => prev.filter((m) => !m.id.startsWith("temp-")));
+      // Restablecer el texto para que el alumno no pierda su consulta
+      setInputValue(text);
     } finally {
       if (activeRunIdRef.current === runIdAtSend) {
         setIsLoading(false);

@@ -346,6 +346,19 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
   // efecto el selector se pinta, pero no se abre ningún expediente y el informe
   // (incluido el Tutor IA) queda inaccesible hasta que se selecciona a mano.
   useEffect(() => {
+    if (selection.deliveryId) {
+      const targetDelivery = sortedDeliveries.find(
+        (d) => d.id === selection.deliveryId,
+      );
+      if (
+        targetDelivery &&
+        projects.some((project) => project.id === targetDelivery.projectId)
+      ) {
+        setSelectedProjectId(targetDelivery.projectId);
+        return;
+      }
+    }
+
     if (
       selection.projectId &&
       projects.some((project) => project.id === selection.projectId)
@@ -360,7 +373,7 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
       }
       return defaultProjectId ?? null;
     });
-  }, [defaultProjectId, projects, selection.projectId]);
+  }, [defaultProjectId, projects, selection.projectId, selection.deliveryId, sortedDeliveries]);
 
   // Filter deliveries and active run by selected project
   const filteredDeliveries = useMemo(() => {
@@ -567,14 +580,16 @@ export function StudentReportsSection({ data }: Props): JSX.Element {
               <MetricCard
                 label="Notas oficiales"
                 value={currentProjectInsights.officialGrades}
-                helper={
-                  filteredDeliveries.find((d) => d.grade !== null)
-                    ? `Nota actual: ${filteredDeliveries.find((d) => d.grade !== null)?.grade?.toFixed(2)}`
-                    : "Sin nota oficial aún"
-                }
+                helper={(() => {
+                  const latestGradedDelivery = filteredDeliveries.find(
+                    (d) => d.grade !== null,
+                  );
+                  if (!latestGradedDelivery) return "Sin nota oficial aún";
+                  return `Nota oficial (v${latestGradedDelivery.version}): ${latestGradedDelivery.grade?.toFixed(2)}`;
+                })()}
                 icon={<RiLineChartLine />}
                 variant={
-                  filteredDeliveries.find((d) => d.grade !== null)
+                  filteredDeliveries.some((d) => d.grade !== null)
                     ? "success"
                     : "default"
                 }

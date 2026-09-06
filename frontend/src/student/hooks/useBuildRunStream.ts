@@ -43,7 +43,16 @@ export function useBuildRunStream(
     return Math.max(0, finished - started);
   }, [run?.finishedAt, run?.startedAt, stream.latestSequence]);
 
-  const isActive = Boolean(run && !run.isTerminal);
+  const isTerminalStream =
+    stream.streamState === "terminal" ||
+    stream.events.some(
+      (e) =>
+        e.eventType === "BUILD_COMPLETED" ||
+        e.eventType === "BUILD_FAILED" ||
+        e.eventType === "RUN_CANCELLED",
+    );
+
+  const isActive = Boolean(run && !run.isTerminal && !isTerminalStream);
 
   return {
     progress,

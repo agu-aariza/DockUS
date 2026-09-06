@@ -56,7 +56,11 @@ export function useStudentWorkspaceData(): StudentWorkspaceData {
   const latestDelivery = deliveries.length > 0 ? deliveries[0] : null;
 
   const refresh = async () => {
-    await Promise.all([assignmentsQuery.refetch(), deliveriesQuery.refetch()]);
+    await Promise.all([
+      assignmentsQuery.refetch(),
+      deliveriesQuery.refetch(),
+      latestRunsQuery.refetch(),
+    ]);
   };
 
   return {
