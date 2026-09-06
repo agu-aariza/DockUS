@@ -143,4 +143,82 @@ describe('parseBuilderEvaluationContractV3', () => {
       ),
     ).toThrow('no admite narrativa por audiencia');
   });
+
+  it('preserves evaluationLimits in limitations and adds reviewFlags on repair (F003)', () => {
+    const parsed = parseBuilderEvaluationContractV3(
+      JSON.stringify(
+        payload({
+          evaluativeState: 'E3',
+          recommendedGrade: 8,
+          criteria: [
+            {
+              name: 'Funcionalidad',
+              maxPoints: 10,
+              awarded: 8,
+              justification: 'Ejecución fallida.',
+              evidenceRefs: [0],
+            },
+          ],
+        }),
+      ),
+    );
+
+    expect(parsed.recommendedGrade).toBe(2);
+    expect(parsed.limitations).toContainEqual(
+      expect.stringContaining('INVALID_CONTRACT_REPAIRED'),
+    );
+    expect(parsed.reviewFlags).toContain('REQUIRES_TEACHER_REVIEW');
+  });
+
+  it('discards blank-named criteria without shifting evidence references (F004)', () => {
+    const parsed = parseBuilderEvaluationContractV3(
+      JSON.stringify(
+        payload({
+          criteria: [
+            {
+              name: '   ',
+              maxPoints: 1,
+              awarded: 0,
+              justification: 'Vacío',
+              evidenceRefs: [0],
+            },
+            {
+              name: 'Funcionalidad',
+              maxPoints: 10,
+              awarded: 8,
+              justification: 'Válido',
+              evidenceRefs: [1],
+            },
+          ],
+        }),
+      ),
+    );
+
+    expect(parsed.criteria).toHaveLength(1);
+    expect(parsed.criteria[0].criterion).toBe('Funcionalidad');
+    expect(parsed.criteria[0].evidenceIds).toEqual([parsed.evidence[1].id]);
+  });
+
+  it('forces awarded to 0 when maxPoints is 0 and produces recommendedGrade 0 (F005)', () => {
+    const parsed = parseBuilderEvaluationContractV3(
+      JSON.stringify(
+        payload({
+          criteria: [
+            {
+              name: 'Informativo',
+              maxPoints: 0,
+              awarded: 8,
+              justification: 'Sin peso evaluable.',
+              evidenceRefs: [0],
+            },
+          ],
+        }),
+      ),
+    );
+
+    expect(parsed.criteria[0].maxPoints).toBe(0);
+    expect(parsed.criteria[0].awarded).toBe(0);
+    expect(parsed.criteria[0].status).toBe('NOT_ASSESSED');
+    expect(parsed.recommendedGrade).toBe(0);
+  });
 });

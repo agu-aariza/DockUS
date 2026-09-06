@@ -52,13 +52,23 @@ export function parseBuilderEvaluationContractV3(
     throw new Error('criteria debe contener al menos un criterio evaluado.');
   }
 
+  const validRawCriteria = rawCriteria.filter(
+    (c) => typeof c.name === 'string' && c.name.trim().length > 0,
+  );
+  if (validRawCriteria.length === 0) {
+    throw new Error(
+      'criteria debe contener al menos un criterio evaluado con nombre no vacío.',
+    );
+  }
+  const droppedCount = rawCriteria.length - validRawCriteria.length;
+
   // Reutiliza las invariantes de ejecución/capacidades/nota ya endurecidas en
   // el parser v2; solo adapta el borde del documento, no su semántica.
   const v2 = parseBuilderEvaluationContractV2(
     JSON.stringify({
       ...object,
       schemaVersion: 'builder-llm/v2',
-      gradeBreakdown: rawCriteria.map((criterion) => ({
+      gradeBreakdown: validRawCriteria.map((criterion) => ({
         criterion: criterion.name,
         maxPoints: criterion.maxPoints,
         awarded: criterion.awarded,
@@ -72,7 +82,7 @@ export function parseBuilderEvaluationContractV3(
   );
 
   const criteria = v2.gradeBreakdown.map((criterion, index) => {
-    const source = rawCriteria[index];
+    const source = validRawCriteria[index];
     const refs = normalizeEvidenceRefs(source.evidenceRefs, evidence, {
       field: `criteria[${index}].evidenceRefs`,
       allowEmpty: false,
@@ -88,8 +98,39 @@ export function parseBuilderEvaluationContractV3(
   const findings = normalizeObjectArray(object.findings, 'findings').map(
     (entry, index) => normalizeFinding(entry, index, evidence, evidenceIds),
   );
-  const limitations = normalizeStringArray(object.limitations, 'limitations');
-  const reviewFlags = normalizeStringArray(object.reviewFlags, 'reviewFlags');
+  const parsedLimitations = normalizeStringArray(
+    object.limitations,
+    'limitations',
+  );
+  const droppedLimits =
+    droppedCount > 0
+      ? [
+          `DISCARDED_CRITERIA: se omitieron ${droppedCount} criterio(s) con nombre vacío.`,
+        ]
+      : [];
+  const mergedLimitations = Array.from(
+    new Set([...v2.evaluationLimits, ...parsedLimitations, ...droppedLimits]),
+  );
+  const parsedReviewFlags = normalizeStringArray(
+    object.reviewFlags,
+    'reviewFlags',
+  );
+  const requiresReview =
+    droppedCount > 0 ||
+    v2.evaluationLimits.some(
+      (limit) =>
+        limit.includes('INVALID_CONTRACT_REPAIRED') ||
+        limit.includes('RESCALED') ||
+        limit.includes('GRADE_OUT_OF_RANGE') ||
+        limit.includes('TRUNCATED') ||
+        limit.includes('RUBRIC_WEIGHTS_ALIGNED'),
+    );
+  const mergedReviewFlags = Array.from(
+    new Set([
+      ...parsedReviewFlags,
+      ...(requiresReview ? ['REQUIRES_TEACHER_REVIEW'] : []),
+    ]),
+  );
   const {
     studentSummary: _studentSummary,
     teacherSummary: _teacherSummary,
@@ -103,8 +144,9 @@ export function parseBuilderEvaluationContractV3(
     criteria,
     evidence,
     findings,
-    limitations,
-    reviewFlags,
+    limitations: mergedLimitations,
+    evaluationLimits: mergedLimitations,
+    reviewFlags: mergedReviewFlags,
   };
 }
 
@@ -213,7 +255,7 @@ function normalizeObjectArray(value: unknown, field: string): JsonObject[] {
   });
 }
 
-function criterionStatus(
+export function criterionStatus(
   awarded: number,
   maxPoints: number,
 ): BuilderCriterionStatus {

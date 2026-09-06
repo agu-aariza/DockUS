@@ -133,7 +133,12 @@ export function parseBuilderEvaluationContractV2(
     // suma se acerca a 100). Reescalar preserva la proporción; recortar a 10 sin
     // más convertiría cualquier desglose en un sobresaliente, y en silencio.
     const usesNonDecimalScale = maxTotal > 0 && Math.abs(maxTotal - 10) > 0.5;
-    const computed = usesNonDecimalScale ? (awarded / maxTotal) * 10 : awarded;
+    const computed =
+      maxTotal === 0
+        ? 0
+        : usesNonDecimalScale
+          ? (awarded / maxTotal) * 10
+          : awarded;
     breakdownMaxTotal = maxTotal;
     breakdownUsesNonDecimalScale = usesNonDecimalScale;
 
@@ -162,41 +167,11 @@ export function parseBuilderEvaluationContractV2(
   // completo ese contrato (lo que provocaba `invalid_contract` y una
   // evaluación degradada): conservamos la evidencia, reducimos la nota a la
   // zona suspensa y dejamos una marca explícita para revisión docente.
-  const maximumGrade = maxGradeForEvaluativeState(contract.evaluativeState);
-  if (
-    contract.recommendedGrade !== undefined &&
-    contract.recommendedGrade > maximumGrade
-  ) {
-    const inconsistentGrade = contract.recommendedGrade;
-
-    if (contract.gradeBreakdown.length > 0) {
-      contract.gradeBreakdown = capGradeBreakdown(
-        contract.gradeBreakdown,
-        maximumGrade,
-        breakdownMaxTotal,
-        breakdownUsesNonDecimalScale,
-      );
-      const cappedAwarded = contract.gradeBreakdown.reduce(
-        (sum, item) => sum + item.awarded,
-        0,
-      );
-      const cappedComputed =
-        breakdownUsesNonDecimalScale && breakdownMaxTotal > 0
-          ? (cappedAwarded / breakdownMaxTotal) * 10
-          : cappedAwarded;
-      contract.recommendedGrade = roundToTwoDecimals(
-        Math.min(maximumGrade, Math.max(0, cappedComputed)),
-      );
-    } else {
-      contract.recommendedGrade = maximumGrade;
-    }
-
-    contract.evaluationLimits = [
-      ...contract.evaluationLimits,
-      `INVALID_CONTRACT_REPAIRED: evaluativeState=${contract.evaluativeState} llegó con recommendedGrade=${inconsistentGrade}, por encima del máximo ${maximumGrade}; el backend la ajustó a ${contract.recommendedGrade} y requiere revisión manual.`,
-    ];
-    contract.confidence = 'low';
-  }
+  enforceEvaluativeStateGradeLimit(
+    contract,
+    breakdownMaxTotal,
+    breakdownUsesNonDecimalScale,
+  );
 
   contract.capabilities = alignCapabilitiesWithRecipe(
     contract.capabilities,
@@ -237,7 +212,63 @@ function roundToTwoDecimals(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-function capGradeBreakdown(
+export function enforceEvaluativeStateGradeLimit(
+  contract: BuilderEvaluationContractV2,
+  breakdownMaxTotal?: number,
+  breakdownUsesNonDecimalScale?: boolean,
+): void {
+  const maximumGrade = maxGradeForEvaluativeState(contract.evaluativeState);
+  if (
+    contract.recommendedGrade !== undefined &&
+    contract.recommendedGrade > maximumGrade
+  ) {
+    const inconsistentGrade = contract.recommendedGrade;
+
+    const safeMaxTotal =
+      breakdownMaxTotal ??
+      (contract.gradeBreakdown.length > 0
+        ? contract.gradeBreakdown.reduce(
+            (sum, item) =>
+              sum + (Number.isFinite(item.maxPoints) ? item.maxPoints : 0),
+            0,
+          )
+        : 0);
+
+    const safeUsesNonDecimalScale =
+      breakdownUsesNonDecimalScale ??
+      (safeMaxTotal > 0 && Math.abs(safeMaxTotal - 10) > 0.5);
+
+    if (contract.gradeBreakdown.length > 0) {
+      contract.gradeBreakdown = capGradeBreakdown(
+        contract.gradeBreakdown,
+        maximumGrade,
+        safeMaxTotal,
+        safeUsesNonDecimalScale,
+      );
+      const cappedAwarded = contract.gradeBreakdown.reduce(
+        (sum, item) => sum + item.awarded,
+        0,
+      );
+      const cappedComputed =
+        safeUsesNonDecimalScale && safeMaxTotal > 0
+          ? (cappedAwarded / safeMaxTotal) * 10
+          : cappedAwarded;
+      contract.recommendedGrade = roundToTwoDecimals(
+        Math.min(maximumGrade, Math.max(0, cappedComputed)),
+      );
+    } else {
+      contract.recommendedGrade = maximumGrade;
+    }
+
+    const limitMsg = `INVALID_CONTRACT_REPAIRED: evaluativeState=${contract.evaluativeState} llegó con recommendedGrade=${inconsistentGrade}, por encima del máximo ${maximumGrade}; el backend la ajustó a ${contract.recommendedGrade} y requiere revisión manual.`;
+    if (!contract.evaluationLimits.includes(limitMsg)) {
+      contract.evaluationLimits = [...contract.evaluationLimits, limitMsg];
+    }
+    contract.confidence = 'low';
+  }
+}
+
+export function capGradeBreakdown(
   items: RubricGradeItem[],
   targetGrade: number,
   maxTotal: number,
@@ -398,10 +429,16 @@ function normalizeGradeBreakdown(value: unknown): RubricGradeItem[] {
     const candidate = entry as Record<string, unknown>;
     const criterion =
       typeof candidate.criterion === 'string' ? candidate.criterion.trim() : '';
-    const maxPoints =
-      typeof candidate.maxPoints === 'number' ? candidate.maxPoints : 0;
-    const awarded =
-      typeof candidate.awarded === 'number' ? candidate.awarded : 0;
+    const rawMax =
+      typeof candidate.maxPoints === 'number' &&
+      Number.isFinite(candidate.maxPoints)
+        ? Math.max(0, candidate.maxPoints)
+        : 0;
+    const rawAwarded =
+      typeof candidate.awarded === 'number' &&
+      Number.isFinite(candidate.awarded)
+        ? Math.max(0, candidate.awarded)
+        : 0;
     const justification =
       typeof candidate.justification === 'string'
         ? candidate.justification.trim()
@@ -412,8 +449,8 @@ function normalizeGradeBreakdown(value: unknown): RubricGradeItem[] {
     return [
       {
         criterion,
-        maxPoints: Math.max(0, maxPoints),
-        awarded: Math.max(0, Math.min(awarded, maxPoints || awarded)),
+        maxPoints: rawMax,
+        awarded: rawMax === 0 ? 0 : Math.min(rawAwarded, rawMax),
         justification: justification || 'Sin justificación.',
       },
     ];

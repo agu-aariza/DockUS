@@ -413,6 +413,40 @@ describe('BuilderReportComposer', () => {
       expect(assessment.gradeBreakdown[1].weight).toBeUndefined();
     });
 
+    it('alinea máximos y recalcula la nota propuesta preservando ratio de logro cuando los pesos suman 100', () => {
+      const assessment = buildAssessment({
+        recommendedGrade: 5,
+        gradeBreakdown: [
+          {
+            criterion: 'Funcionalidad',
+            maxPoints: 5,
+            awarded: 5,
+            justification: 'ok',
+          },
+          {
+            criterion: 'Estilo',
+            maxPoints: 5,
+            awarded: 0,
+            justification: 'ok',
+          },
+        ],
+      });
+
+      composer.enrichGradeBreakdownWithRubric(assessment, [
+        { name: 'Funcionalidad', weight: 90, description: 'Salida esperada' },
+        { name: 'Estilo', weight: 10, description: 'Buenas prácticas' },
+      ]);
+
+      expect(assessment.gradeBreakdown[0].maxPoints).toBe(9);
+      expect(assessment.gradeBreakdown[0].awarded).toBe(9);
+      expect(assessment.gradeBreakdown[1].maxPoints).toBe(1);
+      expect(assessment.gradeBreakdown[1].awarded).toBe(0);
+      expect(assessment.recommendedGrade).toBe(9);
+      expect(assessment.evaluationLimits).toContainEqual(
+        expect.stringContaining('RUBRIC_WEIGHTS_ALIGNED'),
+      );
+    });
+
     it('no hace nada si no hay rúbrica configurada', () => {
       const assessment = buildAssessment({
         gradeBreakdown: [

@@ -15,6 +15,8 @@ import {
   BUILDER_EVALUATION_SCHEMA_VERSION,
 } from '../../../domain/builder.types';
 import { serializeExecutionResult } from '../../../domain/ai/builder-execution-result.util';
+import { enforceEvaluativeStateGradeLimit } from '../../../domain/ai/builder-evaluation-contract.parser';
+import { criterionStatus } from '../../../domain/ai/builder-evaluation-contract-v3.parser';
 import { BuilderCodeQualityTrace } from '../ai/builder-code-quality.service';
 import { BuilderHallucinationGuard } from '../evaluation/builder-hallucination-guard.service';
 
@@ -175,6 +177,44 @@ export function resolveEvaluationAssessment(
       ) {
         trace.parsedContract.evaluativeState = 'E3';
         trace.parsedContract.confidence = 'low';
+      }
+    }
+    enforceEvaluativeStateGradeLimit(
+      trace.parsedContract as BuilderEvaluationContractV2,
+    );
+    if (
+      trace.parsedContract.schemaVersion === BUILDER_EVALUATION_SCHEMA_VERSION
+    ) {
+      const v3 = trace.parsedContract as BuilderEvaluationContractV3;
+      v3.limitations = Array.from(
+        new Set([...(v3.limitations ?? []), ...v3.evaluationLimits]),
+      );
+      if (
+        v3.evaluationLimits.some(
+          (limit) =>
+            limit.includes('INVALID_CONTRACT_REPAIRED') ||
+            limit.includes('RUBRIC_WEIGHTS_ALIGNED') ||
+            limit.includes('TRUNCATED') ||
+            limit.includes('RESCALED') ||
+            limit.includes('GRADE_OUT_OF_RANGE') ||
+            (hallucinationWarning && limit === hallucinationWarning),
+        )
+      ) {
+        v3.reviewFlags = Array.from(
+          new Set([...(v3.reviewFlags ?? []), 'REQUIRES_TEACHER_REVIEW']),
+        );
+      }
+      if (Array.isArray(v3.criteria) && Array.isArray(v3.gradeBreakdown)) {
+        v3.criteria = v3.criteria.map((c, i) => {
+          const corresponding = v3.gradeBreakdown[i];
+          const awarded = corresponding ? corresponding.awarded : c.awarded;
+          return {
+            ...c,
+            awarded,
+            status: criterionStatus(awarded, c.maxPoints),
+          };
+        });
+        v3.gradeBreakdown = v3.criteria;
       }
     }
     reconcileStateWithGradeBreakdown(trace.parsedContract);

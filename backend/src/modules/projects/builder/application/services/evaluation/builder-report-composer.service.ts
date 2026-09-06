@@ -27,6 +27,8 @@ import {
   extractRecommendation,
   isStrengthFinding,
 } from '../../../domain/code-quality-finding.util';
+import { enforceEvaluativeStateGradeLimit } from '../../../domain/ai/builder-evaluation-contract.parser';
+import { criterionStatus } from '../../../domain/ai/builder-evaluation-contract-v3.parser';
 
 @Injectable()
 export class BuilderReportComposer {
@@ -46,14 +48,98 @@ export class BuilderReportComposer {
     if (!rubricCriteria || rubricCriteria.length === 0) {
       return;
     }
-    if (!Array.isArray(assessment.gradeBreakdown)) {
+    if (
+      !Array.isArray(assessment.gradeBreakdown) ||
+      assessment.gradeBreakdown.length === 0
+    ) {
       return;
     }
 
     const normalize = (value: string): string => value.trim().toLowerCase();
     const criterionByName = new Map(
-      rubricCriteria.map((criterion) => [normalize(criterion.name), criterion]),
+      rubricCriteria.map((criterion) => [
+        normalize(criterion.name),
+        criterion,
+      ]),
     );
+
+    const totalRubricWeight = rubricCriteria.reduce(
+      (sum, c) => sum + (Number.isFinite(c.weight) ? c.weight : 0),
+      0,
+    );
+    const weightsSumTo100 = Math.abs(totalRubricWeight - 100) < 0.5;
+
+    const allMatched = assessment.gradeBreakdown.every((item) =>
+      criterionByName.has(normalize(item.criterion)),
+    );
+
+    if (weightsSumTo100 && allMatched) {
+      const needsAdjustment = assessment.gradeBreakdown.some((item) => {
+        const match = criterionByName.get(normalize(item.criterion))!;
+        const canonicalMax = roundToTwoDecimals(match.weight / 10);
+        return Math.abs(item.maxPoints - canonicalMax) > 0.01;
+      });
+
+      if (needsAdjustment) {
+        let gradeSum = 0;
+        const enrichAndAlign = <T extends RubricGradeItem>(items: T[]): T[] =>
+          items.map((item) => {
+            const match = criterionByName.get(normalize(item.criterion))!;
+            const canonicalMax = roundToTwoDecimals(match.weight / 10);
+            const attainment =
+              item.maxPoints > 0
+                ? Math.min(1, Math.max(0, item.awarded / item.maxPoints))
+                : 0;
+            const canonicalAwarded = roundToTwoDecimals(
+              attainment * canonicalMax,
+            );
+            gradeSum += canonicalAwarded;
+            const updated: any = {
+              ...item,
+              maxPoints: canonicalMax,
+              awarded: canonicalAwarded,
+              weight: match.weight,
+              description: match.description,
+            };
+            if ('status' in item) {
+              updated.status = criterionStatus(canonicalAwarded, canonicalMax);
+            }
+            return updated as T;
+          });
+
+        if (assessment.schemaVersion === 'builder-evaluation/v3') {
+          assessment.criteria = enrichAndAlign(assessment.criteria);
+          assessment.gradeBreakdown = assessment.criteria;
+        } else {
+          assessment.gradeBreakdown = enrichAndAlign(
+            assessment.gradeBreakdown,
+          );
+        }
+
+        assessment.recommendedGrade = roundToTwoDecimals(
+          Math.min(10, Math.max(0, gradeSum)),
+        );
+
+        enforceEvaluativeStateGradeLimit(
+          assessment as BuilderEvaluationContractV2,
+        );
+
+        const limitMsg = `RUBRIC_WEIGHTS_ALIGNED: los criterios se ajustaron a los pesos canónicos de la rúbrica docente (escala 0-10); la nota propuesta se recalculó a ${assessment.recommendedGrade}.`;
+        assessment.evaluationLimits = Array.from(
+          new Set([...(assessment.evaluationLimits ?? []), limitMsg]),
+        );
+        if (assessment.schemaVersion === 'builder-evaluation/v3') {
+          const v3 = assessment as BuilderEvaluationContractV3;
+          v3.limitations = Array.from(
+            new Set([...(v3.limitations ?? []), limitMsg]),
+          );
+          v3.reviewFlags = Array.from(
+            new Set([...(v3.reviewFlags ?? []), 'REQUIRES_TEACHER_REVIEW']),
+          );
+        }
+        return;
+      }
+    }
 
     const enrich = <T extends RubricGradeItem>(items: T[]): T[] =>
       items.map((item) => {
@@ -65,12 +151,30 @@ export class BuilderReportComposer {
           description: match.description,
         };
       });
+
     if (assessment.schemaVersion === 'builder-evaluation/v3') {
       assessment.criteria = enrich(assessment.criteria);
       assessment.gradeBreakdown = assessment.criteria;
-      return;
+    } else {
+      assessment.gradeBreakdown = enrich(assessment.gradeBreakdown);
     }
-    assessment.gradeBreakdown = enrich(assessment.gradeBreakdown);
+
+    if (weightsSumTo100 && !allMatched) {
+      const mismatchMsg = `RUBRIC_MISMATCH: no todos los criterios evaluados coinciden con la rúbrica docente configurada (${rubricCriteria.map((c) => c.name).join(', ')}); requiere revisión manual.`;
+      assessment.evaluationLimits = Array.from(
+        new Set([...(assessment.evaluationLimits ?? []), mismatchMsg]),
+      );
+      assessment.confidence = 'low';
+      if (assessment.schemaVersion === 'builder-evaluation/v3') {
+        const v3 = assessment as BuilderEvaluationContractV3;
+        v3.limitations = Array.from(
+          new Set([...(v3.limitations ?? []), mismatchMsg]),
+        );
+        v3.reviewFlags = Array.from(
+          new Set([...(v3.reviewFlags ?? []), 'REQUIRES_TEACHER_REVIEW']),
+        );
+      }
+    }
   }
 
   composeReportV3(
@@ -669,4 +773,8 @@ export class BuilderReportComposer {
 
     return lines.join('\n');
   }
+}
+
+function roundToTwoDecimals(value: number): number {
+  return Math.round(value * 100) / 100;
 }
