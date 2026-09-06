@@ -123,6 +123,27 @@ describe('SourceCodePayloadBuilder', () => {
 
     expect(payload).toBe('');
   });
+
+  it('detiene la acumulación y añade advertencia si el código agregado supera el límite (1MB)', async () => {
+    jest.mocked(fs.readFile).mockResolvedValue('X'.repeat(200 * 1024));
+
+    // 6 ficheros de 200KB suman 1.2MB, superando el tope de 1MB
+    const files: RuntimeFile[] = Array.from({ length: 6 }, (_, index) => ({
+      relativePath: `module_${index}.py`,
+      absolutePath: `/tmp/project/module_${index}.py`,
+      sizeBytes: 200 * 1024,
+    }));
+
+    const workspace = buildWorkspace(files);
+    const payload = await builder.build(workspace);
+
+    // Debe haber leído hasta alcanzar el umbral (al 5º archivo se detiene antes de leer el 6º)
+    expect(fs.readFile).toHaveBeenCalledTimes(5);
+    expect(payload).toContain('--- Archivo: module_0.py ---');
+    expect(payload).toContain('--- Archivo: module_4.py ---');
+    expect(payload).not.toContain('--- Archivo: module_5.py ---');
+    expect(payload).toContain('AVISO DE RENDIMIENTO: Código fuente truncado');
+  });
 });
 /**
  * Pruebas de la construcción segura del payload de código que reciben los prompts del Builder.

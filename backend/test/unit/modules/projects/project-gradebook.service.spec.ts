@@ -71,29 +71,32 @@ describe('ProjectGradebookService — el gradebook no carga columnas jsonb', () 
       ),
     };
 
+    const assignments = {
+      findActiveForProject: jest.fn(() =>
+        Promise.resolve([
+          {
+            id: 'assignment-1',
+            studentId: 'student-1',
+            assignedAt: new Date('2026-01-01T00:00:00Z'),
+            student: {
+              firstName: 'Ana',
+              lastName: 'García',
+              email: 'ana@test',
+            },
+            project: { maxDeliveriesPerStudent: 3 },
+            sourceGroupIds: ['group-1'],
+          },
+        ]),
+      ),
+    };
+
     const service = new ProjectGradebookService(
       {
         findById: jest.fn(() =>
           Promise.resolve({ id: 'p-1', maxDeliveriesPerStudent: 3 }),
         ),
       } as never,
-      {
-        findActiveForProject: jest.fn(() =>
-          Promise.resolve([
-            {
-              id: 'assignment-1',
-              studentId: 'student-1',
-              assignedAt: new Date('2026-01-01T00:00:00Z'),
-              student: {
-                firstName: 'Ana',
-                lastName: 'García',
-                email: 'ana@test',
-              },
-              project: { maxDeliveriesPerStudent: 3 },
-            },
-          ]),
-        ),
-      } as never,
+      assignments as never,
       {
         findByAssignmentIds: jest.fn(() =>
           Promise.resolve([
@@ -113,7 +116,7 @@ describe('ProjectGradebookService — el gradebook no carga columnas jsonb', () 
       { assertCanManageProject: jest.fn(() => Promise.resolve()) } as never,
     );
 
-    return { service, buildRuns };
+    return { service, buildRuns, assignments };
   }
 
   it('delega en el puerto la extracción de overallOutcome por proyecto (no por lista de entregas)', async () => {
@@ -126,7 +129,20 @@ describe('ProjectGradebookService — el gradebook no carga columnas jsonb', () 
     expect(buildRuns.findLatestOutcomeByProject).toHaveBeenCalledWith('p-1');
   });
 
-  it('mapea el veredicto extraído al resultado', async () => {
+  it('aplica el filtro por groupId directamente al consultar asignaciones activas en base de datos', async () => {
+    const { service, assignments } = buildService();
+
+    await service.getGradebook('p-1', { userId: 'u-1' } as never, {
+      groupId: 'group-1',
+    });
+
+    expect(assignments.findActiveForProject).toHaveBeenCalledWith(
+      'p-1',
+      'group-1',
+    );
+  });
+
+  it('mapea el veredicto extraído al resultado y conserva groupIds', async () => {
     const { service } = buildService();
 
     const rows = await service.getGradebook('p-1', { userId: 'u-1' } as never);
@@ -134,5 +150,6 @@ describe('ProjectGradebookService — el gradebook no carga columnas jsonb', () 
     expect(rows).toHaveLength(1);
     expect(rows[0].latestBuilderOutcome).toBe('PASS');
     expect(rows[0].grade).toBe(7.5);
+    expect(rows[0].groupIds).toEqual(['group-1']);
   });
 });

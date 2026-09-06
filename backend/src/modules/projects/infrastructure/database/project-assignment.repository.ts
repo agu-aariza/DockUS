@@ -57,14 +57,23 @@ export class ProjectAssignmentRepository implements IProjectAssignmentRepository
     });
   }
 
-  findActiveForProject(projectId: string): Promise<ProjectAssignment[]> {
-    return this.repository
+  findActiveForProject(
+    projectId: string,
+    groupId?: string,
+  ): Promise<ProjectAssignment[]> {
+    const query = this.repository
       .createQueryBuilder('assignment')
       .innerJoinAndSelect('assignment.project', 'project')
       .leftJoinAndSelect('project.teachers', 'teacher')
       .innerJoinAndSelect('assignment.student', 'student')
       .where('assignment.projectId = :projectId', { projectId })
-      .andWhere('assignment.revokedAt IS NULL')
+      .andWhere('assignment.revokedAt IS NULL');
+
+    if (groupId) {
+      query.andWhere(':groupId = ANY(assignment.sourceGroupIds)', { groupId });
+    }
+
+    return query
       .orderBy('student.lastName', 'ASC')
       .addOrderBy('student.firstName', 'ASC')
       .getMany();

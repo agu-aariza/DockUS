@@ -45,8 +45,11 @@ export interface IProjectAssignmentRepository {
     studentIds: string[],
   ): Promise<ProjectAssignment[]>;
 
-  /** Asignaciones vivas de un proyecto, con `student`/`project.teachers`, ordenadas por nombre de alumno. */
-  findActiveForProject(projectId: string): Promise<ProjectAssignment[]>;
+  /** Asignaciones vivas de un proyecto (opcionalmente filtradas por grupo), con `student`/`project.teachers`, ordenadas por nombre de alumno. */
+  findActiveForProject(
+    projectId: string,
+    groupId?: string,
+  ): Promise<ProjectAssignment[]>;
 
   /** Asignaciones vivas del propio alumno (excluye proyectos en DRAFT), ordenadas por fecha de asignación. */
   findActiveForStudent(studentId: string): Promise<ProjectAssignment[]>;

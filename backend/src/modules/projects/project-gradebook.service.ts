@@ -264,7 +264,7 @@ export class ProjectGradebookService {
   private async buildGradebook(
     projectId: string,
     actor: AuthenticatedUser,
-    _groupId?: string,
+    groupId?: string,
   ): Promise<ProjectGradebookRow[]> {
     const project = await this.projectsRepository.findById(projectId);
     if (!project) {
@@ -273,7 +273,7 @@ export class ProjectGradebookService {
     await this.projectAccessService.assertCanManageProject(project, actor);
 
     const assignments =
-      await this.assignmentsRepository.findActiveForProject(projectId);
+      await this.assignmentsRepository.findActiveForProject(projectId, groupId);
 
     const assignmentIds = assignments.map((assignment) => assignment.id);
     const deliveries =
@@ -328,7 +328,7 @@ export class ProjectGradebookService {
         studentName:
           `${assignment.student.lastName}, ${assignment.student.firstName}`.trim(),
         studentEmail: assignment.student.email,
-        groupIds: [],
+        groupIds: assignment.sourceGroupIds ?? [],
         groupLabels: [],
         assignmentId: assignment.id,
         deliveryCount: count,

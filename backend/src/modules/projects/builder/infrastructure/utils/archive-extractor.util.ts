@@ -49,15 +49,23 @@ export async function extractArchiveToWorkspace(
   );
 }
 
-async function extractZipArchive(
+interface ExtractedArchiveEntry {
+  path: string;
+  content: Buffer;
+  isDirectory?: boolean;
+}
+
+async function writeExtractedEntries(
+  entries: ExtractedArchiveEntry[],
+  commonPrefix: string,
   input: ArchiveExtractionInput,
 ): Promise<RuntimeFile[]> {
-  const entries = parseZipEntries(input.archiveBuffer, {
-    maxTotalBytes: input.limits.maxBytes,
-    maxEntries: input.limits.maxFiles,
-  });
-  const commonPrefix = getCommonRootPrefix(entries.map((e) => e.path));
-  const extractedFiles: RuntimeFile[] = [];
+  const validEntries: {
+    targetPath: string;
+    content: Buffer;
+    destination: string;
+  }[] = [];
+  const directoriesToCreate = new Set<string>();
 
   for (const entry of entries) {
     if (entry.path.startsWith('__MACOSX/') || entry.path === '.DS_Store') {
@@ -76,19 +84,42 @@ async function extractZipArchive(
     registerExtraction(targetPath, entry.content.length, input);
 
     const destination = buildSafeDestination(input.outputRootDir, targetPath);
-    await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(destination, entry.content);
-
-    extractedFiles.push({
-      relativePath: toPosixPath(
-        path.relative(input.outputRootDir, destination),
-      ),
-      absolutePath: destination,
-      sizeBytes: entry.content.length,
-    });
+    directoriesToCreate.add(path.dirname(destination));
+    validEntries.push({ targetPath, content: entry.content, destination });
   }
 
-  return extractedFiles;
+  // Pre-creación de carpetas padre necesarias sin redundancias ni bloqueos
+  for (const dir of directoriesToCreate) {
+    await mkdir(dir, { recursive: true });
+  }
+
+  // Escritura de ficheros en lotes concurrentes (concurrencia acotada a 16)
+  const WRITE_CONCURRENCY = 16;
+  for (let i = 0; i < validEntries.length; i += WRITE_CONCURRENCY) {
+    const chunk = validEntries.slice(i, i + WRITE_CONCURRENCY);
+    await Promise.all(
+      chunk.map((item) => writeFile(item.destination, item.content)),
+    );
+  }
+
+  return validEntries.map((item) => ({
+    relativePath: toPosixPath(
+      path.relative(input.outputRootDir, item.destination),
+    ),
+    absolutePath: item.destination,
+    sizeBytes: item.content.length,
+  }));
+}
+
+async function extractZipArchive(
+  input: ArchiveExtractionInput,
+): Promise<RuntimeFile[]> {
+  const entries = parseZipEntries(input.archiveBuffer, {
+    maxTotalBytes: input.limits.maxBytes,
+    maxEntries: input.limits.maxFiles,
+  });
+  const commonPrefix = getCommonRootPrefix(entries.map((e) => e.path));
+  return writeExtractedEntries(entries, commonPrefix, input);
 }
 
 async function extractTarGzArchive(
@@ -150,35 +181,7 @@ async function extractTarGzArchive(
 
   // Auto-flatten logic
   const commonPrefix = getCommonRootPrefix(entries.map((e) => e.path));
-
-  for (const entry of entries) {
-    if (entry.path.startsWith('__MACOSX/') || entry.path === '.DS_Store') {
-      continue;
-    }
-
-    let targetPath = entry.path;
-    if (commonPrefix && targetPath.startsWith(commonPrefix)) {
-      targetPath = targetPath.slice(commonPrefix.length);
-    }
-
-    if (!targetPath) continue;
-
-    registerExtraction(targetPath, entry.content.length, input);
-
-    const destination = buildSafeDestination(input.outputRootDir, targetPath);
-    await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(destination, entry.content);
-
-    extractedFiles.push({
-      relativePath: toPosixPath(
-        path.relative(input.outputRootDir, destination),
-      ),
-      absolutePath: destination,
-      sizeBytes: entry.content.length,
-    });
-  }
-
-  return extractedFiles;
+  return writeExtractedEntries(entries, commonPrefix, input);
 }
 
 interface ParsedZipEntry {

@@ -60,10 +60,18 @@ const EXCLUDED_DIR_SEGMENTS = new Set([
 /** Los ficheros de código mayores que esto se omiten del prompt. */
 const MAX_SOURCE_FILE_BYTES = 256 * 1024;
 
+/**
+ * Límite agregado total de bytes de código fuente inyectados al prompt LLM.
+ * Evita desbordar la ventana de contexto y costes desmedidos de tokens.
+ */
+export const MAX_AGGREGATE_SOURCE_PAYLOAD_BYTES = 1024 * 1024; // 1 MB
+
 @Injectable()
 export class SourceCodePayloadBuilder {
   async build(workspace: StageWorkspaceResult): Promise<string> {
     const sourceCodePayloadParts: string[] = [];
+    let totalBytesAccumulated = 0;
+    let truncated = false;
 
     for (const file of workspace.runtimeFiles) {
       // Lista blanca por extensión, no lista negra de directorios: un binario,
@@ -77,14 +85,28 @@ export class SourceCodePayloadBuilder {
         continue;
       }
 
+      if (
+        totalBytesAccumulated + file.sizeBytes >
+        MAX_AGGREGATE_SOURCE_PAYLOAD_BYTES
+      ) {
+        truncated = true;
+        break;
+      }
+
       try {
         const content = await fs.readFile(String(file.absolutePath), 'utf8');
-        sourceCodePayloadParts.push(
-          `\n--- Archivo: ${file.relativePath} ---\n${content}\n`,
-        );
+        const chunk = `\n--- Archivo: ${file.relativePath} ---\n${content}\n`;
+        sourceCodePayloadParts.push(chunk);
+        totalBytesAccumulated += Buffer.byteLength(chunk, 'utf8');
       } catch {
         // Ignorar silenciosamente archivos que no se puedan leer.
       }
+    }
+
+    if (truncated) {
+      sourceCodePayloadParts.push(
+        '\n--- [AVISO DE RENDIMIENTO: Código fuente truncado por superar el límite agregado de contexto (1 MB)] ---\n',
+      );
     }
 
     return sourceCodePayloadParts.join('');
