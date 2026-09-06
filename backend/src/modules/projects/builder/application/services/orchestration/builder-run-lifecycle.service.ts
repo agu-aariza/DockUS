@@ -137,6 +137,7 @@ export class BuilderRunLifecycleService {
           JSON.stringify({
             event: 'builder_reporting_cost',
             runId: run.id,
+            correlationId: data.correlationId ?? null,
             inputTokens: reportingCost.inputTokens,
             outputTokens: reportingCost.outputTokens,
             costUsd: reportingCost.costUsd,
@@ -185,10 +186,20 @@ export class BuilderRunLifecycleService {
         // cual, igual que en la guarda de mas arriba: permanece IN_REVIEW
         // hasta que se reencole un nuevo intento.
         this.logger.warn(
-          `processBuildRunJob: run ${run.id} cancelado cooperativamente durante el pipeline.`,
+          `processBuildRunJob: run ${run.id} cancelado cooperativamente durante el pipeline. (correlationId: ${data.correlationId ?? 'none'})`,
         );
         return;
       }
+
+      this.logger.error(
+        JSON.stringify({
+          event: 'builder_run_pipeline_failed',
+          runId: run.id,
+          deliveryId: delivery.id,
+          correlationId: data.correlationId ?? null,
+          detail: error instanceof Error ? error.message : String(error),
+        }),
+      );
 
       await this.builderRunSupportService.markRunAsFailed(
         run.id,

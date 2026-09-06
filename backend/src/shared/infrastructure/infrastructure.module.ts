@@ -35,6 +35,7 @@ import { Delivery } from '../../modules/projects/deliveries/entities/delivery.en
 
 import { DockerInfrastructureModule } from './docker/docker-infrastructure.module';
 import { AiModule } from './ai/ai.module';
+import { StorageInfrastructureModule } from './storage/storage-infrastructure.module';
 
 @Module({
   imports: [
@@ -92,12 +93,14 @@ import { AiModule } from './ai/ai.module';
     DockerInfrastructureModule,
     AiModule,
     CacheModule,
+    StorageInfrastructureModule,
   ],
   providers: [AdminSeedService, DemoSeedService, EduCodeAIThrottlerGuard],
   exports: [
     CacheModule,
     DockerInfrastructureModule,
     AiModule,
+    StorageInfrastructureModule,
     EduCodeAIThrottlerGuard,
   ],
 })

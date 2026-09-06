@@ -218,6 +218,33 @@ export class MinioStorageService implements OnModuleInit {
     return this.signedUrlTtlSeconds;
   }
 
+  /**
+   * Comprueba conectividad y disponibilidad del bucket de almacenamiento MinIO para la sonda de readiness.
+   */
+  async checkHealth(): Promise<{ status: 'up' | 'down'; latencyMs: number; info?: string }> {
+    const startedAt = Date.now();
+    try {
+      await this.s3Client.send(
+        new HeadBucketCommand({
+          Bucket: this.bucketName,
+        }),
+      );
+      return {
+        status: 'up',
+        latencyMs: Date.now() - startedAt,
+        info: `Bucket "${this.bucketName}" accesible en MinIO.`,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Healthcheck de MinIO falló: ${message}`);
+      return {
+        status: 'down',
+        latencyMs: Date.now() - startedAt,
+        info: message,
+      };
+    }
+  }
+
   async putObject(params: PutObjectParams): Promise<void> {
     if (params.body instanceof Readable && params.contentLength === undefined) {
       // Fallar aquí y no dejarlo pasar: sin `ContentLength` el SDK bufferiza el

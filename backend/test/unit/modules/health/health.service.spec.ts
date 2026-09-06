@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { RedisClientService } from '@app/shared/infrastructure/cache/redis-client.service';
 import { DOCKER_DAEMON_STATUS_REDIS_KEY } from '@app/shared/infrastructure/docker/docker-daemon-status-publisher.service';
 import { HealthService } from '@app/modules/health/health.service';
+import type { MinioStorageService } from '@app/shared/infrastructure/storage/minio-storage.service';
 
 const mockBedrockSend = jest.fn();
 
@@ -19,6 +20,7 @@ describe('HealthService', () => {
   let redisClient: { ping: jest.Mock; get: jest.Mock };
   let configService: { get: jest.Mock };
   let logger: { error: jest.Mock };
+  let minioStorageService: { checkHealth: jest.Mock };
   let service: HealthService;
 
   beforeEach(() => {
@@ -47,12 +49,20 @@ describe('HealthService', () => {
       }),
     };
     logger = { error: jest.fn() };
+    minioStorageService = {
+      checkHealth: jest.fn().mockResolvedValue({
+        status: 'up',
+        latencyMs: 3,
+        info: 'Bucket "educodeai-storage" accesible en MinIO.',
+      }),
+    };
 
     service = new HealthService(
       dataSource as unknown as DataSource,
       redisClient as unknown as RedisClientService,
       configService as unknown as ConfigService,
       logger as unknown as Logger,
+      minioStorageService as unknown as MinioStorageService,
     );
   });
 
@@ -137,5 +147,65 @@ describe('HealthService', () => {
       undefined,
       'HealthService',
     );
+  });
+
+  it('reporta almacenamiento MinIO caido si checkHealth falla (A003)', async () => {
+    minioStorageService.checkHealth.mockResolvedValue({
+      status: 'down',
+      latencyMs: 12,
+      info: 'Bucket not found',
+    });
+
+    const report = await service.getReadiness();
+
+    expect(report.status).toBe('error');
+    expect(report.checks.storage).toEqual(
+      expect.objectContaining({
+        status: 'down',
+        info: 'Bucket not found',
+      }),
+    );
+  });
+
+  it('reporta readiness ok cuando MinIO responde correctamente (A003)', async () => {
+    const report = await service.getReadiness();
+
+    expect(report.status).toBe('ok');
+    expect(report.checks.storage).toEqual(
+      expect.objectContaining({
+        status: 'up',
+      }),
+    );
+  });
+
+  it('omite llamada a Bedrock si el proveedor activo configurado no es bedrock (A004)', async () => {
+    configService.get = jest.fn((key: string, fallback?: unknown) => {
+      if (key === 'LLM_PROVIDER') return 'gemini';
+      return fallback;
+    });
+
+    const report = await service.getReadiness();
+
+    expect(report.status).toBe('ok');
+    expect(report.checks.bedrock).toEqual(
+      expect.objectContaining({
+        status: 'up',
+        info: expect.stringContaining('gemini'),
+      }),
+    );
+    expect(mockBedrockSend).not.toHaveBeenCalled();
+  });
+
+  it('omite llamada a Bedrock si HEALTHCHECK_BEDROCK_ENABLED es false (A004)', async () => {
+    configService.get = jest.fn((key: string, fallback?: unknown) => {
+      if (key === 'HEALTHCHECK_BEDROCK_ENABLED') return false;
+      return fallback;
+    });
+
+    const report = await service.getReadiness();
+
+    expect(report.status).toBe('ok');
+    expect(report.checks.bedrock.status).toBe('up');
+    expect(mockBedrockSend).not.toHaveBeenCalled();
   });
 });

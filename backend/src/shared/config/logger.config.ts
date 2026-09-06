@@ -62,6 +62,22 @@ export function toCorrelationId(reqId: unknown): string | undefined {
   return undefined;
 }
 
+/** Rutas de datos sensibles que deben ser enmascaradas en los registros HTTP. */
+export const SENSITIVE_LOG_FIELDS: readonly string[] = [
+  'req.headers.authorization',
+  'req.headers.cookie',
+  'res.headers["set-cookie"]',
+  'req.body.password',
+  'req.body.currentPassword',
+  'req.body.newPassword',
+  'req.body.token',
+  'req.body.refreshToken',
+  'req.body.secret',
+];
+
+/** Texto censor utilizado para enmascarar valores sensibles. */
+export const REDACT_CENSOR = '[REDACTED]';
+
 /**
  * Construye las opciones de configuración para el middleware `pino-http`.
  *
@@ -76,6 +92,11 @@ export function buildPinoHttpConfig(nodeEnv: string | undefined) {
     transport: isProduction
       ? undefined
       : { target: 'pino-pretty', options: { colorize: true } },
+
+    redact: {
+      paths: [...SENSITIVE_LOG_FIELDS],
+      censor: REDACT_CENSOR,
+    },
 
     genReqId: (req: IncomingMessage, res: ServerResponse): string => {
       const correlationId = resolveCorrelationId(

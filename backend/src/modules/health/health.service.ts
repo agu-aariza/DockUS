@@ -21,11 +21,12 @@ import {
   DOCKER_DAEMON_STATUS_REDIS_KEY,
   DockerDaemonStatusPayload,
 } from '../../shared/infrastructure/docker/docker-daemon-status-publisher.service';
+import { MinioStorageService } from '../../shared/infrastructure/storage/minio-storage.service';
 
 type DependencyStatus = 'up' | 'down';
 type ReadinessStatus = 'ok' | 'error';
 
-interface DependencyHealth {
+export interface DependencyHealth {
   status: DependencyStatus;
   latencyMs: number;
   info?: string;
@@ -44,6 +45,7 @@ export interface ReadinessReport {
     redis: DependencyHealth;
     docker: DependencyHealth;
     bedrock: DependencyHealth;
+    storage: DependencyHealth;
   };
 }
 
@@ -54,6 +56,7 @@ export class HealthService {
     private readonly redisClient: RedisClientService,
     private readonly configService: ConfigService,
     private readonly logger: Logger,
+    private readonly minioStorageService: MinioStorageService,
   ) {}
 
   /**
@@ -70,25 +73,27 @@ export class HealthService {
    * Comprueba si las dependencias críticas están listas para recibir tráfico.
    */
   async getReadiness(): Promise<ReadinessReport> {
-    const [database, redis, docker, bedrock] = await Promise.all([
+    const [database, redis, docker, bedrock, storage] = await Promise.all([
       this.checkDatabase(),
       this.checkRedis(),
       this.checkDocker(),
       this.checkBedrock(),
+      this.checkStorage(),
     ]);
 
     const status: ReadinessStatus =
       database.status === 'up' &&
       redis.status === 'up' &&
       docker.status === 'up' &&
-      bedrock.status === 'up'
+      bedrock.status === 'up' &&
+      storage.status === 'up'
         ? 'ok'
         : 'error';
 
     return {
       status,
       timestamp: new Date().toISOString(),
-      checks: { database, redis, docker, bedrock },
+      checks: { database, redis, docker, bedrock, storage },
     };
   }
 
@@ -178,6 +183,22 @@ export class HealthService {
 
   private async checkBedrock(): Promise<DependencyHealth> {
     const startedAt = Date.now();
+    const isBedrockExplicitlyDisabled =
+      this.configService.get<string | boolean>('HEALTHCHECK_BEDROCK_ENABLED') === false ||
+      this.configService.get<string | boolean>('HEALTHCHECK_BEDROCK_ENABLED') === 'false';
+    const llmProvider = this.configService.get<string>('LLM_PROVIDER', 'bedrock');
+
+    if (
+      isBedrockExplicitlyDisabled ||
+      (llmProvider && llmProvider !== 'bedrock' && llmProvider !== 'aws-bedrock')
+    ) {
+      return {
+        status: 'up',
+        latencyMs: 0,
+        info: `Bedrock omitido: proveedor LLM activo es ${llmProvider}.`,
+      };
+    }
+
     const region = this.configService.get<string>('AWS_REGION', 'us-east-1');
 
     try {
@@ -203,6 +224,22 @@ export class HealthService {
       return {
         status: 'down',
         latencyMs: Date.now() - startedAt,
+        info: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Comprueba conectividad con MinIO Storage.
+   */
+  private async checkStorage(): Promise<DependencyHealth> {
+    try {
+      return await this.minioStorageService.checkHealth();
+    } catch (error) {
+      this.logDependencyError('MinIO', error);
+      return {
+        status: 'down',
+        latencyMs: 0,
         info: error instanceof Error ? error.message : String(error),
       };
     }

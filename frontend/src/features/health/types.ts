@@ -16,7 +16,7 @@ export interface DependencyHealth {
   info?: string;
 }
 
-export type ReadinessDependency = "database" | "redis" | "docker" | "bedrock";
+export type ReadinessDependency = "database" | "redis" | "docker" | "bedrock" | "storage";
 
 export interface ReadinessReport {
   status: "ok" | "error";
@@ -30,4 +30,5 @@ export const DEPENDENCY_LABEL: Record<ReadinessDependency, string> = {
   redis: "redis",
   docker: "docker",
   bedrock: "bedrock",
+  storage: "minio",
 };

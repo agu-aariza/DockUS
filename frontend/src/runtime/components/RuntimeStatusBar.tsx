@@ -13,7 +13,13 @@ import {
 } from "../../features/health/types";
 import type { StreamState } from "../../builder/hooks/useBuilderRunStream";
 
-const DEPENDENCIES: ReadinessDependency[] = ["database", "redis", "docker", "bedrock"];
+const DEPENDENCIES: ReadinessDependency[] = [
+  "database",
+  "redis",
+  "docker",
+  "bedrock",
+  "storage",
+];
 
 /** Cada cuánto se vuelve a sondear la salud. Suficiente para enterarse, sin martillear la API. */
 const POLL_INTERVAL_MS = 30_000;

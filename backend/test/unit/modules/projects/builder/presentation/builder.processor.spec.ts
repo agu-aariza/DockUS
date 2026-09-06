@@ -1,7 +1,12 @@
 import {
+  BuilderProcessor,
   resolveStaleRunThresholdMs,
   resolveWorkerConcurrency,
 } from '@app/modules/projects/builder/presentation/builder.processor';
+import { BUILDER_RUN_JOB_NAME } from '@app/modules/projects/builder/domain/builder.constants';
+import type { BuilderRunLifecycleService } from '@app/modules/projects/builder/application/services/orchestration/builder-run-lifecycle.service';
+import type { Job } from 'bullmq';
+import type { ExecuteBuildRunJobData } from '@app/modules/projects/builder/application/services/builder-application.types';
 
 /**
  * La concurrencia se resuelve en tiempo de decoración de clase, antes de que
@@ -85,5 +90,49 @@ describe('resolveStaleRunThresholdMs', () => {
   ])('ignora un valor %s', (_caso, raw) => {
     process.env.BUILDER_STALE_RUN_THRESHOLD_MS = raw;
     expect(resolveStaleRunThresholdMs()).toBe(600000);
+  });
+});
+
+describe('BuilderProcessor.process — trazabilidad y correlación (A002)', () => {
+  let lifecycleMock: { processBuildRunJob: jest.Mock };
+  let processor: BuilderProcessor;
+
+  beforeEach(() => {
+    lifecycleMock = {
+      processBuildRunJob: jest.fn().mockResolvedValue(undefined),
+    };
+    processor = new BuilderProcessor(
+      lifecycleMock as unknown as BuilderRunLifecycleService,
+    );
+  });
+
+  it('propaga el correlationId del job al invocar processBuildRunJob', async () => {
+    const jobData: ExecuteBuildRunJobData = {
+      buildRunId: 'run-trace-1',
+      deliveryId: 'del-trace-1',
+      correlationId: 'req-corr-999',
+    };
+    const job = {
+      name: BUILDER_RUN_JOB_NAME,
+      data: jobData,
+    } as Job<ExecuteBuildRunJobData>;
+
+    await processor.process(job);
+
+    expect(lifecycleMock.processBuildRunJob).toHaveBeenCalledWith(jobData);
+    expect(lifecycleMock.processBuildRunJob).toHaveBeenCalledWith(
+      expect.objectContaining({ correlationId: 'req-corr-999' }),
+    );
+  });
+
+  it('ignora jobs cuyo nombre no coincide con BUILDER_RUN_JOB_NAME', async () => {
+    const job = {
+      name: 'other_job',
+      data: { buildRunId: 'r1', deliveryId: 'd1' },
+    } as Job<ExecuteBuildRunJobData>;
+
+    await processor.process(job);
+
+    expect(lifecycleMock.processBuildRunJob).not.toHaveBeenCalled();
   });
 });
