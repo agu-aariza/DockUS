@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { builderApi } from "../../builder/api/builderApi";
 import type { BuildRunEntity } from "../../features/builder/types";
 import type { DeliveryEntity } from "../../features/deliveries/types";
 import { deliveriesApi } from "../api/deliveriesApi";
+import { queryKeys } from "../../shared/query/queryKeys";
 import { getErrorMessage } from "../../shared/utils/errors";
 import type { NoticeState } from "./deliveryManagement.types";
 
@@ -17,12 +19,14 @@ export function useDeliveryBuilderRuns({
   selectedAssignmentId,
   selectedDeliveryId,
 }: UseDeliveryBuilderRunsInput) {
+  const queryClient = useQueryClient();
   const [reportRun, setReportRun] = useState<BuildRunEntity | null>(null);
   const [reportDelivery, setReportDelivery] = useState<DeliveryEntity | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportNotice, setReportNotice] = useState<NoticeState | null>(null);
   const reportAbortRef = useRef<AbortController | null>(null);
   const lastReportDeliveryIdRef = useRef<string | null>(null);
+  const lastRequestedDeliveryIdRef = useRef<string | null>(null);
   const reportInFlightRef = useRef(false);
 
   const resetReport = useCallback(() => {
@@ -30,6 +34,7 @@ export function useDeliveryBuilderRuns({
     setReportDelivery(null);
     setReportLoading(false);
     lastReportDeliveryIdRef.current = null;
+    lastRequestedDeliveryIdRef.current = null;
     reportAbortRef.current?.abort();
     reportInFlightRef.current = false;
   }, []);
@@ -40,13 +45,14 @@ export function useDeliveryBuilderRuns({
       { force = false }: { force?: boolean } = {},
     ) => {
       if (!deliveryId || !canRead) return;
-      if (reportInFlightRef.current) return;
       if (!force && lastReportDeliveryIdRef.current === deliveryId) return;
+      if (!force && reportInFlightRef.current && lastRequestedDeliveryIdRef.current === deliveryId) return;
 
       reportAbortRef.current?.abort();
       const controller = new AbortController();
       reportAbortRef.current = controller;
       reportInFlightRef.current = true;
+      lastRequestedDeliveryIdRef.current = deliveryId;
       setReportLoading(true);
 
       try {
@@ -69,6 +75,12 @@ export function useDeliveryBuilderRuns({
           return;
         }
 
+        if (force) {
+          void queryClient.invalidateQueries({
+            queryKey: queryKeys.builderRuns.reportV3(latestRun.id),
+          });
+        }
+
         const fullRun = await builderApi.detail(latestRun.id);
         if (controller.signal.aborted) return;
 
@@ -86,7 +98,7 @@ export function useDeliveryBuilderRuns({
         }
       }
     },
-    [canRead, selectedDeliveryId],
+    [canRead, queryClient, selectedDeliveryId],
   );
 
   useEffect(() => {

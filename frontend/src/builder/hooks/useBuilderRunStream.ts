@@ -75,6 +75,28 @@ function isBuildRunEvent(value: unknown): value is BuildRunEvent {
   );
 }
 
+function isTerminalStatusCode(status: number): boolean {
+  return status === 401 || status === 403 || status === 404;
+}
+
+function getErrorStatusCode(error: unknown): number | null {
+  if (typeof error === "object" && error !== null) {
+    if ("statusCode" in error && typeof (error as { statusCode?: unknown }).statusCode === "number") {
+      return (error as { statusCode: number }).statusCode;
+    }
+    if ("status" in error && typeof (error as { status?: unknown }).status === "number") {
+      return (error as { status: number }).status;
+    }
+    if ("response" in error && typeof (error as { response?: unknown }).response === "object" && (error as { response: unknown }).response !== null) {
+      const res = (error as { response: { status?: unknown } }).response;
+      if (typeof res.status === "number") {
+        return res.status;
+      }
+    }
+  }
+  return null;
+}
+
 export function useBuilderRunStream(
   runId: string,
   session: SessionRecord | null,
@@ -181,6 +203,7 @@ export function useBuilderRunStream(
 
     const runStream = async () => {
       while (!disposed && !stateRef.current.terminal) {
+        let isTerminalFailure = false;
         try {
           dispatchStream({ type: "loading-backlog" });
           await fetchBacklog();
@@ -199,6 +222,9 @@ export function useBuilderRunStream(
           );
 
           if (!response.ok || !response.body) {
+            if (isTerminalStatusCode(response.status)) {
+              isTerminalFailure = true;
+            }
             throw new Error(`Stream no disponible (${response.status}).`);
           }
 
@@ -207,10 +233,19 @@ export function useBuilderRunStream(
           await consumeStream(response);
         } catch (error) {
           if (disposed || abortController.signal.aborted) return;
+          const status = getErrorStatusCode(error);
+          if (status && isTerminalStatusCode(status)) {
+            isTerminalFailure = true;
+          }
           dispatchStream({ type: "error", message: getErrorMessage(error) });
         }
 
         if (disposed || stateRef.current.terminal) break;
+
+        if (isTerminalFailure) {
+          dispatchStream({ type: "terminal" });
+          break;
+        }
 
         dispatchStream({ type: "polling" });
         const delay = getReconnectDelay(reconnectAttempt);

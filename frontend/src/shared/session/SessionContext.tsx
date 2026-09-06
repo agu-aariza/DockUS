@@ -13,6 +13,7 @@ import {
   useCallback,
   type PropsWithChildren,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { setAccessToken, setRefreshToken, subscribeAuthWarning, subscribeTokenUpdate } from '../api/http';
 import type { SessionAuthPayload, SessionRecord } from "./session.types";
 import {
@@ -38,6 +39,7 @@ interface SessionContextValue {
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: PropsWithChildren): JSX.Element {
+  const queryClient = useQueryClient();
   const [sessions, setSessions] = useState<SessionRecord[]>(() => readSessions());
   const [activeSessionId, setActiveSessionIdState] = useState<string | null>(() =>
     readActiveSessionId(),
@@ -55,25 +57,20 @@ export function SessionProvider({ children }: PropsWithChildren): JSX.Element {
 
   useEffect(() => {
     writeActiveSessionId(activeSessionId);
-  }, [activeSessionId]);
-
-  // Sync both tokens to the HTTP layer whenever the active session changes
-  useEffect(() => {
     setAccessToken(activeSession?.accessToken ?? null);
     setRefreshToken(activeSession?.refreshToken ?? null);
-  }, [activeSession?.accessToken, activeSession?.refreshToken]);
+  }, [activeSessionId, activeSession]);
 
   useEffect(() => {
-    const unsubscribe = subscribeAuthWarning((message) => {
+    return subscribeAuthWarning((message) => {
       setAuthWarning(message);
     });
-
-    return unsubscribe;
   }, []);
 
   // Listen for token updates from the auto-refresh interceptor
   useEffect(() => {
     const unsubscribe = subscribeTokenUpdate((newAccess, newRefresh) => {
+      if (!activeSessionId) return;
       setSessions((prev) =>
         prev.map((session) => {
           if (session.id === activeSessionId) {
@@ -95,29 +92,33 @@ export function SessionProvider({ children }: PropsWithChildren): JSX.Element {
     const created = createSessionRecord(auth, label);
     setSessions((prev) => [created, ...prev]);
     setActiveSessionIdState(created.id);
+    queryClient.clear();
     return created;
-  }, []);
+  }, [queryClient]);
 
   const setActiveSessionId = useCallback((sessionId: string): void => {
     setActiveSessionIdState(sessionId);
-  }, []);
+    queryClient.clear();
+  }, [queryClient]);
 
   const removeSession = useCallback((sessionId: string): void => {
     setSessions((prev) => {
       const next = prev.filter((session) => session.id !== sessionId);
       if (sessionId === activeSessionId) {
         setActiveSessionIdState(next[0]?.id ?? null);
+        queryClient.clear();
       }
       return next;
     });
-  }, [activeSessionId]);
+  }, [activeSessionId, queryClient]);
 
   const clearSessions = useCallback((): void => {
     setSessions([]);
     setActiveSessionIdState(null);
     setAccessToken(null);
     setRefreshToken(null);
-  }, []);
+    queryClient.clear();
+  }, [queryClient]);
 
   const clearAuthWarning = useCallback((): void => {
     setAuthWarning(null);

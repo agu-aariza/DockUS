@@ -44,6 +44,15 @@ export function useDeliveryCommands({
   const invalidateDeliveries = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.deliveries.all });
 
+  const invalidateAfterGrading = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.deliveries.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.summary.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.builderRuns.all }),
+    ]);
+  };
+
   const createMutation = useMutation({
     mutationFn: (payload: CreateDeliveryPayload) => deliveriesApi.create(payload),
     onSuccess: invalidateDeliveries,
@@ -61,7 +70,7 @@ export function useDeliveryCommands({
   const gradingMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: GradingPayload }) =>
       deliveriesApi.updateGrading(id, payload),
-    onSuccess: invalidateDeliveries,
+    onSuccess: invalidateAfterGrading,
   });
 
   const updateGrading = (id: string, payload: GradingPayload) =>

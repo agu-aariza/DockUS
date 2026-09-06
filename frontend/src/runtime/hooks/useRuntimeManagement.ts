@@ -179,16 +179,34 @@ export function useRuntimeManagement(isLiveActive: boolean) {
    * el intervalo no invoque a un cierre de un run que ya no se observa.
    */
   const evidenceSyncRef = useRef<(() => void) | null>(null);
+  const activeRunIdRef = useRef<string | null>(selectedRunId);
+
+  useEffect(() => {
+    activeRunIdRef.current = selectedRunId;
+  }, [selectedRunId]);
 
   const syncSelectedRun = useCallback(() => {
     if (!selectedRunId) { return; }
-    void builderApi.detail(selectedRunId).then(setSelectedRun).catch(() => {});
+    const requestedRunId = selectedRunId;
+    void builderApi.detail(requestedRunId).then((run) => {
+      if (activeRunIdRef.current === requestedRunId) {
+        setSelectedRun(run);
+      }
+    }).catch(() => {});
   }, [selectedRunId]);
 
   useEffect(() => {
     if (!selectedRunId) { setSelectedRun(null); return; }
-    syncSelectedRun();
-  }, [selectedRunId, syncSelectedRun]);
+    let cancelled = false;
+    void builderApi.detail(selectedRunId).then((run) => {
+      if (!cancelled && activeRunIdRef.current === selectedRunId) {
+        setSelectedRun(run);
+      }
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRunId]);
 
   // Sondeo de detalle del run: suspendido con la pestaña oculta, en estado
   // terminal —un run ya terminado no cambia más— y, además, fuera de la

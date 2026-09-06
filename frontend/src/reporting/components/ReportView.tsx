@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { builderApi } from "../../builder/api/builderApi";
 import type { BuildRunEntity } from "../../features/builder/types";
+import { queryKeys } from "../../shared/query/queryKeys";
 import { getErrorMessage } from "../../shared/utils/errors";
 import { StudentReportView } from "./StudentReportView";
 import { TeacherReportView } from "./TeacherReportView";
@@ -18,9 +19,9 @@ export function ReportView({
   onUseAiGrade,
 }: ReportViewProps): JSX.Element {
   const reportQuery = useQuery({
-    queryKey: ["builder-report-v3", run.id, mode],
+    queryKey: queryKeys.builderRuns.reportV3(run.id, mode),
     queryFn: () => builderApi.report(run.id),
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: 30_000,
   });
 
   const download = async (audience?: "student" | "teacher") => {

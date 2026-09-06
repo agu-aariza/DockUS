@@ -10,8 +10,9 @@ export const queryKeys = {
     list: (assignmentId: string) => ['deliveries', 'list', assignmentId] as const,
     // Vista del propio alumno: todas sus entregas, sin filtrar por asignación
     // (el backend ya alcanza por el usuario autenticado) — key distinta de
-    // list(assignmentId), que siempre exige una asignación.
-    mine: () => ['deliveries', 'mine'] as const,
+    // list(assignmentId), que siempre exige una asignación. Soporta namespace opcional por usuario.
+    mine: (userId?: string) =>
+      userId ? (['deliveries', 'mine', userId] as const) : (['deliveries', 'mine'] as const),
     latestRuns: (evaluatedIds: string[]) =>
       ['deliveries', 'latestRuns', [...evaluatedIds].sort()] as const,
     preview: (deliveryId: string) => ['deliveries', 'preview', deliveryId] as const,
@@ -41,7 +42,8 @@ export const queryKeys = {
   },
   assignments: {
     all: ['assignments'] as const,
-    mine: () => ['assignments', 'mine'] as const,
+    mine: (userId?: string) =>
+      userId ? (['assignments', 'mine', userId] as const) : (['assignments', 'mine'] as const),
     byProject: (projectId: string) => ['assignments', 'byProject', projectId] as const,
   },
   groups: {
@@ -75,10 +77,14 @@ export const queryKeys = {
     messages: (buildRunId: string) => ['builder', 'chatMessages', buildRunId] as const,
   },
   builderRuns: {
+    all: ['builder'] as const,
     // Reconstrucción del log completo drenando todas las páginas de eventos
     // — operación única de cara a la UI (no hay "cargar más"), de ahí un
     // useQuery normal con un queryFn que pagina por dentro, no useInfiniteQuery.
     logs: (buildRunId: string) => ['builder', 'runLogs', buildRunId] as const,
+    // Proyección autorizada del informe v3 del run.
+    reportV3: (buildRunId: string, mode?: string) =>
+      ['builder', 'reportV3', buildRunId, mode ?? 'default'] as const,
   },
   health: {
     readiness: () => ['health', 'readiness'] as const,
@@ -104,6 +110,7 @@ export const queryKeys = {
   // que no son la misma query que las listas paginadas de sus dominios —
   // de ahí keys propias en vez de reusar projects.list()/deliveries.list().
   summary: {
+    all: ['summary'] as const,
     recentProjects: () => ['summary', 'recentProjects'] as const,
     pendingDeliveries: () => ['summary', 'pendingDeliveries'] as const,
     recentEvaluated: () => ['summary', 'recentEvaluated'] as const,
