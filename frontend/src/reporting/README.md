@@ -8,12 +8,10 @@
 reporting/
 ├── components/
 │   ├── ReportView.tsx                 # Composición completa del informe
-│   ├── AssessmentContextSummary.tsx   # Evidencia y límites de la evaluación
 │   ├── CoachingSummary.tsx             # Feedback pedagógico y hallazgos
 │   ├── PedagogicalReport.tsx           # Narrativa de aprendizaje
 │   ├── ProfessionalVerdict.tsx         # Resultado ejecutivo
 │   ├── TeacherHighlights.tsx           # Puntos clave para el docente
-│   ├── GradeBreakdownChart.tsx         # Desglose de la nota
 │   ├── CodeSnippet.tsx                 # Código asociado a un hallazgo
 │   ├── report/                         # Tarjetas, badges y hallazgos técnicos
 │   └── file-preview/GradingPanel.tsx   # Panel de calificación docente

@@ -18,10 +18,8 @@ import {
 export type {
   ProjectProgressSummary,
   ProjectGradebookRow,
-  ProjectOperationalIssue,
   ProjectOperationalIssuesSummary,
   ProjectOperationalIssuesReconcileResult,
-  ProjectQualityInsight,
   ProjectQualityInsightsSummary as ProjectQualityInsightsResponse,
   FindingSeverity,
   ProjectAssignmentResponse as ProjectAssignmentEntity,
@@ -71,4 +69,3 @@ export interface ProjectStudentQualityInsightsResponse {
   studentId: string;
   findings: Record<QualityInsightCategory, TechnicalFeedbackItem[]>;
 }
-

@@ -13,14 +13,8 @@ import {
   evaluativeStateLabel,
   structuralTypeLabel,
 } from "@/shared/data/builderTaxonomy";
-import { findGlossaryEntry } from "@/shared/data/glossary";
-
-const EVALUATIVE_STATES = ["E1", "E2", "E3", "E4"] as const;
-const STRUCTURAL_TYPES = ["T1", "T2", "T3", "T4"] as const;
 
 describe("builderTaxonomy", () => {
-  // Tabla fijada a propósito: si alguien reformula una etiqueta, este test se
-  // rompe y le obliga a mirar también el glosario y las frases del backend.
   it.each([
     ["E1", "Funcionó como se esperaba"],
     ["E2", "Funcionó con fallos"],
@@ -38,16 +32,6 @@ describe("builderTaxonomy", () => {
   ])("traduce %s a su etiqueta legible", (code, label) => {
     expect(structuralTypeLabel(code)).toBe(label);
   });
-
-  it.each([...EVALUATIVE_STATES, ...STRUCTURAL_TYPES])(
-    "expone %s en el glosario con el código entre paréntesis",
-    (code) => {
-      const entry = findGlossaryEntry(code);
-
-      expect(entry?.title).toContain(`(${code})`);
-      expect(entry?.description.length).toBeGreaterThan(40);
-    },
-  );
 
   it("etiqueta las capacidades y sus veredictos sin dejar códigos ni inglés", () => {
     expect(capabilityLabel("C4")).toBe("Detectar pruebas automáticas");

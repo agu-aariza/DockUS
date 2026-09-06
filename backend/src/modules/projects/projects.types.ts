@@ -21,12 +21,8 @@ export type {
   StudentProfileProject,
   StudentProfileDelivery,
   StudentProfileRun,
-  StudentProfileSummary,
-  TeacherRef,
-  ProjectOperationalIssue,
   ProjectOperationalIssuesSummary,
   ProjectOperationalIssuesReconcileResult,
-  ProjectQualityInsight,
   ProjectQualityInsightsSummary,
 } from '@educodeai/contracts';
 

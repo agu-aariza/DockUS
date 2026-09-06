@@ -28,7 +28,6 @@ import type { GroupRosterReader } from '../../../shared/application/group-roster
 // Shapes compartidas con el frontend: fuente única en @educodeai/contracts.
 export type {
   ProjectAssignmentResponse,
-  BulkAssignSummary,
   BulkAssignResponse,
 } from '@educodeai/contracts';
 import type {

@@ -19,6 +19,7 @@ La documentación describe decisiones y flujos. El código sigue siendo la fuent
 | Operar Compose, health checks y recuperación | [operations.md](operations.md) |
 | Revisar límites y controles de seguridad | [security.md](security.md) |
 | Ejecutar y escribir tests | [testing.md](testing.md) |
+| Auditar con IA y organizar informes y planes de acción | [Sistema de auditorías](../audit/README.md) |
 
 También se mantienen guías específicas para [CI](ci.md), [corpus de evaluación](corpus.md), [assets del frontend](frontend-assets.md) y [decisiones arquitectónicas](adr/README.md).
 

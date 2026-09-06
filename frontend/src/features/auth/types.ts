@@ -7,7 +7,7 @@
 import type { SessionIdentity } from "../../shared/session/session.types";
 import { UserRole } from "../../shared/types";
 
-export type { SessionAuthPayload, SessionIdentity, SessionRecord } from "../../shared/session/session.types";
+export type { SessionIdentity } from "../../shared/session/session.types";
 
 export type UserStatus =
   | "ACTIVE"

@@ -12,7 +12,6 @@
 
 | Componente | Qué es |
 | --- | --- |
-| `Glossary.tsx` | Tooltips de términos técnicos, alimentado por `shared/data/glossary.ts`. |
 | `CodePreviewModal.tsx` | Vista rápida genérica de código fuera del explorador completo de `file-preview/`. |
 | `TerminalViewer.tsx` | Visor de salida de terminal/consola (reutilizado fuera de `builder/components/live-run/`). |
 | `MarkdownContent.tsx` | Render de Markdown con `remark-gfm`, usado por informes y feedback. |

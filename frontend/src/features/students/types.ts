@@ -12,6 +12,4 @@ export type {
   StudentProfileProject,
   StudentProfileDelivery,
   StudentProfileRun,
-  StudentProfileSummary,
-  TeacherRef,
 } from "@educodeai/contracts";

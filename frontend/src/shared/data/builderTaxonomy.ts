@@ -4,8 +4,7 @@
  * Traduce los códigos internos del contrato `builder-llm/v2` (T1–T4, E1–E4,
  * C1–C6, `yes`/`no`/`unknown`) a etiquetas en castellano legibles por cualquier
  * usuario. La UI nunca debe imprimir el código pelado: el alumno no tiene forma
- * de saber qué significa "E2". El código sigue disponible en el tooltip del
- * glosario ([[Glossary]]) para quien necesite cruzarlo con artefactos y logs.
+ * de saber qué significa "E2".
  *
  * @module builderTaxonomy
  */

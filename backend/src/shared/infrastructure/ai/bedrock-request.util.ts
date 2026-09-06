@@ -13,7 +13,6 @@ import { LlmRequestError } from './llm-request.util';
 export {
   LlmRequestError,
   LlmRequestError as BedrockRequestError,
-  createLlmInvalidResponseError,
   createLlmInvalidResponseError as createBedrockInvalidResponseError,
 } from './llm-request.util';
 

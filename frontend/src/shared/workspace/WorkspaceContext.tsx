@@ -8,7 +8,6 @@ import { type PropsWithChildren } from 'react';
 import {
   WorkspaceSelectionProvider,
   useWorkspaceSelection,
-  type WorkspaceSelection,
 } from './WorkspaceSelectionContext';
 import { WorkspaceUIProvider, useWorkspaceUI } from './WorkspaceUIContext';
 
@@ -21,4 +20,3 @@ export function WorkspaceProvider({ children }: PropsWithChildren): JSX.Element 
 }
 
 export { useWorkspaceSelection, useWorkspaceUI };
-export type { WorkspaceSelection };

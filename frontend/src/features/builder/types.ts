@@ -14,9 +14,7 @@ export type {
   BuildRunEventsPage,
   ChatMessageResponse as BuildRunChatMessage,
   BuildRunReportSummary,
-  BuilderReportView,
   StudentReportView,
-  TeacherReportView,
 } from "@educodeai/contracts";
 import type { BuildRunReportSummary } from "@educodeai/contracts";
 

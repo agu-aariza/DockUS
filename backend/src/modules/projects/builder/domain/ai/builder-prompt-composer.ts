@@ -21,11 +21,7 @@ import type {
 
 // Se re-exportan para no romper los imports existentes que tomaban estos tipos
 // desde el compositor.
-export type {
-  ComposedPromptPayload,
-  PromptSectionPriority,
-  PromptSectionTrace,
-} from './prompt-composer.types';
+export type { ComposedPromptPayload } from './prompt-composer.types';
 
 const PRIORITY_ORDER: PromptSectionPriority[] = [
   'low',
